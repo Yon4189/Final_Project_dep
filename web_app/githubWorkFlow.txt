@@ -1,0 +1,65 @@
+         1. Getting the Project (One-time setup)
+If your teammate already started the repository on GitHub:
+
+#Open VS Code.
+
+#Press Ctrl + Shift + P and type "Git: Clone".
+
+#Paste the GitHub URL and select a folder on your computer.
+
+#When asked, click "Open".
+
+           2. The Daily Workflow (The "Safe" Cycle)
+To avoid those "revert" errors you had earlier, follow this exact order every time you sit down to work.
+
+Step A: Pull (Refresh)
+Before you type a single line of code, get the latest work from your teammates.
+
+Click the Source Control icon on the left sidebar.
+
+Click the three dots (...) at the top of the Source Control menu.
+
+Select Pull.
+
+Step B: Create a Branch (Your "Safety Zone")
+Never work directly on the main branch. This is the #1 rule for university projects!
+
+Click the branch name at the bottom-left corner (usually says main).
+
+Select "+ Create new branch..." from the top menu.
+
+Name it something like feature-add-login or addisu-report.
+
+Now, any mistake you make stays on this branch and won't break the "Final Project" main code.
+
+Step C: Stage and Commit (Save Locally)
+As you write code, you will see numbers appearing on the Source Control icon.
+
+Stage: Click the plus (+) sign next to the files you changed. This is your "Staging Area."
+
+Commit: Type a message in the "Message" box (e.g., "Updated intro section").
+
+Click the Commit button.
+
+Step D: Push (Share)
+Click the "Publish Branch" or "Sync Changes" button at the bottom left.
+
+This sends your branch to GitHub.
+
+            3. Merging via Pull Request (The "Team Meeting")
+Instead of merging on your laptop (which caused the error earlier), do it on GitHub:
+
+Go to your GitHub repository page.
+
+You will see a yellow bar saying "Compare & pull request". Click it.
+
+Ask your teammate to look at your code.
+
+If they say "Looks good," click "Merge pull request".
+
+       4. Useful VS Code Extensions for Students
+To make collaboration even better, I highly recommend installing these two from the VS Code Marketplace:
+
+GitLens: This is a "superpower." It shows you exactly who wrote which line of code and when. If a bug appears, you’ll know exactly which teammate to ask about it!
+
+GitHub Pull Requests and Issues: This lets you review your friends' code and merge their work without ever leaving VS Code.
