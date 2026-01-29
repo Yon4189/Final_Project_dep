@@ -21,45 +21,34 @@ Click the three dots (...) at the top of the Source Control menu.
 
 Select Pull.
 
-Step B: Create a Branch (Your "Safety Zone")
-Never work directly on the main branch. This is the #1 rule for university projects!
 
-Click the branch name at the bottom-left corner (usually says main).
 
-Select "+ Create new branch..." from the top menu.
-
-Name it something like feature-add-login or addisu-report.
-
-Now, any mistake you make stays on this branch and won't break the "Final Project" main code.
-
-Step C: Stage and Commit (Save Locally)
-As you write code, you will see numbers appearing on the Source Control icon.
-
-Stage: Click the plus (+) sign next to the files you changed. This is your "Staging Area."
-
-Commit: Type a message in the "Message" box (e.g., "Updated intro section").
-
-Click the Commit button.
-
-Step D: Push (Share)
-Click the "Publish Branch" or "Sync Changes" button at the bottom left.
-
-This sends your branch to GitHub.
-
-            3. Merging via Pull Request (The "Team Meeting")
-Instead of merging on your laptop (which caused the error earlier), do it on GitHub:
-
-Go to your GitHub repository page.
-
-You will see a yellow bar saying "Compare & pull request". Click it.
-
-Ask your teammate to look at your code.
-
-If they say "Looks good," click "Merge pull request".
-
-       4. Useful VS Code Extensions for Students
-To make collaboration even better, I highly recommend installing these two from the VS Code Marketplace:
-
-GitLens: This is a "superpower." It shows you exactly who wrote which line of code and when. If a bug appears, you’ll know exactly which teammate to ask about it!
-
-GitHub Pull Requests and Issues: This lets you review your friends' code and merge their work without ever leaving VS Code.
+       3. Create Branch and merging Phases
+🟢 Phase 1: Create a New Branch
+Look at the bottom-left corner of VS Code. It likely says main. Click on the word main.
+A menu will open at the top. Select + Create new branch....
+Type your branch name: feat-admin-setup and press Enter.
+Notice the bottom-left corner now says feat-admin-setup. You are now safe to work!
+🟡 Phase 2: Staging and Committing Changes
+Once you have initialized the project or changed files in web-app/:
+Click the Source Control icon (or press Ctrl + Shift + G).
+You will see a list of changed files under Changes.
+Stage Files: Hover over the word "Changes" and click the + (plus sign) to "Stage All Changes". They move up to Staged Changes.
+Write Message: In the box that says "Message", type: feat: initialize web-app with vite and tailwind.
+Commit: Click the blue Commit button.
+🔵 Phase 3: Pushing to GitHub
+After committing, the blue button will change to Publish Branch.
+Click Publish Branch.
+This sends your code to the GitHub website.
+🟠 Phase 4: Merging (The Pull Request)
+Note: While there are extensions for this, it is standard practice to do the final merge on the GitHub website so your teammates can see the UI and leave comments.
+Go to your repo on GitHub.com.
+A green button usually appears: Compare & pull request. Click it.
+Click Create pull request.
+Once reviewed, click the green Merge pull request and Confirm merge.
+🔴 Phase 5: Syncing back to Main (Inside VS Code)
+Now that your work is officially in the main branch on the website, you need to update your local VS Code:
+Switch back to main: Click the branch name (feat-admin-setup) in the bottom-left corner.
+Select main from the list.
+Pull changes: In the Source Control tab, click the ... (three dots) at the top and select Pull.
+Or simply click the "Sync" icon (circular arrows) in the bottom-left corner.
