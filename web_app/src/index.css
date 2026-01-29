@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* custom colors from the prototype */
+@theme {
+  --color-admin-bg: #0f172a;
+  --color-admin-sidebar: #1e293b;
+  --color-admin-accent: #3b82f6;
+  --color-admin-card: #1e293b;
+}
