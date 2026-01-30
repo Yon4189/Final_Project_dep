@@ -1,21 +1,25 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './layout/Layout';
+
+const Dashboard = () => <h2 className="text-2xl font-bold">Dashboard Overview</h2>;
+const Verification = () => <h2 className="text-2xl font-bold">Verification Queue</h2>;
+const ServicesCRUD = () => <h2 className="text-2xl font-bold">Manage Service Categories</h2>;
+const Payments = () => <h2 className="text-2xl font-bold">Payment Analytics</h2>;
 
 function App() {
   return (
-    <div className="flex h-screen items-center justify-center bg-admin-bg">
-      <div className="text-center p-8 bg-admin-card rounded-xl border border-slate-700 shadow-2xl">
-        <h1 className="text-3xl font-bold text-admin-accent mb-4">
-          Home-Based Service Finder
-        </h1>
-        <p className="text-slate-400 mb-6">Admin Dashboard Web-App initialized</p>
-        
-        <div className="flex gap-2 justify-center">
-          <span className="px-3 py-1 bg-admin-bg rounded border border-slate-600 text-xs text-admin-accent">Tailwind Active</span>
-          <span className="px-3 py-1 bg-admin-bg rounded border border-slate-600 text-xs text-admin-accent">React 19</span>
-        </div>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="verification" element={<Verification />} />
+          <Route path="services" element={<ServicesCRUD />} /> {/* CRUD HERE */}
+          <Route path="payments" element={<Payments />} />     {/* PAYMENTS HERE */}
+          <Route path="*" element={<div className="p-10 text-center text-2xl">404 - Page Not Found</div>} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
+export default App

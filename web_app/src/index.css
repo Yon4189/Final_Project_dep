@@ -2,8 +2,8 @@
 
 /* custom colors from the prototype */
 @theme {
-  --color-admin-bg: #0f172a;
-  --color-admin-sidebar: #1e293b;
-  --color-admin-accent: #3b82f6;
-  --color-admin-card: #1e293b;
+  --color-admin-sidebar: #1e293b; /* Dark Navy for Sidebar */
+  --color-admin-content: #f1f5f9; /* Light Gray/Blue for Body */
+  --color-admin-accent: #3b82f6;  /* Primary Blue */
+  --color-admin-card: #ffffff;    /* White Cards */
 }
