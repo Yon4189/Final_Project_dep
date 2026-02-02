@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Verification from './pages/Verification';
 import Users from './pages/Users'; 
+import Services from './pages/Services';
 
 /**
  * 🛡️ ProtectedRoute Component
@@ -52,7 +53,7 @@ function App() {
                 We will replace these <div>s with real components in the next steps */}
             <Route path="verification" element={<Verification />} />
             <Route path="users" element={<Users />} />
-            <Route path="services" element={<div className="p-4">Manage Services & Categories CRUD</div>} />
+            <Route path="services" element={<Services />} />
             <Route path="disputes" element={<div className="p-4">Dispute Resolution Module</div>} />
             <Route path="payments" element={<div className="p-4">Payment Analytics Module</div>} />
             <Route path="settings" element={<div className="p-4">Platform Settings</div>} />
