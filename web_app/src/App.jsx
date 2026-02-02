@@ -14,6 +14,7 @@ import Services from './pages/Services';
 import Bookings from './pages/Bookings';
 import Disputes from './pages/Disputes';
 import Payments from './pages/Payments';
+import Settings from './pages/Settings';
 
 /**
  * 🛡️ ProtectedRoute Component
@@ -55,12 +56,12 @@ function App() {
             {/* Placeholder routes for the other sidebar links 
                 We will replace these <div>s with real components in the next steps */}
             <Route path="verification" element={<Verification />} />
-            <Route path="users" element={<Users />} />
+            <Route path="users"    element={<Users />} />
             <Route path="services" element={<Services />} />
             <Route path="bookings" element={<Bookings />} />
             <Route path="disputes" element={<Disputes />} />
             <Route path="payments" element={<Payments />} />
-            <Route path="settings" element={<div className="p-4">Platform Settings</div>} />
+            <Route path="settings" element={<Settings />} />
 
             {/* 404 Catch-all */}
             <Route path="*" element={<div className="p-10 text-center font-bold">404 - Page Not Found</div>} />
