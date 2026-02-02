@@ -1,25 +1,69 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './layout/Layout';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-const Dashboard = () => <h2 className="text-2xl font-bold">Dashboard Overview</h2>;
-const Verification = () => <h2 className="text-2xl font-bold">Verification Queue</h2>;
-const ServicesCRUD = () => <h2 className="text-2xl font-bold">Manage Service Categories</h2>;
-const Payments = () => <h2 className="text-2xl font-bold">Payment Analytics</h2>;
+// Layout & Auth
+import Layout from './layout/Layout';
+import Login from './pages/Login';
+
+// Pages
+import Dashboard from './pages/Dashboard';
+import Verification from './pages/Verification';
+import Users from './pages/Users'; 
+
+/**
+ * 🛡️ ProtectedRoute Component
+ * This wrapper checks if the user exists in our AuthContext.
+ * If not, it redirects them to the /login page.
+ */
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="verification" element={<Verification />} />
-          <Route path="services" element={<ServicesCRUD />} /> {/* CRUD HERE */}
-          <Route path="payments" element={<Payments />} />     {/* PAYMENTS HERE */}
-          <Route path="*" element={<div className="p-10 text-center text-2xl">404 - Page Not Found</div>} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Route: Login */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* 🔐 Protected Routes: All routes inside here require login and use the Layout */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            {/* The "index" route is what shows up at exactly http://localhost:5173/ */}
+            <Route index element={<Dashboard />} />
+
+            {/* Placeholder routes for the other sidebar links 
+                We will replace these <div>s with real components in the next steps */}
+            <Route path="verification" element={<Verification />} />
+            <Route path="users" element={<Users />} />
+            <Route path="services" element={<div className="p-4">Manage Services & Categories CRUD</div>} />
+            <Route path="disputes" element={<div className="p-4">Dispute Resolution Module</div>} />
+            <Route path="payments" element={<div className="p-4">Payment Analytics Module</div>} />
+            <Route path="settings" element={<div className="p-4">Platform Settings</div>} />
+
+            {/* 404 Catch-all */}
+            <Route path="*" element={<div className="p-10 text-center font-bold">404 - Page Not Found</div>} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
-export default App
+
+export default App;
