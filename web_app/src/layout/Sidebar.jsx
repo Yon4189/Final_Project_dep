@@ -1,10 +1,13 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 // 1. Import the specific icons  
 import { LayoutDashboard,  UserCheck,  Users,  Wrench,  Scale, BarChart3, Settings, LogOut, ClipboardList } from 'lucide-react';
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();   
   
   // 2. Assign the components to your menu items
   const menuItems = [
@@ -17,6 +20,14 @@ const Sidebar = () => {
     { name: 'Payment Analytics', path: '/payments', icon: BarChart3 },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
+
+  // ✅ THE LOGOUT HANDLER
+  const handleLogout = () => {
+    if (window.confirm("Are you sure you want to logout from the Admin panel?")) {
+      logout(); // This clears localStorage and state
+      navigate('/login'); // This sends you back to the gate
+    }
+  };
 
   return (
     <div className="w-64 bg-admin-sidebar h-screen flex flex-col text-slate-400">
@@ -48,10 +59,14 @@ const Sidebar = () => {
         })}
       </nav>
 
+         {/* ✅ ACTIVE LOGOUT BUTTON */}
       <div className="p-6 border-t border-slate-700">
-        <button className="flex items-center gap-3 text-red-400 hover:text-red-300 text-sm font-bold w-full">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 p-3 rounded-xl transition-all w-full font-black text-xs uppercase tracking-widest"
+        >
           <LogOut size={18} />
-          Logout
+          Logout System
         </button>
       </div>
     </div>
