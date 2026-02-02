@@ -15,6 +15,7 @@ import Bookings from './pages/Bookings';
 import Disputes from './pages/Disputes';
 import Payments from './pages/Payments';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 
 /**
  * 🛡️ ProtectedRoute Component
@@ -62,6 +63,7 @@ function App() {
             <Route path="disputes" element={<Disputes />} />
             <Route path="payments" element={<Payments />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="profile" element={<Profile />} />
 
             {/* 404 Catch-all */}
             <Route path="*" element={<div className="p-10 text-center font-bold">404 - Page Not Found</div>} />
