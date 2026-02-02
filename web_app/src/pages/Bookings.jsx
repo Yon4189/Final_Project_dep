@@ -205,7 +205,7 @@ const Bookings = () => {
                 onClick={() => setSelectedBooking(null)}
                 className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
               >
-                Cancel VIEW
+                Cancel View
               </button>
             </div>
           </div>
