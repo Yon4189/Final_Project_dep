@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 // 1. Import the specific icons  
-import { LayoutDashboard,  UserCheck,  Users,  Wrench,  Scale, BarChart3, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard,  UserCheck,  Users,  Wrench,  Scale, BarChart3, Settings, LogOut, ClipboardList } from 'lucide-react';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -12,6 +12,7 @@ const Sidebar = () => {
     { name: 'Provider Verification', path: '/verification', icon: UserCheck },
     { name: 'User Management', path: '/users', icon: Users },
     { name: 'Manage Services', path: '/services', icon: Wrench },
+    { name: 'Service Bookings', path: '/bookings', icon: ClipboardList },
     { name: 'Dispute Resolution', path: '/disputes', icon: Scale },
     { name: 'Payment Analytics', path: '/payments', icon: BarChart3 },
     { name: 'Settings', path: '/settings', icon: Settings },

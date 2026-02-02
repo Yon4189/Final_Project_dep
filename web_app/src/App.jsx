@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Verification from './pages/Verification';
 import Users from './pages/Users'; 
 import Services from './pages/Services';
+import Bookings from './pages/Bookings';
 import Disputes from './pages/Disputes';
 import Payments from './pages/Payments';
 
@@ -56,6 +57,7 @@ function App() {
             <Route path="verification" element={<Verification />} />
             <Route path="users" element={<Users />} />
             <Route path="services" element={<Services />} />
+            <Route path="bookings" element={<Bookings />} />
             <Route path="disputes" element={<Disputes />} />
             <Route path="payments" element={<Payments />} />
             <Route path="settings" element={<div className="p-4">Platform Settings</div>} />
