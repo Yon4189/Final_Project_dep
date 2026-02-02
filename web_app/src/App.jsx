@@ -12,6 +12,7 @@ import Verification from './pages/Verification';
 import Users from './pages/Users'; 
 import Services from './pages/Services';
 import Disputes from './pages/Disputes';
+import Payments from './pages/Payments';
 
 /**
  * 🛡️ ProtectedRoute Component
@@ -56,8 +57,7 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="services" element={<Services />} />
             <Route path="disputes" element={<Disputes />} />
-            <Route path="disputes" element={<div className="p-4">Dispute Resolution Module</div>} />
-            <Route path="payments" element={<div className="p-4">Payment Analytics Module</div>} />
+            <Route path="payments" element={<Payments />} />
             <Route path="settings" element={<div className="p-4">Platform Settings</div>} />
 
             {/* 404 Catch-all */}
