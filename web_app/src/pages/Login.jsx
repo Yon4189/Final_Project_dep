@@ -1,92 +1,137 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, ChevronLeft } from 'lucide-react';
-import { MOCK_MODE, sleep } from '../api/axios';
+import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import api, { MOCK_MODE, sleep } from '../api/axios';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    // Simulate API Call
-    await sleep(1000); 
+    setIsLoading(true);
 
-    if (MOCK_MODE) {
-      if (email === 'admin@bdu.com' && password === '123456') {
-        login({ name: 'Nathenael', role: 'admin' }, 'fake-jwt-token');
-        navigate('/');
+    try {
+      if (MOCK_MODE) {
+        // --- MOCK LOGIC ---
+        await sleep(1000); 
+        if (email === 'admin@gmail.com' && password === '123456') {
+          login({ name: 'Yonas Abate', role: 'admin' }, 'fake-jwt-token');
+          navigate('/');
+        } else {
+          setError('Invalid credentials.');
+        }
       } else {
-        setError('Invalid credentials. (Try: admin@bdu.com / 123456)');
+        // --- REAL DATABASE INTEGRATION ---
+        const response = await api.post('/admin/login', { 
+          email: email, 
+          password: password 
+        });
+
+        if (response.data.success) {
+          const adminData = response.data.data;
+          const userSession = {
+            id: adminData.adminID,
+            name: adminData.fullname,
+            email: adminData.email,
+            role: 'admin'
+          };
+          login(userSession, "session_active"); 
+          navigate('/');
+        }
       }
+    } catch (err) {
+      if (err.response) {
+        setError(err.response.data.message || "Login failed.");
+      } else {
+        setError("Network error: Server is offline.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Dark Header from your UI */}
-      <div className="bg-[#050a18] h-20 flex items-center px-6">
-        <ChevronLeft className="text-white cursor-pointer" size={32} />
-      </div>
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+      {/* Centered Login Card */}
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 md:p-14 animate-in fade-in zoom-in duration-500">
+        
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-black text-slate-800">Admin Login</h2>
+        </div>
 
-      <div className="flex-1 flex flex-col px-10 pt-20 max-w-lg mx-auto w-full">
-        <h1 className="text-4xl font-bold text-slate-900 mb-12">Login to the system</h1>
+        {error && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl text-center">
+            {error}
+          </div>
+        )}
 
-        {error && <p className="text-red-500 mb-4 font-medium text-sm">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+          {/* Email / Username Field */}
+     <div className="relative">
+          <input 
+          type="email" 
+          required
+          autoComplete="off" // Tells browser not to show previous emails
+          placeholder="Enter your email address"
+          className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 font-medium"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+       />
+      <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
+  </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Email field */}
-          <div className="space-y-3">
-            <label className="text-sm font-black text-slate-900 uppercase tracking-tight">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input 
-                type="email" 
-                placeholder="yourname@domain.com"
-                className="w-full border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-slate-600 focus:outline-none focus:border-blue-500 transition-all placeholder:text-slate-300"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+          {/* Password Field */}
+<div className="relative">
+    <input 
+      type={showPassword ? "text" : "password"} 
+      required
+      autoComplete="new-password" // "new-password" is the strongest way to stop auto-fill
+      placeholder="Enter your password"
+      className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 font-medium"
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+    />
+            <button 
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+            </button>
           </div>
 
-          {/* Password field */}
-          <div className="space-y-3">
-            <label className="text-sm font-black text-slate-900 uppercase tracking-tight">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input 
-                type="password" 
-                placeholder="........"
-                className="w-full border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-slate-600 focus:outline-none focus:border-blue-500 transition-all"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+          {/* Forgot Password Link */}
+          <div className="text-right">
+            <button type="button" className="text-blue-600 text-xs font-bold hover:underline transition-all">
+              Forgot Password?
+            </button>
           </div>
 
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-slate-500 text-sm cursor-pointer">
-              <input type="checkbox" className="w-5 h-5 rounded border-slate-300 accent-blue-600" />
-              Remember me
-            </label>
-            <a href="#" className="text-blue-600 font-bold text-sm">Forgot password?</a>
-          </div>
-
-          <button type="submit" className="w-full bg-[#2b64f3] hover:bg-blue-700 text-white font-bold py-5 rounded-2xl text-lg shadow-lg shadow-blue-200 transition-all active:scale-[0.98]">
-            Login
+          {/* Login Button (Pill Shape) */}
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full bg-[#4a90e2] hover:bg-blue-600 disabled:bg-blue-300 text-white font-black py-4 rounded-full text-sm shadow-xl shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest mt-4"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                <span>Verifying...</span>
+              </>
+            ) : (
+              'Login'
+            )}
           </button>
         </form>
-
-        <p className="text-center mt-12 text-slate-600">
-          Don't have an account? <span className="text-blue-600 font-bold cursor-pointer">Sign Up</span>
-        </p>
       </div>
     </div>
   );
