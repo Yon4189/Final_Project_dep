@@ -30,7 +30,7 @@ class ServiceProviderAuthController extends Controller
                         'required',
                         'unique:serviceproviders,phone',
                         'regex:/^(09|07)[0-9]{8}$/'
-                ],
+],
             'password' => 'required|string|min:8|confirmed', // expects password_confirmation
             'catagoryID' => 'required|integer|exists:catagories,catagoryID',
             'profilePicture'=> 'required|image|mimes:jpeg,png,jpg|max:2048',
@@ -38,13 +38,13 @@ class ServiceProviderAuthController extends Controller
         ]);
 
         // ID photo upload
-        $idPhoto = $request->file('idPhoto');
-        $photoName = time() . '.' . $idPhoto->getClientOriginalExtension();
-        $idPhoto->move(public_path('idphoto'), $photoName);
+$idPhoto = $request->file('idPhoto');
+$photoName = time() . '.' . $idPhoto->getClientOriginalExtension();
+$idPhoto->move(public_path('idphoto'), $photoName);
 
-        // profile picture upload
-        $profilePicName = time().'_profile.'.$request->file('profilePicture')->getClientOriginalExtension();
-        $request->file('profilePicture')->move(public_path('profilepics'), $profilePicName);
+// profile picture upload
+$profilePicName = time().'_profile.'.$request->file('profilePicture')->getClientOriginalExtension();
+$request->file('profilePicture')->move(public_path('profilepics'), $profilePicName);
  
 
         // create new service provider
@@ -66,28 +66,4 @@ class ServiceProviderAuthController extends Controller
             'data' => $provider
         ], 201);
     }
-
-    public function login(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
-
-    $provider = ServiceProvider::where('email', $request->email)->first();
-
-    if (!$provider || !Hash::check($request->password, $provider->password)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid email or password'
-        ], 401);
-    }
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Login successful',
-        'data' => $provider
-    ]);
-}
-
 }
