@@ -25,11 +25,7 @@ class CustomerAuthController extends Controller
         $request->validate([
             'fullname' => 'required|string|max:255',
             'email' => 'required|email|unique:customers,email',
-            'phone' => [
-                        'required',
-                        'unique:serviceproviders,phone',
-                        'regex:/^(09|07)[0-9]{8}$/'
-                ],
+            'phone' => 'required|string|max:20|unique:customers,phone',
             'password' => 'required|string|min:8|confirmed', // expects password_confirmation field
             'profilePicture' => 'sometimes|image|max:2048' // optional, max 2mb
         ]);
@@ -59,27 +55,4 @@ class CustomerAuthController extends Controller
             'data' => $customer
         ], 201);
     }
-
-public function login(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email',
-        'password' => 'required|string',
-    ]);
-
-    $customer = Customer::where('email', $request->email)->first();
-
-    if (!$customer || !Hash::check($request->password, $customer->password)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid credentials'
-        ], 401);
-    }
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Login successful',
-        'data' => $customer
-    ]);
-}
 }

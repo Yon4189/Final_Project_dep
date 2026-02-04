@@ -23,7 +23,7 @@ return new class extends Migration
             $table->float('serviceRadiusKm')->nullable(); 
             $table->timestamps();
 
-            $table->foreign('catagoryID')->references('catagoryID')->on('catagories');
+            $table->foreign('serviceCategory')->references('catagoryID')->on('catagories');
         });
     }
 

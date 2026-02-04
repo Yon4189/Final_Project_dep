@@ -45,10 +45,4 @@ class ServiceProvider extends Model
             'bookingID'    // local key on bookings table
         );
     }
-
-    //connecting to notification
-
-    public function notifications() {
-            return $this->hasMany(Notification::class, 'providerID', 'providerID');
-        }
 }
