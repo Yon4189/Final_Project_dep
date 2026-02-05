@@ -2,72 +2,68 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
-import api, { MOCK_MODE, sleep } from '../api/axios';
+import api from '../api/axios'; // Import our Axios instance
 
 const Login = () => {
+  // State for input values and UI feedback
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const { login } = useAuth(); // Global function to save user session
+  const navigate = useNavigate(); // Function to redirect users
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    e.preventDefault(); // Prevent page refresh on form submit
+    setError('');       // Clear previous errors
+    setIsLoading(true); // Start loading animation
 
     try {
-      if (MOCK_MODE) {
-        // --- MOCK LOGIC ---
-        await sleep(1000); 
-        if (email === 'admin@gmail.com' && password === '123456') {
-          login({ name: 'Yonas Abate', role: 'admin' }, 'fake-jwt-token');
-          navigate('/');
-        } else {
-          setError('Invalid credentials.');
-        }
-      } else {
-        // --- REAL DATABASE INTEGRATION ---
-        const response = await api.post('/admin/login', { 
-          email: email, 
-          password: password 
-        });
+      // 1. Send Login Request to Laravel
+      const response = await api.post('/admin/login', { 
+        email: email, 
+        password: password 
+      });
 
-        if (response.data.success) {
-          const adminData = response.data.data;
-          const userSession = {
-            id: adminData.adminID,
-            name: adminData.fullname,
-            email: adminData.email,
-            role: 'admin'
-          };
-          login(userSession, "session_active"); 
-          navigate('/');
-        }
+      // 2. If Laravel returns success: true
+      if (response.data.success) {
+        const adminData = response.data.data;
+        
+        // Structure the session data
+        const userSession = {
+          id: adminData.adminID,
+          name: adminData.fullname,
+          email: adminData.email,
+          role: 'admin'
+        };
+
+        // 3. Update Auth Context and Redirect
+        login(userSession, "session_active"); 
+        navigate('/');
       }
     } catch (err) {
+      // 4. Handle Errors (Wrong password or Server offline)
       if (err.response) {
         setError(err.response.data.message || "Login failed.");
       } else {
         setError("Network error: Server is offline.");
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading animation regardless of result
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-      {/* Centered Login Card */}
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 md:p-14 animate-in fade-in zoom-in duration-500">
         
         <div className="text-center mb-10">
           <h2 className="text-3xl font-black text-slate-800">Admin Login</h2>
         </div>
 
+        {/* Display Error Message if it exists */}
         {error && (
           <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl text-center">
             {error}
@@ -75,31 +71,31 @@ const Login = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-          {/* Email / Username Field */}
-     <div className="relative">
-          <input 
-          type="email" 
-          required
-          autoComplete="off" // Tells browser not to show previous emails
-          placeholder="Enter your email address"
-          className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 font-medium"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-       />
-      <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
-  </div>
+          {/* Email Field */}
+          <div className="relative">
+            <input 
+              type="email" 
+              required
+              autoComplete="off" 
+              placeholder="Enter your email address"
+              className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 font-medium"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
+          </div>
 
           {/* Password Field */}
-<div className="relative">
-    <input 
-      type={showPassword ? "text" : "password"} 
-      required
-      autoComplete="new-password" // "new-password" is the strongest way to stop auto-fill
-      placeholder="Enter your password"
-      className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 font-medium"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-    />
+          <div className="relative">
+            <input 
+              type={showPassword ? "text" : "password"} 
+              required
+              autoComplete="new-password" 
+              placeholder="Enter your password"
+              className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 font-medium"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <button 
               type="button"
               onClick={() => setShowPassword(!showPassword)}
@@ -109,14 +105,13 @@ const Login = () => {
             </button>
           </div>
 
-          {/* Forgot Password Link */}
           <div className="text-right">
             <button type="button" className="text-blue-600 text-xs font-bold hover:underline transition-all">
               Forgot Password?
             </button>
           </div>
 
-          {/* Login Button (Pill Shape) */}
+          {/* Login Button with Loading State */}
           <button 
             type="submit" 
             disabled={isLoading}

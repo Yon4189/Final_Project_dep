@@ -39,12 +39,13 @@ const Profile = () => {
 
         {/* Info Form */}
         <div className="md:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <form onSubmit={handleUpdate} className="p-8 space-y-6">
+          <form onSubmit={handleUpdate} className="p-8 space-y-6" autoComplete="off">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</label>
                 <input 
                   type="text" 
+                  autoComplete="off"
                   className="w-full border-2 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-admin-accent transition-all font-medium text-slate-700"
                   value={profileData.name}
                   onChange={(e) => setProfileData({...profileData, name: e.target.value})}
@@ -81,8 +82,8 @@ const Profile = () => {
               </div>
             </div>
 
-            <button type="submit" className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2">
-              <ShieldCheck size={20} /> Update Account Security
+            <button type="submit" className="w-full bg-[#4a90e2] hover:bg-blue-600 disabled:bg-blue-300 text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2">
+              <ShieldCheck size={20} /> Update Account 
             </button>
           </form>
         </div>
