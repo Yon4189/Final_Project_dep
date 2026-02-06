@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('phone'); // phone number
             $table->string('password'); // hashed password
             $table->string('profilePicture')->nullable(); // optional profile picture path
-
+            
             $table->timestamps(); // created_at and updated_at
         });
     }

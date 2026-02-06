@@ -14,7 +14,9 @@ class ServiceProvider extends Model
     protected $primaryKey = 'providerID'; // primary key
 
     protected $fillable = [
-        'fullname', 'phone', 'email', 'password', 'catagoryID', 'idPhoto', 'isVerified', 'bio', 'walletBalance', 'serviceRadiusKm', 'profilePicture'
+        'fullname', 'phone', 'email', 'password', 'service_city', 
+        'catagoryID', 'idPhoto', 'isVerified', 'bio', 'walletBalance', 
+        'serviceRadiusKm', 'profilePicture','estimatedPrice'
     ];
 
     // a provider can have many services
@@ -45,4 +47,10 @@ class ServiceProvider extends Model
             'bookingID'    // local key on bookings table
         );
     }
+
+    //connecting to notification
+
+    public function notifications() {
+            return $this->hasMany(Notification::class, 'providerID', 'providerID');
+        }
 }
