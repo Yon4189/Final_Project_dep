@@ -9,33 +9,38 @@ use Illuminate\Support\Facades\Hash;
 class AdminAuthController extends Controller
 {
     public function login(Request $request)
-    {
-        // Validate required fields
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
-        ]);
+{
+    // validate input and return JSON if ther are errors
+    $validator = \Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        // Use input() to safely get the data (works with JSON or form-data)
-        $email = $request->input('email');
-        $password = $request->input('password');
-
-        // Find the admin by email
-        $admin = Admin::where('email', $email)->first();
-
-        // Check if admin exists and password matches
-        if (!$admin || !Hash::check($password, $admin->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid credentials'
-            ], 401);
-        }
-
-        // Login successful
+    if ($validator->fails()) {
         return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'data' => $admin
-        ]);
+            'success' => false,
+            'message' => 'Validation errors',
+            'errors' => $validator->errors()
+        ], 422);
     }
+
+    // find admins by their email
+    $admin = Admin::where('email', $request->email)->first();
+
+
+    // password check
+    if (!$admin || !Hash::check($request->password, $admin->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid credentials'
+        ], 401);
+    }
+
+    // return success json
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'data' => $admin
+    ]);
+}
 }
