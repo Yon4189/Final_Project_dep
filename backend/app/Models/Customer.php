@@ -7,12 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
+    
     use HasFactory;
 
     protected $primaryKey = 'customerID'; // primary key
 
     protected $fillable = [
-        'fullname', 'phone', 'email', 'password', 'location', 'profilePicture', 'bio', 'walletBalance', 'serviceRadiusKm'
+        'fullname', 'phone', 'email', 'password', 'location', 'profilePicture', 'bio', 'walletBalance', 'serviceRadiusKm', 'service_city',
+            'service_latitude', 'service_longitude'
+
     ];
 
     // a customer can have many bookings

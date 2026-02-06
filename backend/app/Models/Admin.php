@@ -3,29 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable; // use for login
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
 
-class Admin extends Authenticatable
+class Admin extends Model
 {
-    use HasFactory, Notifiable;
+    use HasFactory;
 
-    protected $primaryKey = 'adminID'; // primary key
+    protected $table = 'admins';
+    protected $primaryKey = 'adminID';
 
     protected $fillable = [
-        'fullname', 'email', 'phone', 'password'
-    ];
-
-    // hide password from serialization
-    protected $hidden = [
+        'fullname',
+        'email',
+        'phone',
         'password'
     ];
 
-    // cast attributes
-    protected function casts(): array
+    // Optional: automatically hash password when setting it
+    public function setPasswordAttribute($password)
     {
-        return [
-            'password' => 'hashed',
-        ];
+        $this->attributes['password'] = Hash::make($password);
     }
 }
