@@ -3,16 +3,18 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\ServiceProviderAuthController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\ProvidersearchController;
 use App\Http\Controllers\ForgotPasswordController;
-use App\Http\Controllers\NotificationController;
 
 
 
 // customer registration endpoint
 Route::post('/register/customer', [CustomerAuthController::class, 'register']);
+// Customer login
 Route::post('/login/customer', [CustomerAuthController::class, 'login']);
+
 
 // service provider registration endpoint
 Route::post('/register/provider', [ServiceProviderAuthController::class, 'register']);

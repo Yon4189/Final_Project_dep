@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\Customer;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use illuminate\Support\Facades\Validator;
 
 class CustomerAuthController extends Controller
 {

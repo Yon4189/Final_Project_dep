@@ -1,3 +1,13 @@
-/vendor
-/node_modules
-.env
+# Ignore these anywhere they appear in the project
+**/vendor/
+**/node_modules/
+**/.env
+**/.env.*
+**/.vscode/
+**/.idea/
+**/storage/*.key
+**/public/storage
+**/public/build
+*.log
+.DS_Store
+Thumbs.db
