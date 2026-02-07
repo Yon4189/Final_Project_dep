@@ -16,6 +16,7 @@ import Disputes from './pages/Disputes';
 import Payments from './pages/Payments';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import ResetPassword from './pages/ResetPassword';
 
 /**
  * 🛡️ ProtectedRoute Component
@@ -39,10 +40,11 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Route: Login */}
+          {/* ✅ 1. PUBLIC ROUTES - Anyone can see these */}
           <Route path="/login" element={<Login />} />
-          
-          {/* 🔐 Protected Routes: All routes inside here require login and use the Layout */}
+          <Route path="/reset-password" element={<ResetPassword />} /> 
+
+          {/* 🔐 2. PROTECTED ROUTES - Only logged-in users */}
           <Route 
             path="/" 
             element={
@@ -51,21 +53,18 @@ function App() {
               </ProtectedRoute>
             }
           >
-            {/* The "index" route is what shows up at exactly http://localhost:5173/ */}
             <Route index element={<Dashboard />} />
-
-            {/* Placeholder routes for the other sidebar links 
-                We will replace these <div>s with real components in the next steps */}
             <Route path="verification" element={<Verification />} />
-            <Route path="users"    element={<Users />} />
-            <Route path="services" element={<Services />} />
-            <Route path="bookings" element={<Bookings />} />
-            <Route path="disputes" element={<Disputes />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="profile" element={<Profile />} />
+            <Route path="users"      element={<Users />} />
+            <Route path="services"   element={<Services />} />
+            <Route path="bookings"   element={<Bookings />} />
+            <Route path="disputes"   element={<Disputes />} />
+            <Route path="payments"   element={<Payments />} />
+            <Route path="settings"   element={<Settings />} />
+            <Route path="profile"    element={<Profile />} />
 
-            {/* 404 Catch-all */}
+            {/* Remove the /reset-password line from here! */}
+
             <Route path="*" element={<div className="p-10 text-center font-bold">404 - Page Not Found</div>} />
           </Route>
         </Routes>
