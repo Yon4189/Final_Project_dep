@@ -3,7 +3,7 @@ import axios from 'axios';
 export const MOCK_MODE = false 
 
 const api = axios.create({
-  baseURL: 'http://10.161.163.121:8000/api',
+  baseURL: 'http://10.161.152.36:8000/api',
     headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
