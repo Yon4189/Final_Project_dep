@@ -33,3 +33,8 @@ Route::get( '/search/providers',[ProviderSearchController::class, 'search']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
 Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword']);
 
+
+
+Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
+
+Route::get('/providers/pending',[AdminAuthController::class, 'pendingProviders']);

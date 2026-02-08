@@ -21,64 +21,66 @@ class ServiceProviderAuthController extends Controller
      * - returning json response
      */
 
+    
     public function register(Request $request)
     {
-        // validate input using 
-        $validator = \Validator::make($request->all(), [
-            'fullname' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s]+$/'],
-            'email' => 'required|email|unique:serviceproviders,email',
-            'phone' => ['required', 'unique:serviceproviders,phone', 'regex:/^(09|07)[0-9]{8}$/'],
-            'password' => 'required|string|min:8|confirmed', // expects password_confirmation
-            'service_city' => 'required|string|max:255',
-            'catagoryID' => 'required', // dropdown, only required
-            'profilePicture' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
-        ]);
+    // validate input
+    $validator = \Validator::make($request->all(), [
+        'fullname' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s]+$/'],
+        'email' => 'required|email|unique:serviceproviders,email',
+        'phone' => ['required', 'unique:serviceproviders,phone', 'regex:/^(09|07)[0-9]{8}$/'],
+        'password' => 'required|string|min:8|confirmed',
+        'service_city' => 'required|string|max:255',
+        'catagoryID' => 'required', // dropdown
+        'profilePicture' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+        'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // handle file uploads with random names to avoid collisions
-        $profilePath = null;
-        if ($request->hasFile('profilePicture')) {
-            $file = $request->file('profilePicture');
-            $profileName = \Str::random(20) . '_profile.' . $file->getClientOriginalExtension();
-            $file->move(public_path('profilepics'), $profileName);
-            $profilePath = 'profilepics/' . $profileName;
-        }
-
-        $idPhotoPath = null;
-        if ($request->hasFile('idPhoto')) {
-            $file = $request->file('idPhoto');
-            $idPhotoName = \Str::random(20) . '_id.' . $file->getClientOriginalExtension();
-            $file->move(public_path('idphoto'), $idPhotoName);
-            $idPhotoPath = 'idphoto/' . $idPhotoName;
-        }
-
-        // this creates new service provider. a record
-        $provider = ServiceProvider::create([
-            'fullname' => $request->fullname,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => \Hash::make($request->password),
-            'service_city' => $request->service_city,
-            'catagoryID' => $request->catagoryID,
-            'profilePicture' => $profilePath,
-            'idPhoto' => $idPhotoPath,
-            'isVerified' => false, // default, requires admin approval
-        ]);
-
-        // JSON respons return
+    if ($validator->fails()) {
         return response()->json([
-            'success' => true,
-            'message' => 'Service provider registered successfully',
-            'data' => $provider
-        ], 201);
+            'success' => false,
+            'message' => 'Validation errors',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    // handle file uploads
+    $profilePath = null;
+    if ($request->hasFile('profilePicture')) {
+        $file = $request->file('profilePicture');
+        $profileName = \Str::random(20) . '_profile.' . $file->getClientOriginalExtension();
+        $file->move(public_path('profilepics'), $profileName);
+        $profilePath = 'profilepics/' . $profileName;
+    }
+
+    $idPhotoPath = null;
+    if ($request->hasFile('idPhoto')) {
+        $file = $request->file('idPhoto');
+        $idPhotoName = \Str::random(20) . '_id.' . $file->getClientOriginalExtension();
+        $file->move(public_path('idphoto'), $idPhotoName);
+        $idPhotoPath = 'idphoto/' . $idPhotoName;
+    }
+
+    // create new provider
+    $provider = ServiceProvider::create([
+        'fullname' => $request->fullname,
+        'email' => $request->email,
+        'phone' => $request->phone,
+        'password' => \Hash::make($request->password),
+        'service_city' => $request->service_city,
+        'catagoryID' => $request->catagoryID,
+        'profilePicture' => $profilePath,
+        'idPhoto' => $idPhotoPath,
+        'idPhotoType' => $request->idPhotoType, // new
+        'isVerified' => null, // default null until admin approves/rejects
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Service provider registered successfully',
+        'data' => $provider
+    ], 201);
     }
 
     public function login(Request $request)

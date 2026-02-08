@@ -53,4 +53,8 @@ class ServiceProvider extends Model
     public function notifications() {
             return $this->hasMany(Notification::class, 'providerID', 'providerID');
         }
+
+    public function catagory(){
+        return $this->belongsTo(\App\Models\Category::class, 'catagoryID', 'catagoryID');
+    }
 }
