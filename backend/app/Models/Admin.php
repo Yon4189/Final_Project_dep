@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Foundation\Auth\User as Authenticatable; // Change this
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 
-class Admin extends Model
+class Admin extends Authenticatable // Change this
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
 
     protected $table = 'admins';
     protected $primaryKey = 'adminID';
@@ -20,9 +21,15 @@ class Admin extends Model
         'password'
     ];
 
-    // Optional: automatically hash password when setting it
+    protected $hidden = [
+        'password',
+    ];
+
     public function setPasswordAttribute($password)
     {
-        $this->attributes['password'] = Hash::make($password);
+        // Only hash the password if it's not already hashed
+        $this->attributes['password'] = Hash::needsRehash($password) 
+            ? Hash::make($password) 
+            : $password;
     }
 }
