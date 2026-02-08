@@ -104,6 +104,8 @@ const Login = () => {
             <div className="relative">
               <input 
                 type={showPassword ? "text" : "password"} required placeholder="Enter your password"
+                name="admin_password_unique"
+                autoComplete="new-password"
                 className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
                 value={password} onChange={(e) => setPassword(e.target.value)}
               />
