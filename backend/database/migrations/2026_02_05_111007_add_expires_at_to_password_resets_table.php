@@ -9,20 +9,27 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+
     public function up()
-{
-    Schema::create('password_resets', function (Blueprint $table) {
-        $table->string('email')->index();
-        $table->string('token');
-        $table->timestamp('created_at')->nullable();
+    {
+    Schema::table('password_resets', function (Blueprint $table) {
+        $table->timestamp('expires_at')->nullable()->after('created_at');
     });
-}
+    }
+
 
     /**
      * Reverse the migrations.
      */
-    public function down(): void
+
+
+    public function down()
     {
-        Schema::dropIfExists('password_resets');
+    Schema::table('password_resets', function (Blueprint $table) {
+        $table->dropColumn('expires_at');
+    });
     }
+
+
+
 };

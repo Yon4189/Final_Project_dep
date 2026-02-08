@@ -11,8 +11,7 @@ return new class extends Migration
         Schema::create('serviceProviders', function (Blueprint $table) {
             $table->id('providerID');                   
             $table->string('fullname');                 
-            $table->string('phone')->unique();
-            $table->string('service_city')->nullable();                    
+            $table->string('phone')->unique();                    
             $table->string('email')->unique();          
             $table->string('password');                 
             $table->unsignedBigInteger('catagoryID'); // FK to catagories
