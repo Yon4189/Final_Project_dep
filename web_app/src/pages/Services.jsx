@@ -1,13 +1,30 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, X, CheckCircle } from 'lucide-react';
+import { useEffect } from 'react';
 
 const Services = () => {
   // 1. Initial Mock Data (Using realistic IDs)
   const [categories, setCategories] = useState([
-    { id: "CAT-001", name: "Plumbing", description: "Water pipe repairs and installations", status: "Active" },
-    { id: "CAT-002", name: "Cleaning", description: "Deep house cleaning and laundry services", status: "Active" },
-    { id: "CAT-003", name: "Electrical", description: "Wiring, socket fixing and appliance repair", status: "Active" },
+    // { id: "CAT-001", name: "Plumbing", description: "Water pipe repairs and installations", status: "Active" },
+    // { id: "CAT-002", name: "Cleaning", description: "Deep house cleaning and laundry services", status: "Active" },
+    // { id: "CAT-003", name: "Electrical", description: "Wiring, socket fixing and appliance repair", status: "Active" },
   ]);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/categories')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const mapped = data.data.map(cat => ({
+            id: cat.catagoryID,
+            name: cat.name,
+            description: cat.description,
+            status: cat.status
+          }));
+          setCategories(mapped);
+        }
+      });
+  }, []);
 
   // 2. States for Modal and Form
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,32 +43,116 @@ const Services = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingCategory) {
-      // UPDATE Logic
-      setCategories(prev => prev.map(c => 
-        c.id === editingCategory.id ? { ...c, ...formData } : c
-      ));
-    } else {
-      // CREATE Logic
-      const newCategory = {
-        // Generate a readable ID for the mock
-        id: `CAT-${Math.floor(Math.random() * 900) + 100}`, 
-        ...formData,
-        status: "Active"
-      };
-      setCategories([...categories, newCategory]);
+    
+
+    try {
+      if (editingCategory) {
+        // TODO: API call to update category (later)
+
+        
+        // EDIT Logic
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/api/categories/${editingCategory.id}`, {
+          method: 'PUT', // use PUT for update
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData), // send updated name & description
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Update frontend state
+          setCategories(categories.map(cat =>
+            cat.id === editingCategory.id
+              ? {
+                  id: data.data.catagoryID,
+                  name: data.data.name,
+                  description: data.data.description,
+                  status: data.data.status,
+                }
+              : cat
+          ));
+          setIsModalOpen(false); // close modal
+        } else {
+          alert(data.message || 'Failed to update category');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error connecting to server');
+      }
+      } else {
+        // CREATE Logic → send form data to Laravel API
+        const response = await fetch(`http://127.0.0.1:8000/api/categories`, {
+          method: 'POST',                     // Must match backend POST route
+          headers: {
+            'Content-Type': 'application/json',  
+          },
+          body: JSON.stringify(formData)      
+        });
+
+        const data = await response.json();   // Parse JSON response
+
+        if (data.success) {
+          const newCat = {
+            
+            id: data.data.catagoryID,  // map catagoryID → id
+            name: data.data.name,
+            description: data.data.description,
+            status: data.data.status
+          };
+          setCategories([...categories, newCat]);
+          setIsModalOpen(false);
+        }
+
+
+        if (data.success) {
+          // Update local state with the category returned from backend
+          setCategories([...categories, data.category]);
+          setIsModalOpen(false);              // Close modal
+        } else {
+          alert(data.message || 'Something went wrong'); // Show error
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error connecting to server');     // Handle network errors
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id, name) => {
-    if (window.confirm(`Delete "${name}" category? Providers in this category will be affected.`)) {
-      setCategories(prev => prev.filter(c => c.id !== id));
+  const handleDelete = async (id, name) => {
+
+    if (!id) {
+      console.error("Category ID is undefined");
+      return;
+    }
+
+    if (!window.confirm(`Delete "${name}" category? Providers in this category will be affected.`)) {
+      return;
+    }
+
+    try {
+      if(!id){ console.error('Catedoru ID is undefinedddd'); return;}
+      const response = await fetch(`http://127.0.0.1:8000/api/categories/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setCategories(prev => prev.filter(cat => cat.id !== id));
+      } else {
+        alert(data.message || 'Failed to delete category');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error connecting to server');
     }
   };
-
+    console.log('Catagories state:', categories)
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -62,8 +163,7 @@ const Services = () => {
         
         <button 
           onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-admin-accent hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95"
-        >
+          className="flex items-center gap-2 bg-admin-accent hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95">
           <Plus size={20} />
           Add New Category
         </button>
@@ -104,7 +204,9 @@ const Services = () => {
                     >
                       <Edit2 size={14} /> Edit
                     </button>
+
                     <button 
+                      type = "button"
                       onClick={() => handleDelete(cat.id, cat.name)}
                       className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
                     >

@@ -25,7 +25,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/login/admin', { email, password });
+      const response = await api.post('/admin/login', { email, password });
       if (response.data.success) {
         const adminData = response.data.data;
         const userSession = {
