@@ -96,18 +96,6 @@ const Services = () => {
 
         const data = await response.json();   // Parse JSON response
 
-        if (data.success) {
-          const newCat = {
-            
-            id: data.data.catagoryID,  // map catagoryID → id
-            name: data.data.name,
-            description: data.data.description,
-            status: data.data.status
-          };
-          setCategories([...categories, newCat]);
-          setIsModalOpen(false);
-        }
-
 
         if (data.success) {
           // Update local state with the category returned from backend
