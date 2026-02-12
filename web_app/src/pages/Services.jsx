@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, CheckCircle } from 'lucide-react';
-import { useEffect } from 'react';
+
 
 const Services = () => {
   // 1. Initial Mock Data (Using realistic IDs)
@@ -45,53 +46,53 @@ const Services = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
 
     try {
       if (editingCategory) {
         // TODO: API call to update category (later)
 
-        
+
         // EDIT Logic
-      try {
-        const response = await fetch(`http://127.0.0.1:8000/api/categories/${editingCategory.id}`, {
-          method: 'PUT', // use PUT for update
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData), // send updated name & description
-        });
+        try {
+          const response = await fetch(`http://127.0.0.1:8000/api/categories/${editingCategory.id}`, {
+            method: 'PUT', // use PUT for update
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData), // send updated name & description
+          });
 
-        const data = await response.json();
+          const data = await response.json();
 
-        if (data.success) {
-          // Update frontend state
-          setCategories(categories.map(cat =>
-            cat.id === editingCategory.id
-              ? {
+          if (data.success) {
+            // Update frontend state
+            setCategories(categories.map(cat =>
+              cat.id === editingCategory.id
+                ? {
                   id: data.data.catagoryID,
                   name: data.data.name,
                   description: data.data.description,
                   status: data.data.status,
                 }
-              : cat
-          ));
-          setIsModalOpen(false); // close modal
-        } else {
-          alert(data.message || 'Failed to update category');
+                : cat
+            ));
+            setIsModalOpen(false); // close modal
+          } else {
+            alert(data.message || 'Failed to update category');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error connecting to server');
         }
-      } catch (err) {
-        console.error(err);
-        alert('Error connecting to server');
-      }
       } else {
         // CREATE Logic → send form data to Laravel API
         const response = await fetch(`http://127.0.0.1:8000/api/categories`, {
           method: 'POST',                     // Must match backend POST route
           headers: {
-            'Content-Type': 'application/json',  
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData)      
+          body: JSON.stringify(formData)
         });
 
         const data = await response.json();   // Parse JSON response
@@ -123,7 +124,7 @@ const Services = () => {
     }
 
     try {
-      if(!id){ console.error('Catedoru ID is undefinedddd'); return;}
+
       const response = await fetch(`http://127.0.0.1:8000/api/categories/${id}`, {
         method: 'DELETE',
       });
@@ -140,7 +141,7 @@ const Services = () => {
       alert('Error connecting to server');
     }
   };
-    console.log('Catagories state:', categories)
+  console.log('Catagories state:', categories)
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -148,8 +149,8 @@ const Services = () => {
           <h1 className="text-2xl font-black text-slate-900">Manage Service Categories</h1>
           <p className="text-slate-500 text-sm">Configure the types of services available on the platform.</p>
         </div>
-        
-        <button 
+
+        <button
           onClick={() => handleOpenModal()}
           className="flex items-center gap-2 bg-admin-accent hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95">
           <Plus size={20} />
@@ -186,15 +187,15 @@ const Services = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex justify-end gap-2">
-                    <button 
+                    <button
                       onClick={() => handleOpenModal(cat)}
                       className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
                     >
                       <Edit2 size={14} /> Edit
                     </button>
 
-                    <button 
-                      type = "button"
+                    <button
+                      type="button"
                       onClick={() => handleDelete(cat.id, cat.name)}
                       className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
                     >
@@ -223,39 +224,39 @@ const Services = () => {
                 <X size={24} />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Name</label>
-                <input 
+                <input
                   type="text" required
                   className="w-full border-2 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-admin-accent transition-all text-slate-700 font-medium"
                   placeholder="e.g. Home Cleaning"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Description</label>
-                <textarea 
+                <textarea
                   required rows="3"
                   className="w-full border-2 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-admin-accent transition-all text-slate-700 font-medium"
                   placeholder="Briefly describe what this service covers..."
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
 
               <div className="flex gap-4 pt-2">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-xl transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 bg-admin-accent hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2"
                 >

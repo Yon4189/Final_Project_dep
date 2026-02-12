@@ -16,7 +16,8 @@ class ServiceProvider extends Model
     protected $fillable = [
         'fullname', 'phone', 'email', 'password', 'service_city', 
         'catagoryID', 'idPhoto', 'isVerified', 'bio', 'walletBalance', 
-        'serviceRadiusKm', 'profilePicture','estimatedPrice'
+        'serviceRadiusKm', 'profilePicture','estimatedPrice',
+        'idPhotoType', 'verification_reason', 'rejection_reason'
     ];
 
     // a provider can have many services
@@ -54,7 +55,7 @@ class ServiceProvider extends Model
             return $this->hasMany(Notification::class, 'providerID', 'providerID');
         }
 
-    public function catagory(){
+    public function category(){
         return $this->belongsTo(\App\Models\Category::class, 'catagoryID', 'catagoryID');
     }
 }
