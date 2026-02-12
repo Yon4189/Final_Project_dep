@@ -81,7 +81,7 @@ class AdminAuthController extends Controller
         // Prepare email
         if ($request->isVerified) {
             $status = 'approved';
-            $emailBody = {"
+            $emailBody = "
                 <p>Hello {$provider->fullname},</p>
                 <p>Your account has been <strong>approved</strong> by the admin.</p>
                 <p><a href='http://localhost:5173/login' style='display:inline-block;padding:10px 20px;background-color:#1d72b8;color:#fff;text-decoration:none;border-radius:5px;'>Go to Login</a></p>";
