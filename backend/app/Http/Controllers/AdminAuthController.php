@@ -6,13 +6,14 @@ use Illuminate\Http\Request;
 use App\Models\Admin;
 use Illuminate\Support\Facades\Hash;
 use App\Models\ServiceProvider;
+use Illuminate\support\Facades\Validator;
 
 class AdminAuthController extends Controller
 {
     public function login(Request $request)
     {
     // validate input and return JSON if ther are errors
-    $validator = \Validator::make($request->all(), [
+    $validator = Validator::make($request->all(), [
         'email' => 'required|email',
         'password' => 'required|string',
     ]);
