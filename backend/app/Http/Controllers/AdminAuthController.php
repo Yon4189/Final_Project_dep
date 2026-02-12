@@ -12,7 +12,7 @@ class AdminAuthController extends Controller
     public function login(Request $request)
     {
     // validate input and return JSON if ther are errors
-    $validator = \Validator::make($request->all(), [
+    $validator = Validator::make($request->all(), [
         'email' => 'required|email',
         'password' => 'required|string',
     ]);
