@@ -9,8 +9,7 @@ class ServiceProvider extends Model
 {
     use HasFactory;
 
-    protected $table = 'serviceproviders';
-
+     protected $table = 'service_providers';
     protected $primaryKey = 'providerID'; // primary key
 
     protected $fillable = [
@@ -54,7 +53,7 @@ class ServiceProvider extends Model
             return $this->hasMany(Notification::class, 'providerID', 'providerID');
         }
 
-    public function catagory(){
+    public function category(){
         return $this->belongsTo(\App\Models\Category::class, 'catagoryID', 'catagoryID');
     }
 }
