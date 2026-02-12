@@ -28,8 +28,8 @@ class ForgotPasswordController extends Controller
         if ($user) $userTable = 'customers';
 
         if (!$user) {
-            $user = DB::table('serviceproviders')->where('email', $email)->first();
-            if ($user) $userTable = 'serviceproviders';
+            $user = DB::table('service_providers')->where('email', $email)->first();
+            if ($user) $userTable = 'service_providers';
         }
 
         if (!$user) {
@@ -117,7 +117,7 @@ class ForgotPasswordController extends Controller
         // find which table the user is in
         $userTable = null;
         if (DB::table('customers')->where('email', $email)->exists()) $userTable = 'customers';
-        elseif (DB::table('serviceproviders')->where('email', $email)->exists()) $userTable = 'serviceproviders';
+        elseif (DB::table('service_providers')->where('email', $email)->exists()) $userTable = 'service_providers';
         elseif (DB::table('admins')->where('email', $email)->exists()) $userTable = 'admins';
 
         if (!$userTable) {
