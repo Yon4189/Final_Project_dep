@@ -29,8 +29,8 @@ class ServiceProviderAuthController extends Controller
     // validate input
     $validator = Validator::make($request->all(), [
         'fullname' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s]+$/'],
-        'email' => 'required|email|unique:serviceproviders,email',
-        'phone' => ['required', 'unique:serviceproviders,phone', 'regex:/^(09|07)[0-9]{8}$/'],
+        'email' => 'required|email|unique:service_providers,email',
+        'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
         'password' => 'required|string|min:8|confirmed',
         'service_city' => 'required|string|max:255',
         'catagoryID' => 'required', // dropdown

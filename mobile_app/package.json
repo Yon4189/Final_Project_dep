@@ -1,0 +1,18 @@
+{
+  "devDependencies": {
+    "@react-native-community/cli": "^20.1.1",
+    "@react-native/metro-config": "^0.83.1"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-native": "^0.83.1"
+  },
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios"
+
+
+    
+  }
+}
