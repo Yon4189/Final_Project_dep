@@ -12,9 +12,9 @@ const Sidebar = () => {
   // 2. Assign the components to your menu items
   const menuItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Manage Services', path: '/services', icon: Wrench },
     { name: 'Provider Verification', path: '/verification', icon: UserCheck },
     { name: 'User Management', path: '/users', icon: Users },
-    { name: 'Manage Services', path: '/services', icon: Wrench },
     { name: 'Service Bookings', path: '/bookings', icon: ClipboardList },
     { name: 'Dispute Resolution', path: '/disputes', icon: Scale },
     { name: 'Payment Analytics', path: '/payments', icon: BarChart3 },
