@@ -116,7 +116,7 @@ const ServiceCatalog = () => {
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Updating Catalog...</span>
         </div>
       ) : (
-        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-[2 rem] shadow-sm border border-slate-200 overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
               <tr>
