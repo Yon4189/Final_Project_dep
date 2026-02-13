@@ -186,7 +186,7 @@ const ServiceCatalog = () => {
                   type="text" required placeholder="e.g. Plumbing or Pipe Repair"
                   className="w-full bg-slate-100 border-none rounded-2xl py-4 px-6 outline-none font-bold text-slate-700"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
 
@@ -196,7 +196,7 @@ const ServiceCatalog = () => {
                   required rows="3"
                   className="w-full bg-slate-100 border-none rounded-2xl py-4 px-6 outline-none font-medium text-slate-600"
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
 

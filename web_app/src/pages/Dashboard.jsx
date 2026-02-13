@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import api from '../api/axios'; // Ensure your axios instance is imported
 import StatCard from '../components/StatCard';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const [verificationQueue, setVerificationQueue] = useState([]);
@@ -107,7 +108,7 @@ const Dashboard = () => {
             Refresh List
           </button>
         </div>
-        
+
         <div className="overflow-x-auto">
           {isLoading ? (
             <div className="p-20 text-center flex flex-col items-center gap-3">
