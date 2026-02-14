@@ -9,14 +9,17 @@ use App\Http\Controllers\ProvidersearchController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\CategoryController;
 
-
-
 // customer registration endpoint
+Route::get('/test', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'API is working correctly',
+        'server_time' => now()
+    ]);
+});
 Route::post('/customer/register', [CustomerAuthController::class, 'register']);
 // Customer login
 Route::post('/customer/login', [CustomerAuthController::class, 'login']);
-
-
 // service provider registration endpoint
 Route::post('/provider/register', [ServiceProviderAuthController::class, 'register']);
 // provider's login endpoint

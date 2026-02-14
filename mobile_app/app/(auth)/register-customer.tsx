@@ -1,7 +1,8 @@
 // app/(auth)/register-customer.tsx
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { API_BASE_URL } from "../config/api";
+import axios from "axios";
 import {
   Alert,
   FlatList,
@@ -11,50 +12,92 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import AppButton from '../../components/AppButton';
-import AppInput from '../../components/AppInput';
-import { Colors } from '../constants/Colors';
-import { LOCATIONS } from '../constants/Services';
+} from "react-native";
+import AppButton from "../../components/AppButton";
+import AppInput from "../../components/AppInput";
+import { Colors } from "../constants/Colors";
+import { LOCATIONS } from "../constants/Services";
 export default function RegisterCustomerScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    location: '',
-    password: '',
-    confirmPassword: '',
+    fullname: "",
+    email: "",
+    phone: "",
+    location: "", // optional
+    password: "",
+    password_confirmation: "", // match Laravel validation
   });
+
   const [loading, setLoading] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
 
-  const handleRegister = () => {
-    // Validation
+  const handleRegister = async () => {
     const errors = [];
-    if (!formData.fullName) errors.push('Full Name');
-    if (!formData.email) errors.push('Email');
-    if (!formData.phone) errors.push('Phone Number');
-    if (!formData.location) errors.push('Location');
-    if (!formData.password) errors.push('Password');
-    
+    if (!formData.fullname) errors.push("Full Name");
+    if (!formData.email) errors.push("Email");
+    if (!formData.phone) errors.push("Phone Number");
+    if (!formData.location) errors.push("Location");
+    if (!formData.password) errors.push("Password");
+
     if (errors.length > 0) {
-      Alert.alert('Error', `Please fill all required fields: ${errors.join(', ')}`);
+      Alert.alert(
+        "Error",
+        `Please fill all required fields: ${errors.join(", ")}`,
+      );
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+    if (formData.password !== formData.password_confirmation) {
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      setLoading(true);
+
+      try {
+        const response = await axios.post(`${API_BASE_URL}/customer/register`, {
+          fullname: formData.fullname,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          password_confirmation: formData.password_confirmation,
+          location: formData.location,
+        });
+
+        const data = response.data;
+
+        if (response.status >= 200 && response.status < 300) {
+          Alert.alert("Success", data.message);
+          router.push("/(auth)/login");
+        } else {
+          if (data.errors) {
+            const errorMessages = Object.values(data.errors).flat().join("\n");
+            Alert.alert("Validation Error", errorMessages);
+          } else {
+            Alert.alert("Error", data.message || "Something went wrong");
+          }
+        }
+      } catch (err: any) {
+        if (err.response && err.response.data) {
+          const data = err.response.data;
+          if (data.errors) {
+            const errorMessages = Object.values(data.errors).flat().join("\n");
+            Alert.alert("Validation Error", errorMessages);
+          } else {
+            Alert.alert("Error", data.message || "Something went wrong");
+          }
+        } else {
+          Alert.alert("Error", "Could not connect to server");
+          console.error(err);
+        }
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not connect to server");
+      console.error(error);
+    } finally {
       setLoading(false);
-      Alert.alert('Success', 'Registration successful!');
-      router.push('/(auth)/login');
-    }, 1500);
+    }
   };
 
   const renderModalItem = (item: string, onSelect: () => void) => (
@@ -64,7 +107,7 @@ export default function RegisterCustomerScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <Text style={styles.title}>Customer Registration</Text>
         <Text style={styles.subtitle}>Find trusted service providers</Text>
@@ -74,10 +117,8 @@ export default function RegisterCustomerScreen() {
         {/* Full Name */}
         <AppInput
           label="Full Name"
-          value={formData.fullName}
-          onChangeText={(text) => setFormData({ ...formData, fullName: text })}
-          placeholder="Enter your full name"
-          required
+          value={formData.fullname}
+          onChangeText={(text) => setFormData({ ...formData, fullname: text })}
         />
 
         {/* Email */}
@@ -105,12 +146,18 @@ export default function RegisterCustomerScreen() {
           <Text style={styles.label}>
             Location <Text style={styles.required}>*</Text>
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowLocationModal(true)}
           >
-            <Text style={formData.location ? styles.dropdownText : styles.dropdownPlaceholder}>
-              {formData.location || 'Select Location'}
+            <Text
+              style={
+                formData.location
+                  ? styles.dropdownText
+                  : styles.dropdownPlaceholder
+              }
+            >
+              {formData.location || "Select Location"}
             </Text>
             <Text style={styles.dropdownArrow}>▼</Text>
           </TouchableOpacity>
@@ -129,11 +176,10 @@ export default function RegisterCustomerScreen() {
         {/* Confirm Password */}
         <AppInput
           label="Confirm Password"
-          value={formData.confirmPassword}
-          onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-          placeholder="Confirm password"
-          secureTextEntry
-          required
+          value={formData.password_confirmation}
+          onChangeText={(text) =>
+            setFormData({ ...formData, password_confirmation: text })
+          }
         />
 
         {/* Register Button */}
@@ -148,7 +194,7 @@ export default function RegisterCustomerScreen() {
         {/* Provider Registration Link */}
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => router.push('/(auth)/register-provider')}
+          onPress={() => router.push("/(auth)/register-provider")}
         >
           <Text style={styles.linkText}>
             Register as Service Provider instead
@@ -158,10 +204,11 @@ export default function RegisterCustomerScreen() {
         {/* Login Link */}
         <TouchableOpacity
           style={styles.loginLink}
-          onPress={() => router.push('/(auth)/login')}
+          onPress={() => router.push("/(auth)/login")}
         >
           <Text style={styles.loginText}>
-            Already have an account? <Text style={styles.loginLinkText}>Login</Text>
+            Already have an account?{" "}
+            <Text style={styles.loginLinkText}>Login</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -208,13 +255,13 @@ const styles = StyleSheet.create({
   header: {
     padding: 25,
     backgroundColor: Colors.surface,
-    alignItems: 'center',
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.text.primary,
   },
   subtitle: {
@@ -234,7 +281,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text.primary,
     marginBottom: 8,
   },
@@ -247,9 +294,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   dropdownPlaceholder: {
     fontSize: 16,
@@ -269,16 +316,16 @@ const styles = StyleSheet.create({
   },
   linkButton: {
     padding: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 10,
   },
   linkText: {
     color: Colors.secondary,
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: 14,
   },
   loginLink: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   loginText: {
@@ -286,26 +333,26 @@ const styles = StyleSheet.create({
   },
   loginLinkText: {
     color: Colors.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
     backgroundColor: Colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.text.primary,
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalList: {
     maxHeight: 400,

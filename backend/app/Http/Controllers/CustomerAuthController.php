@@ -28,7 +28,8 @@ class CustomerAuthController extends Controller
             'email' => 'required|email|unique:customers,email',
             'phone' => ['required', 'unique:customers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
             'password' => 'required|string|min:8|confirmed', // expects password_confirmation
-            'profilePicture' => 'sometimes|image|max:2048'
+            'profilePicture' => 'sometimes|image|max:2048',
+            'location' => 'sometimes|string|max:255', // ✅ add this
         ]);
 
         if ($validator->fails()) {
@@ -54,7 +55,8 @@ class CustomerAuthController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'password' => \Hash::make($request->password),
-            'profilePicture' => $profilePath
+            'profilePicture' => $profilePath,
+            'location' => $request->location
         ]);
 
         // Step 4: Return JSON success response

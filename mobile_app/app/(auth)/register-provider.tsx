@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { API_BASE_URL } from '../config/api';
+import axios from 'axios';
 
 import AppButton from '../../components/AppButton';
 import AppInput from '../../components/AppInput';
@@ -107,18 +108,16 @@ export default function RegisterProvider() {
         } as any);
       }
 
-      const response = await fetch(`${API_BASE_URL}/register-provider`, {
-        method: 'POST',
+      const response = await axios.post(`${API_BASE_URL}/provider/register`, data, {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'multipart/form-data',
         },
-        body: data,
       });
 
-      const resJson = await response.json();
+      const resJson = response.data;
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         Alert.alert('Success', resJson.message || 'Registered successfully');
         router.push('/(auth)/login');
       } else {
