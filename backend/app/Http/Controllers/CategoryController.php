@@ -38,7 +38,7 @@ class CategoryController extends Controller
         $category = Category::create([
             'name' => $request->name,
             'description' => $request->description,
-            'status' => 'Active', // default value
+            'status' => $request->status // default value
         ]);
 
         // return JSON with catagoryID (primary key)
@@ -96,6 +96,7 @@ class CategoryController extends Controller
         // 2. Update fields (name & description)
         $category->name = $request->input('name', $category->name);
         $category->description = $request->input('description', $category->description);
+         $category->status = $request->input('status', $category->status);
         
         // 3. Save changes
         $category->save();
