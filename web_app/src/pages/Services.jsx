@@ -110,7 +110,7 @@ const Services = () => {
       
       {/* TOAST NOTIFICATION */}
       {toast.show && (
-        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right-10 duration-300 border ${
+        <div className={`fixed bottom-10 right-10 z- [100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right-10 duration-300 border ${
           toast.type === 'success' ? 'bg-slate-900 text-green-400 border-green-500/20' : 'bg-red-600 text-white border-none'
         }`}>
           {toast.type === 'success' ? <CheckCircle size={20}/> : <AlertCircle size={20}/>}
@@ -135,7 +135,7 @@ const Services = () => {
       </div>
 
       {/* Table Container */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+      <div className="bg-white rounded-[2 rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col">
         <div className="overflow-x-auto flex-1">
           {isLoading ? (
             <div className="p-20 text-center flex flex-col items-center gap-4">
@@ -224,8 +224,8 @@ const Services = () => {
 
       {/* DELETE MODAL */}
       {deleteConfirm.show && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[110] p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-8 text-center space-y-6 animate-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z- [110] p-4">
+          <div className="bg-white rounded-[2 rem] shadow-2xl w-full max-w-sm p-8 text-center space-y-6 animate-in zoom-in duration-200">
              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto border border-red-100">
                {isSubmitting ? <Loader2 className="animate-spin" size={32} /> : <Trash size={32} />}
              </div>
