@@ -36,6 +36,7 @@ Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword'])
 
 
 
+Route::get('/admin/stats', [AdminAuthController::class, 'getStats']);
 Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
 
 Route::get('/providers/pending',[AdminAuthController::class, 'pendingProviders']);
