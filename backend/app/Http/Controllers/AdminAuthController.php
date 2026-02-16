@@ -62,15 +62,15 @@ class AdminAuthController extends Controller
                 'data' => [
                     'providers'  => ServiceProvider::count(),
                     'customers'  => Customer::count(),
-                    'categories' => Category::count(), // Now correctly imported
+                    'categories' => Category::count(),
                     'services'   => Service::count(),
-                    'revenue'    => Transaction::sum('platformFee') 
+                    'revenue'    => Transaction::sum('platformFee')
                 ]
             ]);
         } catch (\Exception $e) {
             Log::error("Dashboard Stats Error: " . $e->getMessage());
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Failed to fetch database stats',
                 'error' => $e->getMessage()
             ], 500);
@@ -78,7 +78,45 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 3. Provider Verification Action (With Email)
+     * 3. Get All Providers (for admin overview and dependency checks)
+     */
+    public function getAllProviders()
+    {
+        try {
+            // Load all providers, optionally with their category relationship
+            $providers = ServiceProvider::with('category')->get();
+
+            // Format each provider (you can reuse formatProvider or adapt)
+            $formatted = $providers->map(function ($provider) {
+                return [
+                    'providerID'   => $provider->providerID,
+                    'fullname'     => $provider->fullname,
+                    'email'        => $provider->email,
+                    'phone'        => $provider->phone,
+                    'catagoryID'   => $provider->catagoryID, // important for frontend checks
+                    'category'     => $provider->category->name ?? null,
+                    'isVerified'   => $provider->isVerified,
+                    'created_at'   => $provider->created_at ? $provider->created_at->format('Y-m-d H:i:s') : null,
+                    // Add any other fields you need
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data'    => $formatted
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Get All Providers Error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch providers',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 4. Provider Verification Action (With Email)
      */
     public function verifyProvider(Request $request, $id)
     {
@@ -87,21 +125,18 @@ class AdminAuthController extends Controller
             'verification_reason' => 'nullable|string|max:255',
         ]);
 
-        // Find by providerID primary key
         $provider = ServiceProvider::find($id);
 
         if (!$provider) {
             return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
         }
 
-        // Update DB
         $provider->isVerified = $request->isVerified ? 1 : 0;
         $provider->verification_reason = $request->isVerified ? null : $request->verification_reason;
         $provider->save();
 
         $statusLabel = $request->isVerified ? 'approved' : 'rejected';
-        
-        // Prepare HTML Email Body
+
         if ($request->isVerified) {
             $emailBody = "
                 <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
@@ -122,7 +157,6 @@ class AdminAuthController extends Controller
                 </div>";
         }
 
-        // Send the Mail
         try {
             Mail::html($emailBody, function ($message) use ($provider, $statusLabel) {
                 $message->to($provider->email)
@@ -143,12 +177,12 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 4. List Pending Providers
+     * 5. List Pending Providers
      */
     public function pendingProviders()
     {
         $pending = ServiceProvider::whereNull('isVerified')
-            ->with('category') // Changed to match the category() method in your ServiceProvider Model
+            ->with('category')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -157,14 +191,42 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 5. Format Helper (Aligns with React Dashboard.jsx keys)
+     * 6. List Approved Providers
+     */
+    public function approvedProviders()
+    {
+        $approved = ServiceProvider::where('isVerified', 1)
+            ->with('category')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $approved]);
+    }
+
+    /**
+     * 7. List Rejected Providers
+     */
+    public function rejectedProviders()
+    {
+        $rejected = ServiceProvider::where('isVerified', 0)
+            ->whereNotNull('verification_reason')
+            ->with('category')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $rejected]);
+    }
+
+    /**
+     * 8. Format Helper (Aligns with React Dashboard.jsx keys)
      */
     private function formatProvider($provider)
     {
         return [
             'id' => $provider->providerID,
             'name' => $provider->fullname,
-            // Accessing the relationship correctly
             'service_type' => $provider->category->name ?? 'General',
             'submission_date' => $provider->created_at ? $provider->created_at->format('M d, Y') : 'N/A',
             'credentials' => $provider->idPhoto ? 'DOC_UPLOADED' : 'NO_DOC',
