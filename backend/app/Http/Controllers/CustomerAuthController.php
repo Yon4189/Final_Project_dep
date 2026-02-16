@@ -54,9 +54,9 @@ class CustomerAuthController extends Controller
             'fullname' => $request->fullname,
             'email' => $request->email,
             'phone' => $request->phone,
-'password' => Hash::make($request->password),
-'profilePicture' => $profilePath,
-'location' => $request->location,
+            'password' => Hash::make($request->password),
+            'profilePicture' => $profilePath,
+            'location' => $request->location
 
         ]);
 

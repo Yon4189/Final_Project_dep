@@ -9,7 +9,6 @@ use App\Models\ServiceProvider;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
-
 class AdminAuthController extends Controller
 {
     public function login(Request $request)

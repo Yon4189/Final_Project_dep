@@ -29,14 +29,14 @@ class ServiceProviderAuthController extends Controller
     // validate input
     $validator = Validator::make($request->all(), [
         'fullname' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s]+$/'],
-        'email' => 'required|email|unique:serviceproviders,email',
-        'phone' => ['required', 'unique:serviceproviders,phone', 'regex:/^(09|07)[0-9]{8}$/'],
+        'email' => 'required|email|unique:service_providers,email',
+        'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
         'password' => 'required|string|min:8|confirmed',
-        'service_city' => 'required|string|max:255',
+       // 'service_city' => 'nullable|string|max:255',
         'catagoryID' => 'required', // dropdown
-        'profilePicture' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-        'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
-        'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
+        'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:20408',
+       'idPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:20480',
+       'idPhotoType' => 'nullable|string|in:Passport,Driver License,National ID,Kebele ID',
     ]);
 
     if ($validator->fails()) {

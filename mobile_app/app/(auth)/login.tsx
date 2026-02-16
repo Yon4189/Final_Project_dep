@@ -15,6 +15,8 @@ import {
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
 import { Colors } from "../constants/Colors";
+import { Icon, icon } from "leaflet";
+import Ionicons from "@expo/vector-icons/build/Ionicons";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -38,10 +40,11 @@ export default function LoginScreen() {
         userType === "customer" ? "/customer/login" : "/provider/login";
 
       const response = await axios.post(
-        `http://${API_BASE_URL}/customer/login`,
+        `${API_BASE_URL}/customer/login`,
         {
+          email: formData.email,
           password: formData.password,
-        },
+        }
       );
 
       setLoading(false);
@@ -87,12 +90,14 @@ export default function LoginScreen() {
             onPress={() => setUserType("customer")}
           >
             <Text
+          
               style={[
                 styles.userTypeText,
                 userType === "customer" && styles.userTypeTextActive,
               ]}
             >
-              Customer
+                <Ionicons name="person-outline" size={40} color={Colors.primary} />
+         Customer
             </Text>
           </TouchableOpacity>
 
@@ -109,12 +114,14 @@ export default function LoginScreen() {
                 userType === "provider" && styles.userTypeTextActive,
               ]}
             >
+             <Ionicons name="construct-outline" size={60} color={Colors.primary} />
               Provider
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Email Input */}
+        <Ionicons name="mail-outline" size={25} color={Colors.primary} />
         <AppInput
           label="Email"
           value={formData.email}
@@ -125,6 +132,9 @@ export default function LoginScreen() {
         />
 
         {/* Password Input */}
+         <View style={styles.container}>
+      {/* Lock Icon */}
+      <Ionicons name="lock-closed-outline" size={25} color={Colors.primary} />
         <AppInput
           label="Password"
           value={formData.password}
@@ -133,6 +143,9 @@ export default function LoginScreen() {
           secureTextEntry
           required
         />
+         {/* Optional: Eye icon to toggle password visibility */}
+
+    </View>
 
         {/* Forgot Password */}
         <TouchableOpacity style={styles.forgotPassword}>
@@ -156,7 +169,7 @@ export default function LoginScreen() {
 
         {/* Registration Options */}
         <Text style={styles.registerTitle}>Don't have an account?</Text>
-
+     <Ionicons name="person-outline" size={40} color={Colors.primary} />
         <AppButton
           title="Register as Customer"
           onPress={() => router.push("/(auth)/register-customer")}
@@ -164,7 +177,7 @@ export default function LoginScreen() {
           fullWidth
           style={styles.registerButton}
         />
-
+       <Ionicons name="construct-outline" size={60} color={Colors.primary} />
         <AppButton
           title="Register as Service Provider"
           onPress={() => router.push("/(auth)/register-provider")}
@@ -178,7 +191,8 @@ export default function LoginScreen() {
           style={styles.skipBtn}
           onPress={() => router.replace("/(auth)/home")}
         >
-          <Text style={styles.skipText}>Continue as Guest</Text>
+          <Text style={styles.skipText}><Ionicons name="person-outline" size={60} color={Colors.primary} />
+Continue as Guest</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

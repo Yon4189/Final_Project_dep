@@ -4,16 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Validator;
 
 class ServiceProvider extends Model
 {
     use HasFactory;
 
-     protected $table = 'service_providers';
+    protected $table = 'service_providers';
+
     protected $primaryKey = 'providerID'; // primary key
 
     protected $fillable = [
-        'fullname', 'phone', 'email', 'password', 'service_city', 
+        'fullname', 'phone', 'email', 'password', //'service_city', 
         'catagoryID', 'idPhoto', 'isVerified', 'bio', 'walletBalance', 
         'serviceRadiusKm', 'profilePicture','estimatedPrice'
     ];
