@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\QueryException; // 👈 Add this
 
 class CategoryController extends Controller
 {
-    // Constructor to apply admin auth middleware
+    // Constructor to apply admin auth middleware (commented out)
     // public function __construct()
     // {
-    //     // Replace 'auth:admin' with your actual admin middleware/guard
     //     $this->middleware('auth:admin'); 
     // }
 
@@ -29,8 +29,8 @@ class CategoryController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failllllled',
-                'errors' => $validator->errors()  // concise JSON errors
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
             ], 422);
         }
 
@@ -38,30 +38,31 @@ class CategoryController extends Controller
         $category = Category::create([
             'name' => $request->name,
             'description' => $request->description,
-            'status' => $request->status // default value
+            'status' => $request->status ?? 'Active' // default value if not provided
         ]);
 
-        // return JSON with catagoryID (primary key)
         return response()->json([
             'success' => true,
             'message' => 'Category created successfully',
-            'category' => $category, // <-- rename data to category
+            'category' => $category,
         ]);
-
-
- 
     }
 
-    // fetch categories from DB
-    public function getCategories(){
+    /**
+     * Fetch all categories (Read)
+     */
+    public function getCategories()
+    {
         $categories = Category::all();
         return response()->json([
-            'success' =>true,
+            'success' => true,
             'data' => $categories
-
         ]);
     }
 
+    /**
+     * Delete a category (Delete) – with foreign key check
+     */
     public function deleteCategory($id)
     {
         $category = Category::find($id);
@@ -73,17 +74,39 @@ class CategoryController extends Controller
             ], 404);
         }
 
-        $category->delete(); // permanently remove
+        try {
+            $category->delete(); // permanently remove
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Category deleted successfully'
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Category deleted successfully'
+            ]);
+        } catch (QueryException $e) {
+            // Check for foreign key constraint violation (MySQL error 1451)
+            if ($e->errorInfo[1] == 1451) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete category because it is still used by services or service providers. Remove or reassign them first.'
+                ], 409); // Conflict
+            }
+            // Other database error
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error: ' . $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting category: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
+    /**
+     * Update a category (Edit)
+     */
     public function editCategory(Request $request, $id)
     {
-        // 1. Find the category by ID
         $category = Category::find($id);
 
         if (!$category) {
@@ -93,15 +116,11 @@ class CategoryController extends Controller
             ], 404);
         }
 
-        // 2. Update fields (name & description)
         $category->name = $request->input('name', $category->name);
         $category->description = $request->input('description', $category->description);
-         $category->status = $request->input('status', $category->status);
-        
-        // 3. Save changes
+        $category->status = $request->input('status', $category->status);
         $category->save();
 
-        // 4. Return updated category
         return response()->json([
             'success' => true,
             'message' => 'Category updated successfully',
@@ -113,6 +132,4 @@ class CategoryController extends Controller
             ]
         ]);
     }
-
-    
 }
