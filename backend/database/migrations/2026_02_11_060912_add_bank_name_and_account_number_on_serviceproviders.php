@@ -11,13 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('catagories', function (Blueprint $table) {
-            $table->string('status')->default('Active')->after('description');
+        Schema::table('service_providers', function (Blueprint $table) {
+            //
         });
-
-
-
-
     }
 
     /**
@@ -25,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('catagories', function (Blueprint $table) {
-            $table->dropColumn('status');
+        Schema::table('service_providers', function (Blueprint $table) {
+            //
         });
     }
 };

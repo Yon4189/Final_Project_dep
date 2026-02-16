@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('serviceproviders', function (Blueprint $table) {
+        Schema::table('service_providers', function (Blueprint $table) {
             $table->boolean('isVerified')->nullable()->change();
         });
     }
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('serviceproviders', function (Blueprint $table) {
+        Schema::table('service_providers', function (Blueprint $table) {
             $table->boolean('isVerified')->nullable(false)->change();
         });
     }

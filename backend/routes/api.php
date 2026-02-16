@@ -42,6 +42,9 @@ Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword'])
 Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
 
 Route::get('/providers/pending',[AdminAuthController::class, 'pendingProviders']);
+Route::get('/providers/approved',[AdminAuthController::class, 'approvedProviders']);
+Route::get('/providers/rejected',[AdminAuthController::class, 'rejectedProviders']);
+Route::get('/providers',[AdminAuthController::class, 'getAllProviders']);
 
 // add, read, delete, edit catagories
 Route::post('/categories', [CategoryController::class, 'addCategory']);

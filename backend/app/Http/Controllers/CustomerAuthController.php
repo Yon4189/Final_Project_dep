@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Customer;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-
 class CustomerAuthController extends Controller
 {
     /**
@@ -23,7 +23,7 @@ class CustomerAuthController extends Controller
     public function register(Request $request)
     {
         // Step 1: Validate input using Validator to return JSON
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'fullname' => 'required|string|max:255',
             'email' => 'required|email|unique:customers,email',
             'phone' => ['required', 'unique:customers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
@@ -44,7 +44,7 @@ class CustomerAuthController extends Controller
         $profilePath = null;
         if ($request->hasFile('profilePicture')) {
             $file = $request->file('profilePicture');
-            $filename = \Str::random(20) . '.' . $file->getClientOriginalExtension();
+            $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('profilepics'), $filename);
             $profilePath = 'profilepics/' . $filename; // store relative path in DB
         }
@@ -54,9 +54,10 @@ class CustomerAuthController extends Controller
             'fullname' => $request->fullname,
             'email' => $request->email,
             'phone' => $request->phone,
-            'password' => \Hash::make($request->password),
-            'profilePicture' => $profilePath,
-            'location' => $request->location
+'password' => Hash::make($request->password),
+'profilePicture' => $profilePath,
+'location' => $request->location,
+
         ]);
 
         // Step 4: Return JSON success response
@@ -70,7 +71,7 @@ class CustomerAuthController extends Controller
     public function login(Request $request)
     {
         // Step 1: Validate input and return JSON errors if any
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
@@ -87,7 +88,7 @@ class CustomerAuthController extends Controller
         $customer = Customer::where('email', $request->email)->first();
 
         // Step 3: Check password
-        if (!$customer || !\Hash::check($request->password, $customer->password)) {
+        if (!$customer || !Hash::check($request->password, $customer->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials'

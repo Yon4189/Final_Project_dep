@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('serviceproviders', function (Blueprint $table) {
+        Schema::table('service_providers', function (Blueprint $table) {
             $table->string('verification_reason')->nullable()->after('isVerified');
         });
     }
 
     public function down(): void
     {
-        Schema::table('serviceproviders', function (Blueprint $table) {
+        Schema::table('service_providers', function (Blueprint $table) {
             $table->dropColumn('verification_reason');
         });
     }

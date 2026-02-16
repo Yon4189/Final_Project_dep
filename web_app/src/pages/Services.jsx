@@ -116,7 +116,7 @@ const ServiceCatalog = () => {
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Updating Catalog...</span>
         </div>
       ) : (
-        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-[2 rem] shadow-sm border border-slate-200 overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
               <tr>
@@ -186,7 +186,7 @@ const ServiceCatalog = () => {
                   type="text" required placeholder="e.g. Plumbing or Pipe Repair"
                   className="w-full bg-slate-100 border-none rounded-2xl py-4 px-6 outline-none font-bold text-slate-700"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
 
@@ -196,7 +196,7 @@ const ServiceCatalog = () => {
                   required rows="3"
                   className="w-full bg-slate-100 border-none rounded-2xl py-4 px-6 outline-none font-medium text-slate-600"
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
 
