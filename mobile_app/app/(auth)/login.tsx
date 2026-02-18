@@ -27,7 +27,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<"customer" | "provider">("customer");
 
-  const handleLogin = async () => {
+ const handleLogin = async () => {
     if (!formData.email || !formData.password) {
       Alert.alert("Error", "Please enter email and password");
       return;
@@ -36,11 +36,12 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const endpoint =
-        userType === "customer" ? "/customer/login" : "/provider/login";
+      // 1. Determine the endpoint based on user selection
+      const endpoint = userType === "customer" ? "/customer/login" : "/provider/login";
 
+      // 2. Use the dynamic 'endpoint' variable here
       const response = await axios.post(
-        `${API_BASE_URL}/customer/login`,
+        `${API_BASE_URL}${endpoint}`, // Fixed: No longer hardcoded to /customer/login
         {
           email: formData.email,
           password: formData.password,
@@ -49,21 +50,20 @@ export default function LoginScreen() {
 
       setLoading(false);
 
-      // Axios automatically puts the server response in response.data
       if (response.data.success) {
         Alert.alert("Success", `Logged in as ${userType}`);
-        router.replace(
-          userType === "customer"
-            ? "/(tabs)/customer-dashboard"
-            : "/(tabs)/provider-dashboard",
-        );
+        
+        // 3. Navigate based on user type
+        if (userType === "provider") {
+            router.replace("/(tabs)/provider-dashboard");
+        } else {
+            router.replace("/(tabs)/customer-dashboard");
+        }
       } else {
         Alert.alert("Error", response.data.message || "Login failed");
       }
     } catch (error: any) {
       setLoading(false);
-
-      // Axios errors have response data if server returned error
       if (error.response && error.response.data) {
         Alert.alert("Error", error.response.data.message || "Login failed");
       } else {
@@ -108,13 +108,13 @@ export default function LoginScreen() {
             ]}
             onPress={() => setUserType("provider")}
           >
+            <Ionicons name="construct-outline" size={40} color={Colors.primary} />
             <Text
               style={[
                 styles.userTypeText,
                 userType === "provider" && styles.userTypeTextActive,
               ]}
             >
-             <Ionicons name="construct-outline" size={60} color={Colors.primary} />
               Provider
             </Text>
           </TouchableOpacity>
@@ -147,11 +147,12 @@ export default function LoginScreen() {
 
     </View>
 
-        {/* Forgot Password */}
-        <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
-
+       <TouchableOpacity 
+  style={styles.forgotPassword}
+  onPress={() => router.push("/(auth)/forgot-password")} // Add this
+>
+  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+</TouchableOpacity>
         {/* Login Button */}
         <AppButton
           title="Sign In"

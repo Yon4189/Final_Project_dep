@@ -33,7 +33,7 @@ class ServiceProviderAuthController extends Controller
         'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
         'password' => 'required|string|min:8|confirmed',
        // 'service_city' => 'nullable|string|max:255',
-        'catagoryID' => 'required', // dropdown
+       // 'catagoryID' => 'nullable|exists:categories,id', // dropdown
         'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:20408',
        'idPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:20480',
        'idPhotoType' => 'nullable|string|in:Passport,Driver License,National ID,Kebele ID',

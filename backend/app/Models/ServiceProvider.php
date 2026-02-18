@@ -15,8 +15,8 @@ class ServiceProvider extends Model
     protected $primaryKey = 'providerID'; // primary key
 
     protected $fillable = [
-        'fullname', 'phone', 'email', 'password', //'service_city', 
-        'catagoryID', 'idPhoto', 'isVerified', 'bio', 'walletBalance', 
+        'fullname', 'phone', 'email', 'password', ///*'service_city',  'catagoryID'*/, 
+        'idPhoto', 'isVerified', 'bio', 'walletBalance', 
         'serviceRadiusKm', 'profilePicture','estimatedPrice'
     ];
 
