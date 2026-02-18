@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Users, UserCheck, Clock, Banknote, Layers, Wrench,
-  CheckCircle, XCircle, Loader2, Image as ImageIcon, RefreshCw, FileCheck, Calendar, Database 
+  CheckCircle, XCircle, Loader2, Image as ImageIcon, RefreshCw, FileCheck, Calendar, Database
 } from 'lucide-react';
-import api from '../api/axios'; 
+import api from '../api/axios';
 import StatCard from '../components/StatCard';
 
 const Dashboard = () => {
@@ -27,10 +27,10 @@ const Dashboard = () => {
         api.get('/providers/pending'),
         api.get('/admin/stats')
       ]);
-      
+
       if (queueRes.data.success) setVerificationQueue(queueRes.data.data);
       if (statsRes.data.success) setCounts(statsRes.data.data);
-      
+
       setDbStatus('connected');
     } catch (err) {
       console.error("Database connection issue. Check if Laravel server is running.");
@@ -48,7 +48,7 @@ const Dashboard = () => {
     let reason = null;
     if (!isApproved) {
       reason = window.prompt(`Enter rejection reason for ${name}:`, "Documents provided are not clear.");
-      if (reason === null) return; 
+      if (reason === null) return;
     } else {
       if (!window.confirm(`Approve ${name} and send system verification email?`)) return;
     }
@@ -74,7 +74,7 @@ const Dashboard = () => {
 
   const viewFile = (filePath) => {
     if (!filePath) return alert("No file found for this record.");
-    const backendBase = api.defaults.baseURL.replace('/api', ''); 
+    const backendBase = api.defaults.baseURL.replace('/api', '');
     const fullUrl = `${backendBase}/storage/${filePath}`;
     window.open(fullUrl, '_blank');
   };
@@ -84,16 +84,16 @@ const Dashboard = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Admin Dashboard</h1>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest">Platform Oversight & Real-time Metrics</p>
+          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest">Platform Oversight &amp; Real-time Metrics</p>
         </div>
 
         {/* Database status indicator */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Database size={16} className={
-              dbStatus === 'connected' ? 'text-green-500' : 
-              dbStatus === 'disconnected' ? 'text-red-500' : 
-              'text-yellow-500 animate-pulse'
+              dbStatus === 'connected' ? 'text-green-500' :
+                dbStatus === 'disconnected' ? 'text-red-500' :
+                  'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-black uppercase tracking-wider">
               {dbStatus === 'connected' && 'Database Connected'}
@@ -104,8 +104,8 @@ const Dashboard = () => {
             {dbStatus === 'disconnected' && <XCircle size={14} className="text-red-500" />}
           </div>
 
-          <button 
-            onClick={fetchData} 
+          <button
+            onClick={fetchData}
             className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-2.5 rounded-2xl text-xs font-black text-slate-600 hover:text-blue-600 transition-all shadow-sm active:scale-95"
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} /> Sync Database
@@ -127,7 +127,7 @@ const Dashboard = () => {
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50">
           <h2 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
-            Verification Queue 
+            Verification Queue
             <span className="bg-admin-accent text-white px-2 py-0.5 rounded-full text-[9px] font-black">
               {verificationQueue.length} Waiting
             </span>
@@ -141,7 +141,7 @@ const Dashboard = () => {
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Accessing MySQL...</span>
             </div>
           ) : dbStatus === 'disconnected' ? (
-            /* 👇 Show connection error message when DB is offline */
+            /* Show connection error message when DB is offline */
             <div className="p-20 text-center flex flex-col items-center gap-3">
               <XCircle className="text-red-500" size={32} />
               <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">
@@ -185,7 +185,7 @@ const Dashboard = () => {
                       {item.specific_service || 'Primary Specialist'}
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <button 
+                      <button
                         onClick={() => viewFile(item.idPhoto)}
                         className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all shadow-md active:scale-90"
                       >
@@ -193,7 +193,7 @@ const Dashboard = () => {
                       </button>
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <button 
+                      <button
                         onClick={() => viewFile(item.credentialPhoto)}
                         className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-700 transition-all shadow-md active:scale-90"
                       >
@@ -219,13 +219,13 @@ const Dashboard = () => {
                           </div>
                         ) : (
                           <>
-                            <button 
+                            <button
                               onClick={() => handleVerifyAction(item.id, item.name, true)}
                               className="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-green-100 transition-all active:scale-90"
                             >
                               Approve
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleVerifyAction(item.id, item.name, false)}
                               className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-red-100 transition-all active:scale-90"
                             >
@@ -244,6 +244,7 @@ const Dashboard = () => {
               Queue is Clear: All Providers Processed.
             </div>
           )}
+
         </div>
       </div>
     </div>

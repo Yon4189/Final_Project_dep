@@ -77,7 +77,38 @@ class CustomerAuthController extends Controller
         'data' => $customer
     ], 201);
 }
+ public function login(Request $request)
+    {
+        
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // search for customer by their email
+        $customer = Customer::where('email', $request->email)->first();
+        if (!$customer || !Hash::check($request->password, $customer->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid email or password'
+            ], 401);
+        }
+
+        //  Return success
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => $customer
+        ]);
+    }
 }
 
 

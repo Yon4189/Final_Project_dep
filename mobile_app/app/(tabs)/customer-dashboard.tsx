@@ -1,4 +1,4 @@
-/*import Map from '../../components/Map';
+import Map from '../../components/Map';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -423,7 +423,7 @@ export default function CustomerDashboard() {
 
   return (
     <View style={styles.container}>
-      {/* Header }
+      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back!</Text>
@@ -437,7 +437,7 @@ export default function CustomerDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar *}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <AppInput
           placeholder="Search services, categories, or providers..."
@@ -458,7 +458,7 @@ export default function CustomerDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* Category Quick Select *}
+      {/* Category Quick Select */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -488,7 +488,7 @@ export default function CustomerDashboard() {
         ))}
       </ScrollView>
 
-      {/* Selected Service Info *}
+      {/* Selected Service Info */}
       {selectedService && selectedCategory && (
         <View style={styles.selectedServiceInfo}>
           <View style={styles.selectedServiceHeader}>
@@ -510,7 +510,7 @@ export default function CustomerDashboard() {
         </View>
       )}
 
-      {/* Toggle View *}
+      {/* Toggle View */}
       <View style={styles.viewToggle}>
         <TouchableOpacity
           style={[styles.viewToggleButton, !showMapView && styles.viewToggleActive]}
@@ -533,14 +533,14 @@ export default function CustomerDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* Main Content *}
+      {/* Main Content */}
       {loading && !selectedService ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Select a service to find providers</Text>
         </View>
       ) : showMapView ? (
-        /* Map View Section *
+        /* Map View Section */
         <View style={styles.mapContainer}>
           {userLocation ? (
             <Map
@@ -555,7 +555,7 @@ export default function CustomerDashboard() {
             </View>
           )}
 
-          {/* Keep your Provider List Cards on top of or below the map *}
+          {/* Keep your Provider List Cards on top of or below the map */}
           <View style={styles.mapProviderList}>
             <FlatList
               data={filteredProviders}
@@ -568,7 +568,7 @@ export default function CustomerDashboard() {
           </View>
         </View>
       ) : (
-        /* List View *
+        /* List View */
         <FlatList
           data={filteredProviders}
           renderItem={renderProviderCard}
@@ -617,7 +617,7 @@ export default function CustomerDashboard() {
         />
       )}
 
-      {/* Category Selection Modal *}
+      {/* Category Selection Modal */}
       <Modal
         visible={showCategoryModal}
         animationType="slide"
@@ -644,7 +644,7 @@ export default function CustomerDashboard() {
         </View>
       </Modal>
 
-      {/* Service Selection Modal *}
+      {/* Service Selection Modal */}
       <Modal
         visible={showServiceModal && selectedCategory !== null}
         animationType="slide"
@@ -691,7 +691,7 @@ export default function CustomerDashboard() {
         </View>
       </Modal>
 
-      {/* Service Request Modal *}
+      {/* Service Request Modal */}
       <Modal
         visible={showRequestModal}
         animationType="slide"
@@ -709,7 +709,7 @@ export default function CustomerDashboard() {
 
             {selectedProvider && selectedService && (
               <>
-                {/* Provider Info *}
+                {/* Provider Info */}
                 <View style={styles.requestProviderInfo}>
                   <Text style={styles.requestService}>{selectedService}</Text>
                   <Text style={styles.requestProviderName}>{selectedProvider.name}</Text>
@@ -729,9 +729,9 @@ export default function CustomerDashboard() {
                   </View>
                 </View>
 
-                {/* Request Form *}
+                {/* Request Form */}
                 <View style={styles.requestForm}>
-                  {/* Date *}
+                  {/* Date */}
                   <View style={styles.formGroup}>
                     <Text style={styles.formLabel}>Date</Text>
                     <TouchableOpacity style={styles.dateInput}>
@@ -742,7 +742,7 @@ export default function CustomerDashboard() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Time *}
+                  {/* Time */}
                   <View style={styles.formGroup}>
                     <Text style={styles.formLabel}>Time</Text>
                     <TouchableOpacity style={styles.timeInput}>
@@ -751,7 +751,7 @@ export default function CustomerDashboard() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Address *}
+                  {/* Address */}
                   <View style={styles.formGroup}>
                     <Text style={styles.formLabel}>Service Address</Text>
                     <AppInput
@@ -763,7 +763,7 @@ export default function CustomerDashboard() {
                     />
                   </View>
 
-                  {/* Special Instructions *}
+                  {/* Special Instructions */}
                   <View style={styles.formGroup}>
                     <Text style={styles.formLabel}>Special Instructions (Optional)</Text>
                     <AppInput
@@ -775,7 +775,7 @@ export default function CustomerDashboard() {
                     />
                   </View>
 
-                  {/* Price Estimate *}
+                  {/* Price Estimate */}
                   <View style={styles.priceEstimate}>
                     <Text style={styles.priceLabel}>Estimated Price</Text>
                     <Text style={styles.priceValue}>
@@ -786,7 +786,7 @@ export default function CustomerDashboard() {
                     </Text>
                   </View>
 
-                  {/* Submit Button *}
+                  {/* Submit Button */}
                   <AppButton
                     title="Confirm & Send Request"
                     onPress={submitServiceRequest}
@@ -1322,4 +1322,4 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: 20,
   },
-});*/
+});
