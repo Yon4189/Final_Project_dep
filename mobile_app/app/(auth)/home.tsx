@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function HomeTab() {
   const router = useRouter();
@@ -26,13 +27,16 @@ export default function HomeTab() {
       </View>
 
       {/* I PROVIDE SERVICE BUTTON */}
+     <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 10  } }>
+      <Ionicons name="construct-outline" size={80} color="#190ead" ></Ionicons></View> 
       <TouchableOpacity
         style={[styles.button, { backgroundColor: '#0A84FF', marginTop: 40 }]}
-        onPress={() => router.push('(auth)/register-provider')}
-      >
+        onPress={() => router.push('(auth)/register-provider')}> 
         <Text style={styles.buttonText}>I Provide Service</Text>
       </TouchableOpacity>
-
+<View style={{ alignItems: 'center', marginTop: 20, marginBottom: 50  } }>
+  <Ionicons name="person-outline" size={80} color={Colors.primary} />
+</View>
       {/* I NEED SERVICE BUTTON */}
       <TouchableOpacity
         style={[styles.button, { backgroundColor: '#34C759' }]}

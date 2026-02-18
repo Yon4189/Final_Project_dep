@@ -62,6 +62,7 @@ interface AppInputProps {
   required?: boolean;
   multiline?: boolean;
   style?: any; 
+  maxLength?: number;
   inputStyle?: any; 
   leftIcon?: React.ReactNode;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
@@ -82,6 +83,7 @@ interface AppInputProps {
                   leftIcon, // Add this
                   autoCapitalize = 'none',
                   autoCorrect = false,
+                  maxLength, // Add this
                 }) => {
                   return (
                     <View style={[styles.container, style]}>
@@ -111,6 +113,7 @@ interface AppInputProps {
                           multiline={multiline}
                           autoCapitalize={autoCapitalize}
                           autoCorrect={autoCorrect}
+                          maxLength={maxLength}
                         />
                       </View>
                         {error && <Text style={styles.errorText}>{error}</Text>}

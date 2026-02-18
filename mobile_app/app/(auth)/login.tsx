@@ -1,7 +1,9 @@
 // app/(auth)/login.tsx
 // app/(auth)/login.tsx
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import axios from "axios";
+import { API_BASE_URL } from "../config/api";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -9,38 +11,69 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import AppButton from '../../components/AppButton';
-import AppInput from '../../components/AppInput';
-import { Colors } from '../constants/Colors';
+} from "react-native";
+import AppButton from "../../components/AppButton";
+import AppInput from "../../components/AppInput";
+import { Colors } from "../constants/Colors";
+import { Icon, icon } from "leaflet";
+import Ionicons from "@expo/vector-icons/build/Ionicons";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
   const [loading, setLoading] = useState(false);
-  const [userType, setUserType] = useState<'customer' | 'provider'>('customer');
+  const [userType, setUserType] = useState<"customer" | "provider">("customer");
 
-  const handleLogin = () => {
+ const handleLogin = async () => {
     if (!formData.email || !formData.password) {
-      Alert.alert('Error', 'Please enter email and password');
+      Alert.alert("Error", "Please enter email and password");
       return;
     }
 
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+
+    try {
+      // 1. Determine the endpoint based on user selection
+      const endpoint = userType === "customer" ? "/customer/login" : "/provider/login";
+
+      // 2. Use the dynamic 'endpoint' variable here
+      const response = await axios.post(
+        `${API_BASE_URL}${endpoint}`, // Fixed: No longer hardcoded to /customer/login
+        {
+          email: formData.email,
+          password: formData.password,
+        }
+      );
+
       setLoading(false);
-      Alert.alert('Success', `Logged in as ${userType}`);
-      // Navigate to main app (tabs)
-      router.replace('/(tabs)/customer-dashboard');
-    }, 1500);
+
+      if (response.data.success) {
+        Alert.alert("Success", `Logged in as ${userType}`);
+        
+        // 3. Navigate based on user type
+        if (userType === "provider") {
+            router.replace("/(tabs)/provider-dashboard");
+        } else {
+            router.replace("/(tabs)/customer-dashboard");
+        }
+      } else {
+        Alert.alert("Error", response.data.message || "Login failed");
+      }
+    } catch (error: any) {
+      setLoading(false);
+      if (error.response && error.response.data) {
+        Alert.alert("Error", error.response.data.message || "Login failed");
+      } else {
+        Alert.alert("Error", error.message || "Network error");
+      }
+    }
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
@@ -52,31 +85,34 @@ export default function LoginScreen() {
           <TouchableOpacity
             style={[
               styles.userTypeBtn,
-              userType === 'customer' && styles.userTypeBtnActive,
+              userType === "customer" && styles.userTypeBtnActive,
             ]}
-            onPress={() => setUserType('customer')}
+            onPress={() => setUserType("customer")}
           >
             <Text
+          
               style={[
                 styles.userTypeText,
-                userType === 'customer' && styles.userTypeTextActive,
+                userType === "customer" && styles.userTypeTextActive,
               ]}
             >
-              Customer
+                <Ionicons name="person-outline" size={40} color={Colors.primary} />
+         Customer
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[
               styles.userTypeBtn,
-              userType === 'provider' && styles.userTypeBtnActive,
+              userType === "provider" && styles.userTypeBtnActive,
             ]}
-            onPress={() => setUserType('provider')}
+            onPress={() => setUserType("provider")}
           >
+            <Ionicons name="construct-outline" size={40} color={Colors.primary} />
             <Text
               style={[
                 styles.userTypeText,
-                userType === 'provider' && styles.userTypeTextActive,
+                userType === "provider" && styles.userTypeTextActive,
               ]}
             >
               Provider
@@ -85,6 +121,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Email Input */}
+        <Ionicons name="mail-outline" size={25} color={Colors.primary} />
         <AppInput
           label="Email"
           value={formData.email}
@@ -95,6 +132,9 @@ export default function LoginScreen() {
         />
 
         {/* Password Input */}
+         <View style={styles.container}>
+      {/* Lock Icon */}
+      <Ionicons name="lock-closed-outline" size={25} color={Colors.primary} />
         <AppInput
           label="Password"
           value={formData.password}
@@ -103,12 +143,16 @@ export default function LoginScreen() {
           secureTextEntry
           required
         />
+         {/* Optional: Eye icon to toggle password visibility */}
 
-        {/* Forgot Password */}
-        <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
+    </View>
 
+       <TouchableOpacity 
+  style={styles.forgotPassword}
+  onPress={() => router.push("/(auth)/forgot-password")} // Add this
+>
+  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+</TouchableOpacity>
         {/* Login Button */}
         <AppButton
           title="Sign In"
@@ -126,18 +170,18 @@ export default function LoginScreen() {
 
         {/* Registration Options */}
         <Text style={styles.registerTitle}>Don't have an account?</Text>
-        
+     <Ionicons name="person-outline" size={40} color={Colors.primary} />
         <AppButton
           title="Register as Customer"
-          onPress={() => router.push('/(auth)/register-customer')}
+          onPress={() => router.push("/(auth)/register-customer")}
           variant="outline"
           fullWidth
           style={styles.registerButton}
         />
-
+       <Ionicons name="construct-outline" size={60} color={Colors.primary} />
         <AppButton
           title="Register as Service Provider"
-          onPress={() => router.push('/(auth)/register-provider')}
+          onPress={() => router.push("/(auth)/register-provider")}
           variant="outline"
           fullWidth
           style={styles.registerButton}
@@ -146,9 +190,10 @@ export default function LoginScreen() {
         {/* Skip for now */}
         <TouchableOpacity
           style={styles.skipBtn}
-          onPress={() => router.replace('/(auth)/home')}
+          onPress={() => router.replace("/(auth)/home")}
         >
-          <Text style={styles.skipText}>Continue as Guest</Text>
+          <Text style={styles.skipText}><Ionicons name="person-outline" size={60} color={Colors.primary} />
+Continue as Guest</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -161,14 +206,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 60,
     paddingBottom: 40,
     backgroundColor: Colors.surface,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -176,7 +221,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.text.primary,
   },
   subtitle: {
@@ -192,7 +237,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   userTypeContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: Colors.background,
     borderRadius: 10,
     padding: 5,
@@ -201,7 +246,7 @@ const styles = StyleSheet.create({
   userTypeBtn: {
     flex: 1,
     padding: 15,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 8,
   },
   userTypeBtnActive: {
@@ -209,23 +254,23 @@ const styles = StyleSheet.create({
   },
   userTypeText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text.secondary,
   },
   userTypeTextActive: {
     color: Colors.text.light,
   },
   forgotPassword: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     marginBottom: 25,
   },
   forgotPasswordText: {
     color: Colors.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 30,
   },
   dividerLine: {
@@ -239,18 +284,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   registerTitle: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 16,
     color: Colors.text.primary,
     marginBottom: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   registerButton: {
     marginBottom: 10,
   },
   skipBtn: {
     padding: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   skipText: {

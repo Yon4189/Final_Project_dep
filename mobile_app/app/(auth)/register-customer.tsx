@@ -1,7 +1,10 @@
 // app/(auth)/register-customer.tsx
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { API_BASE_URL } from "../config/api";
+import axios from "axios";
+import * as ImagePicker from 'expo-image-picker';
+import { Platform } from "react-native"; // Add this at the top with other imports
 import {
   Alert,
   FlatList,
@@ -11,52 +14,201 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import AppButton from '../../components/AppButton';
-import AppInput from '../../components/AppInput';
-import { Colors } from '../constants/Colors';
-import { LOCATIONS } from '../constants/Services';
+  Image,
+} from "react-native";
+import AppButton from "../../components/AppButton";
+import AppInput from "../../components/AppInput";
+import { Colors } from "../constants/Colors";
+import { LOCATIONS } from "../constants/Services";
+import { Ionicons } from '@expo/vector-icons';
+
 export default function RegisterCustomerScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    location: '',
-    password: '',
-    confirmPassword: '',
+    fullname: "",
+    email: "",
+    phone: "",
+    location: "",
+    password: "",
+    password_confirmation: "",
+    profilePicture: null as any,
   });
+
   const [loading, setLoading] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
-  const handleRegister = () => {
-    // Validation
-    const errors = [];
-    if (!formData.fullName) errors.push('Full Name');
-    if (!formData.email) errors.push('Email');
-    if (!formData.phone) errors.push('Phone Number');
-    if (!formData.location) errors.push('Location');
-    if (!formData.password) errors.push('Password');
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
-    if (errors.length > 0) {
-      Alert.alert('Error', `Please fill all required fields: ${errors.join(', ')}`);
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant camera roll permissions');
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
 
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert('Success', 'Registration successful!');
-      router.push('/(auth)/login');
-    }, 1500);
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setImageUri(asset.uri);
+      
+      // Get filename from URI
+      const fileName = asset.uri.split('/').pop() || 'photo.jpg';
+      const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+      const mimeType = fileExtension === 'jpg' || fileExtension === 'jpeg' 
+        ? 'image/jpeg' 
+        : fileExtension === 'png' 
+          ? 'image/png' 
+          : 'image/jpeg';
+      
+      setFormData({
+        ...formData,
+        profilePicture: {
+          uri: asset.uri,
+          name: fileName,
+          type: mimeType,
+        }
+      });
+    }
   };
 
+  const validatePhoneNumber = (phone: string) => {
+    const phoneRegex = /^(09|07)[0-9]{8}$/;
+    return phoneRegex.test(phone);
+  };
+
+const handleRegister = async () => {
+  // Validation
+  if (!formData.fullname) return Alert.alert("Error", "Full name is required");
+  if (!formData.email) return Alert.alert("Error", "Email is required");
+  if (!formData.phone) return Alert.alert("Error", "Phone number is required");
+  if (!formData.location) return Alert.alert("Error", "Location is required");
+  if (!formData.password) return Alert.alert("Error", "Password is required");
+  if (!formData.password_confirmation) return Alert.alert("Error", "Please confirm your password");
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) return Alert.alert("Error", "Please enter a valid email address");
+  
+  if (!validatePhoneNumber(formData.phone)) return Alert.alert(
+    "Error", 
+    "Phone number must be 10 digits starting with 09 or 07 (e.g., 0912345678)"
+  );
+  
+  if (formData.password.length < 8) return Alert.alert("Error", "Password must be at least 8 characters long");
+  if (formData.password !== formData.password_confirmation) return Alert.alert("Error", "Passwords do not match");
+
+  try {
+    setLoading(true);
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('fullname', formData.fullname);
+    formDataToSend.append('email', formData.email);
+    formDataToSend.append('phone', formData.phone);
+    formDataToSend.append('password', formData.password);
+    formDataToSend.append('password_confirmation', formData.password_confirmation);
+    formDataToSend.append('location', formData.location);
+
+    // FIXED: Handle file upload for both web and native
+    if (formData.profilePicture?.uri) {
+      if (Platform.OS === 'web') {
+        // WEB PLATFORM: Convert URI to blob
+        const response = await fetch(formData.profilePicture.uri);
+        const blob = await response.blob();
+        
+        // Get filename from URI
+        const fileName = formData.profilePicture.uri.split('/').pop() || 'photo.jpg';
+        
+        // Create file from blob
+        const file = new File([blob], fileName, { 
+          type: formData.profilePicture.type || 'image/jpeg' 
+        });
+        
+        formDataToSend.append('profilePicture', file);
+        console.log('Web upload prepared:', fileName);
+      } else {
+        // NATIVE PLATFORM (iOS/Android)
+        const fileToUpload = {
+          uri: formData.profilePicture.uri,
+          name: formData.profilePicture.name || 'photo.jpg',
+          type: formData.profilePicture.type || 'image/jpeg',
+        };
+        formDataToSend.append('profilePicture', fileToUpload as any);
+        console.log('Native upload prepared:', fileToUpload);
+      }
+    }
+
+    console.log('Sending registration request...');
+
+    const response = await axios.post(
+      `${API_BASE_URL}/customer/register`,
+      formDataToSend,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
+        },
+        timeout: 30000,
+      }
+    );
+
+    if (response.data.success) {
+      // Reset form
+      setFormData({
+        fullname: "",
+        email: "",
+        phone: "",
+        location: "",
+        password: "",
+        password_confirmation: "",
+        profilePicture: null,
+      });
+      setImageUri(null);
+  router.push("/(auth)/login");
+      Alert.alert(
+        "Registration Successful!",
+        "Your account has been created successfully. Please login to continue.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Small delay to ensure Alert is fully closed
+              setTimeout(() => {
+              }, 100);
+            }
+          }
+        ]
+      );
+    }
+  } catch (err: any) {
+    console.error('Registration error:', err);
+    
+    if (err.response?.data) {
+      const data = err.response.data;
+      if (data.errors) {
+        let errorMessage = "Please fix the following errors:\n";
+        for (const field in data.errors) {
+          errorMessage += `\n• ${field}: ${data.errors[field].join(', ')}`;
+        }
+        Alert.alert("Validation Error", errorMessage);
+      } else {
+        Alert.alert("Error", data.message || "Registration failed");
+      }
+    } else if (err.code === 'ECONNABORTED') {
+      Alert.alert("Error", "Request timeout. Please try again.");
+    } else if (err.message === 'Network Error') {
+      Alert.alert("Error", "Network error. Please check your connection.");
+    } else {
+      Alert.alert("Error", "Could not connect to server");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
   const renderModalItem = (item: string, onSelect: () => void) => (
     <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
       <Text style={styles.modalItemText}>{item}</Text>
@@ -64,79 +216,94 @@ export default function RegisterCustomerScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <Text style={styles.title}>Customer Registration</Text>
         <Text style={styles.subtitle}>Find trusted service providers</Text>
       </View>
 
-      <View style={styles.formContainer}>
-        {/* Full Name */}
+
+        {/* Other inputs */}
         <AppInput
           label="Full Name"
-          value={formData.fullName}
-          onChangeText={(text) => setFormData({ ...formData, fullName: text })}
+          value={formData.fullname}
+          onChangeText={(text) => setFormData({ ...formData, fullname: text })}
           placeholder="Enter your full name"
           required
         />
 
-        {/* Email */}
         <AppInput
           label="Email"
           value={formData.email}
           onChangeText={(text) => setFormData({ ...formData, email: text })}
           placeholder="Enter your email"
           keyboardType="email-address"
+          autoCapitalize="none"
           required
         />
 
-        {/* Phone */}
         <AppInput
           label="Phone Number"
           value={formData.phone}
           onChangeText={(text) => setFormData({ ...formData, phone: text })}
-          placeholder="Enter phone number"
+          placeholder="09XXXXXXXX or 07XXXXXXXX"
           keyboardType="phone-pad"
+          maxLength={10}
           required
         />
+        <Text style={styles.hintText}>Enter 10 digits starting with 09 or 07</Text>
 
-        {/* Location Selection */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
             Location <Text style={styles.required}>*</Text>
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowLocationModal(true)}
           >
-            <Text style={formData.location ? styles.dropdownText : styles.dropdownPlaceholder}>
-              {formData.location || 'Select Location'}
+            <Text
+              style={formData.location ? styles.dropdownText : styles.dropdownPlaceholder}
+            >
+              {formData.location || "Select Location"}
             </Text>
             <Text style={styles.dropdownArrow}>▼</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Password */}
         <AppInput
           label="Password"
           value={formData.password}
           onChangeText={(text) => setFormData({ ...formData, password: text })}
-          placeholder="Enter password"
+          placeholder="Enter password (min. 8 characters)"
           secureTextEntry
           required
         />
 
-        {/* Confirm Password */}
         <AppInput
           label="Confirm Password"
-          value={formData.confirmPassword}
-          onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-          placeholder="Confirm password"
+          value={formData.password_confirmation}
+          onChangeText={(text) =>
+            setFormData({ ...formData, password_confirmation: text })
+          }
+          placeholder="Re-enter password"
           secureTextEntry
           required
         />
-
-        {/* Register Button */}
+<View style={styles.formContainer}>
+        {/* Profile Picture */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Profile Picture (Optional)</Text>
+          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.profileImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="camera" size={40} color={Colors.text.secondary} />
+                <Text style={styles.imagePlaceholderText}>Upload Photo</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
         <AppButton
           title="Register as Customer"
           onPress={handleRegister}
@@ -145,20 +312,16 @@ export default function RegisterCustomerScreen() {
           style={styles.registerButton}
         />
 
-        {/* Provider Registration Link */}
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => router.push('/(auth)/register-provider')}
+          onPress={() => router.push("/(auth)/register-provider")}
         >
-          <Text style={styles.linkText}>
-            Register as Service Provider instead
-          </Text>
+          <Text style={styles.linkText}>Register as Service Provider instead</Text>
         </TouchableOpacity>
 
-        {/* Login Link */}
         <TouchableOpacity
           style={styles.loginLink}
-          onPress={() => router.push('/(auth)/login')}
+          onPress={() => router.push("/(auth)/login")}
         >
           <Text style={styles.loginText}>
             Already have an account? <Text style={styles.loginLinkText}>Login</Text>
@@ -166,7 +329,6 @@ export default function RegisterCustomerScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Location Modal */}
       <Modal
         visible={showLocationModal}
         animationType="slide"
@@ -200,123 +362,35 @@ export default function RegisterCustomerScreen() {
   );
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    padding: 25,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginTop: 5,
-  },
-  formContainer: {
-    padding: 20,
-    margin: 15,
-    backgroundColor: Colors.surface,
-    borderRadius: 15,
-    elevation: 3,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  required: {
-    color: Colors.error,
-  },
-  dropdown: {
-    backgroundColor: Colors.background,
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dropdownPlaceholder: {
-    fontSize: 16,
-    color: Colors.text.secondary,
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: Colors.text.primary,
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-  },
-  registerButton: {
-    marginTop: 20,
-    marginBottom: 15,
-  },
-  linkButton: {
-    padding: 15,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  linkText: {
-    color: Colors.secondary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  loginLink: {
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  loginText: {
-    color: Colors.text.secondary,
-  },
-  loginLinkText: {
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalList: {
-    maxHeight: 400,
-  },
-  modalItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: Colors.text.primary,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: { padding: 25, backgroundColor: Colors.surface, alignItems: "center", borderBottomWidth: 1, borderBottomColor: Colors.border },
+  title: { fontSize: 24, fontWeight: "bold", color: Colors.text.primary },
+  subtitle: { fontSize: 14, color: Colors.text.secondary, marginTop: 5 },
+  formContainer: { padding: 20, margin: 15, backgroundColor: Colors.surface, borderRadius: 15, elevation: 3 },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: "600", color: Colors.text.primary, marginBottom: 8 },
+  required: { color: Colors.error },
+  hintText: { fontSize: 12, color: Colors.text.secondary, marginTop: -10, marginBottom: 15, marginLeft: 5 },
+  dropdown: { backgroundColor: Colors.background, padding: 15, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dropdownPlaceholder: { fontSize: 16, color: Colors.text.secondary },
+  dropdownText: { fontSize: 16, color: Colors.text.primary },
+  dropdownArrow: { fontSize: 12, color: Colors.text.secondary },
+  imagePicker: { width: '100%', height: 150, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed', overflow: 'hidden' },
+  profileImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  imagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
+  imagePlaceholderText: { marginTop: 8, color: Colors.text.secondary, fontSize: 14 },
+  registerButton: { marginTop: 20, marginBottom: 15 },
+  linkButton: { padding: 15, alignItems: "center", marginBottom: 10 },
+  linkText: { color: Colors.secondary, fontWeight: "600", fontSize: 14 },
+  loginLink: { alignItems: "center", marginTop: 10 },
+  loginText: { color: Colors.text.secondary },
+  loginLinkText: { color: Colors.primary, fontWeight: "600" },
+  modalContainer: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { backgroundColor: Colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "80%" },
+  modalTitle: { fontSize: 20, fontWeight: "bold", color: Colors.text.primary, marginBottom: 20, textAlign: "center" },
+  modalList: { maxHeight: 400 },
+  modalItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  modalItemText: { fontSize: 16, color: Colors.text.primary },
 });

@@ -10,10 +10,13 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-community/datetimepicker": "^8.6.0",
+    "axios": "^1.13.5",
     "expo": "~54.0.33",
     "expo-image-picker": "~17.0.10",
     "expo-location": "~19.0.8",
     "expo-router": "~6.0.23",
+    "expo-secure-store": "~15.0.8",
     "leaflet": "^1.9.4",
     "nativewind": "^4.2.1",
     "react": "^19.1.0",
