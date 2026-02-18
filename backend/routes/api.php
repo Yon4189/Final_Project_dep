@@ -8,7 +8,7 @@ use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\ProvidersearchController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\CategoryController;
-
+use App\Http\Controllers\ServiceController;
 // customer registration endpoint
 Route::get('/test', function () {
     return response()->json([
@@ -33,11 +33,8 @@ Route::get('provider/{providerID}/notifications', [NotificationController::class
 
 Route::get( '/search/providers',[ProviderSearchController::class, 'search']);
 
-
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
 Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword']);
-
-
 
 Route::get('/admin/stats', [AdminAuthController::class, 'getStats']);
 Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
