@@ -1,6 +1,5 @@
 // services/api.ts
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
