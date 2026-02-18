@@ -39,6 +39,7 @@ Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword'])
 
 
 
+Route::get('/admin/stats', [AdminAuthController::class, 'getStats']);
 Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
 
 Route::get('/providers/pending',[AdminAuthController::class, 'pendingProviders']);
@@ -51,4 +52,5 @@ Route::post('/categories', [CategoryController::class, 'addCategory']);
 Route::get('/categories', [CategoryController::class, 'getCategories']);
 Route::delete('/categories/{id}', [CategoryController::class, 'deleteCategory']);
 Route::put('/categories/{id}', [CategoryController::class, 'editCategory']);
+Route::get('/services', [ServiceController::class, 'index']);
 
