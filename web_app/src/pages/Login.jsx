@@ -149,7 +149,7 @@ const Login = () => {
               onClick={() => { setViewMode('login'); setError(''); setSuccessMsg(''); }}
               className="w-full flex items-center justify-center gap-2 text-slate-500 text-xs font-bold hover:text-slate-800 transition-all"
             >
-              <ArrowLeft size={16} /> Back to Login
+              <ArrowLeft size={16} /> Bak to Login
             </button>
           </form>
         )}
