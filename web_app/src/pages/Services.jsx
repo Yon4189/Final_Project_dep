@@ -1,323 +1,427 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, X, CheckCircle, Loader2, Layers, Wrench, Edit2 } from 'lucide-react';
-import api from '../api/axios'; // Using your axios instance
+import {
+  Plus, Edit2, Trash2, X, CheckCircle, Loader2,
+  AlertCircle, RefreshCw, Trash, Save,
+  ChevronLeft, ChevronRight, Layers, Wrench, Database
+} from 'lucide-react';
+import api from '../api/axios';
 
-const ServiceCatalog = () => {
-  const [activeTab, setActiveTab] = useState('categories'); // 'categories' or 'services'
+const Services = () => {
+  // --- STATE MANAGEMENT ---
+  const [activeTab, setActiveTab] = useState('categories');
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
+  const [providers, setProviders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dbStatus, setDbStatus] = useState('checking');
+  const [apiError, setApiError] = useState(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
 
-  // Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    catagoryID: '' // Primary key for category / Foreign key for services
-  });
+  const [formData, setFormData] = useState({ name: '', description: '', status: 'Active' });
 
-  // FETCH DATA
+  // 🚀 HELPER: Extract array from API response (flexible)
+  const extractData = (response, expectedKey = null) => {
+    console.log('API Response:', response);
+
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+
+    const obj = response.data || {};
+    if (Array.isArray(obj.data)) return obj.data;
+    if (Array.isArray(obj.categories)) return obj.categories;
+    if (Array.isArray(obj.services)) return obj.services;
+    if (Array.isArray(obj.providers)) return obj.providers;
+    if (expectedKey && Array.isArray(obj[expectedKey])) return obj[expectedKey];
+
+    for (let key in obj) {
+      if (Array.isArray(obj[key])) {
+        console.warn(`Using fallback array from key: ${key}`);
+        return obj[key];
+      }
+    }
+
+    return [];
+  };
+
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
+
+  // 🚀 FETCH DATA (Categories, Services, and Providers)
   const fetchData = async () => {
     setIsLoading(true);
+    setApiError(null);
     try {
-      const catRes = await api.get('/catagories');
-      const svcRes = await api.get('/services');
-      setCategories(catRes.data.data || []);
-      setServices(svcRes.data.data || []);
+      const [catRes, svcRes, provRes] = await Promise.allSettled([
+        api.get('/categories'),
+        api.get('/services'),
+        api.get('/providers')
+      ]);
+
+      // Categories
+      if (catRes.status === 'fulfilled') {
+        const categoriesData = extractData(catRes.value, 'categories');
+        setCategories(categoriesData);
+      } else {
+        console.error('Categories fetch failed:', catRes.reason);
+      }
+
+      // Services
+      if (svcRes.status === 'fulfilled') {
+        const servicesData = extractData(svcRes.value, 'services');
+        setServices(servicesData);
+      } else {
+        console.error('Services fetch failed:', svcRes.reason);
+      }
+
+      // Providers
+      if (provRes.status === 'fulfilled') {
+        const providersData = extractData(provRes.value, 'providers');
+        setProviders(providersData);
+      } else {
+        console.error('Providers fetch failed:', provRes.reason);
+      }
+
+      // Determine overall database connectivity
+      if (catRes.status === 'fulfilled' || svcRes.status === 'fulfilled' || provRes.status === 'fulfilled') {
+        setDbStatus('connected');
+      } else {
+        setDbStatus('disconnected');
+        setApiError({ message: 'All data fetches failed' });
+      }
     } catch (err) {
-      console.error("Fetch failed", err);
+      console.error('Unexpected error:', err);
+      setDbStatus('disconnected');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchData();
   }, []);
 
-  // OPEN MODAL LOGIC
-  const handleOpenModal = (category = null) => {
-    if (category) {
-      setEditingCategory(category);
-      setFormData({
-        name: category.name,
-        description: category.description,
-        catagoryID: category.id
-      });
+  // --- PAGINATION LOGIC ---
+  const dataToDisplay = activeTab === 'categories' ? categories : services;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = dataToDisplay.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(dataToDisplay.length / itemsPerPage) || 1;
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // Helper to get category name by ID
+  const getCategoryName = (catagoryID) => {
+    const cat = categories.find(c => c.catagoryID === catagoryID);
+    return cat ? cat.name : 'Unknown';
+  };
+
+  // Check if a category is in use by services or providers
+  const categoryIsInUse = (catagoryID) => {
+    const usedByServices = services.some(s => s.catagoryID === catagoryID);
+    const usedByProviders = providers.some(p => p.catagoryID === catagoryID);
+    return usedByServices || usedByProviders;
+  };
+
+  // 🚀 CRUD: SUBMIT (Categories Only)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (editingCategory) {
+        await api.put(`/categories/${editingCategory.catagoryID}`, formData);
+        triggerToast('Category updated!');
+      } else {
+        await api.post('/categories', formData);
+        triggerToast('New Category added!');
+      }
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error saving data';
+      triggerToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 🚀 CRUD: DELETE (Categories Only) – with pre‑check
+  const handleDeleteClick = (item) => {
+    if (categoryIsInUse(item.catagoryID)) {
+      triggerToast('Cannot delete: This category is used by services or service providers. Remove or reassign them first.', 'error');
+      return;
+    }
+    setDeleteConfirm({ show: true, id: item.catagoryID, name: item.name });
+  };
+
+  const confirmDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/categories/${deleteConfirm.id}`);
+      triggerToast('Deleted successfully');
+      setDeleteConfirm({ show: false, id: null, name: '' });
+      fetchData();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Cannot delete due to database constraints.';
+      triggerToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenModal = (cat = null) => {
+    if (cat) {
+      setEditingCategory(cat);
+      setFormData({ name: cat.name, description: cat.description || '', status: cat.status || 'Active' });
     } else {
       setEditingCategory(null);
-      setFormData({ name: '', description: '', catagoryID: '' });
+      setFormData({ name: '', description: '', status: 'Active' });
     }
     setIsModalOpen(true);
   };
 
-  // SUBMIT LOGIC (Handles both Categories and Services)
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      if (editingCategory) {
-        // TODO: API call to update category (later)
-
-        // EDIT Logic
-        try {
-          const response = await fetch(`http://127.0.0.1:8000/api/catagories/${editingCategory.id}`, {
-            method: 'PUT', // use PUT for update
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData), // send updated name & description
-          });
-
-          const data = await response.json();
-
-          if (data.success) {
-            // Update frontend state
-            setCategories(categories.map(cat =>
-              cat.id === editingCategory.id
-                ? {
-                  id: data.data.catagoryID,
-                  name: data.data.name,
-                  description: data.data.description,
-                  status: data.data.status,
-                }
-                : cat
-            ));
-            setIsModalOpen(false); // close modal
-          } else {
-            alert(data.message || 'Failed to update category');
-          }
-        } catch (err) {
-          console.error(err);
-          alert('Error connecting to server');
-        }
-      }
-
-      else {
-        // CREATE Logic → send form data to Laravel API
-        const response = await fetch(`http://127.0.0.1:8000/api/catagories`, {
-          method: 'POST',                     // Must match backend POST route
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData)
-        });
-
-        const data = await response.json();   // Parse JSON response
-
-
-        if (data.success) {
-          // Update local state with the category returned from backend
-          setCategories([...categories, data.category]);
-          setIsModalOpen(false);              // Close modal
-        } else {
-          alert(data.message || 'Something went wrong'); // Show error
-        }
-
-        // try {
-        //   // if (activeTab === 'categories') {
-        //   //   // Create Category
-        //   //   await api.post('/categories', { 
-        //   //   //     name: formData.name, 
-        //   //   //     description: formData.description 
-        //   //   //     });
-        //   //   //   }
-        // }
-      }
-
-
-    }
-    catch (err) {
-      console.error(err);
-      alert('Error connecting to server');
-    }
-  };
-  const handleDelete = async (type, id, name) => {
-    if (!window.confirm(`Delete "${name}"? This action cannot be undone.`)) return;
-
-    try {
-
-      const response = await fetch(`http://127.0.0.1:8000/api/catagories/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.data.success) {
-        fetchData(); // Refresh list after delete
-      }
-      else {
-        alert(response.data.message || 'Failed to delete item');
-      }
-
-    }
-    catch (err) {
-      console.error(err);
-      alert('Error connecting to server');
-    }
-  };
-
-  console.log('Catagories state:', categories)
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 p-4">
-      {/* Header */}
+    <div className="relative space-y-6 animate-in fade-in duration-500 pb-20">
+
+      {/* TOAST SYSTEM */}
+      {toast.show && (
+        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right-10 border ${toast.type === 'success' ? 'bg-slate-900 text-green-400 border-green-500/20' : 'bg-red-600 text-white'
+          }`}>
+          {toast.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
+        </div>
+      )}
+
+      {/* Header with Database Status */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Service Catalog</h1>
-          <p className="text-slate-500 text-sm">Manage categories and their specific tasks.</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Platform Catalog</h1>
+          <p className="text-slate-500 text-sm font-medium uppercase tracking-tighter">
+            {activeTab === 'categories' ? 'Manage Structure (Admin)' : 'Marketplace Services (Read-Only)'}
+          </p>
         </div>
 
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <Database size={16} className={
+              dbStatus === 'connected' ? 'text-green-500' :
+                dbStatus === 'disconnected' ? 'text-red-500' :
+                  'text-yellow-500 animate-pulse'
+            } />
+            <span className="text-xs font-black uppercase tracking-wider">
+              {dbStatus === 'connected' && 'Database Connected'}
+              {dbStatus === 'disconnected' && 'Database Disconnected'}
+              {dbStatus === 'checking' && 'Checking Database...'}
+            </span>
+            {dbStatus === 'connected' && <CheckCircle size={14} className="text-green-500" />}
+            {dbStatus === 'disconnected' && <AlertCircle size={14} className="text-red-500" />}
+          </div>
+
+          <button onClick={fetchData} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm">
+            <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+
+          {activeTab === 'categories' && dbStatus === 'connected' && (
+            <button onClick={() => handleOpenModal()} className="flex items-center gap-2 bg-[#4a90e2] hover:bg-blue-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg transition-all active:scale-95">
+              <Plus size={20} /> New Category
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 p-1.5 bg-slate-200/50 w-fit rounded-2xl border border-slate-200">
         <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-admin-accent hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95">
-          <Plus size={20} />
-          Add {activeTab === 'categories' ? 'Category' : 'Service'}
+          onClick={() => { setActiveTab('categories'); setCurrentPage(1); }}
+          className={`flex items-center gap-2 px-8 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'categories' ? 'bg-white text-admin-accent shadow-sm' : 'text-slate-500'}`}
+        >
+          <Layers size={18} /> Categories
+        </button>
+        <button
+          onClick={() => { setActiveTab('services'); setCurrentPage(1); }}
+          className={`flex items-center gap-2 px-8 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'services' ? 'bg-white text-admin-accent shadow-sm' : 'text-slate-500'}`}
+        >
+          <Wrench size={18} /> Provider Services
         </button>
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-4">Category ID</th>
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Description</th>
-              <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {categories.map((cat) => (
-              <tr key={cat.id} className="hover:bg-slate-50 transition-colors group">
-                <td className="px-6 py-4">
-                  <span className="font-mono text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-md border border-slate-200">
-                    {cat.id}
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-bold text-slate-900">{cat.name}</td>
-                <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">{cat.description}</td>
-                <td className="px-6 py-4 text-center">
-                  <span className="bg-green-100 text-green-600 text-[10px] font-black px-2 py-1 rounded-full uppercase">
-                    {cat.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => handleOpenModal(cat)}
-                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
-                    >
-                      <Edit2 size={14} /> Edit
-                    </button>
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[450px] flex flex-col">
+        <div className="overflow-x-auto flex-1">
+          {isLoading ? (
+            <div className="p-40 text-center flex flex-col items-center gap-4">
+              <Loader2 className="animate-spin text-blue-500" size={40} />
+              <p className="font-black text-slate-400 uppercase text-[10px] tracking-[0.2em]">Syncing MySQL</p>
+            </div>
+          ) : dbStatus === 'disconnected' ? (
+            <div className="p-40 text-center flex flex-col items-center gap-4">
+              <AlertCircle className="text-red-500" size={40} />
+              <p className="font-black text-red-400 uppercase text-[10px] tracking-[0.2em]">
+                {apiError ? `Error: ${apiError.message}` : 'Database connection failed'}
+              </p>
+              <button
+                onClick={fetchData}
+                className="mt-2 text-xs bg-slate-100 px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition"
+              >
+                Retry
+              </button>
+            </div>
+          ) : dataToDisplay.length === 0 ? (
+            <div className="p-40 text-center flex flex-col items-center gap-4">
+              <p className="font-black text-slate-300 uppercase text-[10px] tracking-[0.2em]">
+                {activeTab === 'categories' ? 'No categories found.' : 'No services found.'}
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black border-b border-slate-100">
+                <tr>
+                  {activeTab === 'categories' ? (
+                    <>
+                      <th className="px-8 py-5">ID</th>
+                      <th className="px-8 py-5">Name</th>
+                      <th className="px-8 py-5">Status</th>
+                      <th className="px-8 py-5">Description</th>
+                      <th className="px-8 py-5 text-right">Action</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-8 py-5">Service ID</th>
+                      <th className="px-8 py-5">Title</th>
+                      <th className="px-8 py-5">Category</th>
+                      <th className="px-8 py-5">Cost (ETB)</th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {currentItems.map((item) => (
+                  <tr key={item.catagoryID || item.serviceID} className="hover:bg-slate-50/50 transition-colors">
+                    {activeTab === 'categories' ? (
+                      <>
+                        <td className="px-8 py-5 font-mono text-xs font-bold text-slate-300">#{item.catagoryID}</td>
+                        <td className="px-8 py-5 font-black text-slate-800">{item.name}</td>
+                        <td className="px-8 py-5">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                            }`}>
+                            {item.status || 'Active'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-sm text-slate-500 max-w-xs truncate italic">{item.description || 'No description.'}</td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => handleOpenModal(item)}
+                              className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all active:scale-95"
+                            >
+                              <Edit2 size={16} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(item)}
+                              className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all active:scale-95"
+                              title={categoryIsInUse(item.catagoryID) ? "Cannot delete – category is in use" : "Delete category"}
+                            >
+                              <Trash2 size={16} /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-8 py-5 font-mono text-xs font-bold text-slate-300">#{item.serviceID}</td>
+                        <td className="px-8 py-5 font-black text-slate-800 uppercase tracking-tighter">{item.title}</td>
+                        <td className="px-8 py-5">
+                          <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase italic border border-blue-100">
+                            {getCategoryName(item.catagoryID)}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 font-black text-slate-800 font-mono tracking-tighter">{item.estimatedCost}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(cat.id, cat.name)}
-                      className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {categories.length === 0 && (
-          <div className="p-20 text-center text-slate-400 italic">No categories created yet. Click "Add New" to start.</div>
+        {/* Pagination Footer */}
+        {!isLoading && dbStatus === 'connected' && dataToDisplay.length > itemsPerPage && (
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+              Entries {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, dataToDisplay.length)} of {dataToDisplay.length}
+            </span>
+            <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
+              <button disabled={currentPage === 1} onClick={() => paginate(currentPage - 1)} className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all"><ChevronLeft size={20} /></button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button key={i + 1} onClick={() => paginate(i + 1)} className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-admin-accent text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
+                  {i + 1}
+                </button>
+              ))}
+              <button disabled={currentPage === totalPages} onClick={() => paginate(currentPage + 1)} className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all"><ChevronRight size={20} /></button>
+            </div>
+          </div>
         )}
       </div>
 
-      {isLoading ? (
-        <div className="p-20 text-center flex flex-col items-center gap-3">
-          <Loader2 className="animate-spin text-blue-500" size={32} />
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Updating Catalog...</span>
-        </div>
-      ) : (
-        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
-              <tr>
-                <th className="px-8 py-5">Name</th>
-                {activeTab === 'services' && <th className="px-8 py-5">Parent Category</th>}
-                <th className="px-8 py-5">Description</th>
-                <th className="px-8 py-5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {(activeTab === 'categories' ? categories : services).map((item) => (
-                <tr key={item.catagoryID || item.serviceID} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-8 py-5 font-black text-slate-800">{item.name}</td>
-                  {activeTab === 'services' && (
-                    <td className="px-8 py-5">
-                      <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-bold border border-blue-100">
-                        {item.category?.name || 'Unassigned'}
-                      </span>
-                    </td>
-                  )}
-                  <td className="px-8 py-5 text-sm text-slate-500 truncate max-w-xs">{item.description}</td>
-                  <td className="px-8 py-5 text-right">
-                    <button
-                      onClick={() => handleDelete(activeTab, item.catagoryID || item.serviceID, item.name)}
-                      className="text-slate-300 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* DELETE MODAL (Categories Only) */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-8 text-center animate-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              {isSubmitting ? <Loader2 className="animate-spin" size={32} /> : <Trash size={32} />}
+            </div>
+            <h3 className="text-xl font-black text-slate-900 italic uppercase tracking-tighter">Confirm Deletion</h3>
+            <p className="text-slate-400 text-xs mt-2 uppercase font-bold tracking-widest">{deleteConfirm.name}</p>
+            <div className="flex gap-3 mt-8">
+              <button disabled={isSubmitting} onClick={() => setDeleteConfirm({ show: false, id: null, name: '' })} className="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200">Cancel</button>
+              <button disabled={isSubmitting} onClick={confirmDelete} className="flex-1 py-4 rounded-2xl bg-red-600 text-white font-black hover:bg-red-700 shadow-lg shadow-red-100">Delete</button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* --- ADD MODAL --- */}
+      {/* ADD / EDIT MODAL (Categories Only) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300">
             <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-              <h2 className="text-xl font-black text-slate-800">
-                {activeTab === 'categories' ? 'New Category' : 'New Specific Service'}
+              <h2 className="text-xl font-black text-slate-800 uppercase italic tracking-tighter">
+                {editingCategory ? 'Update Entry' : 'New Category'}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-red-500"><X size={24} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={28} /></button>
             </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Name</label>
-                <input
-                  type="text" required
-                  className="w-full border-2 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-admin-accent transition-all text-slate-700 font-medium"
-                  placeholder="e.g. Home Cleaning"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category Title</label>
+                <input type="text" required className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Description</label>
-                <textarea
-                  required rows="3"
-                  className="w-full bg-slate-100 border-none rounded-2xl py-4 px-6 outline-none font-medium text-slate-600"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                <select className="w-full bg-slate-100 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700 cursor-pointer appearance-none" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
-
-              <div className="flex gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-admin-accent hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={18} />
-                  {editingCategory ? 'Update' : 'Confirm'}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Description</label>
+                <textarea rows="3" className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-600 transition-all" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="submit" disabled={isSubmitting} className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest disabled:bg-slate-400">
+                  {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                  {isSubmitting ? 'Wait...' : 'Save Record'}
                 </button>
               </div>
             </form>
@@ -326,11 +430,6 @@ const ServiceCatalog = () => {
       )}
     </div>
   );
-
 }
 
-export default ServiceCatalog;
-
-
-
-
+export default Services;

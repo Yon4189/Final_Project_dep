@@ -8,10 +8,7 @@ class UpdateServiceprovidersAddCityDropCoordinates extends Migration
 {
     public function up()
     {
-        Schema::table('serviceproviders', function (Blueprint $table) {
-            // Drop the actual latitude/longitude columns
-            $table->dropColumn('latitude');
-            $table->dropColumn('longitude');
+        Schema::table('service_providers', function (Blueprint $table) {
 
             // Add service_city column
             $table->string('service_city')->nullable()->after('phone');
@@ -20,7 +17,7 @@ class UpdateServiceprovidersAddCityDropCoordinates extends Migration
 
     public function down()
     {
-        Schema::table('serviceproviders', function (Blueprint $table) {
+        Schema::table('service_providers', function (Blueprint $table) {
             // Rollback: re-add coordinates columns
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();

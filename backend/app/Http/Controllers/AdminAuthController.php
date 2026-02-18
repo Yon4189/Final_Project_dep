@@ -4,19 +4,23 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Admin;
-use Illuminate\Support\Facades\Hash;
 use App\Models\ServiceProvider;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\HtmlString;
-//use App\Http\Controllers\Validator;
-
+use App\Models\Customer;
+use App\Models\Category;
+use App\Models\Service;
+use App\Models\Transaction;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class AdminAuthController extends Controller
 {
+    /**
+     * 1. Admin Login Logic
+     */
     public function login(Request $request)
     {
-        // validate input and return JSON if ther are errors
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string',
@@ -30,11 +34,8 @@ class AdminAuthController extends Controller
             ], 422);
         }
 
-        // find admins by their email
         $admin = Admin::where('email', $request->email)->first();
 
-
-        // password check
         if (!$admin || !Hash::check($request->password, $admin->password)) {
             return response()->json([
                 'success' => false,
@@ -42,7 +43,6 @@ class AdminAuthController extends Controller
             ], 401);
         }
 
-        // return success json
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
@@ -50,7 +50,74 @@ class AdminAuthController extends Controller
         ]);
     }
 
+    /**
+     * 2. Platform Statistics
+     * This method feeds the 6 cards on your React Dashboard
+     */
+    public function getStats()
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'providers'  => ServiceProvider::count(),
+                    'customers'  => Customer::count(),
+                    'categories' => Category::count(),
+                    'services'   => Service::count(),
+                    'revenue'    => Transaction::sum('platformFee')
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Dashboard Stats Error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch database stats',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
+    /**
+     * 3. Get All Providers (for admin overview and dependency checks)
+     */
+    public function getAllProviders()
+    {
+        try {
+            // Load all providers, optionally with their category relationship
+            $providers = ServiceProvider::with('category')->get();
+
+            // Format each provider (you can reuse formatProvider or adapt)
+            $formatted = $providers->map(function ($provider) {
+                return [
+                    'providerID'   => $provider->providerID,
+                    'fullname'     => $provider->fullname,
+                    'email'        => $provider->email,
+                    'phone'        => $provider->phone,
+                    'catagoryID'   => $provider->catagoryID, // important for frontend checks
+                    'category'     => $provider->category->name ?? null,
+                    'isVerified'   => $provider->isVerified,
+                    'created_at'   => $provider->created_at ? $provider->created_at->format('Y-m-d H:i:s') : null,
+                    // Add any other fields you need
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data'    => $formatted
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Get All Providers Error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch providers',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 4. Provider Verification Action (With Email)
+     */
     public function verifyProvider(Request $request, $id)
     {
         $request->validate([
@@ -61,152 +128,112 @@ class AdminAuthController extends Controller
         $provider = ServiceProvider::find($id);
 
         if (!$provider) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Provider not found'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
         }
 
-        // Update verification status
         $provider->isVerified = $request->isVerified ? 1 : 0;
-        
-        if ($request->isVerified) {
-            $provider->verification_reason = null; // Clear rejection reason if approved
-        } else {
-            $provider->verification_reason = $request->verification_reason; // Save rejection reason
-        }
-        
+        $provider->verification_reason = $request->isVerified ? null : $request->verification_reason;
         $provider->save();
 
-        // Prepare email
+        $statusLabel = $request->isVerified ? 'approved' : 'rejected';
+
         if ($request->isVerified) {
-            $status = 'approved';
             $emailBody = "
-                <p>Hello {$provider->fullname},</p>
-                <p>Your account has been <strong>approved</strong> by the admin.</p>
-                <p><a href='http://localhost:5173/login' style='display:inline-block;padding:10px 20px;background-color:#1d72b8;color:#fff;text-decoration:none;border-radius:5px;'>Go to Login</a></p>";
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: #2b64f3;'>Congratulations!</h2>
+                    <p>Hello <strong>{$provider->fullname}</strong>,</p>
+                    <p>Your Service Provider account has been <strong>approved</strong> by our administration team.</p>
+                    <p>You can now log in to the mobile app and start receiving service requests.</p>
+                </div>";
         } else {
-            $status = 'rejected';
-            $reason = $request->verification_reason ?? 'No reason provided';
+            $reason = $request->verification_reason ?? 'The provided documents were not clear or valid.';
             $emailBody = "
-                <p>Hello {$provider->fullname},</p>
-                <p>Your account has been <strong>rejected</strong> by the admin.</p>
-                <p><strong>Reason:</strong> {$reason}</p>
-                <p><a href='http://localhost:5173/login' style='display:inline-block;padding:10px 20px;background-color:#1d72b8;color:#fff;text-decoration:none;border-radius:5px;'>Go to Login</a></p>
-            ";
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: #ef4444;'>Account Status Update</h2>
+                    <p>Hello <strong>{$provider->fullname}</strong>,</p>
+                    <p>We regret to inform you that your application has been <strong>rejected</strong> at this time.</p>
+                    <p><strong>Reason:</strong> {$reason}</p>
+                    <p>Please log in to your profile to re-upload clear documents.</p>
+                </div>";
         }
 
-        // Send email
         try {
-            \Illuminate\Support\Facades\Mail::html($emailBody, function ($message) use ($provider, $status) {
+            Mail::html($emailBody, function ($message) use ($provider, $statusLabel) {
                 $message->to($provider->email)
-                        ->subject("Your account has been {$status}");
+                        ->subject("Service Finder Account: " . ucfirst($statusLabel));
             });
         } catch (\Exception $e) {
-            Log::error("Failed to send verification email: " . $e->getMessage());
-            // Proceed without failing the request, as the DB update succeeded
+            Log::error("Mail Error: " . $e->getMessage());
         }
 
-        // Return JSON response
         return response()->json([
             'success' => true,
-            'message' => 'Provider verification updated successfully',
+            'message' => 'Status updated and notification sent.',
             'data' => [
-                'provider_id' => $provider->providerID,
-                'fullname' => $provider->fullname,
-                'email' => $provider->email,
-                'isVerified' => $provider->isVerified,
-                'verification_reason' => $provider->verification_reason,
+                'providerID' => $provider->providerID,
+                'status' => $provider->isVerified
             ]
         ]);
     }
 
+    /**
+     * 5. List Pending Providers
+     */
     public function pendingProviders()
     {
-        // 0 or null is pending - wait, usually 0 is rejected, 1 is approved? 
-        // Or null is pending? "isVerified column which is either true,false or null(by default)"
-        // So null is pending.
-        
         $pending = ServiceProvider::whereNull('isVerified')
             ->with('category')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function($provider) {
-                return $this->formatProvider($provider);
-            });
+            ->map(fn($p) => $this->formatProvider($p));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Pending providers retrieved successfully',
-            'data' => $pending
-        ]);
+        return response()->json(['success' => true, 'data' => $pending]);
     }
 
+    /**
+     * 6. List Approved Providers
+     */
     public function approvedProviders()
     {
-        // verified = 1 (true)
         $approved = ServiceProvider::where('isVerified', 1)
             ->with('category')
-            ->orderBy('updated_at', 'desc')
-            ->get()
-            ->map(function($provider) {
-                return $this->formatProvider($provider);
-            });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Approved providers retrieved successfully',
-            'data' => $approved
-        ]);
-    }
-
-    public function rejectedProviders()
-    {
-        // verified = 0 (false)
-        $rejected = ServiceProvider::where('isVerified', 0)
-            ->with('category')
-            ->orderBy('updated_at', 'desc')
-            ->get()
-            ->map(function($provider) {
-                return $this->formatProvider($provider);
-            });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Rejected providers retrieved successfully',
-            'data' => $rejected
-        ]);
-    }
-
-    public function getAllProviders()
-    {
-        $all = ServiceProvider::with('category')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function($provider) {
-                return $this->formatProvider($provider);
-            });
+            ->map(fn($p) => $this->formatProvider($p));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'All providers retrieved successfully',
-            'data' => $all
-        ]);
+        return response()->json(['success' => true, 'data' => $approved]);
     }
 
+    /**
+     * 7. List Rejected Providers
+     */
+    public function rejectedProviders()
+    {
+        $rejected = ServiceProvider::where('isVerified', 0)
+            ->whereNotNull('verification_reason')
+            ->with('category')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $rejected]);
+    }
+
+    /**
+     * 8. Format Helper (Aligns with React Dashboard.jsx keys)
+     */
     private function formatProvider($provider)
     {
         return [
-            'id' => $provider->providerID, // Use correct primary key
+            'id' => $provider->providerID,
             'name' => $provider->fullname,
-            'service_type' => $provider->category->name ?? 'Unknown',
-            'submission_date' => $provider->created_at ? $provider->created_at->format('l M j Y H:i:s') : 'N/A',
-            'credentials' => $provider->idPhotoType,
+            'service_type' => $provider->category->name ?? 'General',
+            'submission_date' => $provider->created_at ? $provider->created_at->format('M d, Y') : 'N/A',
+            'credentials' => $provider->idPhoto ? 'DOC_UPLOADED' : 'NO_DOC',
+            'idPhoto' => $provider->idPhoto,
+            'credentialPhoto' => $provider->credentialPhoto,
             'status' => $provider->isVerified,
-            'verification_reason' => $provider->verification_reason,
             'email' => $provider->email,
-            'phone' => $provider->phone,
         ];
     }
-
 }

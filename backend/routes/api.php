@@ -8,8 +8,7 @@ use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\ProvidersearchController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\CategoryController;
-
-
+use App\Http\Controllers\ServiceController;
 
 // customer registration endpoint
 Route::post('/customer/register', [CustomerAuthController::class, 'register']);
@@ -36,6 +35,7 @@ Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword'])
 
 
 
+Route::get('/admin/stats', [AdminAuthController::class, 'getStats']);
 Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
 
 Route::get('/providers/pending',[AdminAuthController::class, 'pendingProviders']);
@@ -48,4 +48,5 @@ Route::post('/categories', [CategoryController::class, 'addCategory']);
 Route::get('/categories', [CategoryController::class, 'getCategories']);
 Route::delete('/categories/{id}', [CategoryController::class, 'deleteCategory']);
 Route::put('/categories/{id}', [CategoryController::class, 'editCategory']);
+Route::get('/services', [ServiceController::class, 'index']);
 
