@@ -28,11 +28,8 @@ Route::get('provider/{providerID}/notifications', [NotificationController::class
 
 Route::get( '/search/providers',[ProviderSearchController::class, 'search']);
 
-
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
 Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword']);
-
-
 
 Route::get('/admin/stats', [AdminAuthController::class, 'getStats']);
 Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
