@@ -9,7 +9,6 @@ use App\Http\Controllers\ProvidersearchController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceController;
-
 // customer registration endpoint
 Route::post('/customer/register', [CustomerAuthController::class, 'register']);
 // Customer login
