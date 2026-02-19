@@ -54,10 +54,22 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="verification" element={<Verification />} />
-            <Route path="users"      element={<Users />} />
+            <Route path="/verification" element={<Verification />} />
+            <Route path="/verification/pending" element={<Verification />} />
+            <Route path="/verification/approved" element={<Verification />} />
+            <Route path="/verification/rejected" element={<Verification />} />
+            <Route path="/verification/all" element={<Verification />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/users/customers" element={<Users />} />
+            <Route path="/users/providers" element={<Users />} />
             <Route path="services"   element={<Services />} />
-            <Route path="bookings"   element={<Bookings />} />
+            <Route path="/services/categories" element={<Services />} />
+            <Route path="/services/services" element={<Services />} />
+            <Route path="/bookings" element={<Bookings />} />
+            <Route path="/bookings/pending" element={<Bookings />} />
+            <Route path="/bookings/accepted" element={<Bookings />} />
+            <Route path="/bookings/completed" element={<Bookings />} />
+            <Route path="/bookings/cancelled" element={<Bookings />} />
             <Route path="disputes"   element={<Disputes />} />
             <Route path="payments"   element={<Payments />} />
             <Route path="settings"   element={<Settings />} />
