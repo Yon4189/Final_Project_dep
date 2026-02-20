@@ -29,6 +29,15 @@ const Dashboard = () => {
     providerName: ''
   });
 
+  // State for rejection reason modal
+  const [rejectModal, setRejectModal] = useState({
+    show: false,
+    providerId: null,
+    providerName: '',
+    defaultReason: 'Provided service details or documents are invalid.',
+    inputReason: ''
+  });
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -53,25 +62,33 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  const handleVerifyAction = async (id, name, isApproved) => {
-    let reason = null;
-    if (!isApproved) {
-      reason = window.prompt(`Enter rejection reason for ${name}:`, "Provided service details or documents are invalid.");
-      if (reason === null) return;
-    } else {
-      if (!window.confirm(`Approve ${name} and publish their service to the marketplace?`)) return;
+  // Modal-based verify action
+  const handleVerifyAction = (id, name, approve) => {
+    if (!approve) {
+      setRejectModal({
+        show: true,
+        providerId: id,
+        providerName: name,
+        defaultReason: 'Provided service details or documents are invalid.',
+        inputReason: ''
+      });
+      return;
     }
+    if (!window.confirm(`Approve ${name} and publish their service to the marketplace?`)) return;
+    processVerifyAction(id, 'approved');
+  };
 
+  // Actually send verify/reject request
+  const processVerifyAction = async (id, status, reason = null) => {
     setProcessingId(id);
     try {
       const response = await api.post(`/providers/${id}/verify`, {
-        isVerified: isApproved,
+        status,
         verification_reason: reason
       });
-
       if (response.data.success) {
         setVerificationQueue(prev => prev.filter(item => item.id !== id));
-        alert(isApproved ? "Account & Service Approved!" : "Provider Rejected.");
+        alert(status === 'approved' ? "Account & Service Approved!" : "Provider Rejected.");
         fetchData();
       }
     } catch (err) {
@@ -79,6 +96,20 @@ const Dashboard = () => {
     } finally {
       setProcessingId(null);
     }
+  };
+  // Handle rejection modal submit
+  const handleRejectSubmit = () => {
+    if (!rejectModal.inputReason.trim()) {
+      alert("Please provide a rejection reason.");
+      return;
+    }
+    setRejectModal({ ...rejectModal, show: false });
+    processVerifyAction(rejectModal.providerId, 'rejected', rejectModal.inputReason);
+  };
+
+  // Handle rejection modal cancel
+  const handleRejectCancel = () => {
+    setRejectModal({ show: false, providerId: null, providerName: '', defaultReason: '', inputReason: '' });
   };
 
   const viewFile = (filePath) => {
@@ -98,6 +129,45 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+      {/* Rejection Reason Modal */}
+      {rejectModal.show && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+            <div className="p-6 bg-red-500 text-white flex justify-between items-center">
+              <h2 className="text-lg font-black italic tracking-tighter uppercase">
+                Reject Provider – {rejectModal.providerName}
+              </h2>
+              <button onClick={handleRejectCancel}>
+                <XCircle size={28} />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-slate-700 font-bold mb-2 text-xs uppercase">Rejection Reason</label>
+              <textarea
+                className="w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-400"
+                rows={3}
+                placeholder={rejectModal.defaultReason}
+                value={rejectModal.inputReason}
+                onChange={e => setRejectModal({ ...rejectModal, inputReason: e.target.value })}
+              />
+            </div>
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                onClick={handleRejectCancel}
+                className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectSubmit}
+                className="bg-red-500 hover:bg-red-600 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Description Modal */}
       {descriptionModal.show && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">

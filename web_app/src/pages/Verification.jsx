@@ -15,6 +15,7 @@ const Verification = () => {
     if (location.pathname.includes('/verification/pending')) return 'Pending';
     if (location.pathname.includes('/verification/approved')) return 'Approved';
     if (location.pathname.includes('/verification/rejected')) return 'Rejected';
+    // add Suspended here. for those who were approved but violets a policy later
     return 'Pending';
   };
 
