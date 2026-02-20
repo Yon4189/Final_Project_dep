@@ -75,7 +75,7 @@ class ServiceProviderAuthController extends Controller
         'profilePicture' => $profilePath,
         'idPhoto' => $idPhotoPath,
         'idPhotoType' => $request->idPhotoType, // new
-        'isVerified' => null, // default null until admin approves/rejects
+        'status' => null, // default null until admin approves/rejects
     ]);
 
     return response()->json([

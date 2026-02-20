@@ -77,19 +77,47 @@ const Users = () => {
   }, [userType]); // refetch when userType changes (could pass as param to API)
 
   // 4. Action Handlers
-  const toggleUserStatus = (id, currentStatus) => {
-    const action = currentStatus === 'Active' ? 'SUSPEND' : 'ACTIVATE';
-    if (window.confirm(`Are you sure you want to ${action} this account?`)) {
-      setUsers(prev => prev.map(u => 
-        u.id === id ? { ...u, status: currentStatus === 'Active' ? 'Suspended' : 'Active' } : u
-      ));
+  const toggleUserStatus = async (id, currentStatus) => {
+  const action = currentStatus === 'Active' ? 'SUSPEND' : 'ACTIVATE';
+  if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
+
+  try {
+    const url = userType === "Provider" 
+      ? `/admin/providers/${id}/status` 
+      : `/admin/customers/${id}/status`;
+
+    // call backend to update status
+    await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
+
+    // update frontend state
+    setUsers(prev => prev.map(u => 
+      u.id === id ? { ...u, status: currentStatus === 'Active' ? 'Suspended' : 'Active' } : u
+    ));
+
+  } catch (err) {
+    console.error(err);
+    alert('Failed to update status');
     }
   };
 
-  const deleteUser = (id, name) => {
-    if (window.confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) {
-      setUsers(prev => prev.filter(u => u.id !== id));
-    }
+  const deleteUser = async (id, name) => {
+  if (!window.confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;
+
+  try {
+    const url = userType === "Provider" 
+      ? `/admin/providers/${id}` 
+      : `/admin/customers/${id}`;
+
+    // call backend to delete user
+    await api.delete(url);
+
+    // remove from frontend
+    setUsers(prev => prev.filter(u => u.id !== id));
+
+  } catch (err) {
+    console.error(err);
+    alert('Failed to delete user');
+  }
   };
 
   // 5. Filtering Logic
