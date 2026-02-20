@@ -11,6 +11,9 @@ class Customer extends Model
     use HasFactory;
 
     protected $primaryKey = 'customerID'; // primary key
+        protected $attributes = [
+        'status'=> 'pending', // newly registered will have pending status
+    ];
 
     protected $fillable = [
         'fullname', 'phone', 'email', 'password', 'location', 'profilePicture', 'bio', 'walletBalance', 'serviceRadiusKm', 'service_city',

@@ -11,6 +11,9 @@ class ServiceProvider extends Model
     use HasFactory;
 
     protected $table = 'service_providers';
+    protected $attributes = [
+        'status'=> 'pending', // newly registered will have pending status
+    ];
 
     protected $primaryKey = 'providerID'; // primary key
 

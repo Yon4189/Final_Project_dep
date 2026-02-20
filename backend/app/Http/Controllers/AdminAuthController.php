@@ -117,7 +117,7 @@ class AdminAuthController extends Controller
     {
     // 1. Validate incoming request
     $request->validate([
-        'status' => 'required|string', // "Active" or "Suspended"
+        'status' => 'required|string', // "approved" or "Suspended"
         'verification_reason' => 'nullable|string|max:255',
     ]);
 
@@ -129,13 +129,13 @@ class AdminAuthController extends Controller
 
     // 3. Update status and reason
     $provider->status = $request->status;
-    $provider->verification_reason = $request->status === 'Active' ? null : $request->verification_reason;
+    $provider->verification_reason = $request->status === 'approved' ? null : $request->verification_reason;
     $provider->save();
 
-    $statusLabel = strtolower($request->status); // "active" or "suspended"
+    $statusLabel = strtolower($request->status); // "approved" or "suspended"
 
     // 4. Prepare email
-    if ($request->status === 'Active') {
+    if ($request->status === 'approved') {
         $emailBody = "
             <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
                 <h2 style='color: #2b64f3;'>Congratulations!</h2>
@@ -181,7 +181,7 @@ class AdminAuthController extends Controller
      */
     public function pendingProviders()
     {
-        $pending = ServiceProvider::whereNull('status')
+        $pending = ServiceProvider::where('status', 'pending')
             ->with('category', 'services')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -195,7 +195,7 @@ class AdminAuthController extends Controller
      */
     public function approvedProviders()
     {
-        $approved = ServiceProvider::where('status', 'Active')
+        $approved = ServiceProvider::where('status', 'approved')
             ->with('category')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -209,7 +209,7 @@ class AdminAuthController extends Controller
      */
     public function rejectedProviders()
     {
-        $rejected = ServiceProvider::where('status', 'Suspended')
+        $rejected = ServiceProvider::where('status', 'rejected')
             ->whereNotNull('verification_reason')
             ->with('category')
             ->orderBy('created_at', 'desc')
@@ -217,6 +217,18 @@ class AdminAuthController extends Controller
             ->map(fn($p) => $this->formatProvider($p));
 
         return response()->json(['success' => true, 'data' => $rejected]);
+    }
+
+    public function suspendedProviders()
+    {
+        $suspended = ServiceProvider::where('status', 'suspended')
+            ->whereNotNull('verification_reason')
+            ->with('category')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $suspended]);
     }
 
     /**
@@ -277,7 +289,7 @@ class AdminAuthController extends Controller
     if (!$customer) {
         return response()->json(['message' => 'Customer not found'], 404);
     }
-    $customer->status = $customer->status === 'Active' ? 'Suspended' : 'Active';
+    $customer->status = $customer->status === 'approved' ? 'suspended' : 'approved';
     $customer->save();
     return response()->json(['message' => 'Status updated', 'status' => $customer->status]);
     }
@@ -288,7 +300,7 @@ class AdminAuthController extends Controller
     if (!$provider) {
         return response()->json(['message' => 'Provider not found'], 404);
     }
-    $provider->status = $provider->status === 'Active' ? 'Suspended' : 'Active';
+    $provider->status = $provider->status === 'approved' ? 'suspended' : 'approved';
     $provider->save();
     return response()->json(['message' => 'Status updated', 'status' => $provider->status]);
     }
