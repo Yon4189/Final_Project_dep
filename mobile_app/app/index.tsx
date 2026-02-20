@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { API_BASE_URL } from './config/api';
 import {
   Dimensions,
   Image,
@@ -13,7 +15,6 @@ import AppButton from '../components/AppButton';
 import RoleCard from '../components/RoleCard';
 import { Colors } from '@/app/constants/Colors';
 import { SERVICE_CATEGORIES } from './constants/Services';
-export const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 const { width } = Dimensions.get('window');
 
@@ -26,18 +27,17 @@ export default function LandingScreen() {
     { label: 'Happy Customers', value: '1000+' },
     { label: 'Service Available', value: '24/7' },
   ];
-   // NEW: state to display API message
+  // NEW: state to display API message
   const [apiMessage, setApiMessage] = useState<string>('Loading...');
    // fetch from Laravel
   useEffect(() => {
-    fetch(`${API_BASE_URL}/test`)
-      .then(res => res.json())
-      .then(data => {
-        console.log("API RESPONSE:", data);
-        setApiMessage(data.message); // show message in UI
+    axios.get(`${API_BASE_URL}/test`)
+      .then(response => {
+        console.log('API RESPONSE:', response.data);
+        setApiMessage(response.data.message);
       })
       .catch(err => {
-        console.log("API ERROR:", err);
+        console.log('API ERROR:', err);
         setApiMessage('API connection failed');
       });
   }, []);

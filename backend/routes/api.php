@@ -9,13 +9,17 @@ use App\Http\Controllers\ProvidersearchController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceController;
-
 // customer registration endpoint
+Route::get('/test', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'API is working correctly',
+        'server_time' => now()
+    ]);
+});
 Route::post('/customer/register', [CustomerAuthController::class, 'register']);
 // Customer login
 Route::post('/customer/login', [CustomerAuthController::class, 'login']);
-
-
 // service provider registration endpoint
 Route::post('/provider/register', [ServiceProviderAuthController::class, 'register']);
 // provider's login endpoint
@@ -29,11 +33,8 @@ Route::get('provider/{providerID}/notifications', [NotificationController::class
 
 Route::get( '/search/providers',[ProviderSearchController::class, 'search']);
 
-
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
 Route::post('/reset-password',[ForgotPasswordController::class,'resetPassword']);
-
-
 
 Route::get('/admin/stats', [AdminAuthController::class, 'getStats']);
 Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
@@ -42,6 +43,9 @@ Route::get('/providers/pending',[AdminAuthController::class, 'pendingProviders']
 Route::get('/providers/approved',[AdminAuthController::class, 'approvedProviders']);
 Route::get('/providers/rejected',[AdminAuthController::class, 'rejectedProviders']);
 Route::get('/providers',[AdminAuthController::class, 'getAllProviders']);
+Route::get('admin/providers',[AdminAuthController::class, 'getProviders']);
+Route::get('admin/customers',[AdminAuthController::class, 'getCustomers']);
+
 
 // add, read, delete, edit catagories
 Route::post('/categories', [CategoryController::class, 'addCategory']);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Plus, Edit2, Trash2, X, CheckCircle, Loader2,
   AlertCircle, RefreshCw, Trash, Save,
@@ -7,14 +8,21 @@ import {
 import api from '../api/axios';
 
 const Services = () => {
-  // --- STATE MANAGEMENT ---
-  const [activeTab, setActiveTab] = useState('categories');
+  const location = useLocation();
+
+  const getActiveTabFromPath = () => {
+    if (location.pathname.includes('/services/categories')) return 'categories';
+    if (location.pathname.includes('/services/services')) return 'services';
+    return 'categories';
+  };
+
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [providers, setProviders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dbStatus, setDbStatus] = useState('checking');
+  const [dbStatus, setDbStatus] = useState('checking'); // 'checking', 'connected', 'disconnected'
   const [apiError, setApiError] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,7 +76,6 @@ const Services = () => {
         api.get('/providers')
       ]);
 
-      // Categories
       if (catRes.status === 'fulfilled') {
         const categoriesData = extractData(catRes.value, 'categories');
         setCategories(categoriesData);
@@ -76,7 +83,6 @@ const Services = () => {
         console.error('Categories fetch failed:', catRes.reason);
       }
 
-      // Services
       if (svcRes.status === 'fulfilled') {
         const servicesData = extractData(svcRes.value, 'services');
         setServices(servicesData);
@@ -84,7 +90,6 @@ const Services = () => {
         console.error('Services fetch failed:', svcRes.reason);
       }
 
-      // Providers
       if (provRes.status === 'fulfilled') {
         const providersData = extractData(provRes.value, 'providers');
         setProviders(providersData);
@@ -107,10 +112,15 @@ const Services = () => {
     }
   };
 
-  // Initial fetch on mount
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Update activeTab when route changes
+  useEffect(() => {
+    setActiveTab(getActiveTabFromPath());
+    setCurrentPage(1);
+  }, [location.pathname]);
 
   // --- PAGINATION LOGIC ---
   const dataToDisplay = activeTab === 'categories' ? categories : services;
@@ -192,12 +202,13 @@ const Services = () => {
   };
 
   return (
-    <div className="relative space-y-6 animate-in fade-in duration-500 pb-20">
+    <div className="relative space-y-6 animate-in fade-in duration-500 pb-10">
 
       {/* TOAST SYSTEM */}
       {toast.show && (
-        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right-10 border ${toast.type === 'success' ? 'bg-slate-900 text-green-400 border-green-500/20' : 'bg-red-600 text-white'
-          }`}>
+        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right-10 border ${
+          toast.type === 'success' ? 'bg-slate-900 text-green-400 border-green-500/20' : 'bg-red-600 text-white'
+        }`}>
           {toast.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
         </div>
@@ -206,18 +217,21 @@ const Services = () => {
       {/* Header with Database Status */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Platform Catalog</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">
+            {activeTab === 'categories' ? 'Categories' : 'Services'}
+          </h1>
           <p className="text-slate-500 text-sm font-medium uppercase tracking-tighter">
-            {activeTab === 'categories' ? 'Manage Structure (Admin)' : 'Marketplace Services (Read-Only)'}
+            {activeTab === 'categories' ? 'Manage structure' : 'View marketplace services'}
           </p>
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Database Status Indicator */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Database size={16} className={
               dbStatus === 'connected' ? 'text-green-500' :
-                dbStatus === 'disconnected' ? 'text-red-500' :
-                  'text-yellow-500 animate-pulse'
+              dbStatus === 'disconnected' ? 'text-red-500' :
+              'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-black uppercase tracking-wider">
               {dbStatus === 'connected' && 'Database Connected'}
@@ -228,32 +242,24 @@ const Services = () => {
             {dbStatus === 'disconnected' && <AlertCircle size={14} className="text-red-500" />}
           </div>
 
-          <button onClick={fetchData} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm">
+          {/* Refresh Button */}
+          <button
+            onClick={fetchData}
+            className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm"
+          >
             <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
           </button>
 
+          {/* New Category Button (only for categories) */}
           {activeTab === 'categories' && dbStatus === 'connected' && (
-            <button onClick={() => handleOpenModal()} className="flex items-center gap-2 bg-[#4a90e2] hover:bg-blue-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg transition-all active:scale-95">
+            <button
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 bg-[#4a90e2] hover:bg-blue-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg transition-all active:scale-95"
+            >
               <Plus size={20} /> New Category
             </button>
           )}
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex gap-2 p-1.5 bg-slate-200/50 w-fit rounded-2xl border border-slate-200">
-        <button
-          onClick={() => { setActiveTab('categories'); setCurrentPage(1); }}
-          className={`flex items-center gap-2 px-8 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'categories' ? 'bg-white text-admin-accent shadow-sm' : 'text-slate-500'}`}
-        >
-          <Layers size={18} /> Categories
-        </button>
-        <button
-          onClick={() => { setActiveTab('services'); setCurrentPage(1); }}
-          className={`flex items-center gap-2 px-8 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'services' ? 'bg-white text-admin-accent shadow-sm' : 'text-slate-500'}`}
-        >
-          <Wrench size={18} /> Provider Services
-        </button>
       </div>
 
       {/* Table Section */}
@@ -313,8 +319,9 @@ const Services = () => {
                         <td className="px-8 py-5 font-mono text-xs font-bold text-slate-300">#{item.catagoryID}</td>
                         <td className="px-8 py-5 font-black text-slate-800">{item.name}</td>
                         <td className="px-8 py-5">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                            }`}>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${
+                            item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                          }`}>
                             {item.status || 'Active'}
                           </span>
                         </td>
@@ -430,6 +437,6 @@ const Services = () => {
       )}
     </div>
   );
-}
+};
 
 export default Services;

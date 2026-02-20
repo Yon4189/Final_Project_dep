@@ -51,8 +51,7 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 2. Platform Statistics
-     * This method feeds the 6 cards on your React Dashboard
+     * 2. Platform Statistics – FIXED pending count to match pendingProviders()
      */
     public function getStats()
     {
@@ -62,9 +61,11 @@ class AdminAuthController extends Controller
                 'data' => [
                     'providers'  => ServiceProvider::count(),
                     'customers'  => Customer::count(),
+                    // ✅ Use whereNull('isVerified') to match pendingProviders()
+                    'pending'    => ServiceProvider::whereNull('isVerified')->count(),
                     'categories' => Category::count(),
                     'services'   => Service::count(),
-                    'revenue'    => Transaction::sum('platformFee')
+                    'revenue'    => Transaction::sum('platformFee') 
                 ]
             ]);
         } catch (\Exception $e) {
@@ -83,24 +84,19 @@ class AdminAuthController extends Controller
     public function getAllProviders()
     {
         try {
-            // Load all providers, optionally with their category relationship
             $providers = ServiceProvider::with('category')->get();
-
-            // Format each provider (you can reuse formatProvider or adapt)
             $formatted = $providers->map(function ($provider) {
                 return [
                     'providerID'   => $provider->providerID,
                     'fullname'     => $provider->fullname,
                     'email'        => $provider->email,
                     'phone'        => $provider->phone,
-                    'catagoryID'   => $provider->catagoryID, // important for frontend checks
+                    'catagoryID'   => $provider->catagoryID,
                     'category'     => $provider->category->name ?? null,
                     'isVerified'   => $provider->isVerified,
                     'created_at'   => $provider->created_at ? $provider->created_at->format('Y-m-d H:i:s') : null,
-                    // Add any other fields you need
                 ];
             });
-
             return response()->json([
                 'success' => true,
                 'data'    => $formatted
@@ -177,12 +173,12 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 5. List Pending Providers
+     * 5. List Pending Providers (isVerified = null)
      */
     public function pendingProviders()
     {
         $pending = ServiceProvider::whereNull('isVerified')
-            ->with('category')
+            ->with('category', 'services')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -191,7 +187,7 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 6. List Approved Providers
+     * 6. List Approved Providers (isVerified = 1)
      */
     public function approvedProviders()
     {
@@ -205,7 +201,7 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 7. List Rejected Providers
+     * 7. List Rejected Providers (isVerified = 0)
      */
     public function rejectedProviders()
     {
@@ -220,14 +216,18 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * 8. Format Helper (Aligns with React Dashboard.jsx keys)
+     * 8. Format Helper – used by pending/approved/rejected methods
      */
     private function formatProvider($provider)
     {
+         $service = $provider->services->first();
         return [
             'id' => $provider->providerID,
             'name' => $provider->fullname,
             'service_type' => $provider->category->name ?? 'General',
+            'service_title' => $service->title ?? null, 
+            'service_description' => $service->description ?? null,
+            'estimated_cost' => $service->estimatedCost ?? null,
             'submission_date' => $provider->created_at ? $provider->created_at->format('M d, Y') : 'N/A',
             'credentials' => $provider->idPhoto ? 'DOC_UPLOADED' : 'NO_DOC',
             'idPhoto' => $provider->idPhoto,
@@ -235,5 +235,15 @@ class AdminAuthController extends Controller
             'status' => $provider->isVerified,
             'email' => $provider->email,
         ];
+    }
+
+
+    // fucntions for User Mangment tab for admin
+    public function getProviders(){
+        return ServiceProvider::all();
+    }
+
+    public function getCustomers(){
+        return Customer::all();
     }
 }

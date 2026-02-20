@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('phone')->unique();                    
             $table->string('email')->unique();          
             $table->string('password');                 
-            $table->unsignedBigInteger('catagoryID'); // FK to catagories
+            $table->unsignedBigInteger('catagoryID')->nullable(); // FK to catagories
             $table->string('profilePicture')->nullable();  // nullable cuz its optional
             $table->string('idPhoto');                  
             $table->boolean('isVerified')->default(false); 
