@@ -58,6 +58,7 @@ function App() {
             <Route path="/verification/pending" element={<Verification />} />
             <Route path="/verification/approved" element={<Verification />} />
             <Route path="/verification/rejected" element={<Verification />} />
+            <Route path="/verification/suspended" element={<Verification />} />
             <Route path="/verification/all" element={<Verification />} />
             <Route path="/users" element={<Users />} />
             <Route path="/users/customers" element={<Users />} />

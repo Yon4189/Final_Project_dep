@@ -15,7 +15,7 @@ const Verification = () => {
     if (location.pathname.includes('/verification/pending')) return 'Pending';
     if (location.pathname.includes('/verification/approved')) return 'Approved';
     if (location.pathname.includes('/verification/rejected')) return 'Rejected';
-    // add Suspended here. for those who were approved but violets a policy later
+    if (location.pathname.includes('/verification/suspended')) return 'Suspended';
     return 'Pending';
   };
 
@@ -47,6 +47,7 @@ const Verification = () => {
       let endpoint = '/providers/pending';
       if (filter === 'Approved') endpoint = '/providers/approved';
       if (filter === 'Rejected') endpoint = '/providers/rejected';
+      if (filter === 'Suspended') endpoint = '/providers/suspended';
       if (filter === 'All') endpoint = '/providers';
 
       const response = await api.get(endpoint);
