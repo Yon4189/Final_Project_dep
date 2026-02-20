@@ -42,6 +42,7 @@ Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvid
 Route::get('/providers/pending',[AdminAuthController::class, 'pendingProviders']);
 Route::get('/providers/approved',[AdminAuthController::class, 'approvedProviders']);
 Route::get('/providers/rejected',[AdminAuthController::class, 'rejectedProviders']);
+Route::get('/providers/suspended',[AdminAuthController::class, 'suspendedProviders']);
 Route::get('/providers',[AdminAuthController::class, 'getAllProviders']);
 Route::get('admin/providers',[AdminAuthController::class, 'getProviders']);
 Route::get('admin/customers',[AdminAuthController::class, 'getCustomers']);

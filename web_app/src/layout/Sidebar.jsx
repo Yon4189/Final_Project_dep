@@ -6,7 +6,7 @@ import {
   BarChart3, Settings, LogOut, ClipboardList,
   ChevronDown, ChevronRight, Layers,
   Folder, Clock, CheckCircle, XCircle,
-  User, Check, X
+  User, Check, X, AlertCircle
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -107,6 +107,9 @@ const Sidebar = () => {
               </Link>
               <Link to="/verification/rejected" className={`flex items-center gap-3 px-6 py-2.5 transition-all ${location.pathname === '/verification/rejected' ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'}`}>
                 <XCircle size={16} /> <span className="text-sm">Rejected</span>
+              </Link>
+              <Link to="/verification/suspended" className={`flex items-center gap-3 px-6 py-2.5 transition-all ${location.pathname === '/verification/suspended' ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'}`}>
+                <AlertCircle size={16} /> <span className="text-sm">Suspended</span>
               </Link>
             </div>
           )}

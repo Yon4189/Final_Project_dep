@@ -222,7 +222,6 @@ class AdminAuthController extends Controller
     public function suspendedProviders()
     {
         $suspended = ServiceProvider::where('status', 'suspended')
-            ->whereNotNull('verification_reason')
             ->with('category')
             ->orderBy('created_at', 'desc')
             ->get()
