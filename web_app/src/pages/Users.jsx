@@ -17,6 +17,8 @@ const Users = () => {
     return 'Customer'; // default
   };
 
+
+
   // 1. Data State
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,20 +35,33 @@ const Users = () => {
   }, [location.pathname]);
 
   // 3. Mock Data (replace with API call)
-  const mockUsers = [
-    { id: "USR-001", name: "Yoseph Tilahun", email: "yoseph@bdu.edu.et", phone: "+251 911 1111", type: "Provider", status: "Active", joined: "Jan 2026" },
-    { id: "USR-002", name: "Yonas Abate", email: "yonas@bdu.edu.et", phone: "+251 922 2222", type: "Customer", status: "Active", joined: "Jan 2026" },
-    { id: "USR-003", name: "Nathenael Yacob", email: "naty@bdu.edu.et", phone: "+251 933 3333", type: "Provider", status: "Suspended", joined: "Dec 2025" },
-    { id: "USR-004", name: "Abebe Balcha", email: "abebe@gmail.com", phone: "+251 944 4444", type: "Customer", status: "Active", joined: "Feb 2026" },
-  ];
-
+  // mock data was here. its removed 
+  
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
     try {
-      // In a real app, you might filter by type on the server
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setUsers(mockUsers);
+      const url = userType === "Provider" ? "/admin/providers" : "/admin/customers";
+      console.log("Fetching from URL:", url); // Log the URL being
+
+      // fetching data from backedn
+      const apiResponse = await api.get(url);
+      console.log("Raw API data: ", apiResponse.data);
+
+      // mapping backend fields with frontend fields
+      const mappedUsers = apiResponse.data.map(u => ({
+        id: u.customerID || u.providerID,
+        name: u.fullname,
+        email: u.email,
+        phone: u.phone,
+        type: userType,
+        status: u.status || "Active",
+        joined: u.created_at? new Date(u.created_at).toLocaleDateString() : ""
+
+      }));
+
+      setUsers(mappedUsers);
+      
       setDbStatus('connected');
     } catch (err) {
       console.error(err);
@@ -78,12 +93,19 @@ const Users = () => {
   };
 
   // 5. Filtering Logic
+   // 5. Filtering Logic
   const filteredUsers = users.filter(u => {
     const matchesType = u.type === userType;
-    const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    // Ensure u.name and u.email are strings before calling toLowerCase()
+    const userName = u.name ? String(u.name).toLowerCase() : '';
+    const userEmail = u.email ? String(u.email).toLowerCase() : '';
+    const searchLower = searchQuery.toLowerCase();
+
+    const matchesSearch = userName.includes(searchLower) || 
+                          userEmail.includes(searchLower);
     return matchesType && matchesSearch;
   });
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">

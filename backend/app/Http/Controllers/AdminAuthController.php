@@ -236,4 +236,14 @@ class AdminAuthController extends Controller
             'email' => $provider->email,
         ];
     }
+
+
+    // fucntions for User Mangment tab for admin
+    public function getProviders(){
+        return ServiceProvider::all();
+    }
+
+    public function getCustomers(){
+        return Customer::all();
+    }
 }
