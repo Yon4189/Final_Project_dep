@@ -12,7 +12,7 @@ class ProviderSearchController extends Controller
         $query = ServiceProvider::query();
 
         // Only verified providers
-        $query->where('isVerified', 1);
+        $query->where('status', 'approved');
 
         // Filter by name (partial match)
         if ($request->has('name')) {
