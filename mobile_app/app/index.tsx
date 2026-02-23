@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { API_BASE_URL } from './config/api';
+import { api } from './services/api';
 import {
   Dimensions,
   Image,
@@ -14,31 +13,75 @@ import {
 import AppButton from '../components/AppButton';
 import RoleCard from '../components/RoleCard';
 import { Colors } from '@/app/constants/Colors';
-import { SERVICE_CATEGORIES } from './constants/Services';
 
 const { width } = Dimensions.get('window');
+
+const getCategoryIcon = (name: string) => {
+  const icons: { [key: string]: string } = {
+    'Plumbing': '🔧',
+    'Home Cleaning': '🧹',
+    'Electrical Services': '⚡',
+    'Internet & TV Setup': '📡',
+    'Painting & Finishing': '🎨',
+    'Carpentry': '🪚',
+    'AC & Home Appliances': '❄️',
+    'Home Maintenance': '🏠',
+  };
+  return icons[name] || '🛠️';
+};
 
 export default function LandingScreen() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<'customer' | 'provider' | null>(null);
 
-  const stats = [
-    { label: 'Service Providers', value: '500+' },
-    { label: 'Happy Customers', value: '1000+' },
+  const [stats, setStats] = useState([
+    { label: 'Service Providers', value: '...' },
+    { label: 'Happy Customers', value: '...' },
     { label: 'Service Available', value: '24/7' },
-  ];
+  ]);
+  const [categories, setCategories] = useState<any[]>([]);
+
   // NEW: state to display API message
   const [apiMessage, setApiMessage] = useState<string>('Loading...');
-   // fetch from Laravel
+  // fetch from Laravel
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/test`)
+    // Fetch test message
+    api.get('/test')
       .then(response => {
-        console.log('API RESPONSE:', response.data);
-        setApiMessage(response.data.message);
+        if (response.success && (response as any).message) {
+          setApiMessage((response as any).message);
+        }
       })
       .catch(err => {
         console.log('API ERROR:', err);
         setApiMessage('API connection failed');
+      });
+
+    // Fetch dynamic stats
+    api.get<any>('/public/stats')
+      .then(response => {
+        if (response.success && response.data) {
+          const data = response.data;
+          setStats([
+            { label: 'Service Providers', value: `${data.providers}+` },
+            { label: 'Happy Customers', value: `${data.customers}+` },
+            { label: 'Service Available', value: '24/7' },
+          ]);
+        }
+      })
+      .catch(err => {
+        console.log('STATS API ERROR:', err);
+      });
+
+    // Fetch dynamic categories
+    api.get<any[]>('/categories')
+      .then(response => {
+        if (response.success && response.data) {
+          setCategories(response.data);
+        }
+      })
+      .catch(err => {
+        console.log('CATEGORIES API ERROR:', err);
       });
   }, []);
   const handleContinue = () => {
@@ -77,12 +120,18 @@ export default function LandingScreen() {
       <View style={styles.servicesSection}>
         <Text style={styles.sectionTitle}>Our Services</Text>
         <View style={styles.servicesGrid}>
-          {SERVICE_CATEGORIES.map((category) => (
-            <TouchableOpacity key={category.id} style={styles.serviceCard}>
-              <Text style={styles.serviceIcon}>{category.icon}</Text>
-              <Text style={styles.serviceName}>{category.name}</Text>
-            </TouchableOpacity>
-          ))}
+          {categories.length > 0 ? (
+            categories.slice(0, 9).map((category) => (
+              <TouchableOpacity key={category.catagoryID} style={styles.serviceCard}>
+                <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
+                <Text style={styles.serviceName}>{category.name}</Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={{ textAlign: 'center', width: '100%', color: Colors.text.secondary }}>
+              Loading services...
+            </Text>
+          )}
         </View>
       </View>
 
@@ -108,7 +157,7 @@ export default function LandingScreen() {
 
         {selectedRole && (
           <AppButton
-            title={`Continue as ${selectedRole === 'customer' ? 'Customer' : 'Provider'}`}
+            title={`Continue as ${selectedRole === 'customer' ? 'Customer' : 'Provider'} `}
             onPress={handleContinue}
             fullWidth
             style={styles.continueButton}
@@ -136,12 +185,6 @@ export default function LandingScreen() {
           fullWidth
           style={styles.ctaButton}
         />
-        <TouchableOpacity
-          onPress={() => router.push('/(auth)/home')}
-          style={styles.guestLink}
-        >
-          <Text style={styles.guestText}>Continue as Guest</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );

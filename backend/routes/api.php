@@ -9,7 +9,11 @@ use App\Http\Controllers\ProvidersearchController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\ProviderDashboardController;
+use App\Http\Controllers\ServiceCityController;
+
 // customer registration endpoint
+Route::get('/cities', [ServiceCityController::class, 'index']);
 Route::get('/test', function () {
     return response()->json([
         'success' => true,
@@ -17,6 +21,8 @@ Route::get('/test', function () {
         'server_time' => now()
     ]);
 });
+
+Route::get('/public/stats', [AdminAuthController::class, 'getStats']);
 Route::post('/customer/register', [CustomerAuthController::class, 'register']);
 // Customer login
 Route::post('/customer/login', [CustomerAuthController::class, 'login']);
@@ -61,4 +67,12 @@ Route::get('/categories', [CategoryController::class, 'getCategories']);
 Route::delete('/categories/{id}', [CategoryController::class, 'deleteCategory']);
 Route::put('/categories/{id}', [CategoryController::class, 'editCategory']);
 Route::get('/services', [ServiceController::class, 'index']);
+
+// Provider Dashboard Routes
+Route::get('/provider/dashboard/stats', [ProviderDashboardController::class, 'getStats']);
+Route::get('/provider/schedule/today', [ProviderDashboardController::class, 'getTodaySchedule']);
+Route::get('/provider/earnings/summary', [ProviderDashboardController::class, 'getEarningsSummary']);
+Route::get('/provider/requests', [ProviderDashboardController::class, 'getRequests']);
+Route::get('/provider/reviews', [ProviderDashboardController::class, 'getReviews']);
+Route::get('/provider/profile', [ServiceProviderAuthController::class, 'getProfile']);
 

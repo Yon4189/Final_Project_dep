@@ -1,7 +1,4 @@
-// app/(auth)/login.tsx
-// app/(auth)/login.tsx
-import axios from "axios";
-import { API_BASE_URL } from "../config/api";
+import { api } from "../services/api";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -15,7 +12,7 @@ import {
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
 import { Colors } from "../constants/Colors";
-import Ionicons from "@expo/vector-icons/build/Ionicons";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -35,39 +32,32 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // 1. Determine the endpoint based on user selection
       const endpoint = userType === "customer" ? "/customer/login" : "/provider/login";
-
-      // 2. Use the dynamic 'endpoint' variable here
-      const response = await axios.post(
-        `${API_BASE_URL}${endpoint}`, // Fixed: No longer hardcoded to /customer/login
-        {
-          email: formData.email,
-          password: formData.password,
-        }
-      );
+      const response = await api.post<any>(endpoint, {
+        email: formData.email,
+        password: formData.password,
+      });
 
       setLoading(false);
 
-      if (response.data.success) {
+      if (response.success && response.data) {
+        if (response.data.token) {
+          await api.setToken(response.data.token);
+        }
+
         Alert.alert("Success", `Logged in as ${userType}`);
 
-        // 3. Navigate based on user type
         if (userType === "provider") {
           router.replace("/(provider)/dashboard");
         } else {
           router.replace("/(customer)/dashboard");
         }
       } else {
-        Alert.alert("Error", response.data.message || "Login failed");
+        Alert.alert("Error", response.message || "Login failed");
       }
     } catch (error: any) {
       setLoading(false);
-      if (error.response && error.response.data) {
-        Alert.alert("Error", error.response.data.message || "Login failed");
-      } else {
-        Alert.alert("Error", error.message || "Network error");
-      }
+      Alert.alert("Error", error.message || "Login failed");
     }
   };
 
@@ -88,14 +78,17 @@ export default function LoginScreen() {
             ]}
             onPress={() => setUserType("customer")}
           >
+            <Ionicons
+              name="person-outline"
+              size={24}
+              color={userType === "customer" ? Colors.text.light : Colors.primary}
+            />
             <Text
-
               style={[
                 styles.userTypeText,
                 userType === "customer" && styles.userTypeTextActive,
               ]}
             >
-              <Ionicons name="person-outline" size={40} color={Colors.primary} />
               Customer
             </Text>
           </TouchableOpacity>
@@ -107,7 +100,11 @@ export default function LoginScreen() {
             ]}
             onPress={() => setUserType("provider")}
           >
-            <Ionicons name="construct-outline" size={40} color={Colors.primary} />
+            <Ionicons
+              name="construct-outline"
+              size={24}
+              color={userType === "provider" ? Colors.text.light : Colors.primary}
+            />
             <Text
               style={[
                 styles.userTypeText,
@@ -120,39 +117,43 @@ export default function LoginScreen() {
         </View>
 
         {/* Email Input */}
-        <Ionicons name="mail-outline" size={25} color={Colors.primary} />
-        <AppInput
-          label="Email"
-          value={formData.email}
-          onChangeText={(text) => setFormData({ ...formData, email: text })}
-          placeholder="Enter your email"
-          keyboardType="email-address"
-          required
-        />
+        <View style={styles.inputWithIcon}>
+          <Ionicons name="mail-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
+          <View style={{ flex: 1 }}>
+            <AppInput
+              label="Email"
+              value={formData.email}
+              onChangeText={(text: string) => setFormData({ ...formData, email: text })}
+              placeholder="Enter your email"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              required
+            />
+          </View>
+        </View>
 
         {/* Password Input */}
-        <View style={styles.container}>
-          {/* Lock Icon */}
-          <Ionicons name="lock-closed-outline" size={25} color={Colors.primary} />
-          <AppInput
-            label="Password"
-            value={formData.password}
-            onChangeText={(text) => setFormData({ ...formData, password: text })}
-            placeholder="Enter your password"
-            secureTextEntry
-            required
-          />
-          {/* Optional: Eye icon to toggle password visibility */}
-
+        <View style={styles.inputWithIcon}>
+          <Ionicons name="lock-closed-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
+          <View style={{ flex: 1 }}>
+            <AppInput
+              label="Password"
+              value={formData.password}
+              onChangeText={(text: string) => setFormData({ ...formData, password: text })}
+              placeholder="Enter your password"
+              secureTextEntry
+              required
+            />
+          </View>
         </View>
 
         <TouchableOpacity
           style={styles.forgotPassword}
-          onPress={() => router.push("/(auth)/forgot-password")} // Add this
+          onPress={() => router.push("/(auth)/forgot-password")}
         >
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
-        {/* Login Button */}
+
         <AppButton
           title="Sign In"
           onPress={handleLogin}
@@ -160,16 +161,14 @@ export default function LoginScreen() {
           fullWidth
         />
 
-        {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>OR</Text>
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Registration Options */}
         <Text style={styles.registerTitle}>Don't have an account?</Text>
-        <Ionicons name="person-outline" size={40} color={Colors.primary} />
+
         <AppButton
           title="Register as Customer"
           onPress={() => router.push("/(auth)/register-customer")}
@@ -177,7 +176,7 @@ export default function LoginScreen() {
           fullWidth
           style={styles.registerButton}
         />
-        <Ionicons name="construct-outline" size={60} color={Colors.primary} />
+
         <AppButton
           title="Register as Service Provider"
           onPress={() => router.push("/(auth)/register-provider")}
@@ -186,13 +185,11 @@ export default function LoginScreen() {
           style={styles.registerButton}
         />
 
-        {/* Skip for now */}
         <TouchableOpacity
           style={styles.skipBtn}
-          onPress={() => router.replace("/(auth)/home")}
+          onPress={() => router.replace("/home")}
         >
-          <Text style={styles.skipText}><Ionicons name="person-outline" size={60} color={Colors.primary} />
-            Continue as Guest</Text>
+          <Text style={styles.skipText}>Continue as Guest</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -258,6 +255,15 @@ const styles = StyleSheet.create({
   },
   userTypeTextActive: {
     color: Colors.text.light,
+  },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  inputIcon: {
+    marginRight: 10,
+    marginTop: 20,
   },
   forgotPassword: {
     alignSelf: "flex-end",

@@ -19,7 +19,7 @@ class ServiceProvider extends Model
 
     protected $fillable = [
         'fullname', 'phone', 'email', 'password', 'service_city', 
-        'catagoryID', 'idPhoto','credentialPhoto', 'status', 'bio', 'walletBalance', 
+        'catagoryID', 'idPhoto', 'idPhotoType', 'credentialPhoto', 'status', 'bio', 'walletBalance', 
         'serviceRadiusKm', 'profilePicture','estimatedPrice'
     ];
 

@@ -30,6 +30,7 @@ class CustomerAuthController extends Controller
         'password' => 'required|string|min:8|confirmed',
         'profilePicture' => 'sometimes|image|max:2048',
         'location' => 'sometimes|string|max:255',
+        'service_city' => 'required|string|max:255',
     ]);
 
     if ($validator->fails()) {
@@ -67,7 +68,8 @@ class CustomerAuthController extends Controller
         'phone' => $request->phone,
         'password' => Hash::make($request->password),
         'profilePicture' => $profilePath,
-        'location' => $request->location
+        'location' => $request->location,
+        'service_city' => $request->service_city,
     ]);
 
     // Step 4: Return JSON success response

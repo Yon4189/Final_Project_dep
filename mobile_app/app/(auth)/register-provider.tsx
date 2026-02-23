@@ -13,10 +13,8 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import { API_BASE_URL } from '../config/api';
-import axios from 'axios';
+import { api } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
-
 import AppButton from '../../components/AppButton';
 import AppInput from '../../components/AppInput';
 import { Colors } from '../constants/Colors';
@@ -32,6 +30,7 @@ export default function RegisterProvider() {
     email: '',
     phone: '',
     catagoryID: '',
+    service_city: '',
     password: '',
     password_confirmation: '',
     idPhotoType: '',
@@ -48,11 +47,28 @@ export default function RegisterProvider() {
   const [loading, setLoading] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showIdTypeModal, setShowIdTypeModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
+  const [cities, setCities] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetchCities();
+  }, []);
+
+  const fetchCities = async () => {
+    try {
+      const resp = await api.get<any>('/cities');
+      if (resp.success) {
+        setCities(resp.data);
+      }
+    } catch (err) {
+      console.log('Error fetching cities:', err);
+    }
+  };
 
   // ---------- HYBRID IMAGE PICKER ----------
   const pickImage = async (type: 'profile' | 'id') => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (status !== 'granted' && Platform.OS !== 'web') {
       Alert.alert('Permission needed', 'Please grant camera roll permissions');
       return;
@@ -67,7 +83,7 @@ export default function RegisterProvider() {
 
     if (!result.canceled) {
       const asset = result.assets[0];
-      
+
       // 1. Set UI Preview
       if (type === 'profile') setProfilePictureUri(asset.uri);
       else setIdPhotoUri(asset.uri);
@@ -78,7 +94,7 @@ export default function RegisterProvider() {
         const response = await fetch(asset.uri);
         const blob = await response.blob();
         const file = new File([blob], type === 'profile' ? 'profile.jpg' : 'id.jpg', { type: blob.type });
-        
+
         if (type === 'profile') setProfilePicture(file);
         else setIdPhoto(file);
       } else {
@@ -92,7 +108,7 @@ export default function RegisterProvider() {
           name: filename,
           type: mimeType,
         };
-        
+
         if (type === 'profile') setProfilePicture(mobileFile);
         else setIdPhoto(mobileFile);
       }
@@ -104,7 +120,7 @@ export default function RegisterProvider() {
   // ---------- REGISTRATION LOGIC ----------
   const registerProvider = async () => {
     // Basic Validation
-    if (!formData.fullname || !formData.email || !formData.phone || !profilePicture || !idPhoto) {
+    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !profilePicture || !idPhoto) {
       Alert.alert('Error', 'Please fill all fields and upload both images.');
       return;
     }
@@ -118,13 +134,13 @@ export default function RegisterProvider() {
 
     try {
       const data = new FormData();
-      
+
       // Append Text Data
       data.append('fullname', formData.fullname);
       data.append('email', formData.email);
       data.append('phone', formData.phone);
-      // Even if empty, we send it to avoid DB errors
       data.append('catagoryID', formData.catagoryID || '');
+      data.append('service_city', formData.service_city);
       data.append('idPhotoType', formData.idPhotoType);
       data.append('password', formData.password);
       data.append('password_confirmation', formData.password_confirmation);
@@ -133,30 +149,26 @@ export default function RegisterProvider() {
       data.append('profilePicture', profilePicture);
       data.append('idPhoto', idPhoto);
 
-      const response = await axios.post(`${API_BASE_URL}/provider/register`, data, {
+      const response = await api.post<any>('/provider/register', data, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json',
         },
-        timeout: 45000, 
+        timeout: 45000,
       });
 
-      if (response.data.success) {
+      if (response.success) {
         // 1. Show Alert
         Alert.alert('Success', 'Registration complete!');
-        
-        // 2. IMMEDIATE NAVIGATION (Fixed)
-        // We use replace to ensure the stack is cleared
-        router.replace('/(auth)/login'); 
+
+        // 2. IMMEDIATE NAVIGATION
+        router.replace('/(auth)/login');
+      } else {
+        Alert.alert('Error', response.message || 'Registration failed');
       }
     } catch (err: any) {
-      console.log('UPLOAD ERROR:', err.response?.data || err.message);
-      const errors = err.response?.data?.errors;
-      let msg = 'Registration failed. Check server limits (php.ini).';
-      if (errors) {
-        msg = Object.values(errors).flat().join('\n');
-      }
-      Alert.alert('Error', msg);
+      console.log('UPLOAD ERROR:', err.message);
+      Alert.alert('Error', err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -194,7 +206,7 @@ export default function RegisterProvider() {
         <AppInput
           label="Full Name"
           value={formData.fullname}
-          onChangeText={(t) => setFormData({ ...formData, fullname: t })}
+          onChangeText={(t: string) => setFormData({ ...formData, fullname: t })}
           placeholder="John Doe"
           required
         />
@@ -202,7 +214,7 @@ export default function RegisterProvider() {
         <AppInput
           label="Email"
           value={formData.email}
-          onChangeText={(t) => setFormData({ ...formData, email: t })}
+          onChangeText={(t: string) => setFormData({ ...formData, email: t })}
           placeholder="email@example.com"
           autoCapitalize="none"
           keyboardType="email-address"
@@ -212,7 +224,7 @@ export default function RegisterProvider() {
         <AppInput
           label="Phone Number"
           value={formData.phone}
-          onChangeText={(t) => setFormData({ ...formData, phone: t })}
+          onChangeText={(t: string) => setFormData({ ...formData, phone: t })}
           placeholder="0911223344"
           keyboardType="phone-pad"
           maxLength={10}
@@ -223,9 +235,19 @@ export default function RegisterProvider() {
           <Text style={styles.label}>Category <Text>*</Text></Text>
           <TouchableOpacity style={styles.dropdown} onPress={() => setShowCategoryModal(true)}>
             <Text style={formData.catagoryID ? styles.dropdownText : styles.dropdownPlaceholder}>
-              {formData.catagoryID 
-                ? SERVICE_CATEGORIES.find(c => c.id.toString() === formData.catagoryID)?.name 
+              {formData.catagoryID
+                ? SERVICE_CATEGORIES.find(c => c.id.toString() === formData.catagoryID)?.name
                 : "Select Service"}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Service City <Text style={styles.required}>*</Text></Text>
+          <TouchableOpacity style={styles.dropdown} onPress={() => setShowCityModal(true)}>
+            <Text style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}>
+              {formData.service_city || "Select City"}
             </Text>
             <Text style={styles.dropdownArrow}>▼</Text>
           </TouchableOpacity>
@@ -258,7 +280,7 @@ export default function RegisterProvider() {
         <AppInput
           label="Password"
           value={formData.password}
-          onChangeText={(t) => setFormData({ ...formData, password: t })}
+          onChangeText={(t: string) => setFormData({ ...formData, password: t })}
           secureTextEntry
           placeholder="Min 8 characters"
           required
@@ -267,7 +289,7 @@ export default function RegisterProvider() {
         <AppInput
           label="Confirm Password"
           value={formData.password_confirmation}
-          onChangeText={(t) => setFormData({ ...formData, password_confirmation: t })}
+          onChangeText={(t: string) => setFormData({ ...formData, password_confirmation: t })}
           secureTextEntry
           placeholder="Repeat password"
           required
@@ -321,6 +343,25 @@ export default function RegisterProvider() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={showCityModal} animationType="fade" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Choose Service City</Text>
+            <FlatList
+              data={cities}
+              keyExtractor={(item) => item.cityID?.toString() || item.id?.toString() || item.name || item}
+              renderItem={({ item }) =>
+                renderModalItem(item.name || item, () => {
+                  setFormData({ ...formData, service_city: item.name || item });
+                  setShowCityModal(false);
+                })
+              }
+            />
+            <AppButton title="Close" onPress={() => setShowCityModal(false)} variant="outline" />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -334,9 +375,9 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: Colors.text.primary, marginBottom: 8 },
   required: { color: Colors.error },
-  dropdown: { 
-    backgroundColor: Colors.background, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, 
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center" 
+  dropdown: {
+    backgroundColor: Colors.background, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: Colors.border,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center"
   },
   dropdownPlaceholder: { color: Colors.text.secondary },
   dropdownText: { color: Colors.text.primary },

@@ -1,10 +1,8 @@
-// app/(auth)/register-customer.tsx
+import { api } from "../services/api";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { API_BASE_URL } from "../config/api";
-import axios from "axios";
 import * as ImagePicker from 'expo-image-picker';
-import { Platform } from "react-native"; // Add this at the top with other imports
+import { Platform } from "react-native";
 import {
   Alert,
   FlatList,
@@ -29,6 +27,7 @@ export default function RegisterCustomerScreen() {
     email: "",
     phone: "",
     location: "",
+    service_city: "",
     password: "",
     password_confirmation: "",
     profilePicture: null as any,
@@ -36,11 +35,28 @@ export default function RegisterCustomerScreen() {
 
   const [loading, setLoading] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [cities, setCities] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetchCities();
+  }, []);
+
+  const fetchCities = async () => {
+    try {
+      const resp = await api.get<any>('/cities');
+      if (resp.success) {
+        setCities(resp.data);
+      }
+    } catch (err) {
+      console.log('Error fetching cities:', err);
+    }
+  };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please grant camera roll permissions');
       return;
@@ -56,16 +72,15 @@ export default function RegisterCustomerScreen() {
     if (!result.canceled) {
       const asset = result.assets[0];
       setImageUri(asset.uri);
-      
-      // Get filename from URI
+
       const fileName = asset.uri.split('/').pop() || 'photo.jpg';
       const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
-      const mimeType = fileExtension === 'jpg' || fileExtension === 'jpeg' 
-        ? 'image/jpeg' 
-        : fileExtension === 'png' 
-          ? 'image/png' 
+      const mimeType = fileExtension === 'jpg' || fileExtension === 'jpeg'
+        ? 'image/jpeg'
+        : fileExtension === 'png'
+          ? 'image/png'
           : 'image/jpeg';
-      
+
       setFormData({
         ...formData,
         profilePicture: {
@@ -77,138 +92,98 @@ export default function RegisterCustomerScreen() {
     }
   };
 
-  const validatePhoneNumber = (phone: string) => {
-    const phoneRegex = /^(09|07)[0-9]{8}$/;
-    return phoneRegex.test(phone);
-  };
+  const validatePhoneNumber = (phone: string) => /^(09|07)[0-9]{8}$/.test(phone);
 
-const handleRegister = async () => {
-  // Validation
-  if (!formData.fullname) return Alert.alert("Error", "Full name is required");
-  if (!formData.email) return Alert.alert("Error", "Email is required");
-  if (!formData.phone) return Alert.alert("Error", "Phone number is required");
-  if (!formData.location) return Alert.alert("Error", "Location is required");
-  if (!formData.password) return Alert.alert("Error", "Password is required");
-  if (!formData.password_confirmation) return Alert.alert("Error", "Please confirm your password");
+  const handleRegister = async () => {
+    if (!formData.fullname) return Alert.alert("Error", "Full name is required");
+    if (!formData.email) return Alert.alert("Error", "Email is required");
+    if (!formData.phone) return Alert.alert("Error", "Phone number is required");
+    if (!formData.location) return Alert.alert("Error", "Full address location is required");
+    if (!formData.service_city) return Alert.alert("Error", "Service city is required");
+    if (!formData.password) return Alert.alert("Error", "Password is required");
+    if (!formData.password_confirmation) return Alert.alert("Error", "Please confirm your password");
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.email)) return Alert.alert("Error", "Please enter a valid email address");
-  
-  if (!validatePhoneNumber(formData.phone)) return Alert.alert(
-    "Error", 
-    "Phone number must be 10 digits starting with 09 or 07 (e.g., 0912345678)"
-  );
-  
-  if (formData.password.length < 8) return Alert.alert("Error", "Password must be at least 8 characters long");
-  if (formData.password !== formData.password_confirmation) return Alert.alert("Error", "Passwords do not match");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) return Alert.alert("Error", "Please enter a valid email address");
 
-  try {
-    setLoading(true);
-
-    const formDataToSend = new FormData();
-    formDataToSend.append('fullname', formData.fullname);
-    formDataToSend.append('email', formData.email);
-    formDataToSend.append('phone', formData.phone);
-    formDataToSend.append('password', formData.password);
-    formDataToSend.append('password_confirmation', formData.password_confirmation);
-    formDataToSend.append('location', formData.location);
-
-    // FIXED: Handle file upload for both web and native
-    if (formData.profilePicture?.uri) {
-      if (Platform.OS === 'web') {
-        // WEB PLATFORM: Convert URI to blob
-        const response = await fetch(formData.profilePicture.uri);
-        const blob = await response.blob();
-        
-        // Get filename from URI
-        const fileName = formData.profilePicture.uri.split('/').pop() || 'photo.jpg';
-        
-        // Create file from blob
-        const file = new File([blob], fileName, { 
-          type: formData.profilePicture.type || 'image/jpeg' 
-        });
-        
-        formDataToSend.append('profilePicture', file);
-        console.log('Web upload prepared:', fileName);
-      } else {
-        // NATIVE PLATFORM (iOS/Android)
-        const fileToUpload = {
-          uri: formData.profilePicture.uri,
-          name: formData.profilePicture.name || 'photo.jpg',
-          type: formData.profilePicture.type || 'image/jpeg',
-        };
-        formDataToSend.append('profilePicture', fileToUpload as any);
-        console.log('Native upload prepared:', fileToUpload);
-      }
-    }
-
-    console.log('Sending registration request...');
-
-    const response = await axios.post(
-      `${API_BASE_URL}/customer/register`,
-      formDataToSend,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json',
-        },
-        timeout: 30000,
-      }
+    if (!validatePhoneNumber(formData.phone)) return Alert.alert(
+      "Error",
+      "Phone number must be 10 digits starting with 09 or 07 (e.g., 0912345678)"
     );
 
-    if (response.data.success) {
-      // Reset form
-      setFormData({
-        fullname: "",
-        email: "",
-        phone: "",
-        location: "",
-        password: "",
-        password_confirmation: "",
-        profilePicture: null,
-      });
-      setImageUri(null);
-  router.push("/(auth)/login");
-      Alert.alert(
-        "Registration Successful!",
-        "Your account has been created successfully. Please login to continue.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              // Small delay to ensure Alert is fully closed
-              setTimeout(() => {
-              }, 100);
-            }
-          }
-        ]
-      );
-    }
-  } catch (err: any) {
-    console.error('Registration error:', err);
-    
-    if (err.response?.data) {
-      const data = err.response.data;
-      if (data.errors) {
-        let errorMessage = "Please fix the following errors:\n";
-        for (const field in data.errors) {
-          errorMessage += `\n• ${field}: ${data.errors[field].join(', ')}`;
+    if (formData.password.length < 8) return Alert.alert("Error", "Password must be at least 8 characters long");
+    if (formData.password !== formData.password_confirmation) return Alert.alert("Error", "Passwords do not match");
+
+    try {
+      setLoading(true);
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('fullname', formData.fullname);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('password', formData.password);
+      formDataToSend.append('password_confirmation', formData.password_confirmation);
+      formDataToSend.append('location', formData.location);
+      formDataToSend.append('service_city', formData.service_city);
+
+      if (formData.profilePicture?.uri) {
+        if (Platform.OS === 'web') {
+          const response = await fetch(formData.profilePicture.uri);
+          const blob = await response.blob();
+          const fileName = formData.profilePicture.uri.split('/').pop() || 'photo.jpg';
+          const file = new File([blob], fileName, {
+            type: formData.profilePicture.type || 'image/jpeg'
+          });
+          formDataToSend.append('profilePicture', file);
+        } else {
+          const fileToUpload = {
+            uri: formData.profilePicture.uri,
+            name: formData.profilePicture.name || 'photo.jpg',
+            type: formData.profilePicture.type || 'image/jpeg',
+          };
+          formDataToSend.append('profilePicture', fileToUpload as any);
         }
-        Alert.alert("Validation Error", errorMessage);
-      } else {
-        Alert.alert("Error", data.message || "Registration failed");
       }
-    } else if (err.code === 'ECONNABORTED') {
-      Alert.alert("Error", "Request timeout. Please try again.");
-    } else if (err.message === 'Network Error') {
-      Alert.alert("Error", "Network error. Please check your connection.");
-    } else {
-      Alert.alert("Error", "Could not connect to server");
+
+      const response = await api.post<any>(
+        '/customer/register',
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
+
+      if (response.success) {
+        setFormData({
+          fullname: "",
+          email: "",
+          phone: "",
+          location: "",
+          service_city: "",
+          password: "",
+          password_confirmation: "",
+          profilePicture: null,
+        });
+        setImageUri(null);
+        router.push("/(auth)/login");
+        Alert.alert(
+          "Success",
+          "Account created successfully. Please login to continue."
+        );
+      } else {
+        Alert.alert("Error", response.message || "Registration failed");
+      }
+    } catch (err: any) {
+      console.error('Registration error:', err.message);
+      Alert.alert("Error", err.message || "Could not connect to server");
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   const renderModalItem = (item: string, onSelect: () => void) => (
     <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
       <Text style={styles.modalItemText}>{item}</Text>
@@ -222,12 +197,11 @@ const handleRegister = async () => {
         <Text style={styles.subtitle}>Find trusted service providers</Text>
       </View>
 
-
-        {/* Other inputs */}
+      <View style={styles.formContainer}>
         <AppInput
           label="Full Name"
           value={formData.fullname}
-          onChangeText={(text) => setFormData({ ...formData, fullname: text })}
+          onChangeText={(text: string) => setFormData({ ...formData, fullname: text })}
           placeholder="Enter your full name"
           required
         />
@@ -235,7 +209,7 @@ const handleRegister = async () => {
         <AppInput
           label="Email"
           value={formData.email}
-          onChangeText={(text) => setFormData({ ...formData, email: text })}
+          onChangeText={(text: string) => setFormData({ ...formData, email: text })}
           placeholder="Enter your email"
           keyboardType="email-address"
           autoCapitalize="none"
@@ -245,7 +219,7 @@ const handleRegister = async () => {
         <AppInput
           label="Phone Number"
           value={formData.phone}
-          onChangeText={(text) => setFormData({ ...formData, phone: text })}
+          onChangeText={(text: string) => setFormData({ ...formData, phone: text })}
           placeholder="09XXXXXXXX or 07XXXXXXXX"
           keyboardType="phone-pad"
           maxLength={10}
@@ -273,7 +247,7 @@ const handleRegister = async () => {
         <AppInput
           label="Password"
           value={formData.password}
-          onChangeText={(text) => setFormData({ ...formData, password: text })}
+          onChangeText={(text: string) => setFormData({ ...formData, password: text })}
           placeholder="Enter password (min. 8 characters)"
           secureTextEntry
           required
@@ -282,14 +256,14 @@ const handleRegister = async () => {
         <AppInput
           label="Confirm Password"
           value={formData.password_confirmation}
-          onChangeText={(text) =>
+          onChangeText={(text: string) =>
             setFormData({ ...formData, password_confirmation: text })
           }
           placeholder="Re-enter password"
           secureTextEntry
           required
         />
-<View style={styles.formContainer}>
+
         {/* Profile Picture */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Profile Picture (Optional)</Text>
@@ -304,6 +278,7 @@ const handleRegister = async () => {
             )}
           </TouchableOpacity>
         </View>
+
         <AppButton
           title="Register as Customer"
           onPress={handleRegister}
@@ -352,6 +327,36 @@ const handleRegister = async () => {
             <AppButton
               title="Cancel"
               onPress={() => setShowLocationModal(false)}
+              variant="outline"
+              fullWidth
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showCityModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowCityModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Service City</Text>
+            <FlatList
+              data={cities}
+              keyExtractor={(item) => item.cityID?.toString() || item.id?.toString() || item.name || item}
+              renderItem={({ item }) =>
+                renderModalItem(item.name || item, () => {
+                  setFormData({ ...formData, service_city: item.name || item });
+                  setShowCityModal(false);
+                })
+              }
+              style={styles.modalList}
+            />
+            <AppButton
+              title="Cancel"
+              onPress={() => setShowCityModal(false)}
               variant="outline"
               fullWidth
             />

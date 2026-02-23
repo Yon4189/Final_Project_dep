@@ -120,7 +120,21 @@ class ServiceProviderAuthController extends Controller
             'data' => $provider
         ]);
     }
+    public function getProfile(Request $request)
+    {
+        $providerID = $request->query('providerID');
+        if (!$providerID) {
+            return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+        }
 
+        $provider = ServiceProvider::find($providerID);
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
+        }
 
-
+        return response()->json([
+            'success' => true,
+            'data' => $provider
+        ]);
+    }
 }
