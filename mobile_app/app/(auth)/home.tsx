@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+/*import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
@@ -10,7 +10,7 @@ export default function HomeTab() {
   return (
     <View style={styles.container}>
 
-      {/* Header with Back/Home button */}
+      {/* Header with Back/Home button *}
       <View style={styles.header}>
          
         <TouchableOpacity
@@ -26,7 +26,7 @@ export default function HomeTab() {
         </Text>
       </View>
 
-      {/* I PROVIDE SERVICE BUTTON */}
+      {/* I PROVIDE SERVICE BUTTON *}
      <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 10  } }>
       <Ionicons name="construct-outline" size={80} color="#190ead" ></Ionicons></View> 
       <TouchableOpacity
@@ -37,7 +37,7 @@ export default function HomeTab() {
 <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 50  } }>
   <Ionicons name="person-outline" size={80} color={Colors.primary} />
 </View>
-      {/* I NEED SERVICE BUTTON */}
+      {/* I NEED SERVICE BUTTON *}
       <TouchableOpacity
         style={[styles.button, { backgroundColor: '#34C759' }]}
         onPress={() => router.push('/(auth)/register-customer')}
@@ -78,5 +78,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-});
+  },*/

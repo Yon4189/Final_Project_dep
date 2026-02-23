@@ -1,11 +1,15 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class UpdateServiceprovidersAddCityDropCoordinates extends Migration
+return new class extends Migration
 {
-    public function up()
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
     {
         Schema::table('service_providers', function (Blueprint $table) {
             if (!Schema::hasColumn('service_providers', 'service_city')) {
@@ -14,8 +18,13 @@ class UpdateServiceprovidersAddCityDropCoordinates extends Migration
         });
     }
 
-    public function down()
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
     {
-        //
+        Schema::table('service_providers', function (Blueprint $table) {
+            //
+        });
     }
-}
+};

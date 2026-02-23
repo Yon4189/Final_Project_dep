@@ -1,13 +1,13 @@
-// services/api.ts
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import type { ApiResponse } from '../types/customer.types';
+import { API_BASE_URL as CONFIG_BASE_URL } from '../config/api';
 
 // API Configuration
-const API_BASE_URL = Constants.expoConfig?.extra?.apiUrl || process.env.EXPO_PUBLIC_API_URL || 'https://api.homelink.com/v1';
+const API_BASE_URL = CONFIG_BASE_URL;
 const API_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
@@ -77,7 +77,7 @@ class ApiService {
     if (refreshToken) {
       this.refreshToken = refreshToken;
     }
-    
+
     try {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
       if (refreshToken) {
@@ -91,7 +91,7 @@ class ApiService {
   public async removeToken(): Promise<void> {
     this.token = null;
     this.refreshToken = null;
-    
+
     try {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
@@ -172,7 +172,7 @@ class ApiService {
         resolve(this.api(config));
       }
     });
-    
+
     this.failedQueue = [];
     this.isRefreshing = false;
   }
@@ -254,11 +254,11 @@ class ApiService {
 
             try {
               const newToken = await this.refreshAccessToken();
-              
+
               if (newToken) {
                 this.processQueue(null, newToken);
                 this.emitEvent('token_refreshed');
-                
+
                 // Retry original request with new token
                 if (originalConfig.headers) {
                   originalConfig.headers.Authorization = `Bearer ${newToken}`;
