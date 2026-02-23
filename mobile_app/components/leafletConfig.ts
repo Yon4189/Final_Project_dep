@@ -1,6 +1,8 @@
+// leafletConfig.ts
+// Web-only: configure Leaflet default icon URLs to use CDN (avoids CSS local image warnings)
 import L from "leaflet";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
- import "leaflet/dist/leaflet.css";
+
+// Override the default icon to use CDN-hosted images instead of local ones
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 L.Icon.Default.mergeOptions({

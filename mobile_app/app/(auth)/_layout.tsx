@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import { Colors } from '../constants/Colors';
-
+//import './polyfills';
 export default function AuthLayout() {
   const router = useRouter(); // ✅ FIX: create router instance
 
@@ -12,7 +12,7 @@ export default function AuthLayout() {
         headerStyle: {
           backgroundColor: Colors.primary,
         },
-        headerTintColor: Colors.text.light,
+        headerTintColor: Colors.surface, // Fixed: changed from Colors.text.light
         headerTitleStyle: {
           fontWeight: 'bold',
         },
@@ -32,7 +32,7 @@ export default function AuthLayout() {
               <Ionicons
                 name="arrow-back"
                 size={24}
-                color={Colors.text.light}
+                color={Colors.surface} // This matches the headerTintColor
               />
             </TouchableOpacity>
           ),

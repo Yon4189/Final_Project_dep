@@ -15,7 +15,6 @@ import {
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
 import { Colors } from "../constants/Colors";
-import { Icon, icon } from "leaflet";
 import Ionicons from "@expo/vector-icons/build/Ionicons";
 
 export default function LoginScreen() {
@@ -27,7 +26,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<"customer" | "provider">("customer");
 
- const handleLogin = async () => {
+  const handleLogin = async () => {
     if (!formData.email || !formData.password) {
       Alert.alert("Error", "Please enter email and password");
       return;
@@ -52,12 +51,12 @@ export default function LoginScreen() {
 
       if (response.data.success) {
         Alert.alert("Success", `Logged in as ${userType}`);
-        
+
         // 3. Navigate based on user type
         if (userType === "provider") {
-            router.replace("/(tabs)/provider-dashboard");
+          router.replace("/(provider)/dashboard");
         } else {
-            router.replace("/(tabs)/customer-dashboard");
+          router.replace("/(customer)/dashboard");
         }
       } else {
         Alert.alert("Error", response.data.message || "Login failed");
@@ -90,14 +89,14 @@ export default function LoginScreen() {
             onPress={() => setUserType("customer")}
           >
             <Text
-          
+
               style={[
                 styles.userTypeText,
                 userType === "customer" && styles.userTypeTextActive,
               ]}
             >
-                <Ionicons name="person-outline" size={40} color={Colors.primary} />
-         Customer
+              <Ionicons name="person-outline" size={40} color={Colors.primary} />
+              Customer
             </Text>
           </TouchableOpacity>
 
@@ -132,27 +131,27 @@ export default function LoginScreen() {
         />
 
         {/* Password Input */}
-         <View style={styles.container}>
-      {/* Lock Icon */}
-      <Ionicons name="lock-closed-outline" size={25} color={Colors.primary} />
-        <AppInput
-          label="Password"
-          value={formData.password}
-          onChangeText={(text) => setFormData({ ...formData, password: text })}
-          placeholder="Enter your password"
-          secureTextEntry
-          required
-        />
-         {/* Optional: Eye icon to toggle password visibility */}
+        <View style={styles.container}>
+          {/* Lock Icon */}
+          <Ionicons name="lock-closed-outline" size={25} color={Colors.primary} />
+          <AppInput
+            label="Password"
+            value={formData.password}
+            onChangeText={(text) => setFormData({ ...formData, password: text })}
+            placeholder="Enter your password"
+            secureTextEntry
+            required
+          />
+          {/* Optional: Eye icon to toggle password visibility */}
 
-    </View>
+        </View>
 
-       <TouchableOpacity 
-  style={styles.forgotPassword}
-  onPress={() => router.push("/(auth)/forgot-password")} // Add this
->
-  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-</TouchableOpacity>
+        <TouchableOpacity
+          style={styles.forgotPassword}
+          onPress={() => router.push("/(auth)/forgot-password")} // Add this
+        >
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        </TouchableOpacity>
         {/* Login Button */}
         <AppButton
           title="Sign In"
@@ -170,7 +169,7 @@ export default function LoginScreen() {
 
         {/* Registration Options */}
         <Text style={styles.registerTitle}>Don't have an account?</Text>
-     <Ionicons name="person-outline" size={40} color={Colors.primary} />
+        <Ionicons name="person-outline" size={40} color={Colors.primary} />
         <AppButton
           title="Register as Customer"
           onPress={() => router.push("/(auth)/register-customer")}
@@ -178,7 +177,7 @@ export default function LoginScreen() {
           fullWidth
           style={styles.registerButton}
         />
-       <Ionicons name="construct-outline" size={60} color={Colors.primary} />
+        <Ionicons name="construct-outline" size={60} color={Colors.primary} />
         <AppButton
           title="Register as Service Provider"
           onPress={() => router.push("/(auth)/register-provider")}
@@ -193,7 +192,7 @@ export default function LoginScreen() {
           onPress={() => router.replace("/(auth)/home")}
         >
           <Text style={styles.skipText}><Ionicons name="person-outline" size={60} color={Colors.primary} />
-Continue as Guest</Text>
+            Continue as Guest</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

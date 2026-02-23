@@ -1,0 +1,895 @@
+// app/(provider)/profile.tsx
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Switch,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { Colors } from '@/app/constants/Colors';
+import { useProviderStore } from '@/app/store/providerStore';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { formatPhoneNumber } from '../utils/formatters';
+import type { WorkingHours } from '../types/provider.types';
+
+const WEEKDAYS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+const BADGES = [
+  { type: 'verified', label: 'Verified Professional', icon: 'checkmark-circle', color: Colors.primary },
+  { type: 'top_rated', label: 'Top Rated', icon: 'star', color: Colors.warning },
+  { type: 'expert', label: 'Expert', icon: 'trophy', color: Colors.warning },
+  { type: 'emergency', label: 'Emergency Service', icon: 'flash', color: Colors.error },
+  { type: 'insured', label: 'Fully Insured', icon: 'shield', color: Colors.success },
+];
+
+export default function ProviderProfile() {
+  const router = useRouter();
+  const { profile, isLoading, updateProfile, loadProfile,stats, toggleAvailability } = useProviderStore();
+  const [uploading, setUploading] = useState(false);
+  const [editingHours, setEditingHours] = useState(false);
+  const [workingHours, setWorkingHours] = useState<WorkingHours | null>(profile?.workingHours || null);
+
+  const handlePickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('image', {
+          uri: result.assets[0].uri,
+          type: 'image/jpeg',
+          name: 'profile.jpg',
+        } as any);
+        
+        // Note: You'll need to add uploadImage to your store
+        // await uploadImage(formData);
+        Alert.alert('Success', 'Profile picture updated');
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update profile picture');
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
+
+  const handleToggleAvailability = () => {
+    toggleAvailability();
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: () => {
+            // Clear auth and navigate to login
+            router.replace('/auth/login');
+          }
+        },
+      ]
+    );
+  };
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerTop}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={Colors.surface} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>My Profile</Text>
+        <TouchableOpacity 
+          style={styles.editButton}
+          onPress={() => router.push('/(provider)/profile/edit')}
+        >
+          <Ionicons name="create-outline" size={22} color={Colors.surface} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderProfileCard = () => (
+    <View style={styles.profileCard}>
+      <View style={styles.profileImageContainer}>
+        <Image
+          source={{ uri: profile?.profileImage || 'https://via.placeholder.com/100' }}
+          style={styles.profileImage}
+        />
+        <TouchableOpacity 
+          style={styles.cameraButton}
+          onPress={handlePickImage}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <ActivityIndicator size="small" color={Colors.surface} />
+          ) : (
+            <Ionicons name="camera" size={18} color={Colors.surface} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.businessName}>{profile?.businessName || 'Business Name'}</Text>
+      <Text style={styles.profession}>{profile?.businessName || 'Service Provider'}</Text>
+
+      <View style={styles.ratingContainer}>
+        <Ionicons name="star" size={16} color={Colors.warning} />
+        <Text style={styles.ratingText}>{profile?.rating?.toFixed(1) || '0.0'}</Text>
+        <Text style={styles.reviewCount}>({profile?.reviewCount || 0} reviews)</Text>
+      </View>
+
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{profile?.completedJobs || 0}</Text>
+          <Text style={styles.statLabel}>Jobs</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{profile?.yearsExperience || 0}</Text>
+          <Text style={styles.statLabel}>Years</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stats?.responseRate || 0}%</Text>
+          <Text style={styles.statLabel}>Response</Text>
+        </View>
+      </View>
+
+      <View style={styles.availabilityContainer}>
+        <View style={styles.availabilityLeft}>
+          <View style={[styles.availabilityDot, { 
+            backgroundColor: profile?.isAvailable ? Colors.success : Colors.error 
+          }]} />
+          <Text style={styles.availabilityText}>
+            {profile?.isAvailable ? 'Available for work' : 'Not available'}
+          </Text>
+        </View>
+        
+        <Switch
+          value={profile?.isAvailable || false}
+          onValueChange={handleToggleAvailability}
+          trackColor={{ false: Colors.border, true: Colors.success }}
+          thumbColor={Colors.surface}
+        />
+      </View>
+    </View>
+  );
+
+  const renderBadges = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Badges & Verifications</Text>
+      <View style={styles.badgesContainer}>
+        {BADGES.map((badge) => (
+          <View key={badge.type} style={[styles.badge, { backgroundColor: badge.color + '20' }]}>
+            <Ionicons name={badge.icon as keyof typeof Ionicons.glyphMap} size={20} color={badge.color} />
+            <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderContactInfo = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Contact Information</Text>
+      
+      <TouchableOpacity 
+        style={styles.infoRow}
+        onPress={() => Alert.alert('Info', 'Phone number')}
+      >
+        <View style={styles.infoLeft}>
+          <Ionicons name="call-outline" size={20} color={Colors.primary} />
+          <Text style={styles.infoLabel}>Phone</Text>
+        </View>
+        <View style={styles.infoRight}>
+          <Text style={styles.infoValue}>{formatPhoneNumber(profile?.phone || '')}</Text>
+          <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.infoRow}
+        onPress={() => Alert.alert('Info', 'Email address')}
+      >
+        <View style={styles.infoLeft}>
+          <Ionicons name="mail-outline" size={20} color={Colors.primary} />
+          <Text style={styles.infoLabel}>Email</Text>
+        </View>
+        <View style={styles.infoRight}>
+          <Text style={styles.infoValue}>{profile?.email || 'Not provided'}</Text>
+          <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.infoRow}
+        onPress={() => router.push('/(provider)/profile/location')}
+      >
+        <View style={styles.infoLeft}>
+          <Ionicons name="location-outline" size={20} color={Colors.primary} />
+          <Text style={styles.infoLabel}>Address</Text>
+        </View>
+        <View style={styles.infoRight}>
+          <Text style={styles.infoValue} numberOfLines={1}>{profile?.address || 'Not set'}</Text>
+          <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderBusinessInfo = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Business Information</Text>
+      
+      <View style={styles.bioContainer}>
+        <Text style={styles.bioLabel}>About</Text>
+        <Text style={styles.bioText}>{profile?.bio || 'No bio added yet'}</Text>
+      </View>
+
+      <View style={styles.serviceArea}>
+        <Text style={styles.serviceAreaLabel}>Service Radius</Text>
+        <Text style={styles.serviceAreaValue}>{profile?.serviceRadius || 0} km</Text>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.servicesButton}
+        onPress={() => router.push('/(provider)/profile/services')}
+      >
+        <View style={styles.servicesButtonLeft}>
+          <Text style={styles.servicesButtonLabel}>My Services</Text>
+          <Text style={styles.servicesButtonCount}>{profile?.services?.length || 0} services</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderWorkingHours = () => {
+    const hours = profile?.workingHours || workingHours;
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Working Hours</Text>
+          <TouchableOpacity onPress={() => setEditingHours(!editingHours)}>
+            <Text style={styles.editText}>
+              {editingHours ? 'Done' : 'Edit'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {WEEKDAYS.map((day) => {
+          const dayKey = day.toLowerCase() as keyof WorkingHours;
+          const schedule = hours?.[dayKey] as { isAvailable: boolean; startTime?: string; endTime?: string } | undefined;
+
+          return (
+            <View key={day} style={styles.hoursRow}>
+              <Text style={styles.hoursDay}>{day}</Text>
+              {editingHours ? (
+                <TouchableOpacity style={styles.hoursEdit}>
+                  <Text style={styles.hoursEditText}>
+                    {schedule?.isAvailable 
+                      ? `${schedule.startTime || '09:00'} - ${schedule.endTime || '17:00'}`
+                      : 'Closed'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.text.secondary} />
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.hoursTime}>
+                  {schedule?.isAvailable 
+                    ? `${schedule.startTime || '09:00'} - ${schedule.endTime || '17:00'}`
+                    : 'Closed'}
+                </Text>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const renderDocuments = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Documents & Certifications</Text>
+      
+      <TouchableOpacity 
+        style={styles.docRow}
+        onPress={() => router.push('/(provider)/profile/documents')}
+      >
+        <View style={styles.docLeft}>
+          <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
+          <Text style={styles.docLabel}>Business License</Text>
+        </View>
+        <View style={styles.docRight}>
+          {profile?.verificationStatus === 'verified' ? (
+            <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+          ) : (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingText}>Pending</Text>
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.docRow}
+        onPress={() => router.push('/(provider)/profile/documents')}
+      >
+        <View style={styles.docLeft}>
+          <Ionicons name="shield-outline" size={20} color={Colors.primary} />
+          <Text style={styles.docLabel}>Insurance Certificate</Text>
+        </View>
+        <View style={styles.docRight}>
+          {profile?.verificationStatus === 'verified' ? (
+            <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+          ) : (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingText}>Pending</Text>
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.docRow}
+        onPress={() => router.push('/(provider)/profile/certifications')}
+      >
+        <View style={styles.docLeft}>
+          <Ionicons name="ribbon-outline" size={20} color={Colors.primary} />
+          <Text style={styles.docLabel}>Certifications</Text>
+        </View>
+        <View style={styles.docRight}>
+          <Text style={styles.docCount}>{profile?.certifications?.length || 0}</Text>
+          <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderBankInfo = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Bank Account</Text>
+      
+      <TouchableOpacity 
+        style={styles.bankCard}
+        onPress={() => router.push('/(provider)/profile/bank')}
+      >
+        <View style={styles.bankCardLeft}>
+          <View style={styles.bankIcon}>
+            <Ionicons name="business" size={24} color={Colors.primary} />
+          </View>
+          <View style={styles.bankInfo}>
+            <Text style={styles.bankName}>{profile?.bankDetails?.bankName || 'No bank account'}</Text>
+            {profile?.bankDetails?.accountNumber && (
+              <Text style={styles.bankAccount}>
+                {profile.bankDetails.accountName} •••• {profile.bankDetails.accountNumber.slice(-4)}
+              </Text>
+            )}
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
+      </TouchableOpacity>
+
+      {profile?.bankDetails?.isVerified && (
+        <View style={styles.verifiedBadge}>
+          <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+          <Text style={styles.verifiedText}>Bank account verified</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderSettings = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Settings</Text>
+      
+      <TouchableOpacity 
+        style={styles.settingRow}
+        onPress={() => router.push('/(provider)/profile/notifications')}
+      >
+        <View style={styles.settingLeft}>
+          <Ionicons name="notifications-outline" size={20} color={Colors.text.primary} />
+          <Text style={styles.settingLabel}>Notifications</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.settingRow}
+        onPress={() => router.push('/(provider)/profile/privacy')}
+      >
+        <View style={styles.settingLeft}>
+          <Ionicons name="lock-closed-outline" size={20} color={Colors.text.primary} />
+          <Text style={styles.settingLabel}>Privacy & Security</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.settingRow}
+        onPress={() => router.push('/(provider)/profile/help')}
+      >
+        <View style={styles.settingLeft}>
+          <Ionicons name="help-circle-outline" size={20} color={Colors.text.primary} />
+          <Text style={styles.settingLabel}>Help & Support</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.settingRow}
+        onPress={() => router.push('/(provider)/profile/terms')}
+      >
+        <View style={styles.settingLeft}>
+          <Ionicons name="document-text-outline" size={20} color={Colors.text.primary} />
+          <Text style={styles.settingLabel}>Terms & Conditions</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.text.secondary} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (isLoading) {
+    return <LoadingSpinner fullScreen />;
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {renderHeader()}
+        {renderProfileCard()}
+        {renderBadges()}
+        {renderContactInfo()}
+        {renderBusinessInfo()}
+        {renderWorkingHours()}
+        {renderDocuments()}
+        {renderBankInfo()}
+        {renderSettings()}
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    backgroundColor: Colors.primary,
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.surface,
+  },
+  editButton: {
+    padding: 4,
+  },
+  profileCard: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: 20,
+    marginTop: -30,
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  profileImageContainer: {
+    position: 'relative',
+    marginTop: -50,
+    marginBottom: 16,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: Colors.surface,
+  },
+  cameraButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  businessName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  profession: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginBottom: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  ratingText: {
+    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  reviewCount: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+  },
+  availabilityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 8,
+  },
+  availabilityLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  availabilityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  availabilityText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 12,
+  },
+  editText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  infoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoLabel: {
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  infoRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    maxWidth: 200,
+  },
+  bioContainer: {
+    marginBottom: 16,
+  },
+  bioLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text.secondary,
+    marginBottom: 8,
+  },
+  bioText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    lineHeight: 20,
+  },
+  serviceArea: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  serviceAreaLabel: {
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  serviceAreaValue: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  servicesButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  servicesButtonLeft: {
+    flex: 1,
+  },
+  servicesButtonLabel: {
+    fontSize: 15,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  servicesButtonCount: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  hoursDay: {
+    fontSize: 14,
+    color: Colors.text.primary,
+  },
+  hoursTime: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  hoursEdit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  hoursEditText: {
+    fontSize: 14,
+    color: Colors.primary,
+  },
+  docRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  docLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  docLabel: {
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  docRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pendingBadge: {
+    backgroundColor: Colors.warning + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  pendingText: {
+    fontSize: 11,
+    color: Colors.warning,
+    fontWeight: '500',
+  },
+  docCount: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  bankCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  bankCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  bankIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  bankInfo: {
+    flex: 1,
+  },
+  bankName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  bankAccount: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 6,
+  },
+  verifiedText: {
+    fontSize: 13,
+    color: Colors.success,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  settingLabel: {
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.error + '10',
+    marginHorizontal: 20,
+    marginTop: 30,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.error + '30',
+    gap: 8,
+  },
+  logoutText: {
+    fontSize: 16,
+    color: Colors.error,
+    fontWeight: '600',
+  },
+  bottomPadding: {
+    height: 40,
+  },
+});

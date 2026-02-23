@@ -1,20 +1,30 @@
-// mobile_app/components/Map/index.tsx
+// components/Map/index.tsx
+import { Platform } from 'react-native';
 
-// Define what props the Map component accepts
+// Define the props interface to ensure type safety
 interface MapProps {
   center?: [number, number];
-  userLocation: { latitude: number; longitude: number } | null;
-  providers: any[];
-  onProviderSelect: (provider: any) => void;
-    style?: any;
-    markers?: Array<{
+  zoom?: number;
+  userLocation?: { latitude: number; longitude: number } | null;
+  providers?: any[];
+  onProviderSelect?: (provider: any) => void;
+  style?: any;
+  markers?: Array<{
     position: [number, number];
     title: string;
     description?: string;
   }>;
 }
 
-// Export a placeholder component to satisfy TypeScript's type checking
-const Map = (props: MapProps) => null;
+// Dynamically export the correct implementation based on platform
+let Map: React.ComponentType<MapProps>;
+
+if (Platform.OS === 'web') {
+  // For web, use the web version
+  Map = require('./index.web').default;
+} else {
+  // For native (iOS/Android), use the native version
+  Map = require('./index.native').default;
+}
 
 export default Map;
