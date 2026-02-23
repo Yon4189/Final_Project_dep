@@ -32,11 +32,12 @@ class ServiceProviderAuthController extends Controller
         'email' => 'required|email|unique:service_providers,email',
         'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
         'password' => 'required|string|min:8|confirmed',
-       // 'service_city' => 'nullable|string|max:255',
-       // 'catagoryID' => 'nullable|exists:categories,id', // dropdown
-        'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:20408',
-       'idPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:20480',
-       'idPhotoType' => 'nullable|string|in:Passport,Driver License,National ID,Kebele ID',
+        'service_city' => 'required|string|max:255',
+        'catagoryID' => 'required', // this is a dropdown
+        'profilePicture' => 'image|mimes:jpeg,png,jpg|max:2048',
+        'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+        'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
+        'status' => 'pending',
     ]);
 
     if ($validator->fails()) {
@@ -75,7 +76,7 @@ class ServiceProviderAuthController extends Controller
         'profilePicture' => $profilePath,
         'idPhoto' => $idPhotoPath,
         'idPhotoType' => $request->idPhotoType, // new
-        'isVerified' => null, // default null until admin approves/rejects
+        'status' => 'pending', // default is pending until admin approves/rejects
     ]);
 
     return response()->json([
