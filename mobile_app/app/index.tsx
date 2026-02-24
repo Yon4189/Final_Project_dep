@@ -108,11 +108,6 @@ export default function LandingScreen() {
         />
         <View style={styles.heroOverlay}>
           <Text style={styles.heroText}>Quality Service at Your Doorstep</Text>
-          <AppButton
-            title="Book Now"
-            onPress={() => router.push('/(auth)/login')}
-            style={styles.bookNowBtn}
-          />
         </View>
       </View>
 
