@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   FlatList,
@@ -18,9 +18,24 @@ import { Ionicons } from '@expo/vector-icons';
 import AppButton from '../../components/AppButton';
 import AppInput from '../../components/AppInput';
 import { Colors } from '../constants/Colors';
-import { SERVICE_CATEGORIES } from '../constants/Services';
 
 const ID_PHOTO_TYPES = ['Passport', 'Driver License', 'National ID', 'Kebele ID'];
+
+// Interface for service category from database
+interface ServiceCategory {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+// Interface for service offering
+interface ServiceOffering {
+  categoryId: string;
+  categoryName: string;
+  serviceName: string;
+  basePrice: string;
+  description: string;
+}
 
 export default function RegisterProvider() {
   const router = useRouter();
@@ -29,12 +44,20 @@ export default function RegisterProvider() {
     fullname: '',
     email: '',
     phone: '',
-    catagoryID: '',
     service_city: '',
     password: '',
     password_confirmation: '',
     idPhotoType: '',
   });
+
+  // State for service categories from database
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // State for service offerings
+  const [serviceOfferings, setServiceOfferings] = useState<ServiceOffering[]>([
+    { categoryId: '', categoryName: '', serviceName: '', basePrice: '', description: '' }
+  ]);
 
   // State to hold binary file (Object for Mobile, File for Web)
   const [profilePicture, setProfilePicture] = useState<any>(null);
@@ -48,10 +71,13 @@ export default function RegisterProvider() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showIdTypeModal, setShowIdTypeModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
+  const [showServiceCategoryModal, setShowServiceCategoryModal] = useState<number | null>(null);
   const [cities, setCities] = useState<any[]>([]);
 
-  React.useEffect(() => {
+  // Fetch cities and service categories on mount
+  useEffect(() => {
     fetchCities();
+    fetchServiceCategories();
   }, []);
 
   const fetchCities = async () => {
@@ -63,6 +89,57 @@ export default function RegisterProvider() {
     } catch (err) {
       console.log('Error fetching cities:', err);
     }
+  };
+
+  const fetchServiceCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      // Replace with your actual API endpoint for service categories
+      const resp = await api.get<any>('/service-categories');
+      if (resp.success) {
+        setServiceCategories(resp.data);
+      } else {
+        // Fallback to empty array if API fails
+        setServiceCategories([]);
+        Alert.alert('Warning', 'Could not load service categories');
+      }
+    } catch (err) {
+      console.log('Error fetching service categories:', err);
+      setServiceCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // Handle service offering changes
+  const addServiceOffering = () => {
+    setServiceOfferings([
+      ...serviceOfferings,
+      { categoryId: '', categoryName: '', serviceName: '', basePrice: '', description: '' }
+    ]);
+  };
+
+  const removeServiceOffering = (index: number) => {
+    if (serviceOfferings.length > 1) {
+      const updated = [...serviceOfferings];
+      updated.splice(index, 1);
+      setServiceOfferings(updated);
+    }
+  };
+
+  const updateServiceOffering = (index: number, field: keyof ServiceOffering, value: string) => {
+    const updated = [...serviceOfferings];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // If updating categoryId, also update categoryName
+    if (field === 'categoryId') {
+      const category = serviceCategories.find(c => c.id === value);
+      if (category) {
+        updated[index].categoryName = category.name;
+      }
+    }
+    
+    setServiceOfferings(updated);
   };
 
   // ---------- HYBRID IMAGE PICKER ----------
@@ -78,19 +155,18 @@ export default function RegisterProvider() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: type === 'profile' ? [1, 1] : [3, 2],
-      quality: 0.5, // Critical to keep file size low
+      quality: 0.5,
     });
 
     if (!result.canceled) {
       const asset = result.assets[0];
 
-      // 1. Set UI Preview
+      // Set UI Preview
       if (type === 'profile') setProfilePictureUri(asset.uri);
       else setIdPhotoUri(asset.uri);
 
-      // 2. Prepare Data for Laravel
+      // Prepare Data for Laravel
       if (Platform.OS === 'web') {
-        // WEB: Fetch the URI to convert it to a Blob/File
         const response = await fetch(asset.uri);
         const blob = await response.blob();
         const file = new File([blob], type === 'profile' ? 'profile.jpg' : 'id.jpg', { type: blob.type });
@@ -98,7 +174,6 @@ export default function RegisterProvider() {
         if (type === 'profile') setProfilePicture(file);
         else setIdPhoto(file);
       } else {
-        // ANDROID/IOS: Create the file object structure
         const filename = asset.uri.split('/').pop() || 'upload.jpg';
         const match = /\.(\w+)$/.exec(filename);
         const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
@@ -117,6 +192,26 @@ export default function RegisterProvider() {
 
   const validatePhoneNumber = (phone: string) => /^(09|07)[0-9]{8}$/.test(phone);
 
+  // Validate service offerings
+  const validateServiceOfferings = () => {
+    for (let i = 0; i < serviceOfferings.length; i++) {
+      const offering = serviceOfferings[i];
+      if (!offering.categoryId) {
+        Alert.alert('Error', `Service #${i + 1}: Please select a category`);
+        return false;
+      }
+      if (!offering.serviceName.trim()) {
+        Alert.alert('Error', `Service #${i + 1}: Please enter service name`);
+        return false;
+      }
+      if (!offering.basePrice.trim() || isNaN(Number(offering.basePrice)) || Number(offering.basePrice) <= 0) {
+        Alert.alert('Error', `Service #${i + 1}: Please enter a valid base price`);
+        return false;
+      }
+    }
+    return true;
+  };
+
   // ---------- REGISTRATION LOGIC ----------
   const registerProvider = async () => {
     // Basic Validation
@@ -130,6 +225,10 @@ export default function RegisterProvider() {
       return;
     }
 
+    if (!validateServiceOfferings()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -139,11 +238,18 @@ export default function RegisterProvider() {
       data.append('fullname', formData.fullname);
       data.append('email', formData.email);
       data.append('phone', formData.phone);
-      data.append('catagoryID', formData.catagoryID || '');
       data.append('service_city', formData.service_city);
       data.append('idPhotoType', formData.idPhotoType);
       data.append('password', formData.password);
       data.append('password_confirmation', formData.password_confirmation);
+
+      // Append Service Offerings as JSON
+      data.append('services', JSON.stringify(serviceOfferings.map(s => ({
+        categoryId: s.categoryId,
+        serviceName: s.serviceName,
+        basePrice: parseFloat(s.basePrice),
+        description: s.description
+      }))));
 
       // Append File Data
       data.append('profilePicture', profilePicture);
@@ -158,10 +264,7 @@ export default function RegisterProvider() {
       });
 
       if (response.success) {
-        // 1. Show Alert
         Alert.alert('Success', 'Registration complete!');
-
-        // 2. IMMEDIATE NAVIGATION
         router.replace('/(auth)/login');
       } else {
         Alert.alert('Error', response.message || 'Registration failed');
@@ -174,10 +277,43 @@ export default function RegisterProvider() {
     }
   };
 
-  const renderModalItem = (item: string, onSelect: () => void) => (
+  const renderModalItem = (item: string | any, onSelect: () => void) => (
     <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
-      <Text style={styles.modalItemText}>{item}</Text>
+      <Text style={styles.modalItemText}>{typeof item === 'string' ? item : item.name || item}</Text>
     </TouchableOpacity>
+  );
+
+  const renderServiceCategoryModal = (index: number) => (
+    <Modal visible={showServiceCategoryModal === index} animationType="fade" transparent>
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Choose Service Category</Text>
+          {loadingCategories ? (
+            <View style={styles.loadingContainer}>
+              <Text>Loading categories...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={serviceCategories}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) =>
+                renderModalItem(item.name, () => {
+                  updateServiceOffering(index, 'categoryId', item.id);
+                  updateServiceOffering(index, 'categoryName', item.name);
+                  setShowServiceCategoryModal(null);
+                })
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No categories found</Text>
+                </View>
+              }
+            />
+          )}
+          <AppButton title="Close" onPress={() => setShowServiceCategoryModal(null)} variant="outline" />
+        </View>
+      </View>
+    </Modal>
   );
 
   return (
@@ -232,24 +368,75 @@ export default function RegisterProvider() {
         />
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Category <Text>*</Text></Text>
-          <TouchableOpacity style={styles.dropdown} onPress={() => setShowCategoryModal(true)}>
-            <Text style={formData.catagoryID ? styles.dropdownText : styles.dropdownPlaceholder}>
-              {formData.catagoryID
-                ? SERVICE_CATEGORIES.find(c => c.id.toString() === formData.catagoryID)?.name
-                : "Select Service"}
-            </Text>
-            <Text style={styles.dropdownArrow}>▼</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.inputGroup}>
           <Text style={styles.label}>Service City <Text style={styles.required}>*</Text></Text>
           <TouchableOpacity style={styles.dropdown} onPress={() => setShowCityModal(true)}>
             <Text style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}>
               {formData.service_city || "Select City"}
             </Text>
             <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Service Offerings Section */}
+        <View style={styles.servicesSection}>
+          <Text style={styles.sectionTitle}>Services You Offer <Text style={styles.required}>*</Text></Text>
+          
+          {serviceOfferings.map((offering, index) => (
+            <View key={index} style={styles.serviceCard}>
+              <View style={styles.serviceCardHeader}>
+                <Text style={styles.serviceCardTitle}>Service #{index + 1}</Text>
+                {serviceOfferings.length > 1 && (
+                  <TouchableOpacity onPress={() => removeServiceOffering(index)}>
+                    <Ionicons name="close-circle" size={24} color={Colors.error} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Category <Text style={styles.required}>*</Text></Text>
+                <TouchableOpacity 
+                  style={styles.dropdown} 
+                  onPress={() => setShowServiceCategoryModal(index)}
+                >
+                  <Text style={offering.categoryId ? styles.dropdownText : styles.dropdownPlaceholder}>
+                    {offering.categoryName || "Select Category"}
+                  </Text>
+                  <Text style={styles.dropdownArrow}>▼</Text>
+                </TouchableOpacity>
+              </View>
+
+              <AppInput
+                label="Service Name"
+                value={offering.serviceName}
+                onChangeText={(t: string) => updateServiceOffering(index, 'serviceName', t)}
+                placeholder="e.g., Plumbing Repair"
+                required
+              />
+
+              <AppInput
+                label="Base Price (ETB)"
+                value={offering.basePrice}
+                onChangeText={(t: string) => updateServiceOffering(index, 'basePrice', t)}
+                placeholder="1000"
+                keyboardType="numeric"
+                required
+              />
+
+              <AppInput
+                label="Description"
+                value={offering.description}
+                onChangeText={(t: string) => updateServiceOffering(index, 'description', t)}
+                placeholder="Describe this service..."
+                multiline
+              />
+
+              {renderServiceCategoryModal(index)}
+            </View>
+          ))}
+
+          <TouchableOpacity style={styles.addServiceButton} onPress={addServiceOffering}>
+            <Ionicons name="add-circle-outline" size={24} color={Colors.primary} />
+            <Text style={styles.addServiceText}>Add Another Service</Text>
           </TouchableOpacity>
         </View>
 
@@ -306,25 +493,6 @@ export default function RegisterProvider() {
       </View>
 
       {/* --- MODALS --- */}
-      <Modal visible={showCategoryModal} animationType="fade" transparent>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose Category</Text>
-            <FlatList
-              data={SERVICE_CATEGORIES}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) =>
-                renderModalItem(item.name, () => {
-                  setFormData({ ...formData, catagoryID: item.id.toString() });
-                  setShowCategoryModal(false);
-                })
-              }
-            />
-            <AppButton title="Close" onPress={() => setShowCategoryModal(false)} variant="outline" />
-          </View>
-        </View>
-      </Modal>
-
       <Modal visible={showIdTypeModal} animationType="fade" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -352,7 +520,7 @@ export default function RegisterProvider() {
               data={cities}
               keyExtractor={(item) => item.cityID?.toString() || item.id?.toString() || item.name || item}
               renderItem={({ item }) =>
-                renderModalItem(item.name || item, () => {
+                renderModalItem(item, () => {
                   setFormData({ ...formData, service_city: item.name || item });
                   setShowCityModal(false);
                 })
@@ -395,4 +563,45 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
   modalItem: { padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.border },
   modalItemText: { fontSize: 16 },
+  loadingContainer: { padding: 20, alignItems: 'center' },
+  emptyContainer: { padding: 20, alignItems: 'center' },
+  emptyText: { color: Colors.text.secondary, fontSize: 14 },
+  servicesSection: { marginBottom: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.text.primary, marginBottom: 12 },
+  serviceCard: { 
+    backgroundColor: Colors.background, 
+    padding: 16, 
+    borderRadius: 12, 
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  serviceCardHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  serviceCardTitle: { 
+    fontSize: 15, 
+    fontWeight: '600', 
+    color: Colors.primary 
+  },
+  addServiceButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    marginTop: 8,
+  },
+  addServiceText: { 
+    color: Colors.primary, 
+    fontSize: 14, 
+    fontWeight: '600',
+    marginLeft: 8,
+  },
 });

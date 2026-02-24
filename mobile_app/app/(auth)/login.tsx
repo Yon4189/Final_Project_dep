@@ -184,13 +184,6 @@ export default function LoginScreen() {
           fullWidth
           style={styles.registerButton}
         />
-
-        <TouchableOpacity
-          style={styles.skipBtn}
-          onPress={() => router.replace("/home")}
-        >
-          <Text style={styles.skipText}>Continue as Guest</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
