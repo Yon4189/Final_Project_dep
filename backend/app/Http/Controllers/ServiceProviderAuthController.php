@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\ServiceProvider;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 
@@ -19,7 +20,8 @@ class ServiceProviderAuthController extends Controller
      * - password hashing
      * - required ID photo upload
      * - storing data in the serviceProviders table
-     * - setting isVerified = 0 by default
+     * - setting status = 'pending' by default
+     * - saving each service offering to the services table
      * - returning json response
      */
 
@@ -33,11 +35,10 @@ class ServiceProviderAuthController extends Controller
         'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
         'password' => 'required|string|min:8|confirmed',
         'service_city' => 'required|string|max:255',
-        'catagoryID' => 'required', // this is a dropdown
+        'services' => 'required|string', // JSON array of service offerings
         'profilePicture' => 'image|mimes:jpeg,png,jpg|max:2048',
         'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
         'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
-        'status' => 'pending',
     ]);
 
     if ($validator->fails()) {
@@ -48,42 +49,64 @@ class ServiceProviderAuthController extends Controller
         ], 422);
     }
 
-    // handle file uploads
-    $profilePath = null;
-    if ($request->hasFile('profilePicture')) {
-        $file = $request->file('profilePicture');
-        $profileName = Str::random(20) . '_profile.' . $file->getClientOriginalExtension();
-        $file->move(public_path('profilepics'), $profileName);
-        $profilePath = 'profilepics/' . $profileName;
+    // decode and validate the services JSON
+    $servicesData = json_decode($request->services, true);
+    if (!is_array($servicesData) || count($servicesData) === 0) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid or empty services data'
+        ], 422);
     }
 
-    $idPhotoPath = null;
-    if ($request->hasFile('idPhoto')) {
-        $file = $request->file('idPhoto');
-        $idPhotoName = Str::random(20) . '_id.' . $file->getClientOriginalExtension();
-        $file->move(public_path('idphoto'), $idPhotoName);
-        $idPhotoPath = 'idphoto/' . $idPhotoName;
-    }
+    return DB::transaction(function () use ($request, $servicesData) {
 
-    // create new provider
-    $provider = ServiceProvider::create([
-        'fullname' => $request->fullname,
-        'email' => $request->email,
-        'phone' => $request->phone,
-        'password' => Hash::make($request->password),
-        'service_city' => $request->service_city,
-        'catagoryID' => $request->catagoryID,
-        'profilePicture' => $profilePath,
-        'idPhoto' => $idPhotoPath,
-        'idPhotoType' => $request->idPhotoType, // new
-        'status' => 'pending', // default is pending until admin approves/rejects
-    ]);
+        // handle file uploads
+        $profilePath = null;
+        if ($request->hasFile('profilePicture')) {
+            $file = $request->file('profilePicture');
+            $profileName = Str::random(20) . '_profile.' . $file->getClientOriginalExtension();
+            $file->move(public_path('profilepics'), $profileName);
+            $profilePath = 'profilepics/' . $profileName;
+        }
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Service provider registered successfully',
-        'data' => $provider
-    ], 201);
+        $idPhotoPath = null;
+        if ($request->hasFile('idPhoto')) {
+            $file = $request->file('idPhoto');
+            $idPhotoName = Str::random(20) . '_id.' . $file->getClientOriginalExtension();
+            $file->move(public_path('idphoto'), $idPhotoName);
+            $idPhotoPath = 'idphoto/' . $idPhotoName;
+        }
+
+        // create new provider
+        $provider = ServiceProvider::create([
+            'fullname'       => $request->fullname,
+            'email'          => $request->email,
+            'phone'          => $request->phone,
+            'password'       => Hash::make($request->password),
+            'service_city'   => $request->service_city,
+            'profilePicture' => $profilePath,
+            'idPhoto'        => $idPhotoPath,
+            'idPhotoType'    => $request->idPhotoType,
+            'status'         => 'pending',
+        ]);
+
+        // insert each service offering into the services table
+        foreach ($servicesData as $service) {
+            \App\Models\Service::create([
+                'providerID'     => $provider->providerID,
+                'catagoryID'     => $service['categoryId'],
+                'title'          => $service['serviceName'],
+                'estimatedPrice' => $service['basePrice'],  // column was renamed from estimatedCost
+                'description'    => $service['description'] ?? null,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Service provider registered successfully',
+            'data'    => $provider
+        ], 201);
+    });
     }
 
     public function login(Request $request)

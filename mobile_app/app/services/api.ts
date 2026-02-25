@@ -282,9 +282,12 @@ class ApiService {
           }
         }
 
-        // Handle other status codes
+        // Handle other status codes — attach full response data so callers can inspect field errors
         const errorMessage = this.getErrorMessage(error);
-        return Promise.reject(new Error(errorMessage));
+        const richError: any = new Error(errorMessage);
+        richError.responseData = error.response?.data;
+        richError.statusCode = error.response?.status;
+        return Promise.reject(richError);
       }
     );
   }
