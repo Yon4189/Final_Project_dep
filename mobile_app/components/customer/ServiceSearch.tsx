@@ -3,6 +3,7 @@ import { Colors } from "@/app/constants/Colors";
 import { SERVICE_CATEGORIES } from "@/app/constants/Services";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -14,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -30,6 +32,7 @@ interface ServiceSearchProps {
   placeholder?: string;
   autoFocus?: boolean;
   showRecent?: boolean;
+  searchResults?: any[]; // Add search results prop
 }
 
 export const ServiceSearch: React.FC<ServiceSearchProps> = ({
@@ -44,9 +47,12 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   placeholder = "Search for plumbing, electrical...",
   autoFocus = false,
   showRecent = true,
+  searchResults = [],
 }) => {
+  const router = useRouter();
   const [isFocused, setIsFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -85,12 +91,22 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     }
   }, [isFocused, suggestions.length, recentSearches.length]);
 
+  // Show results when search is performed
+  useEffect(() => {
+    if (value.length > 2 && searchResults.length > 0) {
+      setShowResults(true);
+    } else {
+      setShowResults(false);
+    }
+  }, [value, searchResults]);
+
   const handleFocus = () => {
     setIsFocused(true);
   };
 
   const handleBlur = () => {
     setIsFocused(false);
+    setShowResults(false);
   };
 
   const handleClear = () => {
@@ -102,11 +118,26 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     onChangeText(suggestion);
     onSearch(suggestion);
     setIsFocused(false);
+    setShowResults(true);
   };
 
   const handleCategoryPress = (categoryId: string) => {
     onCategorySelect?.(categoryId);
     setIsFocused(false);
+    // Navigate to category results
+    router.push(`/customer/search?category=${categoryId}`);
+  };
+
+  const handleProviderPress = (providerId: string) => {
+    // Navigate to provider profile
+    router.push(`/customer/provider/${providerId}`);
+  };
+
+  const handleViewAllResults = () => {
+    // Navigate to full search results page
+    router.push(`/customer/search?q=${value}`);
+    setIsFocused(false);
+    setShowResults(false);
   };
 
   const renderCategorySuggestions = () => (
@@ -175,6 +206,72 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     );
   };
 
+  const renderSearchResults = () => {
+    if (!showResults || searchResults.length === 0) return null;
+
+    return (
+      <Animated.View
+        style={[
+          styles.resultsOverlay,
+          {
+            opacity: fadeAnim,
+            transform: [
+              {
+                translateY: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <BlurView
+          intensity={100}
+          tint="light"
+          style={styles.resultsContent}
+        >
+          <FlatList
+            data={searchResults.slice(0, 5)}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.resultItem}
+                onPress={() => handleProviderPress(item.id)}
+              >
+                <Image 
+                  source={{ uri: item.profileImage || 'https://via.placeholder.com/50' }} 
+                  style={styles.resultImage}
+                />
+                <View style={styles.resultInfo}>
+                  <Text style={styles.resultName}>{item.businessName || item.name}</Text>
+                  <View style={styles.resultRating}>
+                    <Ionicons name="star" size={14} color={Colors.warning} />
+                    <Text style={styles.resultRatingText}>{item.rating?.toFixed(1) || '4.5'}</Text>
+                    <Text style={styles.resultReviews}>({item.reviewCount || 0} reviews)</Text>
+                  </View>
+                  <Text style={styles.resultCategory}>{item.category || 'Service Provider'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            )}
+            ListFooterComponent={
+              searchResults.length > 5 ? (
+                <TouchableOpacity 
+                  style={styles.viewAllButton}
+                  onPress={handleViewAllResults}
+                >
+                  <Text style={styles.viewAllText}>View All {searchResults.length} Results</Text>
+                  <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
+                </TouchableOpacity>
+              ) : null
+            }
+          />
+        </BlurView>
+      </Animated.View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.searchWrapper}>
@@ -202,7 +299,10 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
             onChangeText={onChangeText}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            onSubmitEditing={() => onSearch(value)}
+            onSubmitEditing={() => {
+              onSearch(value);
+              setShowResults(true);
+            }}
             returnKeyType="search"
             autoFocus={autoFocus}
             clearButtonMode="never"
@@ -232,7 +332,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         </BlurView>
       </View>
 
-      {showSuggestions && (
+      {showSuggestions && !showResults && (
         <Animated.View
           style={[
             styles.suggestionsOverlay,
@@ -255,7 +355,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
             style={styles.suggestionsContent}
           >
             <FlatList
-              data={[1]} // Dummy data to make FlatList render
+              data={[1]}
               renderItem={() => null}
               ListHeaderComponent={
                 <>
@@ -271,6 +371,8 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
           </BlurView>
         </Animated.View>
       )}
+
+      {showResults && renderSearchResults()}
     </View>
   );
 };
@@ -397,5 +499,85 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 14,
     color: Colors.text.primary,
+  },
+  resultsOverlay: {
+    position: "absolute",
+    top: 58,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    borderRadius: 16,
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  resultsContent: {
+    backgroundColor: Platform.OS === "ios" ? "transparent" : Colors.surface,
+    padding: 16,
+    maxHeight: 400,
+  },
+  resultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + "40",
+  },
+  resultImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+  },
+  resultInfo: {
+    flex: 1,
+  },
+  resultName: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  resultRating: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  resultRatingText: {
+    marginLeft: 4,
+    fontSize: 13,
+    color: Colors.text.primary,
+    fontWeight: "500",
+  },
+  resultReviews: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  resultCategory: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  viewAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: "500",
+    marginRight: 4,
   },
 });

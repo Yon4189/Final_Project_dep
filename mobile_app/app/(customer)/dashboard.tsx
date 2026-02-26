@@ -51,9 +51,9 @@ export default function CustomerDashboard() {
     hasMore,
     refresh: refreshSearch,
   } = useSearch();
-  
+
   const { data: topRatedProviders, isLoading: topRatedLoading } = useTopRatedProviders(5);
-  
+
   const [showMapView, setShowMapView] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
@@ -109,24 +109,24 @@ export default function CustomerDashboard() {
         <Text style={styles.greeting}>Hello, 👋</Text>
         <Text style={styles.subtitle}>Find trusted service providers</Text>
       </View>
-      
+
       <View style={styles.headerActions}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.notificationButton}
-          onPress={() => router.push('/customer/notifications')}
+          onPress={() => router.push('/(customer)/notifications')}
         >
           <Ionicons name="notifications-outline" size={24} color={Colors.text.primary} />
           <View style={styles.notificationBadge}>
             <Text style={styles.notificationBadgeText}>3</Text>
           </View>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.profileButton}
-          onPress={() => router.push('/customer/profile')}
+          onPress={() => router.push('/(customer)/profile')}
         >
-          <Image 
-            source={{ uri: 'https://via.placeholder.com/40' }} 
+          <Image
+            source={{ uri: 'https://via.placeholder.com/40' }}
             style={styles.profileImage}
           />
         </TouchableOpacity>
@@ -142,9 +142,9 @@ export default function CustomerDashboard() {
           <Text style={styles.seeAllText}>See All</Text>
         </TouchableOpacity>
       </View>
-      
-      <ScrollView 
-        horizontal 
+
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.categoriesScroll}
       >
@@ -187,9 +187,9 @@ export default function CustomerDashboard() {
             <Text style={styles.seeAllText}>View All</Text>
           </TouchableOpacity>
         </View>
-        
-        <ScrollView 
-          horizontal 
+
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.topRatedScroll}
         >
@@ -199,8 +199,8 @@ export default function CustomerDashboard() {
               style={styles.topRatedCard}
               onPress={() => handleProviderSelect(provider)}
             >
-              <Image 
-                source={{ uri: provider.profileImage || 'https://via.placeholder.com/60' }} 
+              <Image
+                source={{ uri: provider.profileImage || 'https://via.placeholder.com/60' }}
                 style={styles.topRatedImage}
               />
               <Text style={styles.topRatedName} numberOfLines={1}>
@@ -224,24 +224,24 @@ export default function CustomerDashboard() {
         style={[styles.viewToggleButton, !showMapView && styles.viewToggleActive]}
         onPress={() => setShowMapView(false)}
       >
-        <Ionicons 
-          name="list" 
-          size={20} 
-          color={!showMapView ? Colors.primary : Colors.text.secondary} 
+        <Ionicons
+          name="list"
+          size={20}
+          color={!showMapView ? Colors.primary : Colors.text.secondary}
         />
         <Text style={[styles.viewToggleText, !showMapView && styles.viewToggleTextActive]}>
           List
         </Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity
         style={[styles.viewToggleButton, showMapView && styles.viewToggleActive]}
         onPress={() => setShowMapView(true)}
       >
-        <Ionicons 
-          name="map" 
-          size={20} 
-          color={showMapView ? Colors.primary : Colors.text.secondary} 
+        <Ionicons
+          name="map"
+          size={20}
+          color={showMapView ? Colors.primary : Colors.text.secondary}
         />
         <Text style={[styles.viewToggleText, showMapView && styles.viewToggleTextActive]}>
           Map
@@ -253,21 +253,21 @@ export default function CustomerDashboard() {
   const renderMapView = () => {
     // Convert providers to markers format
     const markers = providers.map(provider => ({
-      position: Platform.OS === 'web' 
+      position: Platform.OS === 'web'
         ? [provider.location.latitude, provider.location.longitude]
         : { latitude: provider.location.latitude, longitude: provider.location.longitude },
-        title: provider?.businessName ?? provider?.name ?? 'Service Provider',
+      title: provider?.businessName ?? provider?.name ?? 'Service Provider',
       description: `Rating: ${provider.rating} ⭐ • ${provider.reviewCount} reviews`,
     }));
 
     // Prepare center coordinates
-    const center = location 
-      ? (Platform.OS === 'web' 
-          ? [location.latitude, location.longitude]
-          : { latitude: location.latitude, longitude: location.longitude })
-      : (Platform.OS === 'web' 
-          ? [9.03, 38.74]
-          : { latitude: 9.03, longitude: 38.74 });
+    const center = location
+      ? (Platform.OS === 'web'
+        ? [location.latitude, location.longitude]
+        : { latitude: location.latitude, longitude: location.longitude })
+      : (Platform.OS === 'web'
+        ? [9.03, 38.74]
+        : { latitude: 9.03, longitude: 38.74 });
 
     return (
       <View style={styles.mapContainer}>
@@ -281,56 +281,56 @@ export default function CustomerDashboard() {
     );
   };
 
- const renderProviderList = () => (
-  <FlatList
-    data={providers}
-    keyExtractor={(item) => item.id}
-    renderItem={({ item }) => (
-      <ProviderCard 
-        provider={item} 
-        onPress={() => handleProviderSelect(item)}
-      />
-    )}
-    contentContainerStyle={styles.providersList}
-    refreshControl={
-      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-    }
-    onEndReached={loadMore}
-    onEndReachedThreshold={0.5}
-    ListFooterComponent={
-      searchLoading ? <LoadingSpinner /> : null
-    }
-    ListEmptyComponent={
-      !searchLoading && !locationLoading ? (
-        <EmptyState
-          icon="search-outline"
-          title="No providers found"
-          message="Try adjusting your search or filters"
-          actionLabel="Clear Filters"
-          onAction={() => {
-            setQuery('');
-            updateFilters({});
-          }}
-          variant="default" // Add variant if needed
+  const renderProviderList = () => (
+    <FlatList
+      data={providers}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <ProviderCard
+          provider={item}
+          onPress={() => handleProviderSelect(item)}
         />
-      ) : null
-    }
-  />
-);
-
-if (locationLoading && !providers.length) {
-  return (
-    <View style={styles.initialLoading}>
-      <LoadingSpinner />
-      <Text style={styles.loadingText}>Finding providers near you...</Text>
-    </View>
+      )}
+      contentContainerStyle={styles.providersList}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.5}
+      ListFooterComponent={
+        searchLoading ? <LoadingSpinner /> : null
+      }
+      ListEmptyComponent={
+        !searchLoading && !locationLoading ? (
+          <EmptyState
+            icon="search-outline"
+            title="No providers found"
+            message="Try adjusting your search or filters"
+            actionLabel="Clear Filters"
+            onAction={() => {
+              setQuery('');
+              updateFilters({});
+            }}
+            variant="default" // Add variant if needed
+          />
+        ) : null
+      }
+    />
   );
-}
+
+  if (locationLoading && !providers.length) {
+    return (
+      <View style={styles.initialLoading}>
+        <LoadingSpinner />
+        <Text style={styles.loadingText}>Finding providers near you...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       {renderHeader()}
-      
+
       <View style={styles.searchContainer}>
         <ServiceSearch
           value={query}
@@ -344,18 +344,18 @@ if (locationLoading && !providers.length) {
           showRecent={true}
         />
       </View>
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {renderCategories()}
         {renderTopRated()}
-        
+
         {query || filters.categoryId ? (
           <>
             {renderViewToggle()}
-            
+
             {showMapView ? (
               renderMapView()
             ) : (
@@ -367,7 +367,7 @@ if (locationLoading && !providers.length) {
             <Text style={styles.popularTitle}>Popular Services Near You</Text>
             <View style={styles.popularGrid}>
               {['Plumbing', 'Electrical', 'Cleaning', 'Painting', 'Moving', 'Gardening'].map((service, index) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={index}
                   style={styles.popularItem}
                   onPress={() => setQuery(service)}
@@ -379,30 +379,30 @@ if (locationLoading && !providers.length) {
             </View>
           </View>
         )}
-        
+
         <View style={styles.bottomPadding} />
       </ScrollView>
-      
+
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         onApply={handleFilterApply}
         initialFilters={filters}
       />
-      
-     <ServiceRequestModal
-  visible={showRequestModal}
-  onClose={() => {
-    setShowRequestModal(false);
-    setSelectedProvider(null);
-  }}
-  provider={selectedProvider}
-  userLocation={location ? {
-    latitude: location.latitude,
-    longitude: location.longitude,
-   // address: address?.formattedAddress || address?.street || 'Current location'
-  } : undefined}
-/>
+
+      <ServiceRequestModal
+        visible={showRequestModal}
+        onClose={() => {
+          setShowRequestModal(false);
+          setSelectedProvider(null);
+        }}
+        provider={selectedProvider}
+        userLocation={location ? {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          // address: address?.formattedAddress || address?.street || 'Current location'
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }

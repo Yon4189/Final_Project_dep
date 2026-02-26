@@ -17,6 +17,8 @@ import {
   View,
 } from "react-native";
 import { useCreateServiceRequest } from "../../hooks/useCustomerQueries";
+import { paymentService } from "../../app/services/payment.service";
+import { usePaymentMethods } from "../../hooks/usePayment";
 
 interface ServiceRequestModalProps {
   visible: boolean;
@@ -25,7 +27,7 @@ interface ServiceRequestModalProps {
   userLocation?: {
     latitude: number;
     longitude: number;
-    address?: string;
+    address?: string | null;
   } | null;
   selectedService?: string;
 }

@@ -127,7 +127,7 @@ export default function ProviderDashboard() {
       <View style={styles.statsGrid}>
         <TouchableOpacity 
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings')}
+          onPress={() => router.push('/(provider)/earnings/index')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.today || 0)}</Text>
           <Text style={styles.statLabel}>Today</Text>
@@ -135,7 +135,7 @@ export default function ProviderDashboard() {
 
         <TouchableOpacity 
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings')}
+          onPress={() => router.push('/(provider)/earnings/index')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.week || 0)}</Text>
           <Text style={styles.statLabel}>This Week</Text>
@@ -143,7 +143,7 @@ export default function ProviderDashboard() {
 
         <TouchableOpacity 
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings')}
+          onPress={() => router.push('/(provider)/earnings/index')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.month || 0)}</Text>
           <Text style={styles.statLabel}>This Month</Text>
@@ -153,7 +153,7 @@ export default function ProviderDashboard() {
       {/* Rating Card */}
       <TouchableOpacity 
         style={styles.ratingCard}
-        onPress={() => router.push('/(provider)/reviews')}
+        onPress={() => router.push('/(provider)/reviews/index')}
       >
         <View style={styles.ratingLeft}>
           <Text style={styles.ratingValue}>{profile?.rating?.toFixed(1) || '0.0'}</Text>
@@ -181,7 +181,7 @@ export default function ProviderDashboard() {
     <View style={styles.quickActions}>
       <TouchableOpacity 
         style={styles.actionButton}
-        onPress={() => router.push('/(provider)/requests')}
+        onPress={() => router.push('/(provider)/requests/index')}
       >
         <View style={[styles.actionIcon, { backgroundColor: Colors.primary + '20' }]}>
           <Ionicons name="clipboard-outline" size={24} color={Colors.primary} />
@@ -206,26 +206,15 @@ export default function ProviderDashboard() {
 
       <TouchableOpacity 
         style={styles.actionButton}
-        onPress={() => router.push('/(provider)/earnings')}
+        onPress={() => router.push('/(provider)/earnings/earnings')}
       >
         <View style={[styles.actionIcon, { backgroundColor: Colors.warning + '20' }]}>
           <Ionicons name="wallet-outline" size={24} color={Colors.warning} />
         </View>
         <Text style={styles.actionLabel}>Earnings</Text>
       </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={styles.actionButton}
-        onPress={() => router.push('/(provider)/services')}
-      >
-        <View style={[styles.actionIcon, { backgroundColor: Colors.info + '20' }]}>
-          <Ionicons name="construct-outline" size={24} color={Colors.info} />
-        </View>
-        <Text style={styles.actionLabel}>Services</Text>
-      </TouchableOpacity>
     </View>
   );
-
   const renderTabs = () => (
     <View style={styles.tabsContainer}>
       {['today', 'pending', 'upcoming'].map((tab) => (
@@ -426,7 +415,7 @@ export default function ProviderDashboard() {
         {/* Recent Earnings Summary */}
         <TouchableOpacity 
           style={styles.earningsSummary}
-          onPress={() => router.push('/(provider)/earnings')}
+          onPress={() => router.push('/(provider)/earnings/index')}
         >
           <View style={styles.earningsHeader}>
             <Text style={styles.earningsTitle}>Recent Earnings</Text>

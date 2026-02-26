@@ -22,18 +22,18 @@ export interface User {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   deletedAt?: Timestamp;
-  
+
   // Profile
   bio?: string;
   dateOfBirth?: Timestamp;
   gender?: 'male' | 'female' | 'other';
-  
+
   // Settings
   language?: string;
   currency?: Currency;
   notificationSettings?: NotificationSettings;
   privacySettings?: PrivacySettings;
-  
+
   // Metadata
   metadata?: Record<string, any>;
 }
@@ -107,7 +107,7 @@ export interface Category {
   displayOrder: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  
+
   // Relations
   services?: Service[];
 }
@@ -129,7 +129,7 @@ export interface Service {
   displayOrder: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  
+
   // Relations
   category?: Category;
   professionalServices?: ProfessionalService[];
@@ -144,7 +144,7 @@ export interface ProfessionalService {
   isActive: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  
+
   // Relations
   service?: Service;
   professional?: ProfessionalProfile;
@@ -177,7 +177,7 @@ export interface ProfessionalProfile {
   verifiedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  
+
   // Relations
   user?: User;
   services?: ProfessionalService[];
@@ -189,7 +189,7 @@ export interface ProfessionalProfile {
 export interface ServiceProvider {
   id: ID;
   userId: ID;
-   name?: string; 
+  name?: string;
   businessName: string;
   firstName: string;
   lastName: string;
@@ -200,6 +200,7 @@ export interface ServiceProvider {
   yearsExperience: number;
   verified: boolean;
   insured?: boolean;
+  isAvailable: boolean;
   services: ProfessionalService[];
   priceRange: PriceRange;
   location: ProviderLocation;
@@ -260,7 +261,7 @@ export interface TimeSlot {
 
 // ==================== Booking Types ====================
 
-export type BookingStatus = 
+export type BookingStatus =
   | 'pending'
   | 'confirmed'
   | 'in_progress'
@@ -269,7 +270,7 @@ export type BookingStatus =
   | 'disputed'
   | 'refunded';
 
-export type PaymentStatus = 
+export type PaymentStatus =
   | 'pending'
   | 'processing'
   | 'paid'
@@ -312,7 +313,7 @@ export interface Booking {
   cancellationReason?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  
+
   // Relations
   homeowner?: User;
   professional?: User;
@@ -355,7 +356,7 @@ export interface ServiceRequest {
   completedAt?: Timestamp;
   cancelledAt?: Timestamp;
   cancellationReason?: string;
-  
+
   // Relations
   review?: Review;
   providerPhone?: string;
@@ -457,7 +458,7 @@ export interface ReviewCriteria {
 
 export type ComplaintStatus = 'pending' | 'under_review' | 'resolved' | 'rejected';
 export type ComplaintPriority = 'low' | 'medium' | 'high';
-export type ComplaintIssueType = 
+export type ComplaintIssueType =
   | 'service_quality'
   | 'professionalism'
   | 'late_arrival'
@@ -533,7 +534,7 @@ export interface SearchSuggestion {
 
 // ==================== Notification Types ====================
 
-export type NotificationType = 
+export type NotificationType =
   | 'booking_confirmed'
   | 'booking_cancelled'
   | 'booking_completed'
@@ -588,7 +589,10 @@ export interface ActivityItem {
 // ==================== API Response Types ====================
 
 export interface ApiResponse<T = any> {
+  categories: boolean;
+  categories: any[];
   success: boolean;
+  status?: string;
   data?: T;
   message?: string;
   errors?: Record<string, string[]>;
@@ -703,7 +707,7 @@ export interface GeoBounds {
 
 // ==================== Event Types ====================
 
-export type CustomerEvent = 
+export type CustomerEvent =
   | { type: 'PROFILE_UPDATED'; payload: { user: User } }
   | { type: 'LOCATION_ADDED'; payload: { location: Location } }
   | { type: 'LOCATION_UPDATED'; payload: { location: Location } }
