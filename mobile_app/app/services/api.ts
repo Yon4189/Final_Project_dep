@@ -12,9 +12,11 @@ const API_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
-// Token storage keys
-const TOKEN_KEY = 'auth_token';
+// Token storage keys - Separate for different user types
+const PROVIDER_TOKEN_KEY = 'provider_token';
+const CUSTOMER_TOKEN_KEY = 'customer_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const USER_TYPE_KEY = 'user_type';
 const USER_KEY = 'user_data';
 
 // Event types for API events
@@ -23,8 +25,10 @@ type ApiEventListener = (event: ApiEventType, data?: any) => void;
 
 class ApiService {
   private api: AxiosInstance;
-  private token: string | null = null;
+  private providerToken: string | null = null;
+  private customerToken: string | null = null;
   private refreshToken: string | null = null;
+  private userType: 'provider' | 'customer' | null = null;
   private isRefreshing = false;
   private failedQueue: Array<{
     resolve: (value: unknown) => void;
@@ -65,43 +69,95 @@ class ApiService {
   // Token management
   private async loadStoredToken(): Promise<void> {
     try {
-      this.token = await SecureStore.getItemAsync(TOKEN_KEY);
+      // Try to load provider token first
+      this.providerToken = await SecureStore.getItemAsync(PROVIDER_TOKEN_KEY);
+
+      // If no provider token, try customer token
+      if (!this.providerToken) {
+        this.customerToken = await SecureStore.getItemAsync(CUSTOMER_TOKEN_KEY);
+      }
+
       this.refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      this.userType = await SecureStore.getItemAsync(USER_TYPE_KEY) as 'provider' | 'customer' | null;
     } catch (error) {
       console.warn('Failed to load stored token:', error);
     }
   }
 
-  public async setToken(token: string, refreshToken?: string): Promise<void> {
-    this.token = token;
+  public async setProviderToken(token: string, refreshToken?: string): Promise<void> {
+    this.providerToken = token;
+    this.customerToken = null; // Clear customer token
+    this.userType = 'provider';
+
     if (refreshToken) {
       this.refreshToken = refreshToken;
     }
 
     try {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      await SecureStore.setItemAsync(PROVIDER_TOKEN_KEY, token);
+      await SecureStore.setItemAsync(USER_TYPE_KEY, 'provider');
+
+      // Clear customer token if exists
+      await SecureStore.deleteItemAsync(CUSTOMER_TOKEN_KEY);
+
       if (refreshToken) {
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
       }
     } catch (error) {
-      console.warn('Failed to store token:', error);
+      console.warn('Failed to store provider token:', error);
+    }
+  }
+
+  public async setCustomerToken(token: string, refreshToken?: string): Promise<void> {
+    this.customerToken = token;
+    this.providerToken = null; // Clear provider token
+    this.userType = 'customer';
+
+    if (refreshToken) {
+      this.refreshToken = refreshToken;
+    }
+
+    try {
+      await SecureStore.setItemAsync(CUSTOMER_TOKEN_KEY, token);
+      await SecureStore.setItemAsync(USER_TYPE_KEY, 'customer');
+
+      // Clear provider token if exists
+      await SecureStore.deleteItemAsync(PROVIDER_TOKEN_KEY);
+
+      if (refreshToken) {
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+      }
+    } catch (error) {
+      console.warn('Failed to store customer token:', error);
     }
   }
 
   public async removeToken(): Promise<void> {
-    this.token = null;
+    this.providerToken = null;
+    this.customerToken = null;
     this.refreshToken = null;
+    this.userType = null;
 
     try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(PROVIDER_TOKEN_KEY);
+      await SecureStore.deleteItemAsync(CUSTOMER_TOKEN_KEY);
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USER_TYPE_KEY);
     } catch (error) {
       console.warn('Failed to remove token:', error);
     }
   }
 
   public getToken(): string | null {
-    return this.token;
+    // Return the appropriate token based on user type
+    if (this.userType === 'provider') {
+      return this.providerToken;
+    }
+    return this.customerToken;
+  }
+
+  public getUserType(): string | null {
+    return this.userType;
   }
 
   // User data management
@@ -152,7 +208,14 @@ class ApiService {
 
       if (response.data.success && response.data.data?.token) {
         const { token, refresh_token } = response.data.data;
-        await this.setToken(token, refresh_token);
+
+        // Set the appropriate token based on user type
+        if (this.userType === 'provider') {
+          await this.setProviderToken(token, refresh_token);
+        } else {
+          await this.setCustomerToken(token, refresh_token);
+        }
+
         return token;
       }
       return null;
@@ -183,8 +246,9 @@ class ApiService {
     this.api.interceptors.request.use(
       async (config) => {
         // Add token to headers
-        if (this.token && config.headers) {
-          config.headers.Authorization = `Bearer ${this.token}`;
+        const token = this.getToken();
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
 
         // Add request ID for tracking
@@ -197,6 +261,7 @@ class ApiService {
             url: config.url,
             params: config.params,
             data: config.data,
+            userType: this.userType,
           });
         }
 
@@ -244,7 +309,23 @@ class ApiService {
           return Promise.reject(new Error('Network error. Please try again.'));
         }
 
-        const { status } = error.response;
+        const { status, data } = error.response;
+
+        // Handle 400 Bad Request & 422 Unprocessable Entity - Log more details
+        if (status === 400 || status === 422) {
+          console.warn(`⚠️ ${status === 400 ? 'Bad Request' : 'Validation Error'}:`, {
+            url: originalConfig?.url,
+            data: data,
+            headers: originalConfig?.headers,
+          });
+
+          // Return the error response data so it can be handled by the caller
+          return Promise.reject({
+            response: error.response,
+            message: (data as any)?.message || (status === 400 ? 'Bad request.' : 'Validation failed.'),
+            errors: (data as any)?.errors
+          });
+        }
 
         // Handle 401 Unauthorized
         if (status === 401 && originalConfig) {
@@ -280,6 +361,11 @@ class ApiService {
               this.failedQueue.push({ resolve, reject, config: originalConfig });
             });
           }
+        }
+
+        // Handle 403 Forbidden
+        if (status === 403) {
+          return Promise.reject(new Error('You do not have permission to access this resource.'));
         }
 
         // Handle other status codes
@@ -334,7 +420,12 @@ class ApiService {
     try {
       const response = await requestFn();
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      // Don't retry 400 errors - they are client errors
+      if (error.response?.status === 400) {
+        throw error;
+      }
+
       if (retries > 0 && this.shouldRetry(error)) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return this.requestWithRetry(requestFn, retries - 1);
