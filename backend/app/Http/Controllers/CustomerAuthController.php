@@ -7,81 +7,102 @@ use App\Models\Customer;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+
 class CustomerAuthController extends Controller
 {
     /**
      * register a new customer
-     * 
-     * this handles:
-     * - validation of input
-     * - password hashing
-     * - optional profile picture upload
-     * - storing data in the customers table
-     * - returning json response
      */
-
     public function register(Request $request)
     {
-   // Step 1: Validate input
-    $validator = Validator::make($request->all(), [
-        'fullname' => 'required|string|max:255',
-        'email' => 'required|email|unique:customers,email',
-        'phone' => ['required', 'unique:customers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
-        'password' => 'required|string|min:8|confirmed',
-        'profilePicture' => 'sometimes|image|max:2048',
-        'location' => 'sometimes|string|max:255',
-        'service_city' => 'required|string|max:255',
-    ]);
+        // Log the incoming request for debugging
+        Log::info('Registration request received:', [
+            'all_data' => $request->all(),
+            'files' => $request->hasFile('profilePicture') ? 'Has file' : 'No file',
+            'headers' => $request->headers->get('content-type')
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation errors',
-            'errors' => $validator->errors()
-        ], 422);
-    }
+        // Step 1: Validate input with more flexible phone validation
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'required|string|max:255',
+            'email' => 'required|email|unique:customers,email',
+            'phone' => [
+                'required',
+                'unique:customers,phone',
+                function ($attribute, $value, $fail) {
+                    // Remove any non-numeric characters
+                    $phone = preg_replace('/[^0-9]/', '', $value);
+                    
+                    // Check if it's 10 digits and starts with 09 or 07
+                    if (!preg_match('/^(09|07)[0-9]{8}$/', $phone)) {
+                        $fail('The phone number must be 10 digits starting with 09 or 07.');
+                    }
+                },
+            ],
+            'password' => 'required|string|min:8|confirmed',
+            'profilePicture' => 'sometimes|image|max:2048',
+            'location' => 'sometimes|string|max:255',
+            'service_city' => 'sometimes|string|max:255',
+        ]);
 
-    // Step 2: Handle profile picture if provided
-    $profilePath = null;
-    if ($request->hasFile('profilePicture')) {
-        $file = $request->file('profilePicture');
-        
-        // FIX: Fallback to 'jpg' if extension is missing (common in mobile uploads)
-        $extension = $file->getClientOriginalExtension() ?: 'jpg'; 
-        
-        $filename = Str::random(20) . '.' . $extension;
-        
-        // Ensure directory exists
-        $destinationPath = public_path('profilepics');
-        if (!file_exists($destinationPath)) {
-            mkdir($destinationPath, 0777, true);
+        if ($validator->fails()) {
+            Log::warning('Validation failed:', $validator->errors()->toArray());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        $file->move($destinationPath, $filename);
-        $profilePath = 'profilepics/' . $filename;
+        // Step 2: Clean the phone number
+        $phone = preg_replace('/[^0-9]/', '', $request->phone);
+
+        // Step 3: Handle profile picture if provided
+        $profilePath = null;
+        if ($request->hasFile('profilePicture')) {
+            $file = $request->file('profilePicture');
+            
+            $extension = $file->getClientOriginalExtension() ?: 'jpg'; 
+            $filename = Str::random(20) . '.' . $extension;
+            
+            $destinationPath = public_path('profilepics');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0777, true);
+            }
+
+            $file->move($destinationPath, $filename);
+            $profilePath = 'profilepics/' . $filename;
+            
+            Log::info('Profile picture saved:', ['path' => $profilePath]);
+        }
+
+        // Step 4: Create new customer
+        $customer = Customer::create([
+            'fullname' => $request->fullname,
+            'email' => $request->email,
+            'phone' => $phone, // Save cleaned phone number
+            'password' => Hash::make($request->password),
+            'profilePicture' => $profilePath,
+            'location' => $request->location,
+            'service_city' => $request->service_city,
+        ]);
+
+        Log::info('Customer registered successfully:', ['id' => $customer->customerID]);
+
+        return response()->json([
+            'success' => true,
+            'status' => 'success',
+            'message' => 'Customer registered successfully.',
+            'data' => [
+                'customer' => $customer
+            ]
+        ], 201);
     }
 
-    // Step 3: Create new customer
-    $customer = Customer::create([
-        'fullname' => $request->fullname,
-        'email' => $request->email,
-        'phone' => $request->phone,
-        'password' => Hash::make($request->password),
-        'profilePicture' => $profilePath,
-        'location' => $request->location,
-        'service_city' => $request->service_city,
-    ]);
-
-    // Step 4: Return JSON success response
-    return response()->json([
-        'success' => true,
-        'message' => 'Customer registered successfully',
-        'data' => $customer
-    ], 201);
-}
- public function login(Request $request)
+    public function login(Request $request)
     {
-        
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string',
@@ -95,16 +116,21 @@ class CustomerAuthController extends Controller
             ], 422);
         }
 
-        // search for customer by their email
+        // Search for customer by their email
         $customer = Customer::where('email', $request->email)->first();
+        
         if (!$customer || !Hash::check($request->password, $customer->password)) {
+            Log::warning('Login failed for email:', ['email' => $request->email]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid email or password'
             ], 401);
         }
 
-        //  Return success
+        // Don't send password in response
+        unset($customer->password);
+
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
@@ -112,5 +138,3 @@ class CustomerAuthController extends Controller
         ]);
     }
 }
-
-

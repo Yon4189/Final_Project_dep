@@ -1,6 +1,7 @@
+// app/(auth)/register-customer.tsx
 import { api } from "../services/api";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from "react-native";
 import {
@@ -13,12 +14,23 @@ import {
   TouchableOpacity,
   View,
   Image,
+  ActivityIndicator,
+  LogBox,
 } from "react-native";
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
 import { Colors } from "../constants/Colors";
 import { LOCATIONS } from "../constants/Services";
 import { Ionicons } from '@expo/vector-icons';
+
+// Define City interface
+LogBox.ignoreLogs(['Unexpected text node']);
+
+interface City {
+  id: number;
+  name: string;
+  cityID?: number;
+}
 
 export default function RegisterCustomerScreen() {
   const router = useRouter();
@@ -37,20 +49,35 @@ export default function RegisterCustomerScreen() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [cities, setCities] = useState<any[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchCities();
   }, []);
 
   const fetchCities = async () => {
+    setCitiesLoading(true);
     try {
       const resp = await api.get<any>('/cities');
-      if (resp.success) {
-        setCities(resp.data);
+      console.log('Cities API response:', resp);
+
+      if (resp.success && resp.data) {
+        let citiesData = resp.data;
+        if (Array.isArray(citiesData)) {
+          setCities(citiesData);
+        } else if (citiesData.data && Array.isArray(citiesData.data)) {
+          setCities(citiesData.data);
+        } else if (citiesData && typeof citiesData === 'object') {
+          setCities([citiesData]);
+        }
       }
     } catch (err) {
       console.log('Error fetching cities:', err);
+      Alert.alert('Error', 'Failed to load cities. Please try again.');
+    } finally {
+      setCitiesLoading(false);
     }
   };
 
@@ -89,60 +116,125 @@ export default function RegisterCustomerScreen() {
           type: mimeType,
         }
       });
+      
+      setValidationErrors(prev => ({ ...prev, profilePicture: '' }));
     }
   };
 
-  const validatePhoneNumber = (phone: string) => /^(09|07)[0-9]{8}$/.test(phone);
+  // Validate phone number - remove non-numeric and check format
+  const validatePhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/[^0-9]/g, '');
+    return {
+      isValid: /^(09|07)[0-9]{8}$/.test(cleaned),
+      cleaned: cleaned
+    };
+  };
+
+  // Validate email format
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Validate form fields
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!formData.fullname.trim()) {
+      errors.fullname = "Full name is required";
+    } else if (formData.fullname.length < 3) {
+      errors.fullname = "Full name must be at least 3 characters";
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!validateEmail(formData.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+    
+    if (!formData.phone.trim()) {
+      errors.phone = "Phone number is required";
+    } else {
+      const { isValid } = validatePhoneNumber(formData.phone);
+      if (!isValid) {
+        errors.phone = "Phone number must be 10 digits starting with 09 or 07";
+      }
+    }
+    
+    if (!formData.location) {
+      errors.location = "Please select your location";
+    }
+    
+    if (!formData.service_city) {
+      errors.service_city = "Please select your service city";
+    }
+    
+    if (!formData.password) {
+      errors.password = "Password is required";
+    } else if (formData.password.length < 8) {
+      errors.password = "Password must be at least 8 characters";
+    }
+    
+    if (!formData.password_confirmation) {
+      errors.password_confirmation = "Please confirm your password";
+    } else if (formData.password !== formData.password_confirmation) {
+      errors.password_confirmation = "Passwords do not match";
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleRegister = async () => {
-    if (!formData.fullname) return Alert.alert("Error", "Full name is required");
-    if (!formData.email) return Alert.alert("Error", "Email is required");
-    if (!formData.phone) return Alert.alert("Error", "Phone number is required");
-    if (!formData.location) return Alert.alert("Error", "Full address location is required");
-    if (!formData.service_city) return Alert.alert("Error", "Service city is required");
-    if (!formData.password) return Alert.alert("Error", "Password is required");
-    if (!formData.password_confirmation) return Alert.alert("Error", "Please confirm your password");
+    setValidationErrors({});
+    
+    if (!validateForm()) {
+      return;
+    }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) return Alert.alert("Error", "Please enter a valid email address");
-
-    if (!validatePhoneNumber(formData.phone)) return Alert.alert(
-      "Error",
-      "Phone number must be 10 digits starting with 09 or 07 (e.g., 0912345678)"
-    );
-
-    if (formData.password.length < 8) return Alert.alert("Error", "Password must be at least 8 characters long");
-    if (formData.password !== formData.password_confirmation) return Alert.alert("Error", "Passwords do not match");
+    const { cleaned: cleanedPhone } = validatePhoneNumber(formData.phone);
 
     try {
       setLoading(true);
+      console.log("Starting registration with cleaned phone:", cleanedPhone);
 
       const formDataToSend = new FormData();
-      formDataToSend.append('fullname', formData.fullname);
-      formDataToSend.append('email', formData.email);
-      formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('fullname', formData.fullname.trim());
+      formDataToSend.append('email', formData.email.trim().toLowerCase());
+      formDataToSend.append('phone', cleanedPhone);
       formDataToSend.append('password', formData.password);
       formDataToSend.append('password_confirmation', formData.password_confirmation);
       formDataToSend.append('location', formData.location);
       formDataToSend.append('service_city', formData.service_city);
 
       if (formData.profilePicture?.uri) {
+        const filename = formData.profilePicture.uri.split('/').pop() || 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
         if (Platform.OS === 'web') {
           const response = await fetch(formData.profilePicture.uri);
           const blob = await response.blob();
-          const fileName = formData.profilePicture.uri.split('/').pop() || 'photo.jpg';
-          const file = new File([blob], fileName, {
-            type: formData.profilePicture.type || 'image/jpeg'
-          });
+          const file = new File([blob], filename, { type });
           formDataToSend.append('profilePicture', file);
         } else {
-          const fileToUpload = {
+          formDataToSend.append('profilePicture', {
             uri: formData.profilePicture.uri,
-            name: formData.profilePicture.name || 'photo.jpg',
-            type: formData.profilePicture.type || 'image/jpeg',
-          };
-          formDataToSend.append('profilePicture', fileToUpload as any);
+            name: filename,
+            type,
+          } as any);
         }
+      }
+
+      if (__DEV__) {
+        console.log('Sending FormData with fields:', {
+          fullname: formData.fullname,
+          email: formData.email,
+          phone: cleanedPhone,
+          location: formData.location,
+          service_city: formData.service_city,
+          hasProfilePicture: !!formData.profilePicture?.uri
+        });
       }
 
       const response = await api.post<any>(
@@ -157,7 +249,9 @@ export default function RegisterCustomerScreen() {
         }
       );
 
-      if (response.success) {
+      console.log("Registration response:", response);
+
+      if (response?.success === true) {
         setFormData({
           fullname: "",
           email: "",
@@ -169,141 +263,345 @@ export default function RegisterCustomerScreen() {
           profilePicture: null,
         });
         setImageUri(null);
-        router.push("/(auth)/login");
+        setValidationErrors({});
+
         Alert.alert(
-          "Success",
-          "Account created successfully. Please login to continue."
+          "Registration Successful",
+          "Your account has been created successfully. Please login to continue.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                //console.log("Navigating to login page...");
+                // FIXED: Use relative path since we're in the same (auth) group
+                router.replace("./login");
+              }
+            }
+          ]
         );
       } else {
-        Alert.alert("Error", response.message || "Registration failed");
+        Alert.alert(
+          "Registration Failed",
+          response?.message || "Could not complete registration. Please try again."
+        );
       }
     } catch (err: any) {
-      console.error('Registration error:', err.message);
-      Alert.alert("Error", err.message || "Could not connect to server");
+      console.error('Registration error details:', err);
+
+      let errorMessage = "Could not connect to server. Please check your internet connection.";
+
+      if (err.response) {
+        console.error('Error response data:', err.response.data);
+        
+        if (err.response.status === 422) {
+          const responseData = err.response.data;
+          
+          if (responseData.errors) {
+            const serverErrors = responseData.errors;
+            const errorMessages = [];
+            
+            const newValidationErrors: {[key: string]: string} = {};
+            
+            if (serverErrors.phone) {
+              newValidationErrors.phone = serverErrors.phone[0];
+              errorMessages.push(`📱 ${serverErrors.phone[0]}`);
+            }
+            if (serverErrors.email) {
+              newValidationErrors.email = serverErrors.email[0];
+              errorMessages.push(`📧 ${serverErrors.email[0]}`);
+            }
+            if (serverErrors.fullname) {
+              newValidationErrors.fullname = serverErrors.fullname[0];
+              errorMessages.push(`👤 ${serverErrors.fullname[0]}`);
+            }
+            if (serverErrors.password) {
+              newValidationErrors.password = serverErrors.password[0];
+              errorMessages.push(`🔒 ${serverErrors.password[0]}`);
+            }
+            if (serverErrors.location) {
+              newValidationErrors.location = serverErrors.location[0];
+              errorMessages.push(`📍 ${serverErrors.location[0]}`);
+            }
+            if (serverErrors.service_city) {
+              newValidationErrors.service_city = serverErrors.service_city[0];
+              errorMessages.push(`🏙️ ${serverErrors.service_city[0]}`);
+            }
+            
+            setValidationErrors(newValidationErrors);
+            
+            if (errorMessages.length > 0) {
+              errorMessage = errorMessages.join('\n\n');
+            } else {
+              errorMessage = responseData.message || 'Validation failed';
+            }
+          } else {
+            errorMessage = responseData.message || 'Validation failed';
+          }
+        } else {
+          errorMessage = err.response.data?.message ||
+            err.response.data?.error ||
+            `Server error: ${err.response.status}`;
+        }
+      } else if (err.request) {
+        errorMessage = "No response from server. Please check your internet connection and try again.";
+      } else {
+        errorMessage = err.message || "An unexpected error occurred.";
+      }
+
+      Alert.alert("Registration Error", errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
   const renderModalItem = (item: string, onSelect: () => void) => (
-    <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
+    <TouchableOpacity 
+      style={styles.modalItem} 
+      onPress={() => {
+        onSelect();
+        if (item === formData.location) {
+          setValidationErrors(prev => ({ ...prev, location: '' }));
+        } else if (item === formData.service_city) {
+          setValidationErrors(prev => ({ ...prev, service_city: '' }));
+        }
+      }}
+    >
       <Text style={styles.modalItemText}>{item}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView 
+      style={styles.container} 
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Customer Registration</Text>
-        <Text style={styles.subtitle}>Find trusted service providers</Text>
+        <Text style={styles.title}>Create Customer Account</Text>
+        <Text style={styles.subtitle}>Join thousands of satisfied customers</Text>
       </View>
 
       <View style={styles.formContainer}>
-        <AppInput
-          label="Full Name"
-          value={formData.fullname}
-          onChangeText={(text: string) => setFormData({ ...formData, fullname: text })}
-          placeholder="Enter your full name"
-          required
-        />
-
-        <AppInput
-          label="Email"
-          value={formData.email}
-          onChangeText={(text: string) => setFormData({ ...formData, email: text })}
-          placeholder="Enter your email"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          required
-        />
-
-        <AppInput
-          label="Phone Number"
-          value={formData.phone}
-          onChangeText={(text: string) => setFormData({ ...formData, phone: text })}
-          placeholder="09XXXXXXXX or 07XXXXXXXX"
-          keyboardType="phone-pad"
-          maxLength={10}
-          required
-        />
-        <Text style={styles.hintText}>Enter 10 digits starting with 09 or 07</Text>
-
+        {/* Full Name Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Location <Text style={styles.required}>*</Text>
+            Full Name <Text style={styles.required}>*</Text>
+          </Text>
+          <AppInput
+            value={formData.fullname}
+            onChangeText={(text: string) => {
+              setFormData({ ...formData, fullname: text });
+              setValidationErrors(prev => ({ ...prev, fullname: '' }));
+            }}
+            placeholder="Enter your full name"
+            required
+            error={validationErrors.fullname}
+          />
+        </View>
+
+        {/* Email Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Email <Text style={styles.required}>*</Text>
+          </Text>
+          <AppInput
+            value={formData.email}
+            onChangeText={(text: string) => {
+              setFormData({ ...formData, email: text });
+              setValidationErrors(prev => ({ ...prev, email: '' }));
+            }}
+            placeholder="Enter your email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            required
+            error={validationErrors.email}
+          />
+        </View>
+
+        {/* Phone Number Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Phone Number <Text style={styles.required}>*</Text>
+          </Text>
+          <AppInput
+            value={formData.phone}
+            onChangeText={(text: string) => {
+              const cleaned = text.replace(/[^0-9]/g, '');
+              if (cleaned.length <= 10) {
+                setFormData({ ...formData, phone: cleaned });
+                setValidationErrors(prev => ({ ...prev, phone: '' }));
+              }
+            }}
+            placeholder="0912345678"
+            keyboardType="phone-pad"
+            maxLength={10}
+            required
+            error={validationErrors.phone}
+          />
+          <Text style={styles.hintText}>Enter 10 digits starting with 09 or 07</Text>
+        </View>
+
+        {/* Location Dropdown */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Your Location <Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity
-            style={styles.dropdown}
+            style={[
+              styles.dropdown,
+              validationErrors.location && styles.dropdownError
+            ]}
             onPress={() => setShowLocationModal(true)}
           >
             <Text
               style={formData.location ? styles.dropdownText : styles.dropdownPlaceholder}
             >
-              {formData.location || "Select Location"}
+              {formData.location || "Select your current location"}
             </Text>
-            <Text style={styles.dropdownArrow}>▼</Text>
+            <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
           </TouchableOpacity>
+          {validationErrors.location ? (
+            <Text style={styles.errorText}>{validationErrors.location}</Text>
+          ) : null}
         </View>
 
-        <AppInput
-          label="Password"
-          value={formData.password}
-          onChangeText={(text: string) => setFormData({ ...formData, password: text })}
-          placeholder="Enter password (min. 8 characters)"
-          secureTextEntry
-          required
-        />
+        {/* Service City Dropdown */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Service City <Text style={styles.required}>*</Text>
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.dropdown,
+              validationErrors.service_city && styles.dropdownError
+            ]}
+            onPress={() => setShowCityModal(true)}
+          >
+            <Text
+              style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}
+            >
+              {formData.service_city || "Select city for services"}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
+          </TouchableOpacity>
+          {validationErrors.service_city ? (
+            <Text style={styles.errorText}>{validationErrors.service_city}</Text>
+          ) : null}
+          {citiesLoading && (
+            <View style={styles.loadingIndicator}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.loadingText}>Loading cities...</Text>
+            </View>
+          )}
+        </View>
 
-        <AppInput
-          label="Confirm Password"
-          value={formData.password_confirmation}
-          onChangeText={(text: string) =>
-            setFormData({ ...formData, password_confirmation: text })
-          }
-          placeholder="Re-enter password"
-          secureTextEntry
-          required
-        />
+        {/* Password Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Password <Text style={styles.required}>*</Text>
+          </Text>
+          <AppInput
+            value={formData.password}
+            onChangeText={(text: string) => {
+              setFormData({ ...formData, password: text });
+              setValidationErrors(prev => ({ ...prev, password: '' }));
+            }}
+            placeholder="Minimum 8 characters"
+            secureTextEntry
+            required
+            error={validationErrors.password}
+          />
+        </View>
+
+        {/* Confirm Password Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Confirm Password <Text style={styles.required}>*</Text>
+          </Text>
+          <AppInput
+            value={formData.password_confirmation}
+            onChangeText={(text: string) => {
+              setFormData({ ...formData, password_confirmation: text });
+              setValidationErrors(prev => ({ ...prev, password_confirmation: '' }));
+            }}
+            placeholder="Re-enter your password"
+            secureTextEntry
+            required
+            error={validationErrors.password_confirmation}
+          />
+        </View>
 
         {/* Profile Picture */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Profile Picture (Optional)</Text>
-          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+          <TouchableOpacity 
+            style={[
+              styles.imagePicker,
+              validationErrors.profilePicture && styles.imagePickerError
+            ]} 
+            onPress={pickImage}
+          >
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={styles.profileImage} />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Ionicons name="camera" size={40} color={Colors.text.secondary} />
-                <Text style={styles.imagePlaceholderText}>Upload Photo</Text>
+                <Ionicons name="camera-outline" size={40} color={Colors.text.secondary} />
+                <Text style={styles.imagePlaceholderText}>Tap to upload photo</Text>
+                <Text style={styles.imageHintText}>JPG or PNG, max 2MB</Text>
               </View>
             )}
           </TouchableOpacity>
+          {validationErrors.profilePicture ? (
+            <Text style={styles.errorText}>{validationErrors.profilePicture}</Text>
+          ) : null}
         </View>
 
+        {/* Register Button */}
         <AppButton
-          title="Register as Customer"
+          title="Create Account"
           onPress={handleRegister}
           loading={loading}
           fullWidth
           style={styles.registerButton}
         />
 
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Link to Provider Registration - FIXED */}
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => router.push("/(auth)/register-provider")}
+          onPress={() => {
+            console.log("Navigating to provider registration");
+            // Use relative path since we're in the same (auth) group
+            router.push("./register-provider");
+          }}
         >
-          <Text style={styles.linkText}>Register as Service Provider instead</Text>
+          <Text style={styles.linkText}>
+            Want to offer services? <Text style={styles.linkHighlight}>Register as Provider</Text>
+          </Text>
         </TouchableOpacity>
 
+        {/* Login Link - FIXED */}
         <TouchableOpacity
           style={styles.loginLink}
-          onPress={() => router.push("/(auth)/login")}
+          onPress={() => {
+            console.log("Navigating to login");
+            // Use relative path since we're in the same (auth) group
+            router.push("./login");
+          }}
         >
           <Text style={styles.loginText}>
-            Already have an account? <Text style={styles.loginLinkText}>Login</Text>
+            Already have an account? <Text style={styles.loginLinkText}>Sign In</Text>
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Location Selection Modal */}
       <Modal
         visible={showLocationModal}
         animationType="slide"
@@ -312,7 +610,12 @@ export default function RegisterCustomerScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Location</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Your Location</Text>
+              <TouchableOpacity onPress={() => setShowLocationModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
             <FlatList
               data={LOCATIONS}
               keyExtractor={(item) => item}
@@ -323,17 +626,13 @@ export default function RegisterCustomerScreen() {
                 })
               }
               style={styles.modalList}
-            />
-            <AppButton
-              title="Cancel"
-              onPress={() => setShowLocationModal(false)}
-              variant="outline"
-              fullWidth
+              showsVerticalScrollIndicator={false}
             />
           </View>
         </View>
       </Modal>
 
+      {/* Service City Selection Modal */}
       <Modal
         visible={showCityModal}
         animationType="slide"
@@ -342,24 +641,41 @@ export default function RegisterCustomerScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Service City</Text>
-            <FlatList
-              data={cities}
-              keyExtractor={(item) => item.cityID?.toString() || item.id?.toString() || item.name || item}
-              renderItem={({ item }) =>
-                renderModalItem(item.name || item, () => {
-                  setFormData({ ...formData, service_city: item.name || item });
-                  setShowCityModal(false);
-                })
-              }
-              style={styles.modalList}
-            />
-            <AppButton
-              title="Cancel"
-              onPress={() => setShowCityModal(false)}
-              variant="outline"
-              fullWidth
-            />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Service City</Text>
+              <TouchableOpacity onPress={() => setShowCityModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            
+            {citiesLoading ? (
+              <View style={styles.modalLoadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.modalLoadingText}>Loading cities...</Text>
+              </View>
+            ) : cities.length === 0 ? (
+              <View style={styles.modalEmptyContainer}>
+                <Ionicons name="location-outline" size={48} color={Colors.text.secondary} />
+                <Text style={styles.modalEmptyText}>No cities available</Text>
+                <TouchableOpacity onPress={fetchCities} style={styles.retryButton}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={cities}
+                keyExtractor={(item) => item.id?.toString() || item.cityID?.toString() || Math.random().toString()}
+                renderItem={({ item }) => {
+                  const cityName = item.name || (typeof item === 'string' ? item : "");
+                  return renderModalItem(cityName, () => {
+                    setFormData({ ...formData, service_city: cityName });
+                    setShowCityModal(false);
+                  });
+                }}
+                style={styles.modalList}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -367,35 +683,254 @@ export default function RegisterCustomerScreen() {
   );
 }
 
-// Styles remain the same
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { padding: 25, backgroundColor: Colors.surface, alignItems: "center", borderBottomWidth: 1, borderBottomColor: Colors.border },
-  title: { fontSize: 24, fontWeight: "bold", color: Colors.text.primary },
-  subtitle: { fontSize: 14, color: Colors.text.secondary, marginTop: 5 },
-  formContainer: { padding: 20, margin: 15, backgroundColor: Colors.surface, borderRadius: 15, elevation: 3 },
-  inputGroup: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: "600", color: Colors.text.primary, marginBottom: 8 },
-  required: { color: Colors.error },
-  hintText: { fontSize: 12, color: Colors.text.secondary, marginTop: -10, marginBottom: 15, marginLeft: 5 },
-  dropdown: { backgroundColor: Colors.background, padding: 15, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  dropdownPlaceholder: { fontSize: 16, color: Colors.text.secondary },
-  dropdownText: { fontSize: 16, color: Colors.text.primary },
-  dropdownArrow: { fontSize: 12, color: Colors.text.secondary },
-  imagePicker: { width: '100%', height: 150, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed', overflow: 'hidden' },
-  profileImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  imagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  imagePlaceholderText: { marginTop: 8, color: Colors.text.secondary, fontSize: 14 },
-  registerButton: { marginTop: 20, marginBottom: 15 },
-  linkButton: { padding: 15, alignItems: "center", marginBottom: 10 },
-  linkText: { color: Colors.secondary, fontWeight: "600", fontSize: 14 },
-  loginLink: { alignItems: "center", marginTop: 10 },
-  loginText: { color: Colors.text.secondary },
-  loginLinkText: { color: Colors.primary, fontWeight: "600" },
-  modalContainer: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
-  modalContent: { backgroundColor: Colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "80%" },
-  modalTitle: { fontSize: 20, fontWeight: "bold", color: Colors.text.primary, marginBottom: 20, textAlign: "center" },
-  modalList: { maxHeight: 400 },
-  modalItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  modalItemText: { fontSize: 16, color: Colors.text.primary },
+  container: { 
+    flex: 1, 
+    backgroundColor: Colors.background 
+  },
+  header: { 
+    padding: 30, 
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  title: { 
+    fontSize: 28, 
+    fontWeight: "bold", 
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: 'rgba(255,255,255,0.9)',
+  },
+  formContainer: { 
+    padding: 20,
+    marginTop: -20,
+    marginHorizontal: 15,
+    backgroundColor: Colors.surface, 
+    borderRadius: 20, 
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  inputGroup: { 
+    marginBottom: 20 
+  },
+  label: { 
+    fontSize: 14, 
+    fontWeight: "600", 
+    color: Colors.text.primary, 
+    marginBottom: 8 
+  },
+  required: { 
+    color: Colors.error 
+  },
+  hintText: { 
+    fontSize: 12, 
+    color: Colors.text.secondary, 
+    marginTop: 4, 
+    marginLeft: 5 
+  },
+  dropdown: { 
+    backgroundColor: Colors.background, 
+    padding: 15, 
+    borderRadius: 10, 
+    borderWidth: 1, 
+    borderColor: Colors.border, 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    alignItems: "center" 
+  },
+  dropdownError: {
+    borderColor: Colors.error,
+  },
+  dropdownPlaceholder: { 
+    fontSize: 16, 
+    color: Colors.text.secondary 
+  },
+  dropdownText: { 
+    fontSize: 16, 
+    color: Colors.text.primary 
+  },
+  errorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: 4,
+    marginLeft: 5,
+  },
+  imagePicker: { 
+    width: '100%', 
+    height: 150, 
+    borderRadius: 10, 
+    borderWidth: 2, 
+    borderColor: Colors.border, 
+    borderStyle: 'dashed', 
+    overflow: 'hidden',
+    backgroundColor: Colors.background,
+  },
+  imagePickerError: {
+    borderColor: Colors.error,
+  },
+  profileImage: { 
+    width: '100%', 
+    height: '100%', 
+    resizeMode: 'cover' 
+  },
+  imagePlaceholder: { 
+    width: '100%', 
+    height: '100%', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: Colors.background 
+  },
+  imagePlaceholderText: { 
+    marginTop: 8, 
+    color: Colors.text.secondary, 
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  imageHintText: {
+    marginTop: 4,
+    color: Colors.text.secondary,
+    fontSize: 12,
+  },
+  registerButton: { 
+    marginTop: 20, 
+    marginBottom: 15 
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: Colors.text.secondary,
+    fontSize: 14,
+  },
+  linkButton: { 
+    padding: 15, 
+    alignItems: "center", 
+    marginBottom: 10,
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  linkText: { 
+    color: Colors.text.secondary, 
+    fontWeight: "500", 
+    fontSize: 14 
+  },
+  linkHighlight: {
+    color: Colors.secondary,
+    fontWeight: "600",
+  },
+  loginLink: { 
+    alignItems: "center", 
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  loginText: { 
+    color: Colors.text.secondary,
+    fontSize: 14,
+  },
+  loginLinkText: { 
+    color: Colors.primary, 
+    fontWeight: "600" 
+  },
+  modalContainer: { 
+    flex: 1, 
+    justifyContent: "flex-end", 
+    backgroundColor: "rgba(0,0,0,0.5)" 
+  },
+  modalContent: { 
+    backgroundColor: Colors.surface, 
+    borderTopLeftRadius: 20, 
+    borderTopRightRadius: 20, 
+    padding: 20, 
+    maxHeight: "80%" 
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: "bold", 
+    color: Colors.text.primary 
+  },
+  modalList: { 
+    maxHeight: 400 
+  },
+  modalItem: { 
+    padding: 15, 
+    borderBottomWidth: 1, 
+    borderBottomColor: Colors.border 
+  },
+  modalItemText: { 
+    fontSize: 16, 
+    color: Colors.text.primary 
+  },
+  loadingContainer: { 
+    padding: 20, 
+    alignItems: 'center' 
+  },
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  loadingText: { 
+    fontSize: 12, 
+    color: Colors.text.secondary, 
+    marginLeft: 8,
+  },
+  modalLoadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  modalLoadingText: {
+    marginTop: 12,
+    color: Colors.text.secondary,
+    fontSize: 14,
+  },
+  emptyContainer: { 
+    padding: 20, 
+    alignItems: 'center' 
+  },
+  modalEmptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  modalEmptyText: {
+    marginTop: 12,
+    color: Colors.text.secondary,
+    fontSize: 16,
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+  },
+  retryText: { 
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
 });

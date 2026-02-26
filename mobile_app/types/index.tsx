@@ -70,11 +70,128 @@ export interface ServiceRequest {
   totalPrice: number;
 }
 
+// Payment Types
 export interface PaymentIntent {
   id: string;
-  client_secret: string;
   amount: number;
   currency: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  checkoutUrl: string;
+  transactionId: string;
+  expiresAt: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  type: "chapa" | "mobile_money" | "bank_transfer" | "card";
+  name: string;
+  description: string;
+  icon: string;
+  enabled: boolean;
+  processingFee?: number;
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+export interface Transaction {
+  id: string;
+  transactionId: string;
+  amount: number;
+  fee: number;
+  netAmount: number;
+  currency: string;
+  status: "pending" | "processing" | "completed" | "failed" | "refunded";
+  paymentMethod: string;
+  bookingId?: string;
+  description?: string;
+  createdAt: string;
+  completedAt?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  amount: number;
+  fee: number;
+  netAmount: number;
+  status: "pending" | "processing" | "completed" | "failed";
+  paymentMethod: string;
+  accountDetails: {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    phoneNumber?: string;
+  };
+  createdAt: string;
+  processedAt?: string;
+}
+
+export interface WalletBalance {
+  balance: number;
+  pendingAmount: number;
+  currency: string;
+  lastUpdated: string;
+}
+
+export interface PaymentVerificationResult {
+  status: "success" | "failed" | "pending";
+  transactionId: string;
+  amount: number;
+  bookingId?: string;
+}
+
+export interface MobileMoneyInitiationResult {
+  transactionId: string;
+  status: string;
+  message: string;
+}
+
+export interface MobileMoneyVerificationResult {
+  status: "success" | "failed" | "pending";
+  amount: number;
+}
+
+export interface PaymentCallbackResult {
+  success: boolean;
+  transactionId?: string;
+  status?: string;
+}
+
+export interface BookingPaymentResult {
+  success: boolean;
+  transactionId?: string;
+  checkoutUrl?: string;
+  message?: string;
+}
+
+export interface BookingPaymentStatus {
+  status: "pending" | "paid" | "failed" | "refunded";
+  amount: number;
+  transactionId?: string;
+  paidAt?: string;
+}
+
+export interface RefundResult {
+  refundId: string;
+  status: string;
+}
+
+export interface RefundStatus {
+  status: "pending" | "approved" | "rejected" | "completed";
+  amount: number;
+  reason: string;
+  processedAt?: string;
+}
+
+export interface TransactionHistoryResult {
+  transactions: Transaction[];
+  total: number;
+  hasMore: boolean;
+}
+
+export interface WalletTransactionsResult {
+  transactions: Transaction[];
+  total: number;
 }
 
 export interface PriceCalculation {

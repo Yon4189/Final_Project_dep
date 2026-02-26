@@ -42,7 +42,11 @@ export default function LoginScreen() {
 
       if (response.success && response.data) {
         if (response.data.token) {
-          await api.setToken(response.data.token);
+          if (userType === 'provider') {
+            api.setProviderToken(response.data.token, response.data.refresh_token);
+          } else {
+            api.setCustomerToken(response.data.token, response.data.refresh_token);
+          }
         }
 
         Alert.alert("Success", `Logged in as ${userType}`);
