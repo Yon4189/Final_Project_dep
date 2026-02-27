@@ -16,7 +16,7 @@ class Customer extends Model
     ];
 
     protected $fillable = [
-        'fullname', 'phone', 'email', 'password', /*'location',*/ 'profilePicture', 'bio', 'walletBalance', 'serviceRadiusKm', 'service_city',
+        'fullname', 'phone', 'email', 'password', 'location', 'profilePicture', 'bio', 'walletBalance', 'serviceRadiusKm', 'service_city',
             'service_latitude', 'service_longitude'
 
     ];

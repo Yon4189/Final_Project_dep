@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ServiceCitySeeder extends Seeder
 {
@@ -13,32 +13,22 @@ class ServiceCitySeeder extends Seeder
     public function run(): void
     {
         $cities = [
-            'Addis Ababa',
-            'Bahirdar',
-            'Jimma',
-            'Adama',
-            'Hawassa',
-            'Mekelle',
-            'Gondar',
-            'Dire Dawa',
-            'Adwa',
-            'Axum',
-            'Lalibela',
-            'Debre Markos',
-            'Debre Birhan',
-            'Shashamane',
-            'Arba Minch',
-            'Jijiga',
-            'Harar',
-            'Nekemte',
-            'Assosa',
-            'Gambela',
+            ['name' => 'Addis Ababa', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Dire Dawa', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Bahir Dar', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Mekelle', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Gondar', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Adama', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Hawassa', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Jimma', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Dessie', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Jijiga', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()],
         ];
 
         foreach ($cities as $city) {
-            \App\Models\ServiceCity::updateOrCreate(
-                ['name' => $city],
-                ['status' => 'Active']
+            DB::table('service_cities')->updateOrInsert(
+                ['name' => $city['name']],
+                $city
             );
         }
     }

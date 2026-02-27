@@ -27,20 +27,24 @@ class ServiceProviderAuthController extends Controller
     public function register(Request $request)
     {
     // validate input
+    // Log incoming data
+    \Illuminate\Support\Facades\Log::info('Provider registration attempt:', $request->except(['password', 'password_confirmation']));
+
+    // validate input
     $validator = Validator::make($request->all(), [
-        'fullname' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s]+$/'],
+        'fullname' => ['required', 'string', 'max:255'],
         'email' => 'required|email|unique:service_providers,email',
         'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
         'password' => 'required|string|min:8|confirmed',
         'service_city' => 'required|string|max:255',
         'catagoryID' => 'required', // this is a dropdown
-        'profilePicture' => 'image|mimes:jpeg,png,jpg|max:2048',
+        'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
         'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
-        'status' => 'pending',
     ]);
 
     if ($validator->fails()) {
+        \Illuminate\Support\Facades\Log::warning('Provider registration validation failed:', $validator->errors()->toArray());
         return response()->json([
             'success' => false,
             'message' => 'Validation errors',
@@ -75,9 +79,30 @@ class ServiceProviderAuthController extends Controller
         'catagoryID' => $request->catagoryID,
         'profilePicture' => $profilePath,
         'idPhoto' => $idPhotoPath,
-        'idPhotoType' => $request->idPhotoType, // new
-        'status' => 'pending', // default is pending until admin approves/rejects
+        'idPhotoType' => $request->idPhotoType,
+        'status' => 'pending', 
     ]);
+
+    // Handle dynamic services if provided by mobile app
+    if ($request->has('services')) {
+        try {
+            $services = json_decode($request->services, true);
+            if (is_array($services)) {
+                foreach ($services as $serviceData) {
+                    \App\Models\Service::create([
+                        'providerID' => $provider->providerID,
+                        'catagoryID' => $serviceData['categoryId'],
+                        'title' => $serviceData['serviceName'],
+                        'estimatedCost' => $serviceData['basePrice'],
+                        'description' => $serviceData['description'] ?? '',
+                    ]);
+                }
+                \Illuminate\Support\Facades\Log::info('Created services for provider:', ['count' => count($services)]);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error saving provider services:', ['error' => $e->getMessage()]);
+        }
+    }
 
     return response()->json([
         'success' => true,

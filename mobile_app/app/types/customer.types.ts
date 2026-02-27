@@ -589,8 +589,6 @@ export interface ActivityItem {
 // ==================== API Response Types ====================
 
 export interface ApiResponse<T = any> {
-  categories: boolean;
-  categories: any[];
   success: boolean;
   status?: string;
   data?: T;

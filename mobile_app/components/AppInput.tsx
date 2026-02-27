@@ -17,13 +17,13 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     position: 'relative',
-    flexDirection: 'row', 
-    alignItems: 'center', 
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconContainer: {
-    position: 'absolute', 
-    left: 15, 
-    zIndex: 1, 
+    position: 'absolute',
+    left: 15,
+    zIndex: 1,
   },
   input: {
     backgroundColor: Colors.background,
@@ -33,17 +33,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     fontSize: 16,
     color: Colors.text.primary,
-    width: '100%', 
+    width: '100%',
   },
   inputWithIcon: {
-    paddingLeft: 45, 
+    paddingLeft: 45,
   },
   inputError: {
     borderColor: Colors.error,
   },
   multilineInput: {
-    minHeight: 80, 
-    textAlignVertical: 'top',  
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   errorText: {
     color: Colors.error,
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
 });
 interface AppInputProps {
-  label?: string; 
+  label?: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
@@ -61,63 +61,71 @@ interface AppInputProps {
   error?: string;
   required?: boolean;
   multiline?: boolean;
-  style?: any; 
+  style?: any;
   maxLength?: number;
-  inputStyle?: any; 
+  inputStyle?: any;
   leftIcon?: React.ReactNode;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoCorrect?: boolean;
 }
-                const AppInput: React.FC<AppInputProps> = ({
-                  label,
-                  value,
-                  onChangeText,
-                  placeholder,
-                  secureTextEntry = false,
-                  keyboardType = 'default',
-                  error,
-                  required = false,
-                  multiline = false, // Add default
-                  style, // Add this
-                  inputStyle, // Add this
-                  leftIcon, // Add this
-                  autoCapitalize = 'none',
-                  autoCorrect = false,
-                  maxLength, // Add this
-                }) => {
-                  return (
-                    <View style={[styles.container, style]}>
-                      {label && (
-                        <Text style={styles.label}>
-                          {label}
-                          {required && <Text style={styles.required}> *</Text>}
-                        </Text>
-                      )}
-                      <View style={styles.inputContainer}>
-                        {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}
-                        <TextInput
-                          style={[
-                            styles.input, 
-                            leftIcon && styles.inputWithIcon,
-                            error && styles.inputError,
-                            multiline && styles.multilineInput,
-                            inputStyle
-                            
-                          ]}
-                          value={value}
-                          onChangeText={onChangeText}
-                          placeholder={placeholder}
-                          secureTextEntry={secureTextEntry}
-                          keyboardType={keyboardType}
-                          placeholderTextColor="#999"
-                          multiline={multiline}
-                          autoCapitalize={autoCapitalize}
-                          autoCorrect={autoCorrect}
-                          maxLength={maxLength}
-                        />
-                      </View>
-                        {error && <Text style={styles.errorText}>{error}</Text>}
-                      </View>
-                    );
-                  };
+const AppInput: React.FC<AppInputProps> = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry = false,
+  keyboardType = 'default',
+  error,
+  required = false,
+  multiline = false,
+  style,
+  inputStyle,
+  leftIcon,
+  autoCapitalize = 'none',
+  autoCorrect = false,
+  maxLength,
+}) => {
+  return (
+    <View style={[styles.container, style]}>
+      {label ? (
+        <Text style={styles.label}>
+          <Text>{label}</Text>
+          {required ? <Text style={styles.required}> *</Text> : null}
+        </Text>
+      ) : null}
+      <View style={styles.inputContainer}>
+        {leftIcon ? (
+          <View style={styles.iconContainer}>
+            {leftIcon}
+          </View>
+        ) : null}
+        <TextInput
+          style={[
+            styles.input,
+            leftIcon && styles.inputWithIcon,
+            error && styles.inputError,
+            multiline && styles.multilineInput,
+            inputStyle
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          placeholderTextColor="#999"
+          multiline={multiline}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          maxLength={maxLength}
+        />
+      </View>
+      {error ? (
+        <Text style={styles.errorText}>
+          <Text>{String(error)}</Text>
+        </Text>
+      ) : null}
+    </View>
+  );
+};
+
 export default AppInput;

@@ -12,6 +12,6 @@ class CategorySeeder extends Seeder
  */
 public function run(): void
 {
-    \App\Models\Catagory::create(['catagoryID' => 4, 'name' => 'General Service']);
+    //\App\Models\Catagory::create(['catagoryID' => 4, 'name' => 'General Service']);
 }
 }

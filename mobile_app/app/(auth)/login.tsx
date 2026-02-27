@@ -68,8 +68,12 @@ export default function LoginScreen() {
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+        <Text style={styles.title}>
+          <Text>Welcome Back</Text>
+        </Text>
+        <Text style={styles.subtitle}>
+          <Text>Sign in to your account</Text>
+        </Text>
       </View>
 
       <View style={styles.formContainer}>
@@ -93,7 +97,7 @@ export default function LoginScreen() {
                 userType === "customer" && styles.userTypeTextActive,
               ]}
             >
-              Customer
+              <Text>Customer</Text>
             </Text>
           </TouchableOpacity>
 
@@ -115,7 +119,7 @@ export default function LoginScreen() {
                 userType === "provider" && styles.userTypeTextActive,
               ]}
             >
-              Provider
+              <Text>Provider</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -153,9 +157,11 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={styles.forgotPassword}
-          onPress={() => router.push("/(auth)/forgot-password")}
+          onPress={() => router.push("/forgot-password")}
         >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          <Text style={styles.forgotPasswordText}>
+            <Text>Forgot Password?</Text>
+          </Text>
         </TouchableOpacity>
 
         <AppButton
@@ -167,15 +173,19 @@ export default function LoginScreen() {
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
+          <Text style={styles.dividerText}>
+            <Text>OR</Text>
+          </Text>
           <View style={styles.dividerLine} />
         </View>
 
-        <Text style={styles.registerTitle}>Don't have an account?</Text>
+        <Text style={styles.registerTitle}>
+          <Text>Don't have an account?</Text>
+        </Text>
 
         <AppButton
           title="Register as Customer"
-          onPress={() => router.push("/(auth)/register-customer")}
+          onPress={() => router.push("/register-customer")}
           variant="outline"
           fullWidth
           style={styles.registerButton}
@@ -183,7 +193,7 @@ export default function LoginScreen() {
 
         <AppButton
           title="Register as Service Provider"
-          onPress={() => router.push("/(auth)/register-provider")}
+          onPress={() => router.push("/register-provider")}
           variant="outline"
           fullWidth
           style={styles.registerButton}
