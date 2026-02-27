@@ -1,5 +1,5 @@
 // app/(customer)/dashboard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +27,10 @@ import { FilterModal } from '../../components/customer/FilterModal';
 import { ServiceRequestModal } from '../../components/customer/ServiceRequestModal';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
+import { customerService } from '@/app/services/customer.service';
+import { paymentService } from '@/app/services/payment.service';
 import type { ServiceProvider } from '@/app/types/customer.types';
+
 // Import the appropriate map based on platform
 let MapComponent: any;
 if (Platform.OS === 'web') {
@@ -40,6 +44,10 @@ if (Platform.OS === 'web') {
 export default function CustomerDashboard() {
   const router = useRouter();
   const { location, loading: locationLoading } = useLocation();
+  
+  console.log('Dashboard - Location:', location);
+  console.log('Dashboard - Location Loading:', locationLoading);
+  
   const {
     query,
     setQuery,
@@ -52,6 +60,10 @@ export default function CustomerDashboard() {
     refresh: refreshSearch,
   } = useSearch();
 
+  console.log('Dashboard - Search Hook - Query:', query);
+  console.log('Dashboard - Search Hook - Loading:', searchLoading);
+  console.log('Dashboard - Search Hook - Providers:', providers.length);
+
   const { data: topRatedProviders, isLoading: topRatedLoading } = useTopRatedProviders(5);
 
   const [showMapView, setShowMapView] = useState(false);
@@ -61,26 +73,142 @@ export default function CustomerDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [serviceCategories, setServiceCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  // Load user data and service categories on mount
+  useEffect(() => {
+    loadUserData();
+    loadServiceCategories();
+  }, []);
+
+  // Trigger initial search when location becomes available
+  useEffect(() => {
+    if (location && !locationLoading) {
+      console.log('Dashboard - Location available, triggering initial search...');
+      refreshSearch();
+    }
+  }, [location, locationLoading, refreshSearch]);
+
+  const loadServiceCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const response = await customerService.getServiceCategories();
+      if (response.success && response.data) {
+        setServiceCategories(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load service categories:', error);
+      // Fallback to hardcoded categories if API fails
+      setServiceCategories([...SERVICE_CATEGORIES]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const loadUserData = async () => {
+    try {
+      setLoadingUser(true);
+      const profileResponse = await customerService.getProfile();
+      if (profileResponse.success) {
+        setUser(profileResponse.data);
+      }
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+    } finally {
+      setLoadingUser(false);
+    }
+  };
 
   // Generate search suggestions based on query
   useEffect(() => {
+    console.log('Dashboard - Query changed:', query);
+    console.log('Dashboard - Location available:', !!location);
+    console.log('Dashboard - Providers count:', providers.length);
+    
     if (query.length > 1) {
-      // This would come from your API in production
-      const mockSuggestions = [
-        `${query} plumbing`,
-        `${query} electrician`,
-        `${query} cleaning`,
-        `${query} repair`,
-      ];
-      setSuggestions(mockSuggestions);
+      // Get suggestions from API
+      const fetchSuggestions = async () => {
+        try {
+          const response = await customerService.getSearchSuggestions(query);
+          if (response.success) {
+            setSuggestions(response.data || []);
+          }
+        } catch (error) {
+          // Fallback to mock suggestions
+          const mockSuggestions = [
+            `${query} plumbing`,
+            `${query} electrician`,
+            `${query} cleaning`,
+            `${query} repair`,
+          ];
+          setSuggestions(mockSuggestions);
+        }
+      };
+
+      fetchSuggestions();
     } else {
       setSuggestions([]);
     }
-  }, [query]);
+  }, [query, location, providers.length]);
 
   const handleCategorySelect = (categoryId: string) => {
+    console.log('Dashboard - Category selected:', categoryId);
     setSelectedCategory(categoryId);
     updateFilters({ categoryId });
+  };
+
+  // Test function to manually trigger search
+  const testSearch = async () => {
+    console.log('Dashboard - Testing search...');
+    console.log('Dashboard - Location available:', !!location);
+    
+    // Test 1: Try search without location first
+    try {
+      console.log('Dashboard - Testing search without location...');
+      const response1 = await customerService.searchProviders({
+        query: 'plumbing',
+        sortBy: 'rating',
+        minRating: 0,
+        maxDistance: 50,
+        page: 1,
+        perPage: 10,
+      });
+      console.log('Dashboard - Test search response (no location):', response1);
+    } catch (error) {
+      console.error('Dashboard - Test search error (no location):', error);
+    }
+
+    // Test 2: Try with location if available
+    if (location) {
+      try {
+        console.log('Dashboard - Testing search with location...');
+        const response2 = await customerService.searchProviders({
+          query: 'plumbing',
+          sortBy: 'rating',
+          minRating: 0,
+          maxDistance: 50,
+          page: 1,
+          perPage: 10,
+        });
+        console.log('Dashboard - Test search response (with location):', response2);
+      } catch (error) {
+        console.error('Dashboard - Test search error (with location):', error);
+      }
+    } else {
+      console.log('Dashboard - No location available for search');
+    }
+
+    // Test 3: Try a simple API call to see if backend is reachable
+    try {
+      console.log('Dashboard - Testing backend connectivity...');
+      const profileResponse = await customerService.getProfile();
+      console.log('Dashboard - Backend connectivity test:', profileResponse.success ? 'SUCCESS' : 'FAILED');
+    } catch (error) {
+      console.error('Dashboard - Backend connectivity error:', error);
+    }
   };
 
   const handleProviderSelect = (provider: ServiceProvider) => {
@@ -93,8 +221,55 @@ export default function CustomerDashboard() {
   };
 
   const handleVoiceSearch = () => {
-    // Implement voice search
-    console.log('Voice search activated');
+    Alert.alert('Voice Search', 'Voice search feature coming soon!');
+  };
+
+  const handleServiceRequest = async (requestData: any) => {
+    try {
+      // Create service request
+      const bookingResponse = await customerService.createBooking({
+        provider_id: selectedProvider?.id || '',
+        service_id: requestData.serviceId || '',
+        scheduled_date: requestData.scheduledDate || '',
+        scheduled_time: requestData.scheduledTime || '',
+        address: requestData.address || '',
+        description: requestData.description || '',
+        estimated_price: requestData.estimatedPrice || 0,
+      });
+
+      if (bookingResponse.success) {
+        // Initialize payment
+        const paymentResponse = await paymentService.initializeChapaPayment({
+          amount: requestData.estimatedPrice || 0,
+          email: user?.email || 'customer@example.com',
+          firstName: user?.firstName || 'Customer',
+          lastName: user?.lastName || 'User',
+          phoneNumber: user?.phoneNumber,
+          customerId: user?.customerID,
+          bookingId: bookingResponse.data.id,
+          paymentMethod: requestData.paymentMethod,
+          description: `Payment for ${requestData.serviceName}`,
+        });
+
+        if (paymentResponse.checkoutUrl) {
+          // Close modal and redirect to payment
+          setShowRequestModal(false);
+          setSelectedProvider(null);
+          
+          // Open payment URL in browser/webview
+          if (Platform.OS === 'web') {
+            window.open(paymentResponse.checkoutUrl, '_blank');
+          } else {
+            router.push({
+              pathname: '/payment/webview',
+              params: { url: paymentResponse.checkoutUrl }
+            });
+          }
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process service request. Please try again.');
+    }
   };
 
   const onRefresh = async () => {
@@ -106,11 +281,21 @@ export default function CustomerDashboard() {
   const renderHeader = () => (
     <View style={styles.header}>
       <View>
-        <Text style={styles.greeting}>Hello, 👋</Text>
+        <Text style={styles.greeting}>
+          Hello, {loadingUser ? '👋' : user?.firstName ? user.firstName.split(' ')[0] : 'User'}! 👋
+        </Text>
         <Text style={styles.subtitle}>Find trusted service providers</Text>
       </View>
 
       <View style={styles.headerActions}>
+        {/* Temporary test button */}
+        <TouchableOpacity
+          style={styles.testButton}
+          onPress={testSearch}
+        >
+          <Text style={styles.testButtonText}>Test Search</Text>
+        </TouchableOpacity>
+        
         <TouchableOpacity
           style={styles.notificationButton}
           onPress={() => router.push('/(customer)/notifications')}
@@ -125,47 +310,72 @@ export default function CustomerDashboard() {
           style={styles.profileButton}
           onPress={() => router.push('/(customer)/profile')}
         >
-          <Image
-            source={{ uri: 'https://via.placeholder.com/40' }}
-            style={styles.profileImage}
-          />
+          {user?.profileImage ? (
+            <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
+          ) : (
+            <Ionicons name="person-circle" size={40} color="gray" />
+          )}
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  const renderCategories = () => (
-    <View style={styles.categoriesSection}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Services</Text>
-        <TouchableOpacity onPress={() => router.push('/customer/categories')}>
-          <Text style={styles.seeAllText}>See All</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoriesScroll}
-      >
-        {SERVICE_CATEGORIES.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryCard,
-              selectedCategory === category.id.toString() && styles.categoryCardSelected,
-            ]}
-            onPress={() => handleCategorySelect(category.id.toString())}
+  const renderCategories = () => {
+    if (loadingCategories) {
+      return (
+        <View style={styles.categoriesSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Services</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoriesScroll}
           >
-            <View style={styles.categoryIconContainer}>
-              <Text style={styles.categoryIcon}>{category.icon}</Text>
-            </View>
-            <Text style={styles.categoryName}>{category.name}</Text>
+            {[1, 2, 3, 4, 5].map((index) => (
+              <View key={index} style={[styles.categoryCard, styles.skeletonCard]} />
+            ))}
+          </ScrollView>
+        </View>
+      );
+    }
+
+    if (!serviceCategories.length) {
+      return null;
+    }
+
+    return (
+      <View style={styles.categoriesSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Services</Text>
+          <TouchableOpacity onPress={() => router.push('/(customer)/categories')}>
+            <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoriesScroll}
+        >
+          {serviceCategories.map((category) => (
+            <TouchableOpacity
+              key={category.id || Math.random().toString()}
+              style={[
+                styles.categoryCard,
+                selectedCategory === (category.id?.toString() || '') && styles.categoryCardSelected,
+              ]}
+              onPress={() => handleCategorySelect(category.id?.toString() || '')}
+            >
+              <View style={styles.categoryIconContainer}>
+                <Text style={styles.categoryIcon}>{category.icon || '🔧'}</Text>
+              </View>
+              <Text style={styles.categoryName}>{category.name || 'Service'}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
 
   const renderTopRated = () => {
     if (topRatedLoading) {
@@ -211,6 +421,14 @@ export default function CustomerDashboard() {
                 <Text style={styles.topRatedRatingText}>{provider.rating.toFixed(1)}</Text>
               </View>
               <Text style={styles.topRatedReviews}>({provider.reviewCount} reviews)</Text>
+              {provider.distance && (
+                <Text style={styles.topRatedDistance}>
+                  {provider.distance < 1 
+                    ? `${Math.round(provider.distance * 1000)}m` 
+                    : `${provider.distance.toFixed(1)}km`
+                  }
+                </Text>
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -257,7 +475,11 @@ export default function CustomerDashboard() {
         ? [provider.location.latitude, provider.location.longitude]
         : { latitude: provider.location.latitude, longitude: provider.location.longitude },
       title: provider?.businessName ?? provider?.name ?? 'Service Provider',
-      description: `Rating: ${provider.rating} ⭐ • ${provider.reviewCount} reviews`,
+      description: `Rating: ${provider.rating || 0} ⭐ • ${provider.reviewCount || 0} reviews${provider.distance ? ` • ${provider.distance < 1 ? `${Math.round(provider.distance * 1000)}m` : `${provider.distance.toFixed(1)}km`} away` : ''}`,
+      rating: provider.rating || 0,
+      reviewCount: provider.reviewCount || 0,
+      distance: provider.distance,
+      onPress: () => handleProviderSelect(provider),
     }));
 
     // Prepare center coordinates
@@ -276,6 +498,8 @@ export default function CustomerDashboard() {
           markers={markers}
           style={{ height: '100%', width: '100%' }}
           zoom={13}
+          showUserLocation={true}
+          onMarkerPress={(marker: any) => marker.onPress && marker.onPress()}
         />
       </View>
     );
@@ -289,6 +513,9 @@ export default function CustomerDashboard() {
         <ProviderCard
           provider={item}
           onPress={() => handleProviderSelect(item)}
+          showDistance={true}
+          showBadges={true}
+          showActions={true}
         />
       )}
       contentContainerStyle={styles.providersList}
@@ -402,6 +629,7 @@ export default function CustomerDashboard() {
           longitude: location.longitude,
           // address: address?.formattedAddress || address?.street || 'Current location'
         } : undefined}
+        onRequest={handleServiceRequest}
       />
     </SafeAreaView>
   );
@@ -577,6 +805,12 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginTop: 2,
   },
+  topRatedDistance: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: '500',
+    marginTop: 2,
+  },
   viewToggle: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -642,6 +876,22 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 80,
+  },
+  skeletonCard: {
+    backgroundColor: '#e0e0e0',
+    opacity: 0.7,
+  },
+  testButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
   },
   initialLoading: {
     flex: 1,

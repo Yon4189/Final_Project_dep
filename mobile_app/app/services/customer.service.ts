@@ -250,6 +250,30 @@ class CustomerService {
     return response;
   }
 
+  async getSearchSuggestions(query: string): Promise<ApiResponse<string[]>> {
+    if (!query || query.length < 2) {
+      return { success: true, data: [] };
+    }
+
+    try {
+      const response = await api.get<string[]>(
+        `${this.BASE_PATH}/search/suggestions?query=${encodeURIComponent(query)}`
+      );
+      return response;
+    } catch (error) {
+      // Fallback to mock suggestions if API fails
+      const mockSuggestions = [
+        `${query} plumbing`,
+        `${query} electrician`,
+        `${query} cleaning`,
+        `${query} repair`,
+        `${query} installation`,
+        `${query} maintenance`,
+      ];
+      return { success: true, data: mockSuggestions };
+    }
+  }
+
   async getNearbyProviders(
     latitude: number,
     longitude: number,
@@ -597,6 +621,29 @@ class CustomerService {
   async getServicesByCategory(categoryId: string): Promise<ApiResponse<any[]>> {
     return api.get<any[]>(`/categories/${categoryId}/services`);
   }
+
+  // ==================== Bookings ====================
+
+  async createBooking(data: {
+    provider_id: string;
+    service_id: string;
+    scheduled_date: string;
+    scheduled_time: string;
+    address: string;
+    description?: string;
+    estimated_price?: number;
+  }): Promise<ApiResponse<any>> {
+    const response = await api.post<any>(`${this.BASE_PATH}/bookings`, data);
+    
+    if (response.success) {
+      // Invalidate relevant caches
+      await storage.removeItem('user_requests');
+      await storage.removeItem('user_bookings');
+    }
+    
+    return response;
+  }
+
 }
 
 export const customerService = new CustomerService();

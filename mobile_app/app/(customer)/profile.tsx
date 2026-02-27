@@ -72,13 +72,12 @@ export default function CustomerProfile() {
   };
 
   const handleChangePassword = () => {
-    router.push('/customer/change-password');
+    router.push('/(customer)/change-password');
   };
 
   const handleManageLocations = () => {
-    router.push('/customer/locations');
+    router.push('/(customer)/locations');
   };
-
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
@@ -115,7 +114,7 @@ export default function CustomerProfile() {
           style: 'destructive',
           onPress: () => {
             // Clear auth token and navigate to login
-            router.replace('/auth/login');
+            router.replace('/(auth)/login');
           }
         },
       ]

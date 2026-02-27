@@ -30,6 +30,7 @@ interface ServiceRequestModalProps {
     address?: string | null;
   } | null;
   selectedService?: string;
+  onRequest?: (requestData: any) => Promise<void>;
 }
 
 interface RequestFormData {
@@ -69,6 +70,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   provider,
   userLocation,
   selectedService,
+  onRequest,
 }) => {
   const [step, setStep] = useState(1);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -228,33 +230,62 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
     setLoading(true);
     try {
-      await createRequest.mutateAsync({
-        providerId: provider.id,
+      // Prepare request data
+      const requestData = {
         serviceId: formData.serviceId,
+        serviceName: selectedServiceDetails?.name || 'Service',
         scheduledDate: formData.scheduledDate.toISOString().split("T")[0],
         scheduledTime: formData.scheduledTime,
         address: formData.address,
         description: formData.description,
         specialInstructions: formData.specialInstructions,
-      });
+        estimatedPrice: formData.estimatedPrice,
+        paymentMethod: 'telebirr', // Default payment method
+      };
 
-      Alert.alert(
-        "Request Sent!",
-        `Your service request has been sent to ${provider.businessName || provider.name || "the provider"}. They will respond shortly.`,
-        [
-          {
-            text: "View Requests",
-            onPress: () => {
-              onClose();
-              // Navigate to requests
+      // Use onRequest prop if provided, otherwise use the existing mutation
+      if (onRequest) {
+        await onRequest(requestData);
+        Alert.alert(
+          "Request Sent!",
+          `Your service request has been sent to ${provider.businessName || provider.name || "the provider"}. Payment initiated successfully.`,
+          [
+            {
+              text: "OK",
+              onPress: onClose,
             },
-          },
-          {
-            text: "OK",
-            onPress: onClose,
-          },
-        ],
-      );
+          ],
+        );
+      } else {
+        // Fallback to existing mutation
+        await createRequest.mutateAsync({
+          providerId: provider.id,
+          serviceId: formData.serviceId,
+          scheduledDate: requestData.scheduledDate,
+          scheduledTime: formData.scheduledTime,
+          address: formData.address,
+          description: formData.description,
+          specialInstructions: formData.specialInstructions,
+        });
+
+        Alert.alert(
+          "Request Sent!",
+          `Your service request has been sent to ${provider.businessName || provider.name || "the provider"}. They will respond shortly.`,
+          [
+            {
+              text: "View Requests",
+              onPress: () => {
+                onClose();
+                // Navigate to requests
+              },
+            },
+            {
+              text: "OK",
+              onPress: onClose,
+            },
+          ],
+        );
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to send request. Please try again.");
     } finally {
