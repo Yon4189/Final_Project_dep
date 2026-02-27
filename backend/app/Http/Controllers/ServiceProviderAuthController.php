@@ -93,7 +93,7 @@ class ServiceProviderAuthController extends Controller
                         'providerID' => $provider->providerID,
                         'catagoryID' => $serviceData['categoryId'],
                         'title' => $serviceData['serviceName'],
-                        'estimatedCost' => $serviceData['basePrice'],
+                        'estimatedPrice' => $serviceData['basePrice'],
                         'description' => $serviceData['description'] ?? '',
                     ]);
                 }

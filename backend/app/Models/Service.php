@@ -12,7 +12,7 @@ class Service extends Model
     protected $primaryKey = 'serviceID'; // primary key
 
     protected $fillable = [
-        'providerID', 'catagoryID', 'title', 'description', 'estimatedCost'
+        'providerID', 'catagoryID', 'title', 'description', 'estimatedPrice', 'hourly_rate'
     ];
 
     // a service belongs to a provider
