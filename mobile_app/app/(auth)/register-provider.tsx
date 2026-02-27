@@ -14,7 +14,6 @@ import {
   Image,
   Platform,
   ActivityIndicator,
-  LogBox,
 } from 'react-native';
 import { api } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +22,6 @@ import AppInput from '../../components/AppInput';
 import { Colors } from '../constants/Colors';
 
 // Ignore specific warnings if needed
-LogBox.ignoreLogs(['Unexpected text node']);
 
 const ID_PHOTO_TYPES = ['Passport', 'Driver License', 'National ID', 'Kebele ID'];
 
@@ -96,26 +94,26 @@ export default function RegisterProvider() {
   const fetchServiceCategories = async () => {
     setLoadingCategories(true);
     setCategoriesError(null);
-    
+
     try {
       const resp = await api.get<any>('/categories');
       console.log('Categories API response:', resp);
-      
+
       if (resp.success && resp.data) {
         let categoriesData = [];
-        
+
         if (Array.isArray(resp.data)) {
           categoriesData = resp.data;
         } else if (resp.data.data && Array.isArray(resp.data.data)) {
           categoriesData = resp.data.data;
-        } else if (resp.categories && Array.isArray(resp.categories)) {
-          categoriesData = resp.categories;
+        } else if ((resp as any).categories && Array.isArray((resp as any).categories)) {
+          categoriesData = (resp as any).categories;
         } else {
-          categoriesData = Object.values(resp.data).filter(item => 
+          categoriesData = Object.values(resp.data).filter(item =>
             typeof item === 'object' && item !== null
           );
         }
-        
+
         setServiceCategories(categoriesData);
         console.log(`Loaded ${categoriesData.length} categories`);
       } else {
@@ -126,9 +124,9 @@ export default function RegisterProvider() {
       console.log('Error fetching service categories:', err);
       setCategoriesError(err.message || 'Failed to load categories');
       setServiceCategories([]);
-      
+
       Alert.alert(
-        'Warning', 
+        'Warning',
         'Could not load service categories. Please try again later.',
         [{ text: 'OK' }]
       );
@@ -153,17 +151,20 @@ export default function RegisterProvider() {
   };
 
   const updateServiceOffering = (index: number, field: keyof ServiceOffering, value: string) => {
-    const updated = [...serviceOfferings];
-    updated[index] = { ...updated[index], [field]: value };
+    setServiceOfferings(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
 
-    if (field === 'categoryId') {
-      const category = serviceCategories.find(c => c.catagoryID === value || (c as any).id === value);
-      if (category) {
-        updated[index].categoryName = category.name;
+      if (field === 'categoryId') {
+        console.log('Updating categoryId to:', value);
+        const category = serviceCategories.find(c => String(c.catagoryID) === String(value) || String((c as any).id) === String(value));
+        if (category) {
+          updated[index].categoryName = category.name;
+        }
       }
-    }
 
-    setServiceOfferings(updated);
+      return updated;
+    });
   };
 
   const pickImage = async (type: 'profile' | 'id') => {
@@ -217,15 +218,18 @@ export default function RegisterProvider() {
     for (let i = 0; i < serviceOfferings.length; i++) {
       const offering = serviceOfferings[i];
       if (!offering.categoryId) {
-        Alert.alert('Error', `Service #${i + 1}: Please select a category`);
+        const msg = `Service #${i + 1}: Please select a category`;
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
         return false;
       }
       if (!offering.serviceName.trim()) {
-        Alert.alert('Error', `Service #${i + 1}: Please enter service name`);
+        const msg = `Service #${i + 1}: Please enter service name`;
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
         return false;
       }
       if (!offering.basePrice.trim() || isNaN(Number(offering.basePrice)) || Number(offering.basePrice) <= 0) {
-        Alert.alert('Error', `Service #${i + 1}: Please enter a valid base price`);
+        const msg = `Service #${i + 1}: Please enter a valid base price`;
+        Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
         return false;
       }
     }
@@ -233,8 +237,8 @@ export default function RegisterProvider() {
   };
 
   const registerProvider = async () => {
-    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !profilePicture || !idPhoto) {
-      Alert.alert('Error', 'Please fill all fields and upload both images.');
+    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType || !profilePicture || !idPhoto) {
+      Alert.alert('Error', 'Please fill all fields, select an ID type, and upload both images.');
       return;
     }
 
@@ -276,8 +280,11 @@ export default function RegisterProvider() {
         basePrice: parseFloat(s.basePrice),
         description: s.description || ''
       }));
-      
+
       data.append('services', JSON.stringify(servicesToSend));
+      if (servicesToSend.length > 0) {
+        data.append('catagoryID', servicesToSend[0].categoryId);
+      }
       console.log('Services being sent:', servicesToSend);
 
       if (profilePicture) {
@@ -288,7 +295,7 @@ export default function RegisterProvider() {
       }
 
       console.log('Sending registration request...');
-      
+
       const response = await api.post<any>('/provider/register', data, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -300,20 +307,10 @@ export default function RegisterProvider() {
       console.log('Registration response:', response);
 
       if (response.success || response.status === 'success') {
-        Alert.alert(
-          'Success',
-          'Registration successful! Please wait for admin verification. You will be notified once your account is approved.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                console.log('Redirecting to login...');
-                // FIXED: Use relative path within auth group
-                router.replace('./login');
-              }
-            }
-          ]
-        );
+        console.log('Provider registration success: Redirecting to login...');
+        setTimeout(() => {
+          router.replace('/login');
+        }, 100);
       } else {
         Alert.alert('Error', response.message || 'Registration failed');
       }
@@ -344,7 +341,7 @@ export default function RegisterProvider() {
   const renderModalItem = (item: string | any, onSelect: () => void) => (
     <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
       <Text style={styles.modalItemText}>
-        {typeof item === 'string' ? item : item.name || item.cityName || item}
+        <Text>{typeof item === 'string' ? item : item.name || item.cityName || item}</Text>
       </Text>
     </TouchableOpacity>
   );
@@ -354,16 +351,20 @@ export default function RegisterProvider() {
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Choose Service Category</Text>
+            <Text style={styles.modalTitle}>
+              <Text>Choose Service Category</Text>
+            </Text>
             <TouchableOpacity onPress={() => setShowServiceCategoryModal(null)}>
               <Ionicons name="close" size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>
-          
+
           {loadingCategories ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
-              <Text style={styles.loadingText}>Loading categories...</Text>
+              <Text style={styles.loadingText}>
+                <Text>Loading categories...</Text>
+              </Text>
             </View>
           ) : categoriesError ? (
             <View style={styles.emptyContainer}>
@@ -376,17 +377,20 @@ export default function RegisterProvider() {
           ) : serviceCategories.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="folder-open-outline" size={48} color={Colors.text.secondary} />
-              <Text style={styles.emptyText}>No categories available</Text>
+              <Text style={styles.emptyText}>
+                <Text>No categories available</Text>
+              </Text>
             </View>
           ) : (
             <FlatList
               data={serviceCategories}
               keyExtractor={(item) => item.catagoryID?.toString() || (item as any).id?.toString() || Math.random().toString()}
               renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.modalItem} 
+                <TouchableOpacity
+                  style={styles.modalItem}
                   onPress={() => {
-                    updateServiceOffering(index, 'categoryId', item.catagoryID || (item as any).id);
+                    const id = (item as any).catagoryID || item.catagoryID || (item as any).id;
+                    updateServiceOffering(index, 'categoryId', id?.toString() || '');
                     updateServiceOffering(index, 'categoryName', item.name);
                     setShowServiceCategoryModal(null);
                   }}
@@ -403,11 +407,11 @@ export default function RegisterProvider() {
               showsVerticalScrollIndicator={false}
             />
           )}
-          
-          <AppButton 
-            title="Cancel" 
-            onPress={() => setShowServiceCategoryModal(null)} 
-            variant="outline" 
+
+          <AppButton
+            title="Cancel"
+            onPress={() => setShowServiceCategoryModal(null)}
+            variant="outline"
             style={styles.modalButton}
           />
         </View>
@@ -418,21 +422,29 @@ export default function RegisterProvider() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Provider Registration</Text>
-        <Text style={styles.subtitle}>Join as a service provider</Text>
+        <Text style={styles.title}>
+          <Text>Provider Registration</Text>
+        </Text>
+        <Text style={styles.subtitle}>
+          <Text>Join as a service provider</Text>
+        </Text>
       </View>
 
       <View style={styles.formContainer}>
         {/* Profile Picture Section */}
         <View style={styles.uploadContainer}>
-          <Text style={styles.label}>Profile Picture <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.label}>
+            <Text>Profile Picture </Text><Text style={styles.required}>*</Text>
+          </Text>
           <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage('profile')}>
             {profilePictureUri ? (
               <Image source={{ uri: profilePictureUri }} style={styles.profileImage} />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Ionicons name="camera-outline" size={40} color={Colors.text.secondary} />
-                <Text style={styles.imagePlaceholderText}>Upload Photo</Text>
+                <Text style={styles.imagePlaceholderText}>
+                  <Text>Upload Photo</Text>
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -470,14 +482,18 @@ export default function RegisterProvider() {
           maxLength={10}
           required
         />
-        <Text style={styles.hintText}>10 digits starting with 09 or 07</Text>
+        <Text style={styles.hintText}>
+          <Text>10 digits starting with 09 or 07</Text>
+        </Text>
 
         {/* Service City Dropdown */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Service City <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.label}>
+            <Text>Service City </Text><Text style={styles.required}>*</Text>
+          </Text>
           <TouchableOpacity style={styles.dropdown} onPress={() => setShowCityModal(true)}>
             <Text style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}>
-              {formData.service_city || "Select your service city"}
+              <Text>{formData.service_city || "Select your service city"}</Text>
             </Text>
             <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
           </TouchableOpacity>
@@ -485,13 +501,19 @@ export default function RegisterProvider() {
 
         {/* Service Offerings Section */}
         <View style={styles.servicesSection}>
-          <Text style={styles.sectionTitle}>Services You Offer <Text style={styles.required}>*</Text></Text>
-          <Text style={styles.sectionSubtitle}>Add at least one service you provide</Text>
+          <Text style={styles.sectionTitle}>
+            <Text>Services You Offer </Text><Text style={styles.required}>*</Text>
+          </Text>
+          <Text style={styles.sectionSubtitle}>
+            <Text>Add at least one service you provide</Text>
+          </Text>
 
           {serviceOfferings.map((offering, index) => (
             <View key={index} style={styles.serviceCard}>
               <View style={styles.serviceCardHeader}>
-                <Text style={styles.serviceCardTitle}>Service #{index + 1}</Text>
+                <Text style={styles.serviceCardTitle}>
+                  <Text>Service #{index + 1}</Text>
+                </Text>
                 {serviceOfferings.length > 1 && (
                   <TouchableOpacity onPress={() => removeServiceOffering(index)}>
                     <Ionicons name="close-circle" size={24} color={Colors.error} />
@@ -501,13 +523,15 @@ export default function RegisterProvider() {
 
               {/* Category Selection */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Category <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.label}>
+                  <Text>Category </Text><Text style={styles.required}>*</Text>
+                </Text>
                 <TouchableOpacity
                   style={[styles.dropdown]}
                   onPress={() => setShowServiceCategoryModal(index)}
                 >
                   <Text style={offering.categoryId ? styles.dropdownText : styles.dropdownPlaceholder}>
-                    {offering.categoryName || "Select a category"}
+                    <Text>{offering.categoryName || "Select a category"}</Text>
                   </Text>
                   <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
                 </TouchableOpacity>
@@ -545,16 +569,20 @@ export default function RegisterProvider() {
 
           <TouchableOpacity style={styles.addServiceButton} onPress={addServiceOffering}>
             <Ionicons name="add-circle-outline" size={24} color={Colors.primary} />
-            <Text style={styles.addServiceText}>Add Another Service</Text>
+            <Text style={styles.addServiceText}>
+              <Text>Add Another Service</Text>
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* ID Document Type */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>ID Document Type <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.label}>
+            <Text>ID Document Type </Text><Text style={styles.required}>*</Text>
+          </Text>
           <TouchableOpacity style={styles.dropdown} onPress={() => setShowIdTypeModal(true)}>
             <Text style={formData.idPhotoType ? styles.dropdownText : styles.dropdownPlaceholder}>
-              {formData.idPhotoType || "Select ID type"}
+              <Text>{formData.idPhotoType || "Select ID type"}</Text>
             </Text>
             <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
           </TouchableOpacity>
@@ -562,15 +590,21 @@ export default function RegisterProvider() {
 
         {/* ID Photo Upload */}
         <View style={styles.uploadContainer}>
-          <Text style={styles.label}>ID Card Photo <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.label}>
+            <Text>ID Card Photo </Text><Text style={styles.required}>*</Text>
+          </Text>
           <TouchableOpacity style={styles.idImagePicker} onPress={() => pickImage('id')}>
             {idPhotoUri ? (
               <Image source={{ uri: idPhotoUri }} style={styles.idImage} />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Ionicons name="id-card-outline" size={40} color={Colors.text.secondary} />
-                <Text style={styles.imagePlaceholderText}>Upload ID Card</Text>
-                <Text style={styles.imageHintText}>Passport, Driver License, or National ID</Text>
+                <Text style={styles.imagePlaceholderText}>
+                  <Text>Upload ID Card</Text>
+                </Text>
+                <Text style={styles.imageHintText}>
+                  <Text>Passport, Driver License, or National ID</Text>
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -608,11 +642,22 @@ export default function RegisterProvider() {
           style={styles.loginLink}
           onPress={() => {
             console.log("Navigating to login");
-            router.push('./login');
+            router.push('/login');
           }}
         >
           <Text style={styles.loginText}>
-            Already have an account? <Text style={styles.loginLinkText}>Sign In</Text>
+            <Text>Already have an account? </Text><Text style={styles.loginLinkText}>Sign In</Text>
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.loginLink}
+          onPress={() => {
+            console.log("Navigating to login");
+            router.push('/login');
+          }}
+        >
+          <Text style={styles.loginText}>
+            <Text>Need help? </Text><Text style={styles.loginLinkText}>Contact Support</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -680,31 +725,31 @@ export default function RegisterProvider() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: Colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background
   },
-  header: { 
-    padding: 30, 
-    backgroundColor: Colors.surface, 
-    alignItems: 'center', 
-    borderBottomWidth: 1, 
-    borderBottomColor: Colors.border 
+  header: {
+    padding: 30,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: Colors.text.primary 
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text.primary
   },
-  subtitle: { 
-    fontSize: 16, 
-    color: Colors.text.secondary, 
-    marginTop: 4 
+  subtitle: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+    marginTop: 4
   },
-  formContainer: { 
-    padding: 20, 
-    margin: 15, 
-    backgroundColor: Colors.surface, 
+  formContainer: {
+    padding: 20,
+    margin: 15,
+    backgroundColor: Colors.surface,
     borderRadius: 20,
     elevation: 5,
     shadowColor: '#000',
@@ -712,84 +757,84 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
-  inputGroup: { 
-    marginBottom: 20 
+  inputGroup: {
+    marginBottom: 20
   },
-  label: { 
-    fontSize: 14, 
-    fontWeight: '600', 
-    color: Colors.text.primary, 
-    marginBottom: 8 
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8
   },
-  required: { 
-    color: Colors.error 
+  required: {
+    color: Colors.error
   },
-  hintText: { 
-    fontSize: 12, 
-    color: Colors.text.secondary, 
-    marginTop: -15, 
-    marginBottom: 15, 
-    marginLeft: 5 
+  hintText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginTop: -15,
+    marginBottom: 15,
+    marginLeft: 5
   },
   dropdown: {
-    backgroundColor: Colors.background, 
-    padding: 15, 
-    borderRadius: 10, 
-    borderWidth: 1, 
+    backgroundColor: Colors.background,
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
     borderColor: Colors.border,
-    flexDirection: "row", 
-    justifyContent: "space-between", 
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center"
   },
-  dropdownPlaceholder: { 
-    color: Colors.text.secondary 
+  dropdownPlaceholder: {
+    color: Colors.text.secondary
   },
-  dropdownText: { 
+  dropdownText: {
     color: Colors.text.primary,
     fontSize: 16,
   },
-  uploadContainer: { 
-    marginBottom: 20 
+  uploadContainer: {
+    marginBottom: 20
   },
-  imagePicker: { 
-    width: '100%', 
-    height: 150, 
-    borderRadius: 10, 
-    borderWidth: 2, 
-    borderColor: Colors.border, 
-    borderStyle: 'dashed', 
+  imagePicker: {
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
     overflow: 'hidden',
     backgroundColor: Colors.background,
   },
-  idImagePicker: { 
-    width: '100%', 
-    height: 200, 
-    borderRadius: 10, 
-    borderWidth: 2, 
-    borderColor: Colors.border, 
-    borderStyle: 'dashed', 
+  idImagePicker: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
     overflow: 'hidden',
     backgroundColor: Colors.background,
   },
-  profileImage: { 
-    width: '100%', 
-    height: '100%', 
-    resizeMode: 'cover' 
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
   },
-  idImage: { 
-    width: '100%', 
-    height: '100%', 
-    resizeMode: 'cover' 
+  idImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
   },
-  imagePlaceholder: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: Colors.background 
+  imagePlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background
   },
-  imagePlaceholderText: { 
-    marginTop: 8, 
-    color: Colors.text.secondary, 
+  imagePlaceholderText: {
+    marginTop: 8,
+    color: Colors.text.secondary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -798,14 +843,14 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: 12,
   },
-  servicesSection: { 
-    marginBottom: 20 
+  servicesSection: {
+    marginBottom: 20
   },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: Colors.text.primary, 
-    marginBottom: 4 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 4
   },
   sectionSubtitle: {
     fontSize: 12,
@@ -849,34 +894,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  registerButton: { 
-    marginTop: 20, 
-    marginBottom: 15 
+  registerButton: {
+    marginTop: 20,
+    marginBottom: 15
   },
-  loginLink: { 
-    alignItems: "center", 
+  loginLink: {
+    alignItems: "center",
     marginTop: 10,
     marginBottom: 20,
   },
-  loginText: { 
+  loginText: {
     color: Colors.text.secondary,
     fontSize: 14,
   },
-  loginLinkText: { 
-    color: Colors.primary, 
-    fontWeight: "600" 
+  loginLinkText: {
+    color: Colors.primary,
+    fontWeight: "600"
   },
-  modalContainer: { 
-    flex: 1, 
-    justifyContent: "flex-end", 
-    backgroundColor: "rgba(0,0,0,0.5)" 
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)"
   },
-  modalContent: { 
-    backgroundColor: Colors.surface, 
-    borderTopLeftRadius: 20, 
-    borderTopRightRadius: 20, 
-    padding: 20, 
-    maxHeight: "80%" 
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "80%"
   },
   modalHeader: {
     flexDirection: 'row',
@@ -887,22 +932,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  modalTitle: { 
-    fontSize: 20, 
-    fontWeight: "bold", 
-    color: Colors.text.primary 
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.text.primary
   },
   modalButton: {
     marginTop: 15,
   },
-  modalItem: { 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: Colors.border 
+  modalItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border
   },
-  modalItemText: { 
-    fontSize: 16, 
-    color: Colors.text.primary 
+  modalItemText: {
+    fontSize: 16,
+    color: Colors.text.primary
   },
   categoryItem: {
     flexDirection: 'row',
@@ -917,18 +962,18 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginTop: 4,
   },
-  loadingContainer: { 
-    padding: 40, 
-    alignItems: 'center' 
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center'
   },
   loadingText: {
     marginTop: 12,
     color: Colors.text.secondary,
     fontSize: 14,
   },
-  emptyContainer: { 
-    padding: 40, 
-    alignItems: 'center' 
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center'
   },
   emptyText: {
     marginTop: 12,
@@ -948,7 +993,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 8,
   },
-  retryText: { 
+  retryText: {
     color: '#FFFFFF',
     fontWeight: '600',
   },

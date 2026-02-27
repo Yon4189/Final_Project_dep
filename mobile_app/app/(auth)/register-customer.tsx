@@ -1,9 +1,9 @@
 // app/(auth)/register-customer.tsx
+import { Platform } from 'react-native';
 import { api } from "../services/api";
 import { useRouter } from "expo-router";
 import React, { useState, useEffect } from "react";
 import * as ImagePicker from 'expo-image-picker';
-import { Platform } from "react-native";
 import {
   Alert,
   FlatList,
@@ -15,7 +15,6 @@ import {
   View,
   Image,
   ActivityIndicator,
-  LogBox,
 } from "react-native";
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
@@ -24,7 +23,6 @@ import { LOCATIONS } from "../constants/Services";
 import { Ionicons } from '@expo/vector-icons';
 
 // Define City interface
-LogBox.ignoreLogs(['Unexpected text node']);
 
 interface City {
   id: number;
@@ -51,7 +49,7 @@ export default function RegisterCustomerScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [cities, setCities] = useState<City[]>([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     fetchCities();
@@ -64,18 +62,22 @@ export default function RegisterCustomerScreen() {
       console.log('Cities API response:', resp);
 
       if (resp.success && resp.data) {
-        let citiesData = resp.data;
-        if (Array.isArray(citiesData)) {
-          setCities(citiesData);
-        } else if (citiesData.data && Array.isArray(citiesData.data)) {
-          setCities(citiesData.data);
-        } else if (citiesData && typeof citiesData === 'object') {
-          setCities([citiesData]);
+        let citiesData = [];
+        if (Array.isArray(resp.data)) {
+          citiesData = resp.data;
+        } else if (resp.data.data && Array.isArray(resp.data.data)) {
+          citiesData = resp.data.data;
+        } else if (resp.data.cities && Array.isArray(resp.data.cities)) {
+          citiesData = resp.data.cities;
+        } else if (typeof resp.data === 'object' && resp.data !== null) {
+          citiesData = Object.values(resp.data).filter(item =>
+            typeof item === 'object' && item !== null
+          );
         }
+        setCities(citiesData);
       }
     } catch (err) {
       console.log('Error fetching cities:', err);
-      Alert.alert('Error', 'Failed to load cities. Please try again.');
     } finally {
       setCitiesLoading(false);
     }
@@ -116,7 +118,7 @@ export default function RegisterCustomerScreen() {
           type: mimeType,
         }
       });
-      
+
       setValidationErrors(prev => ({ ...prev, profilePicture: '' }));
     }
   };
@@ -138,20 +140,20 @@ export default function RegisterCustomerScreen() {
 
   // Validate form fields
   const validateForm = () => {
-    const errors: {[key: string]: string} = {};
-    
+    const errors: { [key: string]: string } = {};
+
     if (!formData.fullname.trim()) {
       errors.fullname = "Full name is required";
     } else if (formData.fullname.length < 3) {
       errors.fullname = "Full name must be at least 3 characters";
     }
-    
+
     if (!formData.email.trim()) {
       errors.email = "Email is required";
     } else if (!validateEmail(formData.email)) {
       errors.email = "Please enter a valid email address";
     }
-    
+
     if (!formData.phone.trim()) {
       errors.phone = "Phone number is required";
     } else {
@@ -160,34 +162,34 @@ export default function RegisterCustomerScreen() {
         errors.phone = "Phone number must be 10 digits starting with 09 or 07";
       }
     }
-    
+
     if (!formData.location) {
       errors.location = "Please select your location";
     }
-    
+
     if (!formData.service_city) {
       errors.service_city = "Please select your service city";
     }
-    
+
     if (!formData.password) {
       errors.password = "Password is required";
     } else if (formData.password.length < 8) {
       errors.password = "Password must be at least 8 characters";
     }
-    
+
     if (!formData.password_confirmation) {
       errors.password_confirmation = "Please confirm your password";
     } else if (formData.password !== formData.password_confirmation) {
       errors.password_confirmation = "Passwords do not match";
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleRegister = async () => {
     setValidationErrors({});
-    
+
     if (!validateForm()) {
       return;
     }
@@ -251,7 +253,7 @@ export default function RegisterCustomerScreen() {
 
       console.log("Registration response:", response);
 
-      if (response?.success === true) {
+      if (response?.success === true || response?.status === 'success') {
         setFormData({
           fullname: "",
           email: "",
@@ -265,20 +267,15 @@ export default function RegisterCustomerScreen() {
         setImageUri(null);
         setValidationErrors({});
 
-        Alert.alert(
-          "Registration Successful",
-          "Your account has been created successfully. Please login to continue.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                //console.log("Navigating to login page...");
-                // FIXED: Use relative path since we're in the same (auth) group
-                router.replace("./login");
-              }
-            }
-          ]
-        );
+        console.log("Registration success: Navigating to login page...");
+
+        if (Platform.OS === 'web') {
+          router.replace("/login");
+        } else {
+          setTimeout(() => {
+            router.replace("/login");
+          }, 100);
+        }
       } else {
         Alert.alert(
           "Registration Failed",
@@ -292,16 +289,16 @@ export default function RegisterCustomerScreen() {
 
       if (err.response) {
         console.error('Error response data:', err.response.data);
-        
+
         if (err.response.status === 422) {
           const responseData = err.response.data;
-          
+
           if (responseData.errors) {
             const serverErrors = responseData.errors;
             const errorMessages = [];
-            
-            const newValidationErrors: {[key: string]: string} = {};
-            
+
+            const newValidationErrors: { [key: string]: string } = {};
+
             if (serverErrors.phone) {
               newValidationErrors.phone = serverErrors.phone[0];
               errorMessages.push(`📱 ${serverErrors.phone[0]}`);
@@ -326,9 +323,9 @@ export default function RegisterCustomerScreen() {
               newValidationErrors.service_city = serverErrors.service_city[0];
               errorMessages.push(`🏙️ ${serverErrors.service_city[0]}`);
             }
-            
+
             setValidationErrors(newValidationErrors);
-            
+
             if (errorMessages.length > 0) {
               errorMessage = errorMessages.join('\n\n');
             } else {
@@ -354,38 +351,42 @@ export default function RegisterCustomerScreen() {
     }
   };
 
-  const renderModalItem = (item: string, onSelect: () => void) => (
-    <TouchableOpacity 
-      style={styles.modalItem} 
-      onPress={() => {
-        onSelect();
-        if (item === formData.location) {
-          setValidationErrors(prev => ({ ...prev, location: '' }));
-        } else if (item === formData.service_city) {
-          setValidationErrors(prev => ({ ...prev, service_city: '' }));
-        }
-      }}
-    >
-      <Text style={styles.modalItemText}>{item}</Text>
-    </TouchableOpacity>
-  );
+  const renderModalItem = (item: string | any, onSelect: () => void) => {
+    const itemName = typeof item === 'string' ? item : item.name || item.cityName || "";
+    return (
+      <TouchableOpacity
+        style={styles.modalItem}
+        onPress={() => {
+          onSelect();
+        }}
+      >
+        <Text style={styles.modalItemText}>
+          <Text>{itemName}</Text>
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <ScrollView 
-      style={styles.container} 
+    <ScrollView
+      style={styles.container}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Create Customer Account</Text>
-        <Text style={styles.subtitle}>Join thousands of satisfied customers</Text>
+        <Text style={styles.title}>
+          <Text>Create Customer Account</Text>
+        </Text>
+        <Text style={styles.subtitle}>
+          <Text>Join thousands of satisfied customers</Text>
+        </Text>
       </View>
 
       <View style={styles.formContainer}>
         {/* Full Name Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Full Name <Text style={styles.required}>*</Text>
+            <Text>Full Name </Text><Text style={styles.required}>*</Text>
           </Text>
           <AppInput
             value={formData.fullname}
@@ -402,7 +403,7 @@ export default function RegisterCustomerScreen() {
         {/* Email Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Email <Text style={styles.required}>*</Text>
+            <Text>Email </Text><Text style={styles.required}>*</Text>
           </Text>
           <AppInput
             value={formData.email}
@@ -421,7 +422,7 @@ export default function RegisterCustomerScreen() {
         {/* Phone Number Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Phone Number <Text style={styles.required}>*</Text>
+            <Text>Phone Number </Text><Text style={styles.required}>*</Text>
           </Text>
           <AppInput
             value={formData.phone}
@@ -438,13 +439,15 @@ export default function RegisterCustomerScreen() {
             required
             error={validationErrors.phone}
           />
-          <Text style={styles.hintText}>Enter 10 digits starting with 09 or 07</Text>
+          <Text style={styles.hintText}>
+            <Text>Enter 10 digits starting with 09 or 07</Text>
+          </Text>
         </View>
 
         {/* Location Dropdown */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Your Location <Text style={styles.required}>*</Text>
+            <Text>Your Location </Text><Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity
             style={[
@@ -456,7 +459,7 @@ export default function RegisterCustomerScreen() {
             <Text
               style={formData.location ? styles.dropdownText : styles.dropdownPlaceholder}
             >
-              {formData.location || "Select your current location"}
+              <Text>{formData.location || "Select your current location"}</Text>
             </Text>
             <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
           </TouchableOpacity>
@@ -468,7 +471,7 @@ export default function RegisterCustomerScreen() {
         {/* Service City Dropdown */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Service City <Text style={styles.required}>*</Text>
+            <Text>Service City </Text><Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity
             style={[
@@ -480,7 +483,7 @@ export default function RegisterCustomerScreen() {
             <Text
               style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}
             >
-              {formData.service_city || "Select city for services"}
+              <Text>{formData.service_city || "Select city for services"}</Text>
             </Text>
             <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
           </TouchableOpacity>
@@ -490,7 +493,9 @@ export default function RegisterCustomerScreen() {
           {citiesLoading && (
             <View style={styles.loadingIndicator}>
               <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.loadingText}>Loading cities...</Text>
+              <Text style={styles.loadingText}>
+                <Text>Loading cities...</Text>
+              </Text>
             </View>
           )}
         </View>
@@ -498,7 +503,7 @@ export default function RegisterCustomerScreen() {
         {/* Password Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Password <Text style={styles.required}>*</Text>
+            <Text>Password </Text><Text style={styles.required}>*</Text>
           </Text>
           <AppInput
             value={formData.password}
@@ -516,7 +521,7 @@ export default function RegisterCustomerScreen() {
         {/* Confirm Password Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            Confirm Password <Text style={styles.required}>*</Text>
+            <Text>Confirm Password </Text><Text style={styles.required}>*</Text>
           </Text>
           <AppInput
             value={formData.password_confirmation}
@@ -534,11 +539,11 @@ export default function RegisterCustomerScreen() {
         {/* Profile Picture */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Profile Picture (Optional)</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.imagePicker,
               validationErrors.profilePicture && styles.imagePickerError
-            ]} 
+            ]}
             onPress={pickImage}
           >
             {imageUri ? (
@@ -546,8 +551,12 @@ export default function RegisterCustomerScreen() {
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Ionicons name="camera-outline" size={40} color={Colors.text.secondary} />
-                <Text style={styles.imagePlaceholderText}>Tap to upload photo</Text>
-                <Text style={styles.imageHintText}>JPG or PNG, max 2MB</Text>
+                <Text style={styles.imagePlaceholderText}>
+                  <Text>Tap to upload photo</Text>
+                </Text>
+                <Text style={styles.imageHintText}>
+                  <Text>JPG or PNG, max 2MB</Text>
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -568,7 +577,9 @@ export default function RegisterCustomerScreen() {
         {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
+          <Text style={styles.dividerText}>
+            <Text>OR</Text>
+          </Text>
           <View style={styles.dividerLine} />
         </View>
 
@@ -578,11 +589,11 @@ export default function RegisterCustomerScreen() {
           onPress={() => {
             console.log("Navigating to provider registration");
             // Use relative path since we're in the same (auth) group
-            router.push("./register-provider");
+            router.push("/register-provider");
           }}
         >
           <Text style={styles.linkText}>
-            Want to offer services? <Text style={styles.linkHighlight}>Register as Provider</Text>
+            <Text>Want to offer services? </Text><Text style={styles.linkHighlight}>Register as Provider</Text>
           </Text>
         </TouchableOpacity>
 
@@ -592,11 +603,11 @@ export default function RegisterCustomerScreen() {
           onPress={() => {
             console.log("Navigating to login");
             // Use relative path since we're in the same (auth) group
-            router.push("./login");
+            router.push("/login");
           }}
         >
           <Text style={styles.loginText}>
-            Already have an account? <Text style={styles.loginLinkText}>Sign In</Text>
+            <Text>Already have an account? </Text><Text style={styles.loginLinkText}>Sign In</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -611,7 +622,9 @@ export default function RegisterCustomerScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Your Location</Text>
+              <Text style={styles.modalTitle}>
+                <Text>Select Your Location</Text>
+              </Text>
               <TouchableOpacity onPress={() => setShowLocationModal(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
@@ -622,6 +635,7 @@ export default function RegisterCustomerScreen() {
               renderItem={({ item }) =>
                 renderModalItem(item, () => {
                   setFormData({ ...formData, location: item });
+                  setValidationErrors(prev => ({ ...prev, location: '' }));
                   setShowLocationModal(false);
                 })
               }
@@ -642,23 +656,31 @@ export default function RegisterCustomerScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Service City</Text>
+              <Text style={styles.modalTitle}>
+                <Text>Select Service City</Text>
+              </Text>
               <TouchableOpacity onPress={() => setShowCityModal(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
-            
+
             {citiesLoading ? (
               <View style={styles.modalLoadingContainer}>
                 <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.modalLoadingText}>Loading cities...</Text>
+                <Text style={styles.modalLoadingText}>
+                  <Text>Loading cities...</Text>
+                </Text>
               </View>
             ) : cities.length === 0 ? (
               <View style={styles.modalEmptyContainer}>
                 <Ionicons name="location-outline" size={48} color={Colors.text.secondary} />
-                <Text style={styles.modalEmptyText}>No cities available</Text>
+                <Text style={styles.modalEmptyText}>
+                  <Text>No cities available</Text>
+                </Text>
                 <TouchableOpacity onPress={fetchCities} style={styles.retryButton}>
-                  <Text style={styles.retryText}>Retry</Text>
+                  <Text style={styles.retryText}>
+                    <Text>Retry</Text>
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -667,8 +689,9 @@ export default function RegisterCustomerScreen() {
                 keyExtractor={(item) => item.id?.toString() || item.cityID?.toString() || Math.random().toString()}
                 renderItem={({ item }) => {
                   const cityName = item.name || (typeof item === 'string' ? item : "");
-                  return renderModalItem(cityName, () => {
+                  return renderModalItem(item, () => {
                     setFormData({ ...formData, service_city: cityName });
+                    setValidationErrors(prev => ({ ...prev, service_city: '' }));
                     setShowCityModal(false);
                   });
                 }}
@@ -684,77 +707,77 @@ export default function RegisterCustomerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: Colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background
   },
-  header: { 
-    padding: 30, 
+  header: {
+    padding: 30,
     backgroundColor: Colors.primary,
     alignItems: "center",
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: "bold", 
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
     color: '#FFFFFF',
     marginBottom: 8,
   },
-  subtitle: { 
-    fontSize: 16, 
+  subtitle: {
+    fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
   },
-  formContainer: { 
+  formContainer: {
     padding: 20,
     marginTop: -20,
     marginHorizontal: 15,
-    backgroundColor: Colors.surface, 
-    borderRadius: 20, 
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
-  inputGroup: { 
-    marginBottom: 20 
+  inputGroup: {
+    marginBottom: 20
   },
-  label: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: Colors.text.primary, 
-    marginBottom: 8 
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.text.primary,
+    marginBottom: 8
   },
-  required: { 
-    color: Colors.error 
+  required: {
+    color: Colors.error
   },
-  hintText: { 
-    fontSize: 12, 
-    color: Colors.text.secondary, 
-    marginTop: 4, 
-    marginLeft: 5 
+  hintText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginTop: 4,
+    marginLeft: 5
   },
-  dropdown: { 
-    backgroundColor: Colors.background, 
-    padding: 15, 
-    borderRadius: 10, 
-    borderWidth: 1, 
-    borderColor: Colors.border, 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "center" 
+  dropdown: {
+    backgroundColor: Colors.background,
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
   },
   dropdownError: {
     borderColor: Colors.error,
   },
-  dropdownPlaceholder: { 
-    fontSize: 16, 
-    color: Colors.text.secondary 
+  dropdownPlaceholder: {
+    fontSize: 16,
+    color: Colors.text.secondary
   },
-  dropdownText: { 
-    fontSize: 16, 
-    color: Colors.text.primary 
+  dropdownText: {
+    fontSize: 16,
+    color: Colors.text.primary
   },
   errorText: {
     fontSize: 12,
@@ -762,34 +785,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 5,
   },
-  imagePicker: { 
-    width: '100%', 
-    height: 150, 
-    borderRadius: 10, 
-    borderWidth: 2, 
-    borderColor: Colors.border, 
-    borderStyle: 'dashed', 
+  imagePicker: {
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
     overflow: 'hidden',
     backgroundColor: Colors.background,
   },
   imagePickerError: {
     borderColor: Colors.error,
   },
-  profileImage: { 
-    width: '100%', 
-    height: '100%', 
-    resizeMode: 'cover' 
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
   },
-  imagePlaceholder: { 
-    width: '100%', 
-    height: '100%', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: Colors.background 
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background
   },
-  imagePlaceholderText: { 
-    marginTop: 8, 
-    color: Colors.text.secondary, 
+  imagePlaceholderText: {
+    marginTop: 8,
+    color: Colors.text.secondary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -798,9 +821,9 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: 12,
   },
-  registerButton: { 
-    marginTop: 20, 
-    marginBottom: 15 
+  registerButton: {
+    marginTop: 20,
+    marginBottom: 15
   },
   divider: {
     flexDirection: 'row',
@@ -817,48 +840,48 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: 14,
   },
-  linkButton: { 
-    padding: 15, 
-    alignItems: "center", 
+  linkButton: {
+    padding: 15,
+    alignItems: "center",
     marginBottom: 10,
     backgroundColor: Colors.background,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  linkText: { 
-    color: Colors.text.secondary, 
-    fontWeight: "500", 
-    fontSize: 14 
+  linkText: {
+    color: Colors.text.secondary,
+    fontWeight: "500",
+    fontSize: 14
   },
   linkHighlight: {
     color: Colors.secondary,
     fontWeight: "600",
   },
-  loginLink: { 
-    alignItems: "center", 
+  loginLink: {
+    alignItems: "center",
     marginTop: 10,
     marginBottom: 20,
   },
-  loginText: { 
+  loginText: {
     color: Colors.text.secondary,
     fontSize: 14,
   },
-  loginLinkText: { 
-    color: Colors.primary, 
-    fontWeight: "600" 
+  loginLinkText: {
+    color: Colors.primary,
+    fontWeight: "600"
   },
-  modalContainer: { 
-    flex: 1, 
-    justifyContent: "flex-end", 
-    backgroundColor: "rgba(0,0,0,0.5)" 
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)"
   },
-  modalContent: { 
-    backgroundColor: Colors.surface, 
-    borderTopLeftRadius: 20, 
-    borderTopRightRadius: 20, 
-    padding: 20, 
-    maxHeight: "80%" 
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "80%"
   },
   modalHeader: {
     flexDirection: 'row',
@@ -869,35 +892,35 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  modalTitle: { 
-    fontSize: 20, 
-    fontWeight: "bold", 
-    color: Colors.text.primary 
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.text.primary
   },
-  modalList: { 
-    maxHeight: 400 
+  modalList: {
+    maxHeight: 400
   },
-  modalItem: { 
-    padding: 15, 
-    borderBottomWidth: 1, 
-    borderBottomColor: Colors.border 
+  modalItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border
   },
-  modalItemText: { 
-    fontSize: 16, 
-    color: Colors.text.primary 
+  modalItemText: {
+    fontSize: 16,
+    color: Colors.text.primary
   },
-  loadingContainer: { 
-    padding: 20, 
-    alignItems: 'center' 
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center'
   },
   loadingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
   },
-  loadingText: { 
-    fontSize: 12, 
-    color: Colors.text.secondary, 
+  loadingText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
     marginLeft: 8,
   },
   modalLoadingContainer: {
@@ -909,9 +932,9 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: 14,
   },
-  emptyContainer: { 
-    padding: 20, 
-    alignItems: 'center' 
+  emptyContainer: {
+    padding: 20,
+    alignItems: 'center'
   },
   modalEmptyContainer: {
     padding: 40,
@@ -929,7 +952,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 8,
   },
-  retryText: { 
+  retryText: {
     color: '#FFFFFF',
     fontWeight: '600',
   },

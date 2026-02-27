@@ -32,7 +32,7 @@ const AppButton: React.FC<AppButtonProps> = ({
         default: return { paddingVertical: 16, paddingHorizontal: 24 };
       }
     };
-    
+
     const getMinHeight = () => {
       switch (size) {
         case 'small': return 36;
@@ -147,21 +147,18 @@ const AppButton: React.FC<AppButtonProps> = ({
 
   return (
     <TouchableOpacity
-      style={[
-        getButtonStyle(),
-        (disabled || loading) && styles.disabledButton,
-        fullWidth && styles.fullWidth,
-        style,
-      ]}
+      style={getButtonStyle()}
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'outline' ? Colors.primary : '#fff'} />
-      ) : (
-        <Text style={getTextStyle()}>{title}</Text>
-      )}
+      ) : title ? (
+        <Text style={getTextStyle()}>
+          <Text>{title}</Text>
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
 };

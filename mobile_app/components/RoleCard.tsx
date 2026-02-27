@@ -24,9 +24,15 @@ const RoleCard: React.FC<RoleCardProps> = ({
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Text style={styles.icon}>{icon}</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={styles.icon}>
+        <Text>{icon}</Text>
+      </Text>
+      <Text style={styles.title}>
+        <Text>{title}</Text>
+      </Text>
+      <Text style={styles.description}>
+        <Text>{description}</Text>
+      </Text>
       {isSelected && <View style={styles.selectionIndicator} />}
     </TouchableOpacity>
   );
