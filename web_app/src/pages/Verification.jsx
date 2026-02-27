@@ -1,32 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  Search, CheckCircle, XCircle, FileText, Loader2,
-  AlertCircle, RefreshCw, Calendar, Database, MoreVertical,
-  Eye, Info, FileCheck, DollarSign, X, 
-  Image as ImageIcon 
+  Search, CheckCircle, XCircle, Loader2, Database,
+  Eye, FileCheck, X, Image as ImageIcon
 } from 'lucide-react';
 import api from '../api/axios';
+
+const getFilterFromPath = (pathname) => {
+  if (pathname.includes('/verification/pending')) return 'Pending';
+  if (pathname.includes('/verification/approved')) return 'Approved';
+  if (pathname.includes('/verification/rejected')) return 'Rejected';
+  if (pathname.includes('/verification/suspended')) return 'Suspended';
+  return 'Pending';
+};
 
 const Verification = () => {
   const location = useLocation();
 
-  const getFilterFromPath = () => {
-    if (location.pathname.includes('/verification/pending')) return 'Pending';
-    if (location.pathname.includes('/verification/approved')) return 'Approved';
-    if (location.pathname.includes('/verification/rejected')) return 'Rejected';
-    if (location.pathname.includes('/verification/suspended')) return 'Suspended';
-    return 'Pending';
-  };
-
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [dbStatus, setDbStatus] = useState('checking');
-  const [filter, setFilter] = useState(getFilterFromPath());
+  const [filter, setFilter] = useState(getFilterFromPath(location.pathname));
   const [processingId, setProcessingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -37,12 +34,11 @@ const Verification = () => {
   });
 
   useEffect(() => {
-    setFilter(getFilterFromPath());
+    setFilter(getFilterFromPath(location.pathname));
   }, [location.pathname]);
 
-  const fetchProviders = async () => {
+  const fetchProviders = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       let endpoint = '/providers/pending';
       if (filter === 'Approved') endpoint = '/providers/approved';
@@ -55,28 +51,27 @@ const Verification = () => {
         setProviders(response.data.data);
         setDbStatus('connected');
       }
-    } catch (err) {
-      setError('Error connecting to MySQL server');
+    } catch {
       setDbStatus('disconnected');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     fetchProviders();
-  }, [filter]);
+  }, [filter, fetchProviders]);
 
   const handleApprove = async (id, name) => {
     if (!window.confirm(`Approve ${name} and notify them via email?`)) return;
     setProcessingId(id);
     try {
-      const response = await api.post(`/providers/${id}/verify`, { isVerified: true });
+      const response = await api.post(`/providers/${id}/verify`, { status: 'approved' });
       if (response.data.success) {
         fetchProviders();
         alert("Account Approved & Email Sent!");
       }
-    } catch (err) {
+    } catch {
       alert('Mail Error: Check backend SMTP settings.');
     } finally {
       setProcessingId(null);
@@ -95,7 +90,7 @@ const Verification = () => {
     setProcessingId(selectedProvider.id);
     try {
       const response = await api.post(`/providers/${selectedProvider.id}/verify`, {
-        isVerified: false,
+        status: 'rejected',
         verification_reason: rejectionReason
       });
       if (response.data.success) {
@@ -103,17 +98,23 @@ const Verification = () => {
         fetchProviders();
         alert("Provider Rejected & Notified.");
       }
-    } catch (err) {
+    } catch {
       alert('Network Error');
     } finally {
       setProcessingId(null);
     }
   };
 
+  const getBackendUrl = (path) => {
+    if (!path) return '';
+    const base = api.defaults.baseURL.replace('/api', '').replace(/\/+$/, '');
+    const cleanPath = path.replace(/^\/+/, '');
+    return `${base}/${cleanPath}`;
+  };
+
   const viewFile = (filePath) => {
     if (!filePath) return alert("No file found for this record.");
-    const backendBase = api.defaults.baseURL.replace('/api', '');
-    window.open(`${backendBase}/storage/${filePath}`, '_blank');
+    window.open(getBackendUrl(filePath), '_blank');
   };
 
   const openDescriptionModal = (description, providerName) => {
@@ -129,13 +130,13 @@ const Verification = () => {
     const service = p.service_type || '';
     const title = p.service_title || '';
     return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           title.toLowerCase().includes(searchQuery.toLowerCase());
+      service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      title.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      
+
       {/* Description Modal */}
       {descriptionModal.show && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[60] p-4">
@@ -172,7 +173,7 @@ const Verification = () => {
             <span className="text-slate-500">{dbStatus}</span>
           </div>
           <button onClick={fetchProviders} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm">
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            Refresh
           </button>
         </div>
       </div>
@@ -199,69 +200,117 @@ const Verification = () => {
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 text-[9px] uppercase font-black border-b border-slate-100 tracking-tighter">
                 <tr>
-                  <th className="px-8 py-5">Full Name</th>
-                  <th className="px-8 py-5">Category</th>
-                  <th className="px-8 py-5">Service Title</th>
-                  <th className="px-8 py-5 text-center">Description</th>
-                  <th className="px-8 py-5">Price</th>
-                  <th className="px-8 py-5 text-center">Files</th>
-                  <th className="px-8 py-5 text-center">Submitted</th>
-                  <th className="px-8 py-5">Status</th>
-                  <th className="px-8 py-5 text-right">Action</th>
+                  <th className="px-6 py-5">Full Name</th>
+                  <th className="px-6 py-5">Service</th>
+                  <th className="px-6 py-5">Service Description</th>
+                  <th className="px-6 py-5 text-center">Est. Cost</th>
+                  <th className="px-6 py-5 text-center">Verification Files</th>
+                  <th className="px-6 py-5 text-center">Submission</th>
+                  <th className="px-6 py-5">Status</th>
+                  <th className="px-6 py-5 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredProviders.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-900">{item.name}</td>
-                    
-                    <td className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">{item.service_type || 'N/A'}</td>
-                    
-                    <td className="px-8 py-5">
-                       <p className="text-[10px] text-blue-600 font-black uppercase tracking-tighter leading-tight max-w-[120px]">
-                         {item.service_title || 'General'}
-                       </p>
-                    </td>
-                    
-                    <td className="px-8 py-5 text-center">
-                      <button
-                        onClick={() => openDescriptionModal(item.service_description, item.name)}
-                        className="flex items-center gap-1.5 text-slate-400 hover:text-blue-500 font-black text-[10px] uppercase mx-auto"
-                      >
-                        <Eye size={14} /> See Info
-                      </button>
+
+                    {/* Full Name – profile picture + name */}
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        {item.profilePicture ? (
+                          <img
+                            src={getBackendUrl(item.profilePicture)}
+                            alt={item.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 shrink-0"
+                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                          />
+                        ) : null}
+                        <div
+                          className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0"
+                          style={{ display: item.profilePicture ? 'none' : 'flex' }}
+                        >
+                          {item.name?.charAt(0)?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">{item.email}</p>
+                        </div>
+                      </div>
                     </td>
 
-                    <td className="px-8 py-5 font-black font-mono text-sm text-emerald-600">
-                       {item.estimated_cost} <span className="text-[10px]">ETB</span>
+                    {/* Service – category + title */}
+                    <td className="px-6 py-5">
+                      <p className="text-xs font-black text-slate-700 uppercase tracking-tight">{item.service_type || 'N/A'}</p>
+                      <p className="text-[10px] text-blue-600 font-bold mt-0.5">{item.service_title || '—'}</p>
                     </td>
 
-                    <td className="px-8 py-5">
+                    {/* Service Description – truncated + modal */}
+                    <td className="px-6 py-5 max-w-[180px]">
+                      {item.service_description ? (
+                        <div>
+                          <p className="text-[11px] text-slate-600 font-medium leading-snug line-clamp-2">
+                            {item.service_description}
+                          </p>
+                          <button
+                            onClick={() => openDescriptionModal(item.service_description, item.name)}
+                            className="mt-1 flex items-center gap-1 text-blue-500 hover:text-blue-700 font-black text-[9px] uppercase"
+                          >
+                            <Eye size={10} /> Read more
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-300 italic">No description</span>
+                      )}
+                    </td>
+
+                    {/* Est. Cost */}
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black font-mono text-sm text-emerald-600">
+                        {item.estimated_cost != null ? (
+                          <>{item.estimated_cost} <span className="text-[10px]">ETB</span></>
+                        ) : (
+                          <span className="text-slate-300 text-[10px] italic">—</span>
+                        )}
+                      </span>
+                    </td>
+
+                    {/* Verification Files – ID doc + Licence */}
+                    <td className="px-6 py-5">
                       <div className="flex flex-col gap-1.5 items-center">
-                        <button onClick={() => viewFile(item.idPhoto)} className="w-24 bg-slate-900 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-black">
-                          <ImageIcon size={10} /> ID DOC
+                        <button
+                          onClick={() => viewFile(item.idPhoto)}
+                          className="w-28 bg-slate-900 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-black transition-colors"
+                        >
+                          <ImageIcon size={10} />
+                          {item.idPhotoType ? item.idPhotoType.split(' ')[0].toUpperCase() : 'ID DOC'}
                         </button>
-                        <button onClick={() => viewFile(item.credentialPhoto)} className="w-24 bg-blue-600 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-blue-700">
-                          <FileCheck size={10} /> LICENSE
+                        <button
+                          onClick={() => viewFile(item.credentialPhoto)}
+                          className="w-28 bg-blue-600 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-blue-700 transition-colors"
+                        >
+                          <FileCheck size={10} /> LICENCE
                         </button>
                       </div>
                     </td>
 
-                    <td className="px-8 py-5 text-center">
+                    {/* Submission date */}
+                    <td className="px-6 py-5 text-center">
                       <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">{item.submission_date}</span>
                     </td>
 
-                    <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
-                        item.status === 1 ? 'bg-green-50 text-green-600 border-green-100' :
-                        item.status === 0 ? 'bg-red-50 text-red-600 border-red-100' :
-                        'bg-orange-50 text-orange-600 border-orange-100'
-                      }`}>
-                        {item.status === 1 ? 'Approved' : item.status === 0 ? 'Rejected' : 'Pending'}
+                    {/* Status badge */}
+                    <td className="px-6 py-5">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${item.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
+                        item.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
+                          item.status === 'suspended' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                            'bg-orange-50 text-orange-600 border-orange-100'
+                        }`}>
+                        {item.status ?? 'Pending'}
                       </span>
                     </td>
 
-                    <td className="px-8 py-5 text-right">
+                    {/* Action buttons */}
+                    <td className="px-6 py-5 text-right">
                       <div className="flex justify-end gap-3">
                         {processingId === item.id ? (
                           <div className="flex items-center gap-2 text-slate-300 font-bold text-[10px] pr-4 italic">
@@ -269,7 +318,7 @@ const Verification = () => {
                           </div>
                         ) : (
                           <>
-                            {(item.status === null || item.status === 0) && (
+                            {(item.status === 'pending' || item.status === null || item.status === 'rejected') && (
                               <button
                                 onClick={() => handleApprove(item.id, item.name)}
                                 className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
@@ -277,7 +326,7 @@ const Verification = () => {
                                 <CheckCircle size={14} /> Approve
                               </button>
                             )}
-                            {(item.status === null || item.status === 1) && (
+                            {(item.status === 'pending' || item.status === null || item.status === 'approved') && (
                               <button
                                 onClick={() => openRejectModal(item)}
                                 className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"

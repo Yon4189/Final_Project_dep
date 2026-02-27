@@ -7,6 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps, no-unused-vars
     const savedUser = localStorage.getItem('admin_user');
     if (savedUser) setUser(JSON.parse(savedUser));
     setLoading(false);
@@ -30,4 +31,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
