@@ -37,8 +37,8 @@ const Verification = () => {
     setFilter(getFilterFromPath(location.pathname));
   }, [location.pathname]);
 
-  const fetchProviders = useCallback(async () => {
-    setLoading(true);
+  const fetchProviders = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       let endpoint = '/providers/pending';
       if (filter === 'Approved') endpoint = '/providers/approved';
@@ -54,12 +54,16 @@ const Verification = () => {
     } catch {
       setDbStatus('disconnected');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [filter]);
 
   useEffect(() => {
-    fetchProviders();
+    fetchProviders(true);
+    const interval = setInterval(() => {
+      fetchProviders(false);
+    }, 10000);
+    return () => clearInterval(interval);
   }, [filter, fetchProviders]);
 
   const handleApprove = async (id, name) => {

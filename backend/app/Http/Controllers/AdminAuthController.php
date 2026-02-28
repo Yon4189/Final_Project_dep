@@ -196,7 +196,7 @@ class AdminAuthController extends Controller
     public function approvedProviders()
     {
         $approved = ServiceProvider::where('status', 'approved')
-            ->with('category')
+            ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -211,7 +211,7 @@ class AdminAuthController extends Controller
     {
         $rejected = ServiceProvider::where('status', 'rejected')
             ->whereNotNull('verification_reason')
-            ->with('category')
+            ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -222,7 +222,7 @@ class AdminAuthController extends Controller
     public function suspendedProviders()
     {
         $suspended = ServiceProvider::where('status', 'suspended')
-            ->with('category')
+            ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));

@@ -38,8 +38,8 @@ const Dashboard = () => {
     inputReason: ''
   });
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     try {
       const [queueRes, statsRes] = await Promise.all([
         api.get('/providers/pending'),
@@ -54,12 +54,16 @@ const Dashboard = () => {
       setDbStatus('disconnected');
       console.error("Fetch Error:", err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Modal-based verify action
