@@ -196,7 +196,7 @@ class AdminAuthController extends Controller
     public function approvedProviders()
     {
         $approved = ServiceProvider::where('status', 'approved')
-            ->with('category')
+            ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -211,7 +211,7 @@ class AdminAuthController extends Controller
     {
         $rejected = ServiceProvider::where('status', 'rejected')
             ->whereNotNull('verification_reason')
-            ->with('category')
+            ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -222,7 +222,7 @@ class AdminAuthController extends Controller
     public function suspendedProviders()
     {
         $suspended = ServiceProvider::where('status', 'suspended')
-            ->with('category')
+            ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -235,20 +235,21 @@ class AdminAuthController extends Controller
      */
     private function formatProvider($provider)
     {
-         $service = $provider->services->first();
+        $service = $provider->services->first();
         return [
-            'id' => $provider->providerID,
-            'name' => $provider->fullname,
-            'service_type' => $provider->category->name ?? 'General',
-            'service_title' => $service->title ?? null, 
-            'service_description' => $service->description ?? null,
-            'estimated_cost' => $service->estimatedCost ?? null,
-            'submission_date' => $provider->created_at ? $provider->created_at->format('M d, Y') : 'N/A',
-            'credentials' => $provider->idPhoto ? 'DOC_UPLOADED' : 'NO_DOC',
-            'idPhoto' => $provider->idPhoto,
-            'credentialPhoto' => $provider->credentialPhoto,
-            'status' => $provider->status,
-            'email' => $provider->email,
+            'id'                  => $provider->providerID,
+            'name'                => $provider->fullname,
+            'profilePicture'      => $provider->profilePicture,
+            'service_type'        => $provider->category->name ?? 'General',
+            'service_title'       => $service->title ?? $provider->category->name ?? 'General Service',
+            'service_description' => $service->description ?? $provider->bio ?? null,
+            'estimated_cost'      => $service->estimatedPrice ?? $service->estimatedCost ?? $provider->estimatedPrice ?? null,
+            'submission_date'     => $provider->created_at ? $provider->created_at->format('M d, Y') : 'N/A',
+            'idPhoto'             => $provider->idPhoto,
+            'idPhotoType'         => $provider->idPhotoType,
+            'credentialPhoto'     => $provider->credentialPhoto,
+            'status'              => $provider->status,
+            'email'               => $provider->email,
         ];
     }
 

@@ -69,6 +69,14 @@ class ServiceProviderAuthController extends Controller
         $idPhotoPath = 'idphoto/' . $idPhotoName;
     }
 
+    $credentialPhotoPath = null;
+    if ($request->hasFile('credentialPhoto')) {
+        $file = $request->file('credentialPhoto');
+        $credentialName = Str::random(20) . '_credential.' . $file->getClientOriginalExtension();
+        $file->move(public_path('credentialphoto'), $credentialName);
+        $credentialPhotoPath = 'credentialphoto/' . $credentialName;
+    }
+
     // create new provider
     $provider = ServiceProvider::create([
         'fullname' => $request->fullname,
@@ -79,6 +87,7 @@ class ServiceProviderAuthController extends Controller
         'catagoryID' => $request->catagoryID,
         'profilePicture' => $profilePath,
         'idPhoto' => $idPhotoPath,
+        'credentialPhoto' => $credentialPhotoPath,
         'idPhotoType' => $request->idPhotoType,
         'status' => 'pending', 
     ]);

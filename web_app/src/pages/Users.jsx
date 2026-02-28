@@ -36,9 +36,9 @@ const Users = () => {
 
   // 3. Mock Data (replace with API call)
   // mock data was here. its removed 
-  
-  const fetchUsers = async () => {
-    setLoading(true);
+
+  const fetchUsers = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(null);
     try {
       const url = userType === "Provider" ? "/admin/providers" : "/admin/customers";
@@ -56,72 +56,76 @@ const Users = () => {
         phone: u.phone,
         type: userType,
         status: u.status || "Active",
-        joined: u.created_at? new Date(u.created_at).toLocaleDateString() : ""
+        joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
 
       }));
 
       setUsers(mappedUsers);
-      
+
       setDbStatus('connected');
     } catch (err) {
       console.error(err);
       setError('Failed to fetch users');
       setDbStatus('disconnected');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, [userType]); // refetch when userType changes (could pass as param to API)
+    fetchUsers(true);
+    const interval = setInterval(() => {
+      fetchUsers(false);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [userType]); // refetch when userType changes
 
   // 4. Action Handlers
   const toggleUserStatus = async (id, currentStatus) => {
-  const action = currentStatus === 'Active' ? 'SUSPEND' : 'ACTIVATE';
-  if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
+    const action = currentStatus === 'Active' ? 'SUSPEND' : 'ACTIVATE';
+    if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
 
-  try {
-    const url = userType === "Provider" 
-      ? `/admin/providers/${id}/status` 
-      : `/admin/customers/${id}/status`;
+    try {
+      const url = userType === "Provider"
+        ? `/admin/providers/${id}/status`
+        : `/admin/customers/${id}/status`;
 
-    // call backend to update status
-    await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
+      // call backend to update status
+      await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
 
-    // update frontend state
-    setUsers(prev => prev.map(u => 
-      u.id === id ? { ...u, status: currentStatus === 'Active' ? 'Suspended' : 'Active' } : u
-    ));
+      // update frontend state
+      setUsers(prev => prev.map(u =>
+        u.id === id ? { ...u, status: currentStatus === 'Active' ? 'Suspended' : 'Active' } : u
+      ));
 
-  } catch (err) {
-    console.error(err);
-    alert('Failed to update status');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status');
     }
   };
 
   const deleteUser = async (id, name) => {
-  if (!window.confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;
+    if (!window.confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;
 
-  try {
-    const url = userType === "Provider" 
-      ? `/admin/providers/${id}` 
-      : `/admin/customers/${id}`;
+    try {
+      const url = userType === "Provider"
+        ? `/admin/providers/${id}`
+        : `/admin/customers/${id}`;
 
-    // call backend to delete user
-    await api.delete(url);
+      // call backend to delete user
+      await api.delete(url);
 
-    // remove from frontend
-    setUsers(prev => prev.filter(u => u.id !== id));
+      // remove from frontend
+      setUsers(prev => prev.filter(u => u.id !== id));
 
-  } catch (err) {
-    console.error(err);
-    alert('Failed to delete user');
-  }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete user');
+    }
   };
 
   // 5. Filtering Logic
-   // 5. Filtering Logic
+  // 5. Filtering Logic
   const filteredUsers = users.filter(u => {
     const matchesType = u.type === userType;
     // Ensure u.name and u.email are strings before calling toLowerCase()
@@ -129,8 +133,8 @@ const Users = () => {
     const userEmail = u.email ? String(u.email).toLowerCase() : '';
     const searchLower = searchQuery.toLowerCase();
 
-    const matchesSearch = userName.includes(searchLower) || 
-                          userEmail.includes(searchLower);
+    const matchesSearch = userName.includes(searchLower) ||
+      userEmail.includes(searchLower);
     return matchesType && matchesSearch;
   });
 
@@ -152,8 +156,8 @@ const Users = () => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Database size={16} className={
               dbStatus === 'connected' ? 'text-green-500' :
-              dbStatus === 'disconnected' ? 'text-red-500' :
-              'text-yellow-500 animate-pulse'
+                dbStatus === 'disconnected' ? 'text-red-500' :
+                  'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-black uppercase tracking-wider">
               {dbStatus === 'connected' && 'Database Connected'}
@@ -235,9 +239,8 @@ const Users = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <span className={`text-xs font-bold px-3 py-1 rounded-lg ${
-                        user.type === 'Provider' ? 'text-purple-600 bg-purple-50' : 'text-blue-600 bg-blue-50'
-                      }`}>
+                      <span className={`text-xs font-bold px-3 py-1 rounded-lg ${user.type === 'Provider' ? 'text-purple-600 bg-purple-50' : 'text-blue-600 bg-blue-50'
+                        }`}>
                         {user.type}
                       </span>
                     </td>
@@ -253,9 +256,8 @@ const Users = () => {
                     </td>
                     <td className="px-8 py-5 text-sm text-slate-500">{user.joined}</td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                        user.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${user.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                        }`}>
                         {user.status}
                       </span>
                     </td>

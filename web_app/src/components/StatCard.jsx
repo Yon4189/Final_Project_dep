@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React from 'react';
 
 const StatCard = ({ title, value, icon: Icon, color }) => {

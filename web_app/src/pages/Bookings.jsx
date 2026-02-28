@@ -6,7 +6,7 @@ import {
   Clock, DollarSign, Database,
   AlertCircle, RefreshCw, Loader2
 } from 'lucide-react';
-import api from '../api/axios';
+
 
 const Bookings = () => {
   const location = useLocation();
@@ -120,9 +120,9 @@ const Bookings = () => {
   const filteredBookings = bookings.filter(b => {
     const matchesStatus = b.status === status;
     const matchesSearch = b.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          b.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          b.id.toLowerCase().includes(searchQuery.toLowerCase());
+      b.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.id.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -151,8 +151,8 @@ const Bookings = () => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Database size={16} className={
               dbStatus === 'connected' ? 'text-green-500' :
-              dbStatus === 'disconnected' ? 'text-red-500' :
-              'text-yellow-500 animate-pulse'
+                dbStatus === 'disconnected' ? 'text-red-500' :
+                  'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-black uppercase tracking-wider">
               {dbStatus === 'connected' && 'Database Connected'}
@@ -257,12 +257,11 @@ const Bookings = () => {
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-300">
             {/* Modal Header */}
-            <div className={`p-8 text-white flex justify-between items-center ${
-              selectedBooking.status === 'Cancelled' ? 'bg-red-600' :
-              selectedBooking.status === 'Completed' ? 'bg-green-600' :
-              selectedBooking.status === 'Accepted' ? 'bg-blue-600' :
-              'bg-yellow-600' // Pending
-            }`}>
+            <div className={`p-8 text-white flex justify-between items-center ${selectedBooking.status === 'Cancelled' ? 'bg-red-600' :
+                selectedBooking.status === 'Completed' ? 'bg-green-600' :
+                  selectedBooking.status === 'Accepted' ? 'bg-blue-600' :
+                    'bg-yellow-600' // Pending
+              }`}>
               <div>
                 <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Case File</p>
                 <h2 className="text-xl font-black italic">{selectedBooking.id}</h2>
@@ -279,8 +278,8 @@ const Bookings = () => {
               {/* Status Banner */}
               <div className={`flex items-center gap-3 p-4 rounded-2xl border-2 ${getStatusStyle(selectedBooking.status)}`}>
                 {selectedBooking.status === 'Completed' ? <CheckCircle size={24} /> :
-                 selectedBooking.status === 'Cancelled' ? <XCircle size={24} /> :
-                 <Clock size={24} />}
+                  selectedBooking.status === 'Cancelled' ? <XCircle size={24} /> :
+                    <Clock size={24} />}
                 <div>
                   <p className="text-xs font-black uppercase">Current Booking State</p>
                   <p className="text-lg font-black">{selectedBooking.status}</p>
