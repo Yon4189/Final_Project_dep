@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { useServiceRequests } from '../../hooks/useCustomerQueries';
+import { useCancelRequest } from '../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import type { ServiceRequest } from '@/app/types/customer.types';
@@ -27,6 +28,7 @@ export default function BookingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: bookings, isLoading, error, refetch } = useServiceRequests();
+  const cancelRequest = useCancelRequest();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -35,7 +37,7 @@ export default function BookingsScreen() {
   };
 
   const handleBookingPress = (booking: ServiceRequest) => {
-    router.push(`/customer/bookings/${booking.id}`);
+    router.push(`/(customer)/requests/${booking.id}`);
   };
 
   const handleCancelBooking = (booking: ServiceRequest) => {
@@ -47,17 +49,24 @@ export default function BookingsScreen() {
         {
           text: 'Yes',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement cancellation logic
-            Alert.alert('Booking Cancelled', 'Your booking has been cancelled.');
-          }
+          onPress: async () => {
+            try {
+              await cancelRequest.mutateAsync({
+                id: booking.id,
+                reason: 'Cancelled by customer',
+              });
+              await refetch();
+            } catch (e) {
+              Alert.alert('Error', 'Failed to cancel booking. Please try again.');
+            }
+          },
         },
       ]
     );
   };
 
   const handleRateProvider = (booking: ServiceRequest) => {
-    router.push(`/customer/bookings/${booking.id}/rate`);
+    router.push(`/(customer)/requests/${booking.id}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -224,7 +233,7 @@ export default function BookingsScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Bookings</Text>
-          <TouchableOpacity onPress={() => router.push('/customer/search')}>
+          <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
             <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
         </View>
@@ -238,7 +247,7 @@ export default function BookingsScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Bookings</Text>
-          <TouchableOpacity onPress={() => router.push('/customer/search')}>
+          <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
             <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
         </View>
@@ -260,7 +269,7 @@ export default function BookingsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Bookings</Text>
-        <TouchableOpacity onPress={() => router.push('/customer/search')}>
+        <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
           <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
       </View>

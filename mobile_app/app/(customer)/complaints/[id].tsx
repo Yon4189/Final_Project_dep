@@ -182,7 +182,7 @@ export default function ComplaintDetails() {
           <Text style={styles.providerService}>{complaint.serviceName || 'Service not specified'}</Text>
           <TouchableOpacity 
             style={styles.viewBookingButton}
-            onPress={() => router.push(`/customer/requests/${complaint.bookingId}`)}
+            onPress={() => router.push(`/(customer)/requests/${complaint.bookingId}`)}
           >
             <Text style={styles.viewBookingText}>View Booking</Text>
             <Ionicons name="chevron-forward" size={14} color={Colors.primary} />

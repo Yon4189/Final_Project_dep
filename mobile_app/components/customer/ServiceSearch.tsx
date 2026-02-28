@@ -1,10 +1,10 @@
 // components/customer/ServiceSearch.tsx
 import { Colors } from "@/app/constants/Colors";
-import { SERVICE_CATEGORIES } from "@/app/constants/Services";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+
 import {
   Animated,
   Dimensions,
@@ -27,11 +27,13 @@ interface ServiceSearchProps {
   onFilterPress: () => void;
   onVoicePress?: () => void;
   onCategorySelect?: (categoryId: string) => void;
+  categories?: Array<{ id: string; name: string; icon?: string }>;
   suggestions?: string[];
   recentSearches?: string[];
   placeholder?: string;
   autoFocus?: boolean;
   showRecent?: boolean;
+
   searchResults?: any[]; // Add search results prop
 }
 
@@ -42,11 +44,13 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   onFilterPress,
   onVoicePress,
   onCategorySelect,
+  categories = [],
   suggestions = [],
   recentSearches = [],
   placeholder = "Search for plumbing, electrical...",
   autoFocus = false,
   showRecent = true,
+
   searchResults = [],
 }) => {
   const router = useRouter();
@@ -125,17 +129,23 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     onCategorySelect?.(categoryId);
     setIsFocused(false);
     // Navigate to category results
-    router.push(`/customer/search?category=${categoryId}`);
+    router.push({
+      pathname: '/(customer)/search/results',
+      params: { categoryId },
+    });
   };
 
   const handleProviderPress = (providerId: string) => {
     // Navigate to provider profile
-    router.push(`/customer/provider/${providerId}`);
+    router.push(`/(customer)/provider/${providerId}`);
   };
 
   const handleViewAllResults = () => {
     // Navigate to full search results page
-    router.push(`/customer/search?q=${value}`);
+    router.push({
+      pathname: '/(customer)/search/results',
+      params: { query: value },
+    });
     setIsFocused(false);
     setShowResults(false);
   };
@@ -144,13 +154,13 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     <View style={styles.categoriesContainer}>
       <Text style={styles.suggestionsTitle}>Popular Categories</Text>
       <View style={styles.categoriesGrid}>
-        {SERVICE_CATEGORIES.slice(0, 6).map((category) => (
+        {categories.slice(0, 6).map((category) => (
           <TouchableOpacity
             key={category.id}
             style={styles.categoryChip}
             onPress={() => handleCategoryPress(category.id.toString())}
           >
-            <Text style={styles.categoryIcon}>{category.icon}</Text>
+            <Text style={styles.categoryIcon}>{category.icon || '🔧'}</Text>
             <Text style={styles.categoryName}>{category.name}</Text>
           </TouchableOpacity>
         ))}

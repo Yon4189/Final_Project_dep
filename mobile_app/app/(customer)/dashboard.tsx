@@ -17,7 +17,6 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
-import { SERVICE_CATEGORIES } from '@/app/constants/Services';
 import { useLocation } from '../../hooks/useLocation';
 import { useSearch } from '../../hooks/useSearch';
 import { useTopRatedProviders } from '../../hooks/useCustomerQueries';
@@ -101,12 +100,20 @@ export default function CustomerDashboard() {
       }
     } catch (error) {
       console.error('Failed to load service categories:', error);
-      // Fallback to hardcoded categories if API fails
-      setServiceCategories([...SERVICE_CATEGORIES]);
+      // Fallback to empty array if API fails
+      setServiceCategories([]);
     } finally {
       setLoadingCategories(false);
     }
   };
+
+  const searchCategories = serviceCategories
+    .map((c: any) => ({
+      id: (c.catagoryID ?? c.id ?? '').toString(),
+      name: c.name ?? 'Service',
+      icon: c.icon,
+    }))
+    .filter((c: any) => c.id);
 
   const loadUserData = async () => {
     try {
@@ -359,12 +366,20 @@ export default function CustomerDashboard() {
         >
           {serviceCategories.map((category) => (
             <TouchableOpacity
-              key={category.id || Math.random().toString()}
+              key={(category.catagoryID ?? category.id ?? Math.random()).toString()}
               style={[
                 styles.categoryCard,
-                selectedCategory === (category.id?.toString() || '') && styles.categoryCardSelected,
+                selectedCategory === (category.catagoryID?.toString() || category.id?.toString() || '') && styles.categoryCardSelected,
               ]}
-              onPress={() => handleCategorySelect(category.id?.toString() || '')}
+              onPress={() => {
+                const categoryId = (category.catagoryID?.toString() || category.id?.toString() || '');
+                if (!categoryId) return;
+                handleCategorySelect(categoryId);
+                router.push({
+                  pathname: '/(customer)/search/results',
+                  params: { categoryId },
+                });
+              }}
             >
               <View style={styles.categoryIconContainer}>
                 <Text style={styles.categoryIcon}>{category.icon || '🔧'}</Text>
@@ -393,7 +408,7 @@ export default function CustomerDashboard() {
             <Ionicons name="star" size={20} color={Colors.warning} />
             <Text style={styles.sectionTitle}>Top Rated Pros</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/customer/top-rated')}>
+          <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
             <Text style={styles.seeAllText}>View All</Text>
           </TouchableOpacity>
         </View>
@@ -562,13 +577,13 @@ export default function CustomerDashboard() {
         <ServiceSearch
           value={query}
           onChangeText={setQuery}
-          onSearch={setQuery}
+          onSearch={() => refreshSearch()}
           onFilterPress={() => setShowFilterModal(true)}
           onVoicePress={handleVoiceSearch}
-          suggestions={suggestions}
           onCategorySelect={handleCategorySelect}
-          placeholder="Search for plumbing, electrical..."
-          showRecent={true}
+          suggestions={suggestions}
+          searchResults={providers}
+          categories={searchCategories}
         />
       </View>
 
@@ -593,14 +608,20 @@ export default function CustomerDashboard() {
           <View style={styles.popularServices}>
             <Text style={styles.popularTitle}>Popular Services Near You</Text>
             <View style={styles.popularGrid}>
-              {['Plumbing', 'Electrical', 'Cleaning', 'Painting', 'Moving', 'Gardening'].map((service, index) => (
+              {searchCategories.slice(0, 6).map((category) => (
                 <TouchableOpacity
-                  key={index}
+                  key={category.id}
                   style={styles.popularItem}
-                  onPress={() => setQuery(service)}
+                  onPress={() => {
+                    handleCategorySelect(category.id);
+                    router.push({
+                      pathname: '/(customer)/search/results',
+                      params: { categoryId: category.id },
+                    });
+                  }}
                 >
-                  <Ionicons name="search" size={24} color={Colors.primary} />
-                  <Text style={styles.popularItemText}>{service}</Text>
+                  <Text style={styles.popularItemIcon}>{category.icon || '🔧'}</Text>
+                  <Text style={styles.popularItemText}>{category.name}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -873,6 +894,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.text.secondary,
     textAlign: 'center',
+  },
+  popularItemIcon: {
+    fontSize: 24,
+    textAlign: 'center',
+    color: Colors.primary,
   },
   bottomPadding: {
     height: 80,

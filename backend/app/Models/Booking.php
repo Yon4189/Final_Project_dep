@@ -12,7 +12,28 @@ class Booking extends Model
     protected $primaryKey = 'bookingID'; // primary key
 
     protected $fillable = [
-        'customerID', 'serviceID', 'status', 'scheduledDate'
+        'customerID',
+        'serviceID',
+        'providerID',
+        'status',
+        'scheduledDate',
+        'service_latitude',
+        'service_longitude',
+        'eta_minutes',
+        'estimated_arrival_time',
+        'accepted_at',
+        'provider_started_at',
+        'provider_arrived_at',
+        'completed_at'
+    ];
+
+    protected $casts = [
+        'scheduledDate' => 'datetime',
+        'estimated_arrival_time' => 'datetime',
+        'accepted_at' => 'datetime',
+        'provider_started_at' => 'datetime',
+        'provider_arrived_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     // a booking belongs to a customer
@@ -23,6 +44,10 @@ class Booking extends Model
     // a booking belongs to a service
     public function service() {
         return $this->belongsTo(Service::class, 'serviceID', 'serviceID'); // fk, owner key
+    }
+
+    public function provider() {
+        return $this->belongsTo(ServiceProvider::class, 'providerID', 'providerID');
     }
 
     // a booking can have one transaction

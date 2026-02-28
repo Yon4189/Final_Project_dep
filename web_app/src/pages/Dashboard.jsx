@@ -38,8 +38,8 @@ const Dashboard = () => {
     inputReason: ''
   });
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     try {
       const [queueRes, statsRes] = await Promise.all([
         api.get('/providers/pending'),
@@ -54,12 +54,16 @@ const Dashboard = () => {
       setDbStatus('disconnected');
       console.error("Fetch Error:", err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Modal-based verify action
@@ -91,7 +95,7 @@ const Dashboard = () => {
         alert(status === 'approved' ? "Account & Service Approved!" : "Provider Rejected.");
         fetchData();
       }
-    } catch (err) {
+    } catch {
       alert("Action failed. Ensure backend mail server is active.");
     } finally {
       setProcessingId(null);
@@ -112,10 +116,16 @@ const Dashboard = () => {
     setRejectModal({ show: false, providerId: null, providerName: '', defaultReason: '', inputReason: '' });
   };
 
+  const getBackendUrl = (path) => {
+    if (!path) return '';
+    const base = api.defaults.baseURL.replace('/api', '').replace(/\/+$/, '');
+    const cleanPath = path.replace(/^\/+/, '');
+    return `${base}/${cleanPath}`;
+  };
+
   const viewFile = (filePath) => {
     if (!filePath) return alert("No file found for this record.");
-    const backendBase = api.defaults.baseURL.replace('/api', '');
-    window.open(`${backendBase}/storage/${filePath}`, '_blank');
+    window.open(getBackendUrl(filePath), '_blank');
   };
 
   // Open modal with full description
@@ -265,12 +275,27 @@ const Dashboard = () => {
               <tbody className="divide-y divide-slate-50">
                 {verificationQueue.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    {/* Full Name – profile picture + name */}
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase border">
-                          {item.name ? item.name.charAt(0) : 'P'}
+                        {item.profilePicture ? (
+                          <img
+                            src={getBackendUrl(item.profilePicture)}
+                            alt={item.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 shrink-0"
+                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                          />
+                        ) : null}
+                        <div
+                          className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0"
+                          style={{ display: item.profilePicture ? 'none' : 'flex' }}
+                        >
+                          {item.name?.charAt(0)?.toUpperCase()}
                         </div>
-                        <span className="font-bold text-slate-900 text-sm">{item.name}</span>
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">{item.email}</p>
+                        </div>
                       </div>
                     </td>
 
@@ -286,37 +311,51 @@ const Dashboard = () => {
                       </p>
                     </td>
 
-                    {/* 👇 New: Clickable link "see full description" with eye icon */}
-                    <td className="px-6 py-5">
-                      <button
-                        onClick={() => openDescriptionModal(item.service_description, item.name)}
-                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-xs bg-transparent border-none cursor-pointer transition-colors"
-                      >
-                        <Eye size={16} />
-                        <span className="underline underline-offset-2">description...</span>
-                      </button>
+                    {/* Service Description – truncated + modal */}
+                    <td className="px-6 py-5 max-w-[180px]">
+                      {item.service_description ? (
+                        <div>
+                          <p className="text-[11px] text-slate-600 font-medium leading-snug line-clamp-2">
+                            {item.service_description}
+                          </p>
+                          <button
+                            onClick={() => openDescriptionModal(item.service_description, item.name)}
+                            className="mt-1 flex items-center gap-1 text-blue-500 hover:text-blue-700 font-black text-[9px] uppercase"
+                          >
+                            <Eye size={10} /> Read more
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-300 italic">No description</span>
+                      )}
                     </td>
 
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-1 text-emerald-600 font-black font-mono">
-                        <span className="text-xs italic">{item.estimated_cost || '0'}</span>
-                        <span className="text-[9px]">ETB</span>
-                      </div>
+                    {/* Est. Cost */}
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black font-mono text-sm text-emerald-600">
+                        {item.estimated_cost != null ? (
+                          <>{item.estimated_cost} <span className="text-[10px]">ETB</span></>
+                        ) : (
+                          <span className="text-slate-300 text-[10px] italic">—</span>
+                        )}
+                      </span>
                     </td>
 
+                    {/* Verification Files – ID doc + Licence */}
                     <td className="px-6 py-5">
-                      <div className="flex flex-col gap-2 items-center">
+                      <div className="flex flex-col gap-1.5 items-center">
                         <button
                           onClick={() => viewFile(item.idPhoto)}
-                          className="w-full flex items-center justify-center gap-1.5 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-black transition-all"
+                          className="w-28 bg-slate-900 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-black transition-colors"
                         >
-                          <ImageIcon size={12} /> ID DOC
+                          <ImageIcon size={10} />
+                          {item.idPhotoType ? item.idPhotoType.split(' ')[0].toUpperCase() : 'ID DOC'}
                         </button>
                         <button
                           onClick={() => viewFile(item.credentialPhoto)}
-                          className="w-full flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-blue-700 transition-all"
+                          className="w-28 bg-blue-600 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-blue-700 transition-colors"
                         >
-                          <FileCheck size={12} /> LICENSE
+                          <FileCheck size={10} /> LICENCE
                         </button>
                       </div>
                     </td>
@@ -360,10 +399,10 @@ const Dashboard = () => {
             </table>
           ) : (
             <div className="p-24 text-center">
-               <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-slate-200">
-                  <CheckCircle className="text-slate-300" size={32} />
-               </div>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Verification Queue is Empty</p>
+              <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-slate-200">
+                <CheckCircle className="text-slate-300" size={32} />
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Verification Queue is Empty</p>
             </div>
           )}
         </div>

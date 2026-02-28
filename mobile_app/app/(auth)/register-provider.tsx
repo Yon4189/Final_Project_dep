@@ -72,9 +72,11 @@ export default function RegisterProviderScreen() {
 
   const [profilePicture, setProfilePicture] = useState<any>(null);
   const [idPhoto, setIdPhoto] = useState<any>(null);
+  const [credentialPhoto, setCredentialPhoto] = useState<any>(null);
   const [profilePictureUri, setProfilePictureUri] = useState<string | null>(null);
   const [idPhoto, setIdPhoto] = useState<any>(null);
   const [idPhotoUri, setIdPhotoUri] = useState<string | null>(null);
+  const [credentialPhotoUri, setCredentialPhotoUri] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [showIdTypeModal, setShowIdTypeModal] = useState(false);
@@ -203,7 +205,7 @@ const testApiConnection = async () => {
     });
   };
 
-  const pickImage = async (type: 'profile' | 'id') => {
+  const pickImage = async (type: 'profile' | 'id' | 'credential') => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== 'granted' && Platform.OS !== 'web') {
@@ -222,15 +224,17 @@ const testApiConnection = async () => {
       const asset = result.assets[0];
 
       if (type === 'profile') setProfilePictureUri(asset.uri);
-      else setIdPhotoUri(asset.uri);
+      else if (type === 'id') setIdPhotoUri(asset.uri);
+      else setCredentialPhotoUri(asset.uri);
 
       if (Platform.OS === 'web') {
         const response = await fetch(asset.uri);
         const blob = await response.blob();
-        const file = new File([blob], type === 'profile' ? 'profile.jpg' : 'id.jpg', { type: blob.type });
+        const file = new File([blob], type === 'profile' ? 'profile.jpg' : type === 'id' ? 'id.jpg' : 'credential.jpg', { type: blob.type });
 
         if (type === 'profile') setProfilePicture(file);
-        else setIdPhoto(file);
+        else if (type === 'id') setIdPhoto(file);
+        else setCredentialPhoto(file);
       } else {
         const filename = asset.uri.split('/').pop() || 'upload.jpg';
         const match = /\.(\w+)$/.exec(filename);
@@ -243,7 +247,8 @@ const testApiConnection = async () => {
         };
 
         if (type === 'profile') setProfilePicture(mobileFile);
-        else setIdPhoto(mobileFile);
+        else if (type === 'id') setIdPhoto(mobileFile);
+        else setCredentialPhoto(mobileFile);
       }
     }
   };
@@ -273,8 +278,8 @@ const testApiConnection = async () => {
   };
 
   const registerProvider = async () => {
-    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType || !profilePicture || !idPhoto) {
-      Alert.alert('Error', 'Please fill all fields, select an ID type, and upload both images.');
+    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType || !profilePicture || !idPhoto || !credentialPhoto) {
+      Alert.alert('Error', 'Please fill all fields, select an ID type, and upload all required images including the business license.');
       return;
     }
 
@@ -372,6 +377,9 @@ const testApiConnection = async () => {
       }
       if (idPhoto) {
         data.append('idPhoto', idPhoto);
+      }
+      if (credentialPhoto) {
+        data.append('credentialPhoto', credentialPhoto);
       }
 
       console.log('Sending registration request...');
@@ -703,6 +711,28 @@ const testApiConnection = async () => {
                 </Text>
                 <Text style={styles.imageHintText}>
                   <Text>Passport, Driver License, or National ID</Text>
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Credential Photo Upload */}
+        <View style={styles.uploadContainer}>
+          <Text style={styles.label}>
+            <Text>Business License/Certificate </Text><Text style={styles.required}>*</Text>
+          </Text>
+          <TouchableOpacity style={styles.idImagePicker} onPress={() => pickImage('credential')}>
+            {credentialPhotoUri ? (
+              <Image source={{ uri: credentialPhotoUri }} style={styles.idImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="document-attach-outline" size={40} color={Colors.text.secondary} />
+                <Text style={styles.imagePlaceholderText}>
+                  <Text>Upload License/Certificate</Text>
+                </Text>
+                <Text style={styles.imageHintText}>
+                  <Text>Required to verify your business</Text>
                 </Text>
               </View>
             )}

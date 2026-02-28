@@ -82,7 +82,7 @@ export default function ComplaintsList() {
         <Text style={styles.headerTitle}>My Complaints</Text>
         <TouchableOpacity 
           style={styles.newButton}
-          onPress={() => router.push('/customer/complaints/new')}
+          onPress={() => router.push('/(customer)/complaints/new')}
         >
           <Ionicons name="add" size={24} color={Colors.surface} />
         </TouchableOpacity>
@@ -163,7 +163,7 @@ export default function ComplaintsList() {
   const renderComplaintCard = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.complaintCard}
-      onPress={() => router.push(`/customer/complaints/${item.id}`)}
+      onPress={() => router.push(`/(customer)/complaints/${item.id}`)}
     >
       <View style={styles.cardHeader}>
         <View style={styles.complaintInfo}>
@@ -222,7 +222,7 @@ export default function ComplaintsList() {
       title="No complaints yet"
       message="If you have an issue with a service, you can report it here"
       actionLabel="File a Complaint"
-      onAction={() => router.push('/customer/complaints/new')}
+      onAction={() => router.push('/(customer)/complaints/new')}
     />
   );
 

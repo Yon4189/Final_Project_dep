@@ -218,7 +218,7 @@ export default function CustomerProfile() {
         <View style={styles.sectionContent}>
           {renderSettingItem('lock-closed-outline', 'Change Password', handleChangePassword)}
           {renderSettingItem('location-outline', 'Manage Addresses', handleManageLocations)}
-          {renderSettingItem('card-outline', 'Payment Methods', () => router.push('/customer/payment-methods'))}
+          {renderSettingItem('card-outline', 'Payment Methods', () => Alert.alert('Coming Soon', 'Payment methods are not available yet.'))}
         </View>
       </View>
 
@@ -271,10 +271,10 @@ export default function CustomerProfile() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.sectionContent}>
-          {renderSettingItem('help-circle-outline', 'Help Center', () => router.push('/customer/help'))}
-          {renderSettingItem('chatbubble-outline', 'Contact Support', () => router.push('/customer/support'))}
-          {renderSettingItem('document-text-outline', 'Terms & Conditions', () => router.push('/customer/terms'))}
-          {renderSettingItem('shield-outline', 'Privacy Policy', () => router.push('/customer/privacy'))}
+          {renderSettingItem('help-circle-outline', 'Help Center', () => Alert.alert('Coming Soon', 'Help center is not available yet.'))}
+          {renderSettingItem('chatbubble-outline', 'Contact Support', () => Alert.alert('Coming Soon', 'Support chat is not available yet.'))}
+          {renderSettingItem('document-text-outline', 'Terms & Conditions', () => Alert.alert('Coming Soon', 'Terms page is not available yet.'))}
+          {renderSettingItem('shield-outline', 'Privacy Policy', () => Alert.alert('Coming Soon', 'Privacy policy page is not available yet.'))}
         </View>
       </View>
 

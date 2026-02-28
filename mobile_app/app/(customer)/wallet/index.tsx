@@ -137,12 +137,8 @@ export default function WalletScreen() {
       Alert.alert('Invalid Amount', 'Please enter a valid amount (minimum ETB 10)');
       return;
     }
-    
-    // Navigate to payment gateway
-    router.push({
-      pathname: '/customer/wallet/payment',
-      params: { amount: amount.toString(), method: selectedPaymentMethod }
-    });
+
+    Alert.alert('Coming Soon', 'Wallet top up is not available yet.');
     setShowTopUpModal(false);
     setTopUpAmount('');
   };
@@ -153,17 +149,13 @@ export default function WalletScreen() {
       Alert.alert('Invalid Amount', 'Please enter a valid amount (minimum ETB 50)');
       return;
     }
-    
+
     if (amount > (wallet?.balance || 0)) {
       Alert.alert('Insufficient Balance', 'You do not have enough balance');
       return;
     }
-    
-    // Navigate to withdrawal method selection
-    router.push({
-      pathname: '/customer/wallet/withdraw',
-      params: { amount: amount.toString() }
-    });
+
+    Alert.alert('Coming Soon', 'Withdrawals are not available yet.');
     setShowWithdrawModal(false);
     setWithdrawAmount('');
   };
@@ -182,7 +174,7 @@ export default function WalletScreen() {
         <Text style={styles.headerTitle}>My Wallet</Text>
         <TouchableOpacity 
           style={styles.historyButton}
-          onPress={() => router.push('/customer/wallet/transactions')}
+          onPress={() => Alert.alert('Coming Soon', 'Transaction history is not available yet.')}
         >
           <Ionicons name="time-outline" size={24} color={Colors.surface} />
         </TouchableOpacity>
@@ -221,7 +213,7 @@ export default function WalletScreen() {
 
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => router.push('/customer/wallet/send')}
+          onPress={() => Alert.alert('Coming Soon', 'Send money is not available yet.')}
         >
           <View style={styles.actionIcon}>
             <Ionicons name="send" size={24} color={Colors.primary} />
@@ -231,7 +223,7 @@ export default function WalletScreen() {
 
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => router.push('/customer/wallet/receive')}
+          onPress={() => Alert.alert('Coming Soon', 'Receive money is not available yet.')}
         >
           <View style={styles.actionIcon}>
             <Ionicons name="qr-code" size={24} color={Colors.primary} />
@@ -350,7 +342,7 @@ export default function WalletScreen() {
   const renderTransactionItem = ({ item }: { item: Transaction }) => (
     <TouchableOpacity 
       style={styles.transactionItem}
-      onPress={() => router.push(`/customer/wallet/transaction/${item.id}`)}
+      onPress={() => Alert.alert('Coming Soon', 'Transaction details are not available yet.')}
     >
       <View style={[styles.transactionIcon, { backgroundColor: getTransactionColor(item.type) + '20' }]}>
         <Ionicons 
@@ -613,7 +605,7 @@ export default function WalletScreen() {
         <View style={styles.transactionsSection}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.transactionsTitle}>Recent Transactions</Text>
-            <TouchableOpacity onPress={() => router.push('/customer/wallet/transactions')}>
+            <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Transaction history is not available yet.')}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>

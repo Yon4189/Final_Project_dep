@@ -81,23 +81,23 @@ export const RequestCard: React.FC<RequestCardProps> = ({
     if (onPress) {
       onPress();
     } else {
-      router.push(`/customer/requests/${request.id}`);
+      router.push(`/(customer)/requests/${request.id}`);
     }
   };
 
   const handleActionPress = (action: string) => {
     switch (action) {
       case 'track':
-        router.push(`/customer/requests/${request.id}/track`);
+        router.push(`/(customer)/requests/${request.id}`);
         break;
       case 'message':
-        router.push(`/customer/messages/${request.providerId}`);
+        router.push(`/(customer)/requests/${request.id}`);
         break;
       case 'review':
-        router.push(`/customer/requests/${request.id}/review`);
+        router.push(`/(customer)/requests/${request.id}`);
         break;
       case 'pay':
-        router.push(`/customer/requests/${request.id}/payment`);
+        router.push(`/(customer)/requests/${request.id}`);
         break;
     }
   };
