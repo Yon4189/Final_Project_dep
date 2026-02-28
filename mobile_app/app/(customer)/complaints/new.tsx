@@ -154,7 +154,7 @@ export default function NewComplaint() {
         [
           {
             text: 'View Complaints',
-            onPress: () => router.push('/customer/complaints'),
+            onPress: () => router.push('/(customer)/complaints'),
           },
         ]
       );

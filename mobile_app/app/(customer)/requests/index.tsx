@@ -130,7 +130,7 @@ export default function MyRequests() {
         title="No requests found"
         message={messages[activeFilter]}
         actionLabel="Browse Services"
-        onAction={() => router.push('/customer/dashboard')}
+        onAction={() => router.push('/(customer)/dashboard')}
       />
     );
   };

@@ -14,6 +14,8 @@ use App\Http\Controllers\ServiceCityController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerSearchController;
 
 // customer registration endpoint
 Route::get('/cities', [ServiceCityController::class, 'index']);
@@ -101,4 +103,62 @@ Route::post('/admin/withdrawal/process/{withdrawal_id}', [WithdrawalController::
 Route::post('/admin/withdrawal/cancel/{withdrawal_id}', [WithdrawalController::class, 'cancel']);
 Route::get('/admin/payments/stats', [PaymentController::class, 'getPaymentStats']);
 Route::get('/admin/withdrawals/stats', [WithdrawalController::class, 'getWithdrawalStats']);
+
+// Customer API Routes (Mobile App)
+Route::prefix('customer')->group(function () {
+    // Profile Management
+    Route::get('/profile', [CustomerController::class, 'getProfile']);
+    Route::put('/profile', [CustomerController::class, 'updateProfile']);
+    Route::post('/profile/image', [CustomerController::class, 'uploadProfileImage']);
+    Route::post('/profile/password', [CustomerController::class, 'changePassword']);
+    
+    // Provider Search
+    Route::get('/providers/search', [CustomerSearchController::class, 'searchProviders']);
+    Route::get('/providers/top-rated', [CustomerSearchController::class, 'getTopRated']);
+    Route::get('/providers/{id}', [CustomerSearchController::class, 'getProviderDetails']);
+    Route::get('/providers/{id}/availability', [CustomerSearchController::class, 'getProviderAvailability']);
+    Route::get('/providers/{id}/reviews', [CustomerSearchController::class, 'getProviderReviews']);
+    Route::get('/providers/nearby', [CustomerSearchController::class, 'getNearbyProviders']);
+    
+    // Service Requests
+    Route::get('/requests', [CustomerController::class, 'getRequests']);
+    Route::post('/requests', [CustomerController::class, 'createBooking']);
+    Route::get('/requests/{id}', [CustomerController::class, 'getRequestDetails']);
+    Route::post('/requests/{id}/cancel', [CustomerController::class, 'cancelRequest']);
+    Route::post('/requests/{id}/reschedule', [CustomerController::class, 'rescheduleRequest']);
+    Route::get('/requests/{id}/status', [CustomerController::class, 'getRequestStatus']);
+    Route::get('/requests/{id}/track', [CustomerController::class, 'trackProvider']);
+    
+    // Reviews
+    Route::post('/reviews', [CustomerController::class, 'createReview']);
+    Route::put('/reviews/{id}', [CustomerController::class, 'updateReview']);
+    Route::delete('/reviews/{id}', [CustomerController::class, 'deleteReview']);
+    Route::get('/reviews/booking/{bookingId}', [CustomerController::class, 'getReviewForBooking']);
+    Route::get('/reviews/my', [CustomerController::class, 'getMyReviews']);
+    
+    // Complaints
+    Route::post('/complaints', [CustomerController::class, 'createComplaint']);
+    Route::get('/complaints', [CustomerController::class, 'getComplaints']);
+    Route::get('/complaints/{id}', [CustomerController::class, 'getComplaintDetails']);
+    
+    // Locations
+    Route::get('/locations', [CustomerController::class, 'getLocations']);
+    Route::post('/locations', [CustomerController::class, 'addLocation']);
+    Route::put('/locations/{id}', [CustomerController::class, 'updateLocation']);
+    Route::delete('/locations/{id}', [CustomerController::class, 'deleteLocation']);
+    Route::patch('/locations/{id}/primary', [CustomerController::class, 'setPrimaryLocation']);
+    
+    // Notifications
+    Route::get('/notifications/settings', [CustomerController::class, 'getNotificationSettings']);
+    Route::put('/notifications/settings', [CustomerController::class, 'updateNotificationSettings']);
+    
+    // Search Suggestions
+    Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
+});
+
+// Public Customer Routes (No Auth Required)
+Route::prefix('customer')->group(function () {
+    Route::get('/categories', [CategoryController::class, 'getCategories']);
+    Route::get('/services', [ServiceController::class, 'index']);
+});
 
