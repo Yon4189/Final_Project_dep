@@ -15,11 +15,11 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { api } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import AppButton from '../../components/AppButton';
 import AppInput from '../../components/AppInput';
 import { Colors } from '../constants/Colors';
+import { api } from '../services/api';
 
 // Ignore specific warnings if needed
 
@@ -33,18 +33,25 @@ interface ServiceCategory {
   icon?: string;
 }
 
-// Interface for service offering
 interface ServiceOffering {
   categoryId: string;
   categoryName: string;
   serviceName: string;
   basePrice: string;
   description: string;
-}
+  }
 
-export default function RegisterProvider() {
+interface City {
+  cityID?: string;
+  id?: string;
+  name: string;
+  }
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export default function RegisterProviderScreen() {
   const router = useRouter();
 
+  // ── Form state ──────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     fullname: '',
     email: '',
@@ -67,6 +74,7 @@ export default function RegisterProvider() {
   const [idPhoto, setIdPhoto] = useState<any>(null);
   const [credentialPhoto, setCredentialPhoto] = useState<any>(null);
   const [profilePictureUri, setProfilePictureUri] = useState<string | null>(null);
+  const [idPhoto, setIdPhoto] = useState<any>(null);
   const [idPhotoUri, setIdPhotoUri] = useState<string | null>(null);
   const [credentialPhotoUri, setCredentialPhotoUri] = useState<string | null>(null);
 
@@ -82,6 +90,7 @@ export default function RegisterProvider() {
   }, []);
 
   const fetchCities = async () => {
+    setLoadingCities(true);
     try {
       const resp = await api.get<any>('/cities');
       console.log('Cities response:', resp);
@@ -90,6 +99,9 @@ export default function RegisterProvider() {
       }
     } catch (err) {
       console.log('Error fetching cities:', err);
+      Alert.alert('Warning', 'Could not load cities. Please try again later.');
+    } finally {
+      setLoadingCities(false);
     }
   };
 
@@ -140,15 +152,39 @@ export default function RegisterProvider() {
   const addServiceOffering = () => {
     setServiceOfferings([
       ...serviceOfferings,
-      { categoryId: '', categoryName: '', serviceName: '', basePrice: '', description: '' }
+      { categoryId: '', categoryName: '', serviceName: '', basePrice: '', description: '' },
     ]);
   };
+
+  
+  // Add this temporary test function
+const testApiConnection = async () => {
+  try {
+    console.log('Testing API connection...');
+    const response = await api.get('/test'); // or any simple endpoint
+    console.log('API test response:', response);
+    Alert.alert('API Test', 'Connection successful!');
+  } catch (error) {
+    console.log('API test error:', error);
+    Alert.alert('API Test', 'Connection failed!');
+  }
+};
+
+// Add a test button temporarily in your render (near the register button)
+<AppButton
+  title="Test API"
+  onPress={testApiConnection}
+  fullWidth
+  style={{ marginTop: 10, backgroundColor: 'orange' }}
+/>
 
   const removeServiceOffering = (index: number) => {
     if (serviceOfferings.length > 1) {
       const updated = [...serviceOfferings];
       updated.splice(index, 1);
       setServiceOfferings(updated);
+    } else {
+      Alert.alert('Info', 'You need at least one service offering.');
     }
   };
 
@@ -262,10 +298,54 @@ export default function RegisterProvider() {
       return;
     }
 
-    if (!validateServiceOfferings()) {
+    if (!validateEmail(formData.email)) {
+      Alert.alert('Validation Error', 'Please enter a valid email address.');
       return;
     }
 
+    if (!formData.phone.trim()) {
+      Alert.alert('Validation Error', 'Please enter your phone number.');
+      return;
+    }
+
+    if (!validatePhone(formData.phone)) {
+      Alert.alert('Validation Error', 'Phone number must start with 09 or 07 and be 10 digits.');
+      return;
+    }
+
+    if (!formData.service_city) {
+      Alert.alert('Validation Error', 'Please select your service city.');
+      return;
+    }
+
+    if (!formData.idPhotoType) {
+      Alert.alert('Validation Error', 'Please select your ID document type.');
+      return;
+    }
+
+    if (!formData.password) {
+      Alert.alert('Validation Error', 'Please enter a password.');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      Alert.alert('Validation Error', 'Password must be at least 8 characters.');
+      return;
+    }
+
+    if (formData.password !== formData.password_confirmation) {
+      Alert.alert('Validation Error', 'Passwords do not match.');
+      return;
+    }
+
+    if (!idPhoto) {
+      Alert.alert('Validation Error', 'Please upload your ID card photo.');
+      return;
+    }
+
+    if (!validateServiceOfferings()) return;
+
+    // Build FormData
     setLoading(true);
 
     try {
@@ -309,7 +389,7 @@ export default function RegisterProvider() {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json',
         },
-        timeout: 45000,
+        timeout: 60000, // 60 seconds timeout for file uploads
       });
 
       console.log('Registration response:', response);
@@ -320,7 +400,12 @@ export default function RegisterProvider() {
           router.replace('/login');
         }, 100);
       } else {
-        Alert.alert('Error', response.message || 'Registration failed');
+        // Assume success if we got a 2xx response
+        setRegistrationSuccess(true);
+        Alert.alert(
+          'Success!',
+          'Your registration has been submitted successfully. You will be notified once your account is verified.'
+        );
       }
     } catch (err: any) {
       console.log('Registration error:', err);
@@ -346,7 +431,27 @@ export default function RegisterProvider() {
     }
   };
 
-  const renderModalItem = (item: string | any, onSelect: () => void) => (
+  // ── Success Screen ────────────────────────────────────────────────────────────
+  if (registrationSuccess) {
+    return (
+      <View style={styles.successContainer}>
+        <Ionicons name="checkmark-circle" size={80} color={Colors.success || '#4CAF50'} />
+        <Text style={styles.successTitle}>Registration Submitted!</Text>
+        <Text style={styles.successSubtitle}>
+          Your application is under review. We'll notify you once your account is verified.
+        </Text>
+        <AppButton
+          title="Go to Login"
+          onPress={() => router.replace('/(auth)/login')}
+          fullWidth
+          style={{ marginTop: 20 }}
+        />
+      </View>
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  const renderModalItem = (label: string, onSelect: () => void) => (
     <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
       <Text style={styles.modalItemText}>
         <Text>{typeof item === 'string' ? item : item.name || item.cityName || item}</Text>
@@ -458,13 +563,7 @@ export default function RegisterProvider() {
           </TouchableOpacity>
         </View>
 
-        <AppInput
-          label="Full Name"
-          value={formData.fullname}
-          onChangeText={(t: string) => setFormData({ ...formData, fullname: t })}
-          placeholder="John Doe"
-          required
-        />
+        <View style={styles.formContainer}>
 
         <AppInput
           label="Email"
@@ -544,14 +643,14 @@ export default function RegisterProvider() {
                   <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
                 </TouchableOpacity>
               </View>
+            ))}
 
-              <AppInput
-                label="Service Name"
-                value={offering.serviceName}
-                onChangeText={(t: string) => updateServiceOffering(index, 'serviceName', t)}
-                placeholder="e.g., Plumbing Repair"
-                required
-              />
+            {/* Add service button */}
+            <TouchableOpacity style={styles.addServiceButton} onPress={addServiceOffering}>
+              <Ionicons name="add-circle-outline" size={24} color={Colors.primary || '#007AFF'} />
+              <Text style={styles.addServiceText}>Add Another Service</Text>
+            </TouchableOpacity>
+          </View>
 
               <AppInput
                 label="Base Price (ETB)"
@@ -714,8 +813,7 @@ export default function RegisterProvider() {
               showsVerticalScrollIndicator={false}
             />
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
       {/* City Modal */}
       <Modal visible={showCityModal} animationType="slide" transparent>
@@ -754,6 +852,7 @@ export default function RegisterProvider() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -893,7 +992,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border || '#e0e0e0',
   },
   serviceCardHeader: {
     flexDirection: 'row',
@@ -910,10 +1009,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.primary || '#007AFF',
     borderStyle: 'dashed',
     marginTop: 8,
     backgroundColor: Colors.background,

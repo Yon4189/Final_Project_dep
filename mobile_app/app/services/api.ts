@@ -370,7 +370,10 @@ class ApiService {
 
         // Handle other status codes
         const errorMessage = this.getErrorMessage(error);
-        return Promise.reject(new Error(errorMessage));
+        const richError: any = new Error(errorMessage);
+        richError.responseData = error.response?.data;
+        richError.statusCode = error.response?.status;
+        return Promise.reject(richError);
       }
     );
   }
