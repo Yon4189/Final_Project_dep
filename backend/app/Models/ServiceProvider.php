@@ -3,62 +3,212 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
-class ServiceProvider extends Model
+class ServiceProvider extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, HasApiTokens, Notifiable;
 
     protected $table = 'service_providers';
-    protected $attributes = [
-        'status'=> 'pending', // newly registered will have pending status
-    ];
+    protected $primaryKey = 'providerID';
 
-    protected $primaryKey = 'providerID'; // primary key
+    protected $attributes = [
+        'status' => 'pending', // newly registered will have pending status
+        'rating' => 0,
+        'completed_jobs' => 0,
+        'accepted_jobs' => 0,
+    ];
 
     protected $fillable = [
-        'fullname', 'phone', 'email', 'password', 'service_city', 
-        'catagoryID', 'idPhoto', 'idPhotoType', 'credentialPhoto', 'status', 'bio', 'walletBalance', 
-        'serviceRadiusKm', 'profilePicture','estimatedPrice'
+        'fullname', 
+        'phone', 
+        'email', 
+        'password', 
+        'service_city', 
+        'catagoryID', 
+        'idPhoto', 
+        'idPhotoType', 
+        'credentialPhoto', 
+        'status', 
+        'bio', 
+        'walletBalance', 
+        'serviceRadiusKm', 
+        'profilePicture',
+        'estimatedPrice',
+        'current_latitude',
+        'current_longitude',
+        'rating',
+        'completed_jobs',
+        'accepted_jobs',
+        'approved_at',
+        'rejected_at',
+        'rejection_reason'
     ];
 
-    // a provider can have many services
-    public function services() {
-        return $this->hasMany(Service::class, 'providerID', 'providerID'); // fk, local key
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'current_latitude' => 'decimal:8',
+        'current_longitude' => 'decimal:8',
+        'rating' => 'decimal:2',
+    ];
+
+    /**
+     * Get the services for this provider
+     */
+    public function services()
+    {
+        return $this->hasMany(Service::class, 'providerID', 'providerID');
     }
 
-    // a provider can have many bookings through services
-    public function bookings() {
+    /**
+     * Get the bookings for this provider (direct relationship)
+     */
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'providerID', 'providerID');
+    }
+
+    /**
+     * Get pending bookings that need response
+     */
+    public function pendingBookings()
+    {
+        return $this->hasMany(Booking::class, 'providerID', 'providerID')
+                    ->where('status', 'pending')
+                    ->where('expires_at', '>', now());
+    }
+
+    /**
+     * Get active bookings (accepted but not completed)
+     */
+    public function activeBookings()
+    {
+        return $this->hasMany(Booking::class, 'providerID', 'providerID')
+                    ->whereIn('status', ['accepted'])
+                    ->where('scheduledDate', '>', now());
+    }
+
+    /**
+     * Get completed bookings
+     */
+    public function completedBookings()
+    {
+        return $this->hasMany(Booking::class, 'providerID', 'providerID')
+                    ->where('status', 'completed');
+    }
+
+    /**
+     * Get reviews for this provider (through bookings)
+     */
+    public function reviews()
+    {
         return $this->hasManyThrough(
+            Review::class,
             Booking::class,
-            Service::class,
-            'providerID', // foreign key on services table
-            'serviceID',  // foreign key on bookings table
-            'providerID', // local key on providers table
-            'serviceID'   // local key on services table
+            'providerID', // Foreign key on bookings table
+            'bookingID',  // Foreign key on reviews table
+            'providerID', // Local key on providers table
+            'bookingID'   // Local key on bookings table
         );
     }
 
-    // a provider can have many transactions through bookings
-    public function transactions() {
-        return $this->hasManyThrough(
-            Transaction::class,
-            Booking::class,
-            'serviceID',   // foreign key on bookings table (points to services)
-            'bookingID',   // foreign key on transactions table
-            'providerID',  // local key on providers table
-            'bookingID'    // local key on bookings table
-        );
+    /**
+     * Get the category this provider belongs to
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'catagoryID', 'catagoryID');
     }
 
-    //connecting to notification
+    /**
+     * Get notifications for this provider (polymorphic)
+     */
+    public function notifications()
+    {
+        return $this->morphMany(Notification::class, 'notifiable');
+    }
 
-    public function notifications() {
-            return $this->hasMany(Notification::class, 'providerID', 'providerID');
+    /**
+     * Check if provider is approved
+     */
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    /**
+     * Check if provider is pending approval
+     */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    /**
+     * Calculate success rate
+     */
+    public function getSuccessRateAttribute(): float
+    {
+        if ($this->accepted_jobs === 0) {
+            return 0;
         }
+        return round(($this->completed_jobs / $this->accepted_jobs) * 100, 2);
+    }
 
-    public function category(){
-        return $this->belongsTo(\App\Models\Category::class, 'catagoryID', 'catagoryID');
+    /**
+     * Update provider's average rating from all reviews
+     */
+    public function updateRating(): void
+    {
+        $avgRating = $this->reviews()->avg('rating') ?? 0;
+        $this->rating = round($avgRating, 2);
+        $this->save();
+    }
+
+    /**
+     * Scope to only include approved providers
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    /**
+     * Scope to only include providers in a specific city
+     */
+    public function scopeInCity($query, $city)
+    {
+        return $query->where('service_city', $city);
+    }
+
+    /**
+     * Scope to only include providers with specific service category
+     */
+    public function scopeWithCategory($query, $categoryId)
+    {
+        return $query->where('catagoryID', $categoryId);
+    }
+
+    /**
+     * Scope to order by proximity to given coordinates
+     */
+    public function scopeNearest($query, $latitude, $longitude)
+    {
+        $sql = "(6371 * acos(cos(radians(?)) * cos(radians(current_latitude)) 
+                * cos(radians(current_longitude) - radians(?)) 
+                + sin(radians(?)) * sin(radians(current_latitude)))) AS distance";
+        
+        return $query->select('service_providers.*')
+            ->selectRaw($sql, [$latitude, $longitude, $latitude])
+            ->orderBy('distance');
     }
 }
