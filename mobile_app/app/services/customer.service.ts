@@ -295,27 +295,6 @@ class CustomerService {
 
   // ==================== Service Requests ====================
 
-  async createServiceRequest(data: {
-    providerId: string;
-    serviceId: string;
-    scheduledDate: string;
-    scheduledTime: string;
-    locationId?: string;
-    address?: string;
-    description?: string;
-    specialInstructions?: string;
-    estimatedDuration?: number;
-  }): Promise<ApiResponse<ServiceRequest>> {
-    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/requests`, data);
-    
-    if (response.success) {
-      // Invalidate requests cache
-      await storage.removeItem('user_requests');
-    }
-    
-    return response;
-  }
-
   async getMyRequests(status?: string): Promise<ApiResponse<ServiceRequest[]>> {
     const cacheKey = status ? `user_requests_${status}` : 'user_requests';
     const cached = await storage.getItem<ServiceRequest[]>(cacheKey);
@@ -633,7 +612,7 @@ class CustomerService {
     description?: string;
     estimated_price?: number;
   }): Promise<ApiResponse<any>> {
-    const response = await api.post<any>(`${this.BASE_PATH}/bookings`, data);
+    const response = await api.post<any>(`${this.BASE_PATH}/requests`, data);
     
     if (response.success) {
       // Invalidate relevant caches

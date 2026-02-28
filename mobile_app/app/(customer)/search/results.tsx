@@ -23,18 +23,26 @@ const { width } = Dimensions.get('window');
 
 export default function SearchResultsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ query?: string }>();
+  const params = useLocalSearchParams<{
+    query?: string;
+    q?: string;
+    categoryId?: string;
+    category?: string;
+  }>();
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [sortBy, setSortBy] = useState('rating');
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
   const [ratingFilter, setRatingFilter] = useState(0);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState(params.query || '');
+  const [searchQuery, setSearchQuery] = useState(params.query || params.q || '');
+
+  const categoryId = params.categoryId || params.category;
 
   // Use the search hook with proper filters
   const { results: providers, loading: isLoading, error } = useSearch({
     initialQuery: searchQuery,
     initialFilters: {
+      ...(categoryId ? { categoryId } : {}),
       sortBy: sortBy as 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews',
      
       maxDistance: 50,

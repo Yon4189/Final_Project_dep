@@ -93,11 +93,11 @@ export default function RequestDetails() {
   };
 
   const handleMessageProvider = () => {
-    router.push(`/customer/messages/${request.providerId}`);
+    Alert.alert('Coming Soon', 'Messaging is not available yet.');
   };
 
   const handleTrackProvider = () => {
-    router.push(`/customer/requests/${id}/track`);
+    Alert.alert('Coming Soon', 'Live tracking is not available yet.');
   };
 
   const handleCancelRequest = async () => {
@@ -116,7 +116,7 @@ export default function RequestDetails() {
   };
 
   const handlePayNow = () => {
-    router.push(`/customer/requests/${id}/payment`);
+    Alert.alert('Info', 'Payment is handled during request creation.');
   };
 
   const handleReportIssue = () => {

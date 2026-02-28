@@ -114,7 +114,7 @@ export default function CustomerLayout() {
             </TouchableOpacity>
           ),
           headerRight: () => (
-            <TouchableOpacity onPress={() => router.push('/customer/wallet/transactions')} style={{ marginLeft: 16 }}>
+            <TouchableOpacity onPress={() => router.push('/(customer)/wallet')} style={{ marginLeft: 16 }}>
               <Ionicons name="time-outline" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           ),

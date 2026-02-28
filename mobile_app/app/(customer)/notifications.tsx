@@ -141,31 +141,27 @@ export default function Notifications() {
       case 'request_update':
       case 'provider_response':
         if (notification.data?.requestId) {
-          router.push(`/customer/requests/${notification.data.requestId}`);
+          router.push(`/(customer)/requests/${notification.data.requestId}`);
         } else {
-          router.push('/customer/requests');
+          router.push('/(customer)/requests');
         }
         break;
       case 'payment':
         if (notification.data?.bookingId) {
-          router.push(`/customer/bookings/${notification.data.bookingId}`);
+          router.push(`/(customer)/requests/${notification.data.bookingId}`);
         } else {
-          router.push('/customer/bookings');
+          router.push('/(customer)/bookings');
         }
         break;
       case 'reminder':
         if (notification.data?.bookingId) {
-          router.push(`/customer/bookings/${notification.data.bookingId}`);
+          router.push(`/(customer)/requests/${notification.data.bookingId}`);
         } else {
-          router.push('/customer/bookings');
+          router.push('/(customer)/bookings');
         }
         break;
       case 'review':
-        if (notification.data?.bookingId) {
-          router.push(`/customer/review/${notification.data.bookingId}`);
-        } else {
-          router.push('/customer/reviews');
-        }
+        router.push('/(customer)/requests');
         break;
       case 'promo':
         // Stay on notifications page or go to promotions

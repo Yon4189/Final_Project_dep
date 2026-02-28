@@ -112,7 +112,7 @@ export default function PaymentScreen() {
         [
           {
             text: 'View Bookings',
-            onPress: () => router.push('/customer/bookings'),
+            onPress: () => router.push('/(customer)/bookings'),
           },
           {
             text: 'OK',
@@ -346,7 +346,7 @@ export default function PaymentScreen() {
           {paymentStatus === 'completed' && (
             <TouchableOpacity
               style={styles.doneButton}
-              onPress={() => router.push('/customer/bookings')}
+              onPress={() => router.push('/(customer)/bookings')}
             >
               <Text style={styles.doneButtonText}>View My Bookings</Text>
             </TouchableOpacity>
