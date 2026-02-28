@@ -17,6 +17,7 @@ import Payments from './pages/Payments';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import ResetPassword from './pages/ResetPassword';
+import Payment from './pages/Payment';
 
 /**
  * 🛡️ ProtectedRoute Component
@@ -42,7 +43,8 @@ function App() {
         <Routes>
           {/* ✅ 1. PUBLIC ROUTES - Anyone can see these */}
           <Route path="/login" element={<Login />} />
-          <Route path="/reset-password" element={<ResetPassword />} /> 
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/payment/:txRef" element={<Payment />} /> 
 
           {/* 🔐 2. PROTECTED ROUTES - Only logged-in users */}
           <Route 

@@ -11,6 +11,9 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProviderDashboardController;
 use App\Http\Controllers\ServiceCityController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\WebhookController;
 
 // customer registration endpoint
 Route::get('/cities', [ServiceCityController::class, 'index']);
@@ -75,4 +78,27 @@ Route::get('/provider/earnings/summary', [ProviderDashboardController::class, 'g
 Route::get('/provider/requests', [ProviderDashboardController::class, 'getRequests']);
 Route::get('/provider/reviews', [ProviderDashboardController::class, 'getReviews']);
 Route::get('/provider/profile', [ServiceProviderAuthController::class, 'getProfile']);
+
+// Webhook Routes (Public)
+Route::post('/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
+
+// Customer Payment Routes (Mobile App)
+Route::post('/customer/payment/initialize', [PaymentController::class, 'initialize']);
+Route::get('/customer/payment/verify/{tx_ref}', [PaymentController::class, 'verify']);
+Route::get('/customer/payment/{tx_ref}', [PaymentController::class, 'show']);
+Route::post('/customer/payment/cancel/{tx_ref}', [PaymentController::class, 'cancel']);
+Route::get('/customer/payment/history/{customer_id}', [PaymentController::class, 'customerHistory']);
+
+// Service Provider Withdrawal Routes (Mobile App)
+Route::post('/provider/withdrawal/create', [WithdrawalController::class, 'create']);
+Route::get('/provider/withdrawal/status/{withdrawal_ref}', [WithdrawalController::class, 'status']);
+Route::get('/provider/withdrawal/history/{provider_id}', [WithdrawalController::class, 'providerHistory']);
+
+// Admin Payment Management Routes (Web App)
+Route::get('/admin/payments', [PaymentController::class, 'index']);
+Route::get('/admin/withdrawals', [WithdrawalController::class, 'index']);
+Route::post('/admin/withdrawal/process/{withdrawal_id}', [WithdrawalController::class, 'process']);
+Route::post('/admin/withdrawal/cancel/{withdrawal_id}', [WithdrawalController::class, 'cancel']);
+Route::get('/admin/payments/stats', [PaymentController::class, 'getPaymentStats']);
+Route::get('/admin/withdrawals/stats', [WithdrawalController::class, 'getWithdrawalStats']);
 

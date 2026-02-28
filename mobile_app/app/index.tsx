@@ -86,9 +86,9 @@ export default function LandingScreen() {
   }, []);
   const handleContinue = () => {
     if (selectedRole === 'customer') {
-      router.push('/(auth)/register-customer');
+      router.push('/register-customer');
     } else if (selectedRole === 'provider') {
-      router.push('/(auth)/register-provider');
+      router.push('/register-provider');
     }
   };
 
@@ -96,8 +96,12 @@ export default function LandingScreen() {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { marginTop: 40 }]}>
-        <Text style={styles.title}>HomeService Pro</Text>
-        <Text style={styles.subtitle}>Find Trusted Home Service Providers</Text>
+        <Text style={styles.title}>
+          <Text>HomeService Pro</Text>
+        </Text>
+        <Text style={styles.subtitle}>
+          <Text>Find Trusted Home Service Providers</Text>
+        </Text>
       </View>
 
       {/* Hero Section */}
@@ -107,24 +111,30 @@ export default function LandingScreen() {
           style={styles.heroImage}
         />
         <View style={styles.heroOverlay}>
-          <Text style={styles.heroText}>Quality Service at Your Doorstep</Text>
+          <Text style={styles.heroText}>
+            <Text>Quality Service at Your Doorstep</Text>
+          </Text>
         </View>
       </View>
 
       {/* Services Section */}
       <View style={styles.servicesSection}>
-        <Text style={styles.sectionTitle}>Our Services</Text>
+        <Text style={styles.sectionTitle}>
+          <Text>Our Services</Text>
+        </Text>
         <View style={styles.servicesGrid}>
           {categories.length > 0 ? (
             categories.slice(0, 9).map((category) => (
               <TouchableOpacity key={category.catagoryID} style={styles.serviceCard}>
                 <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
-                <Text style={styles.serviceName}>{category.name}</Text>
+                <Text style={styles.serviceName}>
+                  <Text>{category.name}</Text>
+                </Text>
               </TouchableOpacity>
             ))
           ) : (
             <Text style={{ textAlign: 'center', width: '100%', color: Colors.text.secondary }}>
-              Loading services...
+              <Text>Loading services...</Text>
             </Text>
           )}
         </View>
@@ -132,7 +142,9 @@ export default function LandingScreen() {
 
       {/* Role Selection */}
       <View style={styles.roleSection}>
-        <Text style={styles.sectionTitle}>Join HomeService Pro</Text>
+        <Text style={styles.sectionTitle}>
+          <Text>Join HomeService Pro</Text>
+        </Text>
         <View style={styles.roleContainer}>
           <RoleCard
             title="I Need Service"
@@ -164,18 +176,24 @@ export default function LandingScreen() {
       <View style={styles.statsSection}>
         {stats.map((stat, index) => (
           <View key={index} style={styles.statItem}>
-            <Text style={styles.statNumber}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
+            <Text style={styles.statNumber}>
+              <Text>{stat.value}</Text>
+            </Text>
+            <Text style={styles.statLabel}>
+              <Text>{stat.label}</Text>
+            </Text>
           </View>
         ))}
       </View>
 
       {/* CTA Section */}
       <View style={styles.ctaSection}>
-        <Text style={styles.ctaTitle}>Already have an account?</Text>
+        <Text style={styles.ctaTitle}>
+          <Text>Already have an account?</Text>
+        </Text>
         <AppButton
           title="Sign In"
-          onPress={() => router.push('../(auth)/login')}
+          onPress={() => router.push('/login')}
           variant="outline"
           fullWidth
           style={styles.ctaButton}

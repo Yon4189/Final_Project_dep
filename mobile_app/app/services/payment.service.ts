@@ -145,7 +145,7 @@ interface WalletTransactionsResult {
 }
 
 class PaymentService {
-  private readonly BASE_PATH = "/payments";
+  private readonly BASE_PATH = "";
   private readonly CHAPA_REDIRECT_URL = "homelink://payment/callback";
 
   // ==================== Payment Methods ====================
@@ -232,17 +232,27 @@ class PaymentService {
     email: string;
     firstName: string;
     lastName: string;
-    title?: string;
-    description?: string;
+    phoneNumber?: string;
+    customerId: string;
     bookingId?: string;
+    paymentMethod?: string;
+    description?: string;
     metadata?: Record<string, any>;
   }): Promise<PaymentIntent> {
-    const response = await api.post<PaymentIntent>(
-      `${this.BASE_PATH}/chapa/initialize`,
+    const response = await api.post<any>(
+      `${this.BASE_PATH}/customer/payment/initialize`,
       {
-        ...data,
-        callback_url: this.CHAPA_REDIRECT_URL,
-        return_url: this.CHAPA_REDIRECT_URL,
+        amount: data.amount,
+        customer_id: data.customerId,
+        customer_email: data.email,
+        customer_first_name: data.firstName,
+        customer_last_name: data.lastName,
+        customer_phone: data.phoneNumber,
+        payment_method: data.paymentMethod || 'telebirr',
+        booking_id: data.bookingId,
+        callback_url: `${this.CHAPA_REDIRECT_URL}`,
+        return_url: `${this.CHAPA_REDIRECT_URL}`,
+        meta_data: data.metadata
       },
     );
 
@@ -251,21 +261,34 @@ class PaymentService {
     }
 
     // Store payment intent
-    await storage.setItem(`payment_intent_${response.data.id}`, response.data);
+    await storage.setItem(`payment_intent_${response.data.payment_id}`, response.data);
 
-    return response.data;
+    return {
+      id: response.data.payment_id,
+      amount: response.data.amount,
+      currency: response.data.currency,
+      status: response.data.status,
+      checkoutUrl: response.data.checkout_url,
+      transactionId: response.data.tx_ref,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
+    };
   }
 
   async verifyChapaPayment(txRef: string): Promise<PaymentVerificationResult> {
-    const response = await api.get<PaymentVerificationResult>(
-      `${this.BASE_PATH}/chapa/verify/${txRef}`,
+    const response = await api.get<any>(
+      `${this.BASE_PATH}/customer/payment/verify/${txRef}`,
     );
 
     if (!response.success || !response.data) {
       throw new Error(response.message || "Failed to verify payment");
     }
 
-    return response.data;
+    return {
+      status: response.data.status,
+      transactionId: response.data.tx_ref,
+      amount: response.data.amount,
+      bookingId: response.data.booking_id,
+    };
   }
 
   // ==================== WebView Payment Handling ====================
@@ -432,17 +455,20 @@ class PaymentService {
 
   async requestWithdrawal(data: {
     amount: number;
-    paymentMethod: "bank" | "mobile_money";
-    accountDetails: {
-      bankName?: string;
-      accountNumber?: string;
-      accountName?: string;
-      phoneNumber?: string;
-    };
+    providerId: string;
+    bankName: string;
+    accountNumber: string;
+    accountHolderName: string;
   }): Promise<WithdrawalRequest> {
-    const response = await api.post<WithdrawalRequest>(
-      `${this.BASE_PATH}/withdrawals`,
-      data,
+    const response = await api.post<any>(
+      `${this.BASE_PATH}/provider/withdrawal/create`,
+      {
+        amount: data.amount,
+        provider_id: data.providerId,
+        bank_name: data.bankName,
+        account_number: data.accountNumber,
+        account_holder_name: data.accountHolderName,
+      },
     );
 
     if (!response.success || !response.data) {
@@ -452,16 +478,45 @@ class PaymentService {
     // Invalidate wallet balance cache
     await storage.removeItem("wallet_balance");
 
-    return response.data;
+    return {
+      id: response.data.withdrawal_id || response.data.id,
+      amount: response.data.amount,
+      fee: response.data.platform_fee || 0,
+      netAmount: response.data.net_amount || response.data.amount,
+      status: response.data.status,
+      paymentMethod: "bank",
+      accountDetails: {
+        bankName: data.bankName,
+        accountNumber: data.accountNumber,
+        accountName: data.accountHolderName,
+      },
+      createdAt: new Date().toISOString(),
+    };
   }
 
-  async getWithdrawalHistory(): Promise<WithdrawalRequest[]> {
-    const response = await api.get<WithdrawalRequest[]>(
-      `${this.BASE_PATH}/withdrawals`,
-    );
+  async getWithdrawalHistory(providerId?: string): Promise<WithdrawalRequest[]> {
+    const url = providerId 
+      ? `${this.BASE_PATH}/provider/withdrawal/history/${providerId}`
+      : `${this.BASE_PATH}/withdrawals`;
+      
+    const response = await api.get<any[]>(url);
 
     if (response.success && response.data) {
-      return response.data;
+      return response.data.map((withdrawal: any) => ({
+        id: withdrawal.id,
+        amount: withdrawal.amount,
+        fee: withdrawal.platform_fee || 0,
+        netAmount: withdrawal.net_amount || withdrawal.amount,
+        status: withdrawal.status,
+        paymentMethod: "bank",
+        accountDetails: {
+          bankName: withdrawal.provider_bank_name || withdrawal.bankName,
+          accountNumber: withdrawal.provider_account_number || withdrawal.accountNumber,
+          accountName: withdrawal.provider_account_holder_name || withdrawal.accountHolderName,
+        },
+        createdAt: withdrawal.created_at || withdrawal.createdAt,
+        processedAt: withdrawal.processed_at || withdrawal.processedAt,
+      }));
     }
 
     return [];
