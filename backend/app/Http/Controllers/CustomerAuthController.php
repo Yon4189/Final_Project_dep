@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Laravel\Sanctum\HasApiTokens; 
+
 
 class CustomerAuthController extends Controller
 {
@@ -101,40 +103,52 @@ class CustomerAuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+public function login(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        // Search for customer by their email
-        $customer = Customer::where('email', $request->email)->first();
-        
-        if (!$customer || !Hash::check($request->password, $customer->password)) {
-            Log::warning('Login failed for email:', ['email' => $request->email]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid email or password'
-            ], 401);
-        }
-
-        // Don't send password in response
-        unset($customer->password);
-
+    if ($validator->fails()) {
         return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'data' => $customer
-        ]);
+            'success' => false,
+            'message' => 'Validation errors',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    // Find customer
+    $customer = Customer::where('email', $request->email)->first();
+
+    if (!$customer || !Hash::check($request->password, $customer->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid email or password'
+        ], 401);
+    }
+
+    // Remove password from response
+    unset($customer->password);
+
+    // Create a Sanctum token
+    $token = $customer->createToken('customer_token')->plainTextToken;
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'data' => [
+            'customerID' => $customer->customerID,
+            'user_type' => 'customer',
+            'token' => $token,
+            'profilePicture' => $customer->profilePicture,
+            'fullname' => $customer->fullname,
+            'email' => $customer->email,
+            'phone' => $customer->phone,
+            'service_city' => $customer->service_city,
+            'location' => $customer->location
+        ]
+    ]);
     }
 }
