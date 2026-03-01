@@ -1,736 +1,329 @@
 // components/customer/ProviderCard.tsx
-import { Colors } from "@/app/constants/Colors";
-import type { ServiceProvider } from "@/app/types/customer.types";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
+import React from 'react';
 import {
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
-} from "react-native";
-import { RatingStars } from "./ratingstars";
-
-const { width } = Dimensions.get("window");
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/app/constants/Colors';
+import type { ServiceProvider } from '@/app/types/customer.types';
 
 interface ProviderCardProps {
   provider: ServiceProvider;
-  onPress: (provider: ServiceProvider) => void;
-  variant?: "list" | "grid" | "horizontal";
+  onPress: () => void;
   showDistance?: boolean;
   showBadges?: boolean;
   showActions?: boolean;
-  compact?: boolean;
+  showServices?: boolean;
+  showCategory?: boolean;
 }
 
 export const ProviderCard: React.FC<ProviderCardProps> = ({
   provider,
   onPress,
-  variant = "list",
   showDistance = true,
   showBadges = true,
-  showActions = true,
-  compact = false,
+  showActions = false,
+  showServices = true,
+  showCategory = true,
 }) => {
-  const getInitials = (name: string) => {
-    if (!name) return "??";
-    return name
-      .split(" ")
-      .map((word) => word?.[0] || "")
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const formatDistance = (distance?: number) => {
+    if (!distance) return null;
+    if (distance < 1) {
+      return `${(distance * 1000).toFixed(0)}m`;
+    }
+    return `${distance.toFixed(1)}km`;
   };
 
-  const renderBadges = () => {
-    if (!showBadges) return null;
-
-    return (
-      <View style={styles.badgesContainer}>
-        {provider.verified && (
-          <View style={[styles.badge, styles.verifiedBadge]}>
-            <Ionicons
-              name="checkmark-circle"
-              size={12}
-              color={Colors.surface}
-            />
-            <Text style={styles.badgeText}>Verified</Text>
-          </View>
-        )}
-        {provider.insured && (
-          <View style={[styles.badge, styles.insuredBadge]}>
-            <Ionicons
-              name="shield-checkmark"
-              size={12}
-              color={Colors.surface}
-            />
-            <Text style={styles.badgeText}>Insured</Text>
-          </View>
-        )}
-        {provider.completedJobs && provider.completedJobs > 100 && (
-          <View style={[styles.badge, styles.expertBadge]}>
-            <Ionicons name="trophy" size={12} color={Colors.surface} />
-            <Text style={styles.badgeText}>Expert</Text>
-          </View>
-        )}
-      </View>
-    );
+  const getPrimaryService = () => {
+    if (!provider.services || provider.services.length === 0) return null;
+    const service = provider.services[0];
+    return (service as any)?.serviceName || (service as any)?.name || 'Service';
   };
 
-  const renderListVariant = () => (
-    <TouchableOpacity
-      style={[styles.card, styles.listCard]}
-      onPress={() => onPress(provider)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.listContent}>
-        {/* Provider Image */}
+  const getServiceCount = () => {
+    return provider.services?.length || 0;
+  };
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.header}>
         <View style={styles.imageContainer}>
-          {provider.profileImage ? (
-            <Image
-              source={{ uri: provider.profileImage }}
-              style={styles.providerImage}
-            />
-          ) : (
-            <LinearGradient
-              colors={[Colors.primary + "80", Colors.primary]}
-              style={styles.initialsContainer}
-            >
-              <Text style={styles.initialsText}>
-                {getInitials(provider.businessName || provider.name || "")}
-              </Text>
-            </LinearGradient>
-          )}
-          {provider.verified && (
-            <View style={styles.verifiedIcon}>
-              <Ionicons
-                name="checkmark-circle"
-                size={18}
-                color={Colors.primary}
-              />
+          <Image
+            source={{ uri: provider.profileImage || 'https://via.placeholder.com/60' }}
+            style={styles.image}
+          />
+          {provider.verified && showBadges && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
             </View>
           )}
         </View>
 
-        {/* Provider Info */}
-        <View style={styles.infoContainer}>
+        <View style={styles.info}>
           <View style={styles.nameRow}>
-            <Text style={styles.providerName} numberOfLines={1}>
-              {provider.businessName || provider.name || "Service Provider"}
+            <Text style={styles.name} numberOfLines={1}>
+              {provider.businessName || provider.name || 'Provider'}
             </Text>
             {showDistance && provider.distance && (
-              <View style={styles.distanceContainer}>
-                <Ionicons
-                  name="location-outline"
-                  size={14}
-                  color={Colors.text.secondary}
-                />
-                <Text style={styles.distanceText}>
-                  {provider.distance.toFixed(1)} km
-                </Text>
+              <View style={styles.distance}>
+                <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
+                <Text style={styles.distanceText}>{formatDistance(provider.distance)}</Text>
               </View>
             )}
           </View>
 
-          {/* Rating */}
           <View style={styles.ratingRow}>
-            <RatingStars rating={provider.rating || 0} size={14} />
-            <Text style={styles.reviewCount}>
-              ({provider.reviewCount || 0} reviews)
-            </Text>
-          </View>
-
-          {/* Services */}
-          <View style={styles.servicesContainer}>
-            {provider.services?.slice(0, 3).map((service, index) => {
-              // Handle both string and object service types
-              const serviceName =
-                typeof service === "string"
-                  ? service
-                  : (service as any).serviceName ||
-                    (service as any).name ||
-                    "Service";
-
-              return (
-                <View key={index} style={styles.serviceTag}>
-                  <Text style={styles.serviceText} numberOfLines={1}>
-                    {serviceName}
-                  </Text>
-                </View>
-              );
-            })}
-            {provider.services && provider.services.length > 3 && (
-              <View style={styles.moreTag}>
-                <Text style={styles.moreText}>
-                  +{provider.services.length - 3}
-                </Text>
+            <Ionicons name="star" size={16} color={Colors.warning} />
+            <Text style={styles.rating}>{provider.rating?.toFixed(1) || '0.0'}</Text>
+            <Text style={styles.reviews}>({provider.reviewCount || 0} reviews)</Text>
+            {provider.completedJobs > 0 && (
+              <View style={styles.jobsBadge}>
+                <Text style={styles.jobsText}>{provider.completedJobs} jobs</Text>
               </View>
             )}
           </View>
 
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Ionicons
-                name="briefcase-outline"
-                size={14}
-                color={Colors.text.secondary}
-              />
-              <Text style={styles.statText}>
-                {provider.completedJobs || 0}+ jobs
-              </Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Ionicons
-                name="time-outline"
-                size={14}
-                color={Colors.text.secondary}
-              />
-              <Text style={styles.statText}>
-                {provider.responseTime || "~1h"}
-              </Text>
-            </View>
-          </View>
-
-          {/* Badges */}
-          {renderBadges()}
-
-          {/* Price and Action */}
-          {showActions && (
-            <View style={styles.actionRow}>
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceLabel}>Starting at</Text>
-                <Text style={styles.priceValue}>
-                  ${provider.priceRange?.min || 0}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.bookButton}
-                onPress={() => onPress(provider)}
-              >
-                <Text style={styles.bookButtonText}>Book Now</Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={16}
-                  color={Colors.surface}
-                />
-              </TouchableOpacity>
-            </View>
+          {showCategory && provider.category && (
+            <Text style={styles.category} numberOfLines={1}>
+              {typeof provider.category === 'string' ? provider.category : provider.category.name}
+            </Text>
           )}
         </View>
       </View>
-    </TouchableOpacity>
-  );
 
-  const renderGridVariant = () => (
-    <TouchableOpacity
-      style={[styles.card, styles.gridCard]}
-      onPress={() => onPress(provider)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.gridContent}>
-        {/* Provider Image */}
-        <View style={styles.gridImageContainer}>
-          {provider.profileImage ? (
-            <Image
-              source={{ uri: provider.profileImage }}
-              style={styles.gridProviderImage}
-            />
-          ) : (
-            <LinearGradient
-              colors={[Colors.primary + "80", Colors.primary]}
-              style={styles.gridInitialsContainer}
-            >
-              <Text style={styles.gridInitialsText}>
-                {getInitials(provider.businessName || provider.name || "")}
-              </Text>
-            </LinearGradient>
-          )}
-          {provider.verified && (
-            <View style={styles.gridVerifiedIcon}>
-              <Ionicons
-                name="checkmark-circle"
-                size={16}
-                color={Colors.primary}
-              />
-            </View>
+      {showServices && provider.services && provider.services.length > 0 && (
+        <View style={styles.servicesContainer}>
+          <Text style={styles.serviceName} numberOfLines={1}>
+            {getPrimaryService()}
+          </Text>
+          {getServiceCount() > 1 && (
+            <Text style={styles.serviceCount}>+{getServiceCount() - 1} more</Text>
           )}
         </View>
+      )}
 
-        {/* Provider Info */}
-        <Text style={styles.gridProviderName} numberOfLines={1}>
-          {provider.businessName || provider.name || "Service Provider"}
-        </Text>
-
-        {/* Rating */}
-        <View style={styles.gridRatingContainer}>
-          <RatingStars rating={provider.rating || 0} size={12} />
-          <Text style={styles.gridRatingCount}>
-            ({provider.reviewCount || 0})
+      <View style={styles.footer}>
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceLabel}>Starting from</Text>
+          <Text style={styles.price}>
+            ETB {provider.priceRange?.min || 0}
           </Text>
         </View>
 
-        {/* Service Type */}
-        <Text style={styles.gridServiceType} numberOfLines={1}>
-          {provider.services && provider.services.length > 0
-            ? typeof provider.services[0] === "string"
-              ? provider.services[0]
-              : (provider.services[0] as any).serviceName ||
-                (provider.services[0] as any).name ||
-                "Various Services"
-            : "Various Services"}
-        </Text>
-
-        {/* Distance */}
-        {showDistance && provider.distance && (
-          <View style={styles.gridDistance}>
-            <Ionicons
-              name="location-outline"
-              size={12}
-              color={Colors.text.secondary}
-            />
-            <Text style={styles.gridDistanceText}>
-              {provider.distance.toFixed(1)} km
-            </Text>
+        {showActions ? (
+          <View style={styles.actions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="chatbubble-outline" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="call-outline" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.bookButton}>
+            <Text style={styles.bookButtonText}>Book Now</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.surface} />
           </View>
         )}
-
-        {/* Price */}
-        <View style={styles.gridPriceContainer}>
-          <Text style={styles.gridPriceLabel}>From</Text>
-          <Text style={styles.gridPriceValue}>
-            ${provider.priceRange?.min || 0}
-          </Text>
-        </View>
       </View>
+
+      {provider.availableNow && (
+        <View style={styles.availableBadge}>
+          <View style={styles.availableDot} />
+          <Text style={styles.availableText}>Available Now</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
-
-  const renderHorizontalVariant = () => (
-    <TouchableOpacity
-      style={[styles.card, styles.horizontalCard]}
-      onPress={() => onPress(provider)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.horizontalContent}>
-        {/* Provider Image */}
-        <View style={styles.horizontalImageContainer}>
-          {provider.profileImage ? (
-            <Image
-              source={{ uri: provider.profileImage }}
-              style={styles.horizontalProviderImage}
-            />
-          ) : (
-            <LinearGradient
-              colors={[Colors.primary + "80", Colors.primary]}
-              style={styles.horizontalInitialsContainer}
-            >
-              <Text style={styles.horizontalInitialsText}>
-                {getInitials(provider.businessName || provider.name || "")}
-              </Text>
-            </LinearGradient>
-          )}
-        </View>
-
-        {/* Provider Info */}
-        <View style={styles.horizontalInfo}>
-          <Text style={styles.horizontalProviderName} numberOfLines={1}>
-            {provider.businessName || provider.name || "Service Provider"}
-          </Text>
-
-          <View style={styles.horizontalRating}>
-            <RatingStars rating={provider.rating || 0} size={12} />
-            <Text style={styles.horizontalReviewCount}>
-              ({provider.reviewCount || 0})
-            </Text>
-          </View>
-
-          <View style={styles.horizontalFooter}>
-            <View style={styles.horizontalPrice}>
-              <Text style={styles.horizontalPriceLabel}>from</Text>
-              <Text style={styles.horizontalPriceValue}>
-                ${provider.priceRange?.min || 0}
-              </Text>
-            </View>
-
-            {showDistance && provider.distance && (
-              <View style={styles.horizontalDistance}>
-                <Ionicons
-                  name="location-outline"
-                  size={12}
-                  color={Colors.text.secondary}
-                />
-                <Text style={styles.horizontalDistanceText}>
-                  {provider.distance.toFixed(1)} km
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  if (variant === "grid") return renderGridVariant();
-  if (variant === "horizontal") return renderHorizontalVariant();
-  return renderListVariant();
 };
 
-// Styles remain exactly the same...
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    overflow: "hidden",
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  listCard: {
+  header: {
+    flexDirection: 'row',
     marginBottom: 12,
   },
-  listContent: {
-    flexDirection: "row",
-    padding: 16,
-  },
   imageContainer: {
-    position: "relative",
-    marginRight: 16,
+    position: 'relative',
+    marginRight: 12,
   },
-  providerImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  image: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: Colors.border,
   },
-  initialsContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  initialsText: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: Colors.surface,
-  },
-  verifiedIcon: {
-    position: "absolute",
+  verifiedBadge: {
+    position: 'absolute',
     bottom: 0,
     right: 0,
     backgroundColor: Colors.surface,
     borderRadius: 10,
+    padding: 2,
   },
-  infoContainer: {
+  info: {
     flex: 1,
   },
   nameRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  providerName: {
+  name: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     color: Colors.text.primary,
     flex: 1,
-    marginRight: 8,
   },
-  distanceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  distance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   distanceText: {
-    marginLeft: 4,
     fontSize: 12,
     color: Colors.text.secondary,
+    marginLeft: 2,
   },
   ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    flexWrap: 'wrap',
   },
-  reviewCount: {
-    marginLeft: 8,
+  rating: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginLeft: 4,
+    marginRight: 4,
+  },
+  reviews: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginRight: 8,
+  },
+  jobsBadge: {
+    backgroundColor: Colors.primary + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  jobsText: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  category: {
     fontSize: 12,
     color: Colors.text.secondary,
   },
   servicesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 8,
-  },
-  serviceTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.background,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  serviceText: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  moreTag: {
-    backgroundColor: Colors.background,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  moreText: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  statItem: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statText: {
-    marginLeft: 4,
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  statDivider: {
-    width: 1,
-    height: 12,
-    backgroundColor: Colors.border,
-    marginHorizontal: 8,
-  },
-  badgesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    padding: 10,
+    borderRadius: 8,
     marginBottom: 12,
-    gap: 6,
   },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+  serviceName: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    flex: 1,
   },
-  verifiedBadge: {
-    backgroundColor: Colors.primary,
+  serviceCount: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginLeft: 8,
+    fontStyle: 'italic',
   },
-  insuredBadge: {
-    backgroundColor: Colors.success,
-  },
-  expertBadge: {
-    backgroundColor: Colors.warning,
-  },
-  badgeText: {
-    fontSize: 10,
-    color: Colors.surface,
-    fontWeight: "500",
-  },
-  actionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   priceContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
+    flex: 1,
   },
   priceLabel: {
     fontSize: 11,
     color: Colors.text.secondary,
-    marginRight: 4,
+    marginBottom: 2,
   },
-  priceValue: {
+  price: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: Colors.text.primary,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  actions: {
+    flexDirection: 'row',
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   bookButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    gap: 4,
   },
   bookButtonText: {
-    fontSize: 13,
     color: Colors.surface,
-    fontWeight: "500",
-  },
-  // Grid Variant Styles
-  gridCard: {
-    width: (width - 48) / 2,
-    marginBottom: 12,
-  },
-  gridContent: {
-    padding: 12,
-  },
-  gridImageContainer: {
-    position: "relative",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  gridProviderImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  gridInitialsContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  gridInitialsText: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: Colors.surface,
-  },
-  gridVerifiedIcon: {
-    position: "absolute",
-    bottom: 0,
-    right: 20,
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-  },
-  gridProviderName: {
     fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  gridRatingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  gridRatingCount: {
-    marginLeft: 4,
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  gridServiceType: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  gridDistance: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  gridDistanceText: {
-    marginLeft: 4,
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  gridPriceContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-  },
-  gridPriceLabel: {
-    fontSize: 11,
-    color: Colors.text.secondary,
+    fontWeight: '600',
     marginRight: 4,
   },
-  gridPriceValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: Colors.text.primary,
+  availableBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.success + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.success,
   },
-  // Horizontal Variant Styles
-  horizontalCard: {
-    width: 280,
-    marginRight: 12,
+  availableDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.success,
+    marginRight: 4,
   },
-  horizontalContent: {
-    flexDirection: "row",
-    padding: 12,
-  },
-  horizontalImageContainer: {
-    marginRight: 12,
-  },
-  horizontalProviderImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  horizontalInitialsContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  horizontalInitialsText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: Colors.surface,
-  },
-  horizontalInfo: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  horizontalProviderName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  horizontalRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  horizontalReviewCount: {
-    marginLeft: 4,
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  horizontalFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  horizontalPrice: {
-    flexDirection: "row",
-    alignItems: "baseline",
-  },
-  horizontalPriceLabel: {
+  availableText: {
     fontSize: 10,
-    color: Colors.text.secondary,
-    marginRight: 2,
-  },
-  horizontalPriceValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: Colors.text.primary,
-  },
-  horizontalDistance: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  horizontalDistanceText: {
-    marginLeft: 2,
-    fontSize: 11,
-    color: Colors.text.secondary,
+    color: Colors.success,
+    fontWeight: '600',
   },
 });

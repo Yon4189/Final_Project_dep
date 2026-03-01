@@ -1,388 +1,187 @@
 // utils/formatters.ts
-import { format, formatDistance, formatRelative, isToday, isYesterday, isThisWeek } from 'date-fns';
-import type { Currency, Coordinates, Location } from '../types/customer.types';
-
-// ==================== Date Formatters ====================
-
-export const formatDate = (date: string | Date | number, formatStr: string = 'PPP'): string => {
-  try {
-    return format(new Date(date), formatStr);
-  } catch (error) {
-    console.warn('Date formatting error:', error);
-    return 'Invalid date';
-  }
+/**
+ * Format currency to ETB
+ */
+export const formatCurrency = (amount: number | undefined | null): string => {
+  if (amount === undefined || amount === null) return 'ETB 0';
+  return `ETB ${amount.toFixed(2)}`;
 };
 
-export const formatDateTime = (date: string | Date | number): string => {
-  try {
-    return format(new Date(date), 'PPp');
-  } catch (error) {
-    return 'Invalid date';
-  }
-};
-
-export const formatTime = (date: string | Date | number): string => {
-  try {
-    return format(new Date(date), 'p');
-  } catch (error) {
-    return 'Invalid time';
-  }
-};
-
-export const formatRelativeTime = (date: string | Date | number): string => {
-  try {
-    const dateObj = new Date(date);
-    
-    if (isToday(dateObj)) {
-      return `Today at ${format(dateObj, 'h:mm a')}`;
-    }
-    if (isYesterday(dateObj)) {
-      return `Yesterday at ${format(dateObj, 'h:mm a')}`;
-    }
-    if (isThisWeek(dateObj)) {
-      return format(dateObj, 'EEEE at h:mm a');
-    }
-    
-    return format(dateObj, 'MMM d, yyyy');
-  } catch (error) {
-    return 'Invalid date';
-  }
-};
-
-export const formatTimeAgo = (date: string | Date | number): string => {
-  try {
-    return formatDistance(new Date(date), new Date(), { addSuffix: true });
-  } catch (error) {
-    return 'Invalid date';
-  }
-};
-
-export const formatDuration = (minutes: number): string => {
-  if (minutes < 60) {
-    return `${minutes} min${minutes !== 1 ? 's' : ''}`;
-  }
-  
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  
-  if (remainingMinutes === 0) {
-    return `${hours} hour${hours !== 1 ? 's' : ''}`;
-  }
-  
-  return `${hours}h ${remainingMinutes}m`;
-};
-
-export const formatTimeSlot = (start: string, end: string): string => {
-  return `${formatTime(start)} - ${formatTime(end)}`;
-};
-
-// ==================== Currency Formatters ====================
-
-export const formatCurrency = (
-  amount: number,
-  currency: Currency = 'ETB',
-  options?: Intl.NumberFormatOptions
-): string => {
-  const formatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    ...options,
+/**
+ * Format date to readable string
+ */
+export const formatDate = (date: string | Date): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
-  
-  return formatter.format(amount);
 };
 
-export const formatCompactCurrency = (amount: number, currency: Currency = 'ETB'): string => {
-  if (amount >= 1_000_000) {
-    return `${currency} ${(amount / 1_000_000).toFixed(1)}M`;
-  }
-  if (amount >= 1_000) {
-    return `${currency} ${(amount / 1_000).toFixed(1)}K`;
-  }
-  return `${currency} ${amount.toFixed(0)}`;
+/**
+ * Format time to readable string
+ */
+export const formatTime = (time: string | Date): string => {
+  const t = typeof time === 'string' ? new Date(`2000-01-01T${time}`) : time;
+  return t.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
-export const formatPriceRange = (min: number, max: number, currency: Currency = 'ETB'): string => {
-  return `${formatCurrency(min, currency)} - ${formatCurrency(max, currency)}`;
+/**
+ * Format datetime to readable string
+ */
+export const formatDateTime = (datetime: string | Date): string => {
+  const dt = typeof datetime === 'string' ? new Date(datetime) : datetime;
+  return dt.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
-export const formatPercentage = (value: number, decimals: number = 1): string => {
-  return `${value.toFixed(decimals)}%`;
-};
+/**
+ * Format time ago (e.g., "2 hours ago")
+ */
+export const formatTimeAgo = (timestamp: string | Date): string => {
+  const now = new Date();
+  const past = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  const diffMs = now.getTime() - past.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
 
-// ==================== Number Formatters ====================
-
-export const formatNumber = (num: number, options?: Intl.NumberFormatOptions): string => {
-  return new Intl.NumberFormat('en-US', options).format(num);
-};
-
-export const formatCompactNumber = (num: number): string => {
-  if (num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(1)}M`;
-  }
-  if (num >= 1_000) {
-    return `${(num / 1_000).toFixed(1)}K`;
-  }
-  return num.toString();
-};
-
-export const formatOrdinal = (num: number): string => {
-  const suffixes = ['th', 'st', 'nd', 'rd'];
-  const value = num % 100;
-  const suffix = suffixes[(value - 20) % 10] || suffixes[value] || suffixes[0];
-  return `${num}${suffix}`;
-};
-
-// ✅ FIXED: Renamed from formatDistance to formatMetricDistance to avoid conflict with date-fns import
-export const formatMetricDistance = (meters: number, unit: 'metric' | 'imperial' = 'metric'): string => {
-  if (unit === 'metric') {
-    if (meters < 1000) {
-      return `${Math.round(meters)} m`;
-    }
-    return `${(meters / 1000).toFixed(1)} km`;
+  if (diffSec < 60) {
+    return diffSec <= 5 ? 'just now' : `${diffSec} seconds ago`;
+  } else if (diffMin < 60) {
+    return `${diffMin} ${diffMin === 1 ? 'minute' : 'minutes'} ago`;
+  } else if (diffHour < 24) {
+    return `${diffHour} ${diffHour === 1 ? 'hour' : 'hours'} ago`;
+  } else if (diffDay < 7) {
+    return `${diffDay} ${diffDay === 1 ? 'day' : 'days'} ago`;
+  } else if (diffWeek < 4) {
+    return `${diffWeek} ${diffWeek === 1 ? 'week' : 'weeks'} ago`;
+  } else if (diffMonth < 12) {
+    return `${diffMonth} ${diffMonth === 1 ? 'month' : 'months'} ago`;
   } else {
-    const feet = meters * 3.28084;
-    if (feet < 5280) {
-      return `${Math.round(feet)} ft`;
-    }
-    return `${(feet / 5280).toFixed(1)} mi`;
+    return `${diffYear} ${diffYear === 1 ? 'year' : 'years'} ago`;
   }
 };
 
-// ==================== Phone Number Formatters ====================
-
-export const formatPhoneNumber = (phone: string, country: string = 'ET'): string => {
-  // Remove all non-numeric characters
-  const cleaned = phone.replace(/\D/g, '');
-  
-  // Ethiopian phone numbers
-  if (country === 'ET') {
-    if (cleaned.length === 10) {
-      return `+251 ${cleaned.slice(1, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
-    }
-    if (cleaned.length === 12 && cleaned.startsWith('251')) {
-      return `+251 ${cleaned.slice(3, 6)} ${cleaned.slice(6, 9)} ${cleaned.slice(9)}`;
-    }
+/**
+ * Format distance
+ */
+export const formatDistance = (distance: number | undefined | null): string => {
+  if (distance === undefined || distance === null) return 'Distance unknown';
+  if (distance < 1) {
+    return `${Math.round(distance * 1000)}m away`;
   }
-  
-  // Default formatting
-  return phone;
+  return `${distance.toFixed(1)}km away`;
 };
 
-export const formatMaskedPhone = (phone: string): string => {
+/**
+ * Format phone number
+ */
+export const formatPhoneNumber = (phone: string): string => {
+  // Format: 0912 345 678
   const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length >= 10) {
-    const last4 = cleaned.slice(-4);
-    return `**** *** ${last4}`;
+  const match = cleaned.match(/^(\d{4})(\d{3})(\d{3})$/);
+  if (match) {
+    return `${match[1]} ${match[2]} ${match[3]}`;
   }
   return phone;
 };
 
-// ==================== Address Formatters ====================
-
-export const formatAddress = (location: Partial<Location>): string => {
-  const parts = [
-    location.addressLine1,
-    location.addressLine2,
-    location.city,
-    location.state,
-    location.postalCode,
-    location.country,
-  ].filter(Boolean);
-  
-  return parts.join(', ');
-};
-
-export const formatShortAddress = (location: Partial<Location>): string => {
-  if (location.city && location.state) {
-    return `${location.city}, ${location.state}`;
-  }
-  if (location.city) {
-    return location.city;
-  }
-  return location.addressLine1 || '';
-};
-
-export const formatCoordinates = (coords: Coordinates): string => {
-  return `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
-};
-
-// ==================== Name Formatters ====================
-
-export const formatInitials = (name: string, maxLetters: number = 2): string => {
-  return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, maxLetters);
-};
-
-export const formatFullName = (firstName: string, lastName: string): string => {
-  return `${firstName} ${lastName}`.trim();
-};
-
-export const formatMaskedName = (name: string): string => {
-  const parts = name.split(' ');
-  if (parts.length === 1) {
-    return parts[0].charAt(0) + '*'.repeat(parts[0].length - 1);
-  }
-  
-  const firstName = parts[0];
-  const lastName = parts[parts.length - 1];
-  
-  return `${firstName} ${lastName.charAt(0)}***`;
-};
-
-// ==================== File Size Formatters ====================
-
-export const formatFileSize = (bytes: number): string => {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-  
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
-
-// ==================== Duration Formatters ====================
-
-export const formatSecondsToMinutes = (seconds: number): string => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
-
-export const formatHoursToDays = (hours: number): string => {
-  if (hours < 24) {
-    return `${hours} hour${hours !== 1 ? 's' : ''}`;
-  }
-  
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-  
-  if (remainingHours === 0) {
-    return `${days} day${days !== 1 ? 's' : ''}`;
-  }
-  
-  return `${days}d ${remainingHours}h`;
-};
-
-// ==================== Rating Formatters ====================
-
-export const formatRating = (rating: number): string => {
+/**
+ * Format rating to display
+ */
+export const formatRating = (rating: number | undefined | null): string => {
+  if (rating === undefined || rating === null) return '0.0';
   return rating.toFixed(1);
 };
 
-export const formatRatingStars = (rating: number): string => {
-  const fullStars = Math.floor(rating);
-  const halfStar = rating % 1 >= 0.5;
-  const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-  
-  return '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
-};
-
-// ==================== List Formatters ====================
-
-export const formatList = (items: string[], conjunction: string = 'and'): string => {
-  if (items.length === 0) return '';
-  if (items.length === 1) return items[0];
-  if (items.length === 2) return `${items[0]} ${conjunction} ${items[1]}`;
-  
-  const lastItem = items[items.length - 1];
-  const otherItems = items.slice(0, -1).join(', ');
-  
-  return `${otherItems}, ${conjunction} ${lastItem}`;
-};
-
-export const formatTruncatedText = (text: string, maxLength: number = 100): string => {
+/**
+ * Truncate text with ellipsis
+ */
+export const truncateText = (text: string, maxLength: number): string => {
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength).trim() + '...';
+  return text.substring(0, maxLength) + '...';
 };
 
-// ==================== JSON Formatters ====================
-
-export const formatJSON = (data: any, pretty: boolean = true): string => {
-  try {
-    return pretty 
-      ? JSON.stringify(data, null, 2)
-      : JSON.stringify(data);
-  } catch (error) {
-    return 'Invalid JSON';
-  }
+/**
+ * Format booking status for display
+ */
+export const formatBookingStatus = (status: string): { label: string; color: string } => {
+  const statusMap: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Pending', color: '#F59E0B' },
+    confirmed: { label: 'Confirmed', color: '#3B82F6' },
+    in_progress: { label: 'In Progress', color: '#8B5CF6' },
+    completed: { label: 'Completed', color: '#10B981' },
+    cancelled: { label: 'Cancelled', color: '#EF4444' },
+    disputed: { label: 'Disputed', color: '#F59E0B' },
+    refunded: { label: 'Refunded', color: '#6B7280' },
+  };
+  return statusMap[status] || { label: status, color: '#6B7280' };
 };
 
-// ==================== HTML Formatters ====================
-
-export const stripHTML = (html: string): string => {
-  return html.replace(/<[^>]*>/g, '');
+/**
+ * Format payment status for display
+ */
+export const formatPaymentStatus = (status: string): { label: string; color: string } => {
+  const statusMap: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Pending', color: '#F59E0B' },
+    processing: { label: 'Processing', color: '#3B82F6' },
+    paid: { label: 'Paid', color: '#10B981' },
+    held: { label: 'Held', color: '#8B5CF6' },
+    released: { label: 'Released', color: '#10B981' },
+    refunded: { label: 'Refunded', color: '#6B7280' },
+    failed: { label: 'Failed', color: '#EF4444' },
+    cancelled: { label: 'Cancelled', color: '#6B7280' },
+  };
+  return statusMap[status] || { label: status, color: '#6B7280' };
 };
 
-// ==================== Case Formatters ====================
-
-export const capitalize = (text: string): string => {
-  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+/**
+ * Format file size
+ */
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export const capitalizeWords = (text: string): string => {
-  return text
+/**
+ * Format number with commas
+ */
+export const formatNumber = (num: number): string => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+/**
+ * Format percentage
+ */
+export const formatPercentage = (value: number, decimals: number = 0): string => {
+  return `${value.toFixed(decimals)}%`;
+};
+
+/**
+ * Get initials from name
+ */
+export const getInitials = (name: string): string => {
+  return name
     .split(' ')
-    .map(word => capitalize(word))
-    .join(' ');
-};
-
-export const toTitleCase = (text: string): string => {
-  return text
-    .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-export const toSentenceCase = (text: string): string => {
-  const sentences = text.split(/[.!?]+/);
-  return sentences
-    .map(sentence => {
-      const trimmed = sentence.trim();
-      if (trimmed.length === 0) return '';
-      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-    })
-    .join('. ')
-    .trim();
-};
-
-export const toCamelCase = (text: string): string => {
-  return text
-    .toLowerCase()
-    .replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase());
-};
-
-export const toSnakeCase = (text: string): string => {
-  return text
-    .toLowerCase()
-    .replace(/[^a-zA-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-};
-
-export const toKebabCase = (text: string): string => {
-  return text
-    .toLowerCase()
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-};
-
-// ==================== Slug Formatters ====================
-
-export const createSlug = (text: string): string => {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
 };

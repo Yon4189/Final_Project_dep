@@ -1,7 +1,7 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../app/constants/Colors';
-import type { ServiceProvider, ProfessionalService } from '../app/types/customer.types';
+import type { ProfessionalService } from '../app/types/customer.types';
 
 type Props = {
   name: string;
@@ -64,7 +64,7 @@ export default function ProviderCard({
           <View style={styles.servicesContainer}>
             <Text style={styles.servicesTitle}>Services:</Text>
             {services.slice(0, 3).map((service, index) => (
-              <Text key={index} style={styles.serviceItem}>• {service.name || service}</Text>
+              <Text key={index} style={styles.serviceItem}>• {service.service?.name ?? 'Service'}</Text>
             ))}
             {services.length > 3 && (
               <Text style={styles.moreServices}>+{services.length - 3} more</Text>

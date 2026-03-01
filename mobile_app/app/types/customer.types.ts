@@ -12,21 +12,25 @@ export type Rating = 1 | 2 | 3 | 4 | 5;
 
 export interface User {
   id: ID;
+  customerID?: ID; // Add this to match your database
   name: string;
+  fullname?: string; // Add this to match your database
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone?: string;
+  phoneNumber?: string; // Add this
   profileImage?: string;
-  role: 'homeowner' | 'professional' | 'admin';
+  profilePicture?: string; // Add this to match your database
+  role: 'homeowner' | 'professional' | 'admin' | 'customer' | 'provider';
   isActive: boolean;
   isVerified: boolean;
+  service_city?: string; // Add this
+  location?: string; // Add this
+  bio?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   deletedAt?: Timestamp;
-
-  // Profile
-  bio?: string;
-  dateOfBirth?: Timestamp;
-  gender?: 'male' | 'female' | 'other';
 
   // Settings
   language?: string;
@@ -98,13 +102,14 @@ export interface Address {
 
 export interface Category {
   id: ID;
+  catagoryID?: ID; // Add this to match your database
   name: string;
-  slug: string;
+  slug?: string;
   description?: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap | string;
   image?: string;
   isActive: boolean;
-  displayOrder: number;
+  displayOrder?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 
@@ -116,17 +121,19 @@ export interface Service {
   id: ID;
   categoryId: ID;
   name: string;
-  slug: string;
+  serviceName?: string; // Add this
+  slug?: string;
   description?: string;
   basePrice?: number;
-  priceUnit: 'hour' | 'fixed' | 'sqft' | 'day';
+  price?: number; // Add this
+  priceUnit?: 'hour' | 'fixed' | 'sqft' | 'day';
   estimatedDuration?: {
     min: number;
     max: number;
     unit: 'minutes' | 'hours' | 'days';
   };
   isActive: boolean;
-  displayOrder: number;
+  displayOrder?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 
@@ -139,9 +146,12 @@ export interface ProfessionalService {
   id: ID;
   professionalProfileId: ID;
   serviceId: ID;
+  serviceName?: string;
   customPrice?: number;
+  price?: number; // Add this
   description?: string;
   isActive: boolean;
+  estimatedDuration?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 
@@ -156,7 +166,9 @@ export interface ProfessionalProfile {
   id: ID;
   userId: ID;
   businessName?: string;
+  name?: string; // Add this
   bio?: string;
+  about?: string; // Add this
   licenseNumber?: string;
   insuranceDetails?: string;
   yearsExperience: number;
@@ -164,7 +176,13 @@ export interface ProfessionalProfile {
   rating: number;
   reviewCount: number;
   completedJobs: number;
+  successRate?: number; // Add this
+  responseTime?: string; // Add this
   isAvailable: boolean;
+  availableNow?: boolean; // Add this
+  verified: boolean;
+  isVerified?: boolean; // Add this
+  insured?: boolean;
   latitude?: number;
   longitude?: number;
   address?: string;
@@ -172,7 +190,7 @@ export interface ProfessionalProfile {
   state?: string;
   postalCode?: string;
   country: string;
-  serviceRadius: number; // in kilometers
+  serviceRadius: number;
   verificationDocuments?: string[];
   verifiedAt?: Timestamp;
   createdAt: Timestamp;
@@ -188,46 +206,54 @@ export interface ProfessionalProfile {
 
 export interface ServiceProvider {
   id: ID;
-  userId: ID;
+  userId?: ID;
   name?: string;
-  businessName: string;
-  firstName: string;
-  lastName: string;
+  businessName?: string;
+  firstName?: string;
+  lastName?: string;
   profileImage?: string;
+  profilePicture?: string; // Add this
+  phone?: string;
+  phoneNumber?: string; // Add this
+  email?: string;
   rating: number;
   reviewCount: number;
   completedJobs: number;
-  yearsExperience: number;
-  verified: boolean;
-  insured?: boolean;
-  isAvailable: boolean;
-  services: ProfessionalService[];
-  priceRange: PriceRange;
-  location: ProviderLocation;
-  distance?: number; // calculated field
+  yearsExperience?: number;
+  successRate?: number;
   responseTime?: string;
-  availability?: AvailabilitySlot[];
-  reviews?: Review[];
+  verified: boolean;
+  isVerified?: boolean;
+  insured?: boolean;
+  isAvailable?: boolean;
+  availableNow?: boolean;
+  services?: ProfessionalService[];
+  category?: Category | string;
+  priceRange?: PriceRange;
+  location?: ProviderLocation;
+  distance?: number;
+  bio?: string;
   about?: string;
+  reviews?: Review[];
   languages?: string[];
   specializations?: string[];
-  certifications?: string[];
   badges?: ProviderBadge[];
 }
 
 export interface ProviderLocation extends Coordinates {
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  serviceRadius: number;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  serviceRadius?: number;
 }
 
 export interface PriceRange {
   min: number;
   max: number;
-  currency: Currency;
-  unit: 'hour' | 'fixed' | 'sqft' | 'day';
+  currency?: Currency;
+  unit?: 'hour' | 'fixed' | 'sqft' | 'day';
 }
 
 export interface ProviderBadge {
@@ -242,9 +268,9 @@ export interface ProviderBadge {
 export interface AvailabilitySlot {
   id: ID;
   professionalProfileId: ID;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
+  date: string;
+  startTime: string;
+  endTime: string;
   isBooked: boolean;
   isRecurring: boolean;
   recurringPattern?: 'weekly' | 'biweekly' | 'monthly';
@@ -283,20 +309,20 @@ export type PaymentStatus =
 export interface Booking {
   id: ID;
   bookingNumber: string;
-  homeownerId: ID;
-  professionalId: ID;
-  professionalProfileId: ID;
+  customerId: ID;
+  providerId: ID;
+  professionalProfileId?: ID;
   serviceId: ID;
   locationId?: ID;
   status: BookingStatus;
-  scheduledDate: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  estimatedDuration: number; // in hours
+  scheduledDate: string;
+  startTime: string;
+  endTime?: string;
+  estimatedDuration?: number;
   totalAmount: number;
-  serviceFee: number;
-  taxAmount: number;
-  finalAmount: number;
+  serviceFee?: number;
+  taxAmount?: number;
+  finalAmount?: number;
   description?: string;
   homeownerNotes?: string;
   professionalNotes?: string;
@@ -315,7 +341,7 @@ export interface Booking {
   updatedAt: Timestamp;
 
   // Relations
-  homeowner?: User;
+  customer?: User;
   professional?: User;
   professionalProfile?: ProfessionalProfile;
   service?: Service;
@@ -327,17 +353,19 @@ export interface Booking {
 
 export interface ServiceRequest {
   id: ID;
-  requestNumber: string;
+  requestNumber?: string;
+  bookingId?: ID;
   providerId: ID;
-  providerName: string;
+  providerName?: string;
   providerImage?: string;
   providerRating?: number;
   providerReviewCount?: number;
   providerVerified?: boolean;
   providerJobs?: number;
+  providerPhone?: string;
   serviceId: ID;
   serviceName: string;
-  categoryName: string;
+  categoryName?: string;
   status: BookingStatus;
   scheduledDate: string;
   scheduledTime: string;
@@ -359,14 +387,15 @@ export interface ServiceRequest {
 
   // Relations
   review?: Review;
-  providerPhone?: string;
 }
+
 export interface WalletBalance {
   balance: number;
   pendingAmount: number;
   currency: string;
   lastUpdated: string;
 }
+
 // ==================== Payment Types ====================
 
 export interface Transaction {
@@ -401,7 +430,7 @@ export interface Transaction {
 export interface PaymentDetails {
   transactionId: string;
   amount: number;
-  currency: Currency;
+  currency: string;
   paymentMethod: string;
   status: PaymentStatus;
   paidAt?: Timestamp;
@@ -429,9 +458,9 @@ export interface Review {
   reviewerName: string;
   reviewerImage?: string;
   professionalId: ID;
-  professionalName: string;
+  professionalName?: string;
   professionalImage?: string;
-  rating: Rating;
+  rating: Rating | number;
   comment?: string;
   criteriaRatings?: ReviewCriteria;
   isRecommended: boolean;
@@ -442,6 +471,7 @@ export interface Review {
   helpful: number;
   reported: boolean;
   images?: string[];
+  date?: string; // Add this
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -474,7 +504,7 @@ export interface Complaint {
   bookingId: ID;
   userId: ID;
   providerId: ID;
-  providerName: string;
+  providerName?: string;
   providerImage?: string;
   serviceName?: string;
   subject: string;
@@ -487,7 +517,6 @@ export interface Complaint {
   adminNotes?: string;
   resolution?: string;
   responses?: ComplaintResponse[];
-  userResponses?: ComplaintResponse[];
   resolvedAt?: Timestamp;
   rejectedAt?: Timestamp;
   rejectionReason?: string;
@@ -511,7 +540,7 @@ export interface SearchFilters {
   query?: string;
   categoryId?: string;
   serviceId?: string;
-  minRating?: Rating | 0;
+  minRating?: number;
   maxDistance?: number;
   priceRange?: {
     min: number;
@@ -519,7 +548,7 @@ export interface SearchFilters {
   };
   verifiedOnly?: boolean;
   availableNow?: boolean;
-  sortBy: 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews' | 'relevance';
+  sortBy: 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews';
   page?: number;
   perPage?: number;
 }
@@ -544,17 +573,20 @@ export type NotificationType =
   | 'complaint_update'
   | 'promotion'
   | 'reminder'
-  | 'system';
+  | 'system'
+  | 'request_update'
+  | 'provider_response';
 
 export interface Notification {
   id: ID;
   userId: ID;
+  userType?: 'customer' | 'provider' | 'admin';
   type: NotificationType;
   title: string;
   message: string;
   data?: Record<string, any>;
   isRead: boolean;
-  isActionable: boolean;
+  isActionable?: boolean;
   actionUrl?: string;
   image?: string;
   createdAt: Timestamp;
@@ -648,6 +680,7 @@ export interface ComplaintForm {
 
 export interface ProfileForm {
   name: string;
+  fullname?: string;
   email: string;
   phone?: string;
   bio?: string;
