@@ -1,5 +1,5 @@
 // app/(customer)/provider/[id].tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,6 @@ import {
   TouchableOpacity,
   Alert,
   Image,
-  Dimensions,
-  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,21 +16,26 @@ import { useProviderDetails, useTopRatedProviders } from '@/hooks/useCustomerQue
 import { useLocation } from '@/hooks/useLocation';
 import { ServiceRequestModal } from '../../../components/customer/ServiceRequestModal';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { EmptyState } from '../../../components/common/EmptyState';
-import type { ServiceProvider, Review, ProviderService } from '@/app/types/customer.types';
-
-const { width } = Dimensions.get('window');
+import type { ServiceProvider, Review } from '@/app/types/customer.types';
 
 export default function ProviderProfileScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
-  const providerId = params.id;
-  
+  const providerId = params.id || '';
+
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showSimilarProviders, setShowSimilarProviders] = useState(false);
+
+  const { location, address } = useLocation();
+  const userLocation = location
+    ? {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        address: address?.formattedAddress || '',
+      }
+    : undefined;
   
-  const { location } = useLocation();
   const { data: provider, isLoading, error } = useProviderDetails(providerId);
   const { data: similarProviders, isLoading: similarLoading } = useTopRatedProviders(5);
 
@@ -58,30 +61,92 @@ export default function ProviderProfileScreen() {
     return `ETB ${amount.toFixed(2)}`;
   };
 
+  // Get primary service category from first service
+  const getPrimaryCategory = () => {
+    if (!provider?.services || provider.services.length === 0) {
+      return 'Service Provider';
+    }
+    // Access category through the service structure
+    const firstService = provider.services[0];
+    // Try different possible paths to get category name
+    const categoryName = 
+      (firstService as any)?.category?.name || 
+      (firstService as any)?.service?.category?.name || 
+      'Service Provider';
+    return categoryName;
+  };
+
   const handleCall = () => {
     if (provider?.phone) {
-      // Implement call functionality
-      Alert.alert('Call', `Calling ${provider.businessName || provider.name}`);
+      Alert.alert('Call', `Calling ${provider.businessName || provider.name || 'provider'}`);
     } else {
       Alert.alert('Info', 'Phone number not available');
     }
   };
+
   const handleMessage = () => {
     if (provider) {
-      // Navigate to chat or implement messaging
       router.push(`/(customer)/chat/${providerId}`);
     }
   };
 
   const handleShare = () => {
-    // Implement share functionality
     Alert.alert('Share', 'Sharing provider profile');
+  };
+
+  const renderServices = () => {
+    if (!providerData.services || providerData.services.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Services Offered</Text>
+          <Text style={styles.sectionCount}>{providerData.services.length} services</Text>
+        </View>
+        
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.servicesScroll}
+        >
+          {providerData.services.map((service, index: number) => (
+            <TouchableOpacity
+              key={service?.id || index}
+              style={styles.serviceCard}
+              onPress={() => handleServiceSelect(service?.service?.name || 'Service')}
+            >
+              <View style={styles.serviceIconContainer}>
+                <MaterialCommunityIcons name="wrench" size={24} color={Colors.primary} />
+              </View>
+              <Text style={styles.serviceName} numberOfLines={1}>
+                {service?.service?.name || 'Service'}
+              </Text>
+              <Text style={styles.servicePrice}>
+                {formatCurrency(service?.customPrice ?? service?.service?.basePrice ?? 0)}
+              </Text>
+              <Text style={styles.serviceDuration} numberOfLines={2}>
+                {service?.description || 'Professional service'}
+              </Text>
+              <View style={styles.bookButton}>
+                <Text style={styles.bookButtonText}>Book Now</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
   };
 
   if (isLoading) {
     return (
       <View style={styles.container}>
-        {renderHeader()}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Provider Profile</Text>
+          <View style={{ width: 24 }} />
+        </View>
         <View style={styles.loadingContainer}>
           <LoadingSpinner />
           <Text style={styles.loadingText}>Loading provider details...</Text>
@@ -93,11 +158,19 @@ export default function ProviderProfileScreen() {
   if (error || !provider) {
     return (
       <View style={styles.container}>
-        {renderHeader()}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Provider Profile</Text>
+          <View style={{ width: 24 }} />
+        </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
           <Text style={styles.errorTitle}>Provider Not Found</Text>
-          <Text style={styles.errorText}>The provider you're looking for doesn't exist or has been removed.</Text>
+          <Text style={styles.errorText}>
+            The provider you're looking for doesn't exist or has been removed.
+          </Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
@@ -106,273 +179,189 @@ export default function ProviderProfileScreen() {
     );
   }
 
+  const providerData = provider as ServiceProvider;
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderHeader()}
-        {renderProviderInfo()}
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Provider Profile</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        {/* Provider Info */}
+        <View style={styles.providerInfo}>
+          <View style={styles.avatarContainer}>
+            <Image 
+              source={{ uri: providerData.profileImage || 'https://via.placeholder.com/120' }} 
+              style={styles.avatar}
+            />
+            {providerData.verified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+                <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            )}
+          </View>
+          
+          <View style={styles.providerDetails}>
+            <Text style={styles.providerName}>
+              {providerData.businessName || providerData.name || 'Provider'}
+            </Text>
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={16} color={Colors.warning} />
+              <Text style={styles.ratingText}>
+                {providerData.rating?.toFixed(1) || '0.0'} • {providerData.reviewCount || 0} reviews
+              </Text>
+            </View>
+            <Text style={styles.categoryText}>
+              {getPrimaryCategory()}
+            </Text>
+            {providerData.distance && (
+              <Text style={styles.distanceText}>
+                {formatDistance(providerData.distance)}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{providerData.completedJobs || 0}</Text>
+              <Text style={styles.statLabel}>Jobs Done</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{providerData.successRate || 98}%</Text>
+              <Text style={styles.statLabel}>Success Rate</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{providerData.responseTime || '<1h'}</Text>
+              <Text style={styles.statLabel}>Response</Text>
+            </View>
+          </View>
+        </View>
+
         {renderServices()}
-        {renderAbout()}
-        {renderLocation()}
-        {renderReviews()}
-        {renderSimilarProviders()}
-        {renderContactActions()}
+
+        {/* About */}
+        {(providerData.bio || providerData.about) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.aboutText}>
+              {providerData.bio || providerData.about || 'Professional service provider with years of experience.'}
+            </Text>
+          </View>
+        )}
+
+        {/* Location */}
+        {(providerData.location?.address || providerData.distance) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Location</Text>
+            <View style={styles.locationContainer}>
+              <Ionicons name="location-outline" size={20} color={Colors.primary} />
+              <Text style={styles.locationText}>
+                {providerData.location?.address || 'Location not specified'}
+              </Text>
+            </View>
+            {providerData.distance && (
+              <Text style={styles.distanceInfo}>
+                Approximately {formatDistance(providerData.distance)}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Reviews */}
+        {providerData.reviews && providerData.reviews.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Reviews</Text>
+              <TouchableOpacity onPress={() => router.push(`/(customer)/provider/${providerId}/reviews`)}>
+                <Text style={styles.seeAllText}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {providerData.reviews.slice(0, 3).map((review: Review, index: number) => (
+              <View key={index} style={styles.reviewCard}>
+                <View style={styles.reviewHeader}>
+                  <View style={styles.reviewerInfo}>
+                    <Text style={styles.reviewerName}>{review.reviewerName || 'Anonymous'}</Text>
+                    <View style={styles.reviewRating}>
+                      <Ionicons name="star" size={12} color={Colors.warning} />
+                      <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.reviewDate}>{review.createdAt || 'Recent'}</Text>
+                </View>
+                <Text style={styles.reviewText}>{review.comment}</Text>
+                {review.isRecommended && (
+                  <Text style={styles.recommendedText}>✓ Recommended</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Similar Providers */}
+        {similarProviders && similarProviders.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity 
+              style={styles.similarProvidersHeader}
+              onPress={handleSimilarProvidersToggle}
+            >
+              <Text style={styles.sectionTitle}>Similar Providers</Text>
+              <Ionicons 
+                name={showSimilarProviders ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color={Colors.text.secondary} 
+              />
+            </TouchableOpacity>
+            
+            {showSimilarProviders && (
+              <View style={styles.similarProvidersContainer}>
+                {similarLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  similarProviders.map((similarProvider: ServiceProvider) => (
+                    <TouchableOpacity
+                      key={similarProvider.id}
+                      style={styles.similarProviderCard}
+                      onPress={() => router.push(`/(customer)/provider/${similarProvider.id}`)}
+                    >
+                      <Image 
+                        source={{ uri: similarProvider.profileImage || 'https://via.placeholder.com/50' }} 
+                        style={styles.similarProviderImage}
+                      />
+                      <View style={styles.similarProviderInfo}>
+                        <Text style={styles.similarProviderName}>
+                          {similarProvider.businessName || similarProvider.name || 'Provider'}
+                        </Text>
+                        <View style={styles.similarProviderRating}>
+                          <Ionicons name="star" size={12} color={Colors.warning} />
+                          <Text style={styles.similarProviderRatingText}>
+                            {similarProvider.rating?.toFixed(1) || '0.0'} ({similarProvider.reviewCount || 0})
+                          </Text>
+                        </View>
+                        <Text style={styles.similarProviderCategory}>
+                          {similarProvider.services?.[0]?.service?.name || 'Service Provider'}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
-      <ServiceRequestModal
-        visible={showRequestModal}
-        onClose={() => {
-          setShowRequestModal(false);
-          setSelectedService(null);
-        }}
-        provider={provider}
-        userLocation={location ? {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          address: location.address,
-        } : undefined}
-        selectedService={selectedService || undefined}
-      />
-    </View>
-  );
-
-  function renderHeader() {
-    return (
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Provider Profile</Text>
-        <View style={{ width: 24 }} />
-      </View>
-    );
-  }
-
-  function renderProviderInfo() {
-    return (
-      <View style={styles.providerInfo}>
-        <View style={styles.avatarContainer}>
-          <Image 
-            source={{ uri: provider.profileImage || 'https://via.placeholder.com/120' }} 
-            style={styles.avatar}
-          />
-          {provider.verified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-              <Text style={styles.verifiedText}>Verified</Text>
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.providerDetails}>
-          <Text style={styles.providerName}>
-            {provider.businessName || provider.name || 'Provider'}
-          </Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color={Colors.warning} />
-            <Text style={styles.ratingText}>
-              {provider.rating?.toFixed(1) || '0.0'} • {provider.reviewCount || 0} reviews
-            </Text>
-          </View>
-          <Text style={styles.categoryText}>
-            {provider.category?.name || 'Service Provider'}
-          </Text>
-          {provider.distance && (
-            <Text style={styles.distanceText}>
-              {formatDistance(provider.distance)}
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{provider.completedJobs || 0}</Text>
-            <Text style={styles.statLabel}>Jobs Done</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{provider.successRate || 98}%</Text>
-            <Text style={styles.statLabel}>Success Rate</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{provider.responseTime || '<1h'}</Text>
-            <Text style={styles.statLabel}>Response</Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  function renderServices() {
-    if (!provider.services || provider.services.length === 0) return null;
-
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Services Offered</Text>
-          <Text style={styles.sectionCount}>{provider.services.length} services</Text>
-        </View>
-        
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.servicesScroll}
-        >
-          {provider.services.map((service: any, index: number) => (
-            <TouchableOpacity
-              key={service?.id || index}
-              style={styles.serviceCard}
-              onPress={() => handleServiceSelect(service?.serviceName || service?.name || 'Service')}
-            >
-              <View style={styles.serviceIconContainer}>
-                <MaterialCommunityIcons name="wrench" size={24} color={Colors.primary} />
-              </View>
-              <Text style={styles.serviceName} numberOfLines={1}>
-                {service?.serviceName || service?.name || 'Service'}
-              </Text>
-              <Text style={styles.servicePrice}>
-                {formatCurrency(service?.price || service?.basePrice || 0)}
-              </Text>
-              <Text style={styles.serviceDuration} numberOfLines={2}>
-                {service?.estimatedDuration || 1}h • {service?.description || 'Professional service'}
-              </Text>
-              <View style={styles.bookButton}>
-                <Text style={styles.bookButtonText}>Book Now</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  }
-
-  function renderAbout() {
-    if (!provider.bio && !provider.description) return null;
-
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <Text style={styles.aboutText}>
-          {provider.bio || provider.description || 'Professional service provider with years of experience in the industry. Committed to delivering high-quality services with attention to detail and customer satisfaction.'}
-        </Text>
-      </View>
-    );
-  }
-
-  function renderLocation() {
-    if (!provider.location?.address && !provider.distance) return null;
-
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Location</Text>
-        <View style={styles.locationContainer}>
-          <Ionicons name="location-outline" size={20} color={Colors.primary} />
-          <Text style={styles.locationText}>
-            {provider.location?.address || 'Location not specified'}
-          </Text>
-        </View>
-        {provider.distance && (
-          <Text style={styles.distanceInfo}>
-            Approximately {formatDistance(provider.distance)}
-          </Text>
-        )}
-      </View>
-    );
-  }
-
-  function renderReviews() {
-    if (!provider.reviews || provider.reviews.length === 0) return null;
-
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Reviews</Text>
-          <TouchableOpacity onPress={() => router.push(`/(customer)/provider/${providerId}/reviews`)}>
-            <Text style={styles.seeAllText}>View All</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {provider.reviews.slice(0, 3).map((review: any, index: number) => (
-          <View key={index} style={styles.reviewCard}>
-            <View style={styles.reviewHeader}>
-              <View style={styles.reviewerInfo}>
-                <Text style={styles.reviewerName}>{review.reviewerName || 'Anonymous'}</Text>
-                <View style={styles.reviewRating}>
-                  <Ionicons name="star" size={12} color={Colors.warning} />
-                  <Text style={styles.reviewRatingText}>{review.rating}</Text>
-                </View>
-              </View>
-              <Text style={styles.reviewDate}>{review.date || 'Recent'}</Text>
-            </View>
-            <Text style={styles.reviewText}>{review.comment}</Text>
-            {review.isRecommended && (
-              <Text style={styles.recommendedText}>✓ Recommended</Text>
-            )}
-          </View>
-        ))}
-      </View>
-    );
-  }
-
-  function renderSimilarProviders() {
-    if (!similarProviders || similarProviders.length === 0) return null;
-
-    return (
-      <View style={styles.section}>
-        <TouchableOpacity 
-          style={styles.similarProvidersHeader}
-          onPress={handleSimilarProvidersToggle}
-        >
-          <Text style={styles.sectionTitle}>Similar Providers</Text>
-          <Ionicons 
-            name={showSimilarProviders ? "chevron-up" : "chevron-down"} 
-            size={20} 
-            color={Colors.text.secondary} 
-          />
-        </TouchableOpacity>
-        
-        {showSimilarProviders && (
-          <View style={styles.similarProvidersContainer}>
-            {similarLoading ? (
-              <LoadingSpinner />
-            ) : (
-              similarProviders.map((similarProvider: ServiceProvider) => (
-                <TouchableOpacity
-                  key={similarProvider.id}
-                  style={styles.similarProviderCard}
-                  onPress={() => router.push(`/(customer)/provider/${similarProvider.id}`)}
-                >
-                  <Image 
-                    source={{ uri: similarProvider.profileImage || 'https://via.placeholder.com/50' }} 
-                    style={styles.similarProviderImage}
-                  />
-                  <View style={styles.similarProviderInfo}>
-                    <Text style={styles.similarProviderName}>
-                      {similarProvider.businessName || similarProvider.name || 'Provider'}
-                    </Text>
-                    <View style={styles.similarProviderRating}>
-                      <Ionicons name="star" size={12} color={Colors.warning} />
-                      <Text style={styles.similarProviderRatingText}>
-                        {similarProvider.rating?.toFixed(1) || '0.0'} ({similarProvider.reviewCount || 0})
-                      </Text>
-                    </View>
-                    <Text style={styles.similarProviderCategory}>
-                      {similarProvider.category?.name || 'Service Provider'}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  function renderContactActions() {
-    return (
+      {/* Contact Actions */}
       <View style={styles.contactActions}>
         <TouchableOpacity style={styles.contactButton} onPress={handleCall}>
           <Ionicons name="call-outline" size={20} color={Colors.primary} />
@@ -389,8 +378,19 @@ export default function ProviderProfileScreen() {
           <Text style={styles.contactButtonText}>Share</Text>
         </TouchableOpacity>
       </View>
-    );
-  }
+
+      <ServiceRequestModal
+        visible={showRequestModal}
+        onClose={() => {
+          setShowRequestModal(false);
+          setSelectedService(null);
+        }}
+        provider={providerData}
+        userLocation={userLocation}
+        selectedService={selectedService || undefined}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -168,6 +168,14 @@ class CustomerService {
     return response;
   }
 
+  async getServiceCity(): Promise<ApiResponse<{ service_city: string }>> {
+    return api.get<{ service_city: string }>(`${this.BASE_PATH}/service-city`);
+  }
+
+  async updateServiceCity(data: { service_city: string }): Promise<ApiResponse<{ service_city: string }>> {
+    return api.put<{ service_city: string }>(`${this.BASE_PATH}/service-city`, data);
+  }
+
   // ==================== Service Provider Search ====================
 
   async searchProviders(filters: SearchFilters & { page?: number; perPage?: number }): Promise<ApiResponse<ServiceProvider[]>> {
@@ -368,6 +376,27 @@ class CustomerService {
     return api.get<{ latitude: number; longitude: number }>(`${this.BASE_PATH}/requests/${id}/track`);
   }
 
+  // ==================== Bookings ====================
+
+  async createBooking(data: {
+    provider_id: string;
+    service_id: string;
+    scheduled_date: string;
+    scheduled_time: string;
+    address: string;
+    description?: string;
+    estimated_price?: number;
+  }): Promise<ApiResponse<any>> {
+    const response = await api.post<any>(`${this.BASE_PATH}/requests`, data);
+    
+    if (response.success) {
+      // Invalidate relevant caches
+      await storage.removeItem('user_requests');
+    }
+    
+    return response;
+  }
+
   // ==================== Reviews ====================
 
   async createReview(data: {
@@ -512,18 +541,6 @@ class CustomerService {
     return api.get<WalletBalance>(`${this.BASE_PATH}/wallet/balance`);
   }
 
-  async initiatePayment(data: any): Promise<ApiResponse<any>> {
-    return api.post<any>(`${this.BASE_PATH}/payments/initiate`, data);
-  }
-
-  async verifyPayment(transactionId: string): Promise<ApiResponse<any>> {
-    return api.get<any>(`${this.BASE_PATH}/payments/verify/${transactionId}`);
-  }
-
-  async getTransactionHistory(page: number = 1): Promise<ApiResponse<any[]>> {
-    return api.get<any[]>(`${this.BASE_PATH}/transactions?page=${page}`);
-  }
-
   // ==================== Notifications ====================
 
   async getNotifications(page: number = 1): Promise<ApiResponse<any[]>> {
@@ -600,29 +617,6 @@ class CustomerService {
   async getServicesByCategory(categoryId: string): Promise<ApiResponse<any[]>> {
     return api.get<any[]>(`/categories/${categoryId}/services`);
   }
-
-  // ==================== Bookings ====================
-
-  async createBooking(data: {
-    provider_id: string;
-    service_id: string;
-    scheduled_date: string;
-    scheduled_time: string;
-    address: string;
-    description?: string;
-    estimated_price?: number;
-  }): Promise<ApiResponse<any>> {
-    const response = await api.post<any>(`${this.BASE_PATH}/requests`, data);
-    
-    if (response.success) {
-      // Invalidate relevant caches
-      await storage.removeItem('user_requests');
-      await storage.removeItem('user_bookings');
-    }
-    
-    return response;
-  }
-
 }
 
 export const customerService = new CustomerService();

@@ -55,7 +55,6 @@ export default function CustomerDashboard() {
     results: providers,
     loading: searchLoading,
     loadMore,
-    hasMore,
     refresh: refreshSearch,
   } = useSearch();
 
@@ -76,6 +75,8 @@ export default function CustomerDashboard() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   // Load user data and service categories on mount
   useEffect(() => {
@@ -97,11 +98,29 @@ export default function CustomerDashboard() {
       const response = await customerService.getServiceCategories();
       if (response.success && response.data) {
         setServiceCategories(response.data);
+        setAllCategories(response.data);
       }
     } catch (error) {
       console.error('Failed to load service categories:', error);
       // Fallback to empty array if API fails
       setServiceCategories([]);
+      setAllCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const fetchAllCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const response = await customerService.getServiceCategories();
+      if (response.success && response.data) {
+        setAllCategories(response.data);
+        setShowAllCategories(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch all service categories:', error);
+      Alert.alert('Error', 'Failed to load all categories. Please try again.');
     } finally {
       setLoadingCategories(false);
     }
@@ -268,7 +287,7 @@ export default function CustomerDashboard() {
             window.open(paymentResponse.checkoutUrl, '_blank');
           } else {
             router.push({
-              pathname: '/payment/webview',
+              pathname: '/(customer)/payment',
               params: { url: paymentResponse.checkoutUrl }
             });
           }
@@ -295,14 +314,7 @@ export default function CustomerDashboard() {
       </View>
 
       <View style={styles.headerActions}>
-        {/* Temporary test button */}
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={testSearch}
-        >
-          <Text style={styles.testButtonText}>Test Search</Text>
-        </TouchableOpacity>
-        
+        {/* Temporary test button */} 
         <TouchableOpacity
           style={styles.notificationButton}
           onPress={() => router.push('/(customer)/notifications')}
@@ -332,7 +344,7 @@ export default function CustomerDashboard() {
       return (
         <View style={styles.categoriesSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Services</Text>
+            <Text style={styles.sectionTitle}>Service Categories</Text>
           </View>
           <ScrollView
             horizontal
@@ -354,8 +366,8 @@ export default function CustomerDashboard() {
     return (
       <View style={styles.categoriesSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Services</Text>
-          <TouchableOpacity onPress={() => router.push('/(customer)/categories')}>
+          <Text style={styles.sectionTitle}>Service Categories</Text>
+          <TouchableOpacity onPress={fetchAllCategories}>
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
@@ -375,10 +387,9 @@ export default function CustomerDashboard() {
                 const categoryId = (category.catagoryID?.toString() || category.id?.toString() || '');
                 if (!categoryId) return;
                 handleCategorySelect(categoryId);
-                router.push({
-                  pathname: '/(customer)/search/results',
-                  params: { categoryId },
-                });
+                // Update search to filter by category
+                updateFilters({ categoryId });
+                refreshSearch();
               }}
             >
               <View style={styles.categoryIconContainer}>
@@ -485,17 +496,23 @@ export default function CustomerDashboard() {
 
   const renderMapView = () => {
     // Convert providers to markers format
-    const markers = providers.map(provider => ({
-      position: Platform.OS === 'web'
-        ? [provider.location.latitude, provider.location.longitude]
-        : { latitude: provider.location.latitude, longitude: provider.location.longitude },
-      title: provider?.businessName ?? provider?.name ?? 'Service Provider',
-      description: `Rating: ${provider.rating || 0} ⭐ • ${provider.reviewCount || 0} reviews${provider.distance ? ` • ${provider.distance < 1 ? `${Math.round(provider.distance * 1000)}m` : `${provider.distance.toFixed(1)}km`} away` : ''}`,
-      rating: provider.rating || 0,
-      reviewCount: provider.reviewCount || 0,
-      distance: provider.distance,
-      onPress: () => handleProviderSelect(provider),
-    }));
+    const markers = providers
+      .filter(provider => provider.location) // Filter out providers without location
+      .map(provider => {
+        // TypeScript assertion to ensure location exists after filter
+        const location = provider.location!;
+        return {
+          position: Platform.OS === 'web'
+            ? [location.latitude, location.longitude]
+            : { latitude: location.latitude, longitude: location.longitude },
+          title: provider?.businessName ?? provider?.name ?? 'Service Provider',
+          description: `Rating: ${provider.rating || 0} ⭐ • ${provider.reviewCount || 0} reviews${provider.distance ? ` • ${provider.distance < 1 ? `${Math.round(provider.distance * 1000)}m` : `${provider.distance.toFixed(1)}km`} away` : ''}`,
+          rating: provider.rating || 0,
+          reviewCount: provider.reviewCount || 0,
+          distance: provider.distance,
+          onPress: () => handleProviderSelect(provider),
+        };
+      });
 
     // Prepare center coordinates
     const center = location
@@ -521,7 +538,7 @@ export default function CustomerDashboard() {
   };
 
   const renderProviderList = () => (
-    <FlatList
+        <FlatList
       data={providers}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
@@ -531,6 +548,8 @@ export default function CustomerDashboard() {
           showDistance={true}
           showBadges={true}
           showActions={true}
+          showServices={true}
+          showCategory={true}
         />
       )}
       contentContainerStyle={styles.providersList}
@@ -553,7 +572,7 @@ export default function CustomerDashboard() {
               setQuery('');
               updateFilters({});
             }}
-            variant="default" // Add variant if needed
+            variant="default"
           />
         ) : null
       }
@@ -628,6 +647,42 @@ export default function CustomerDashboard() {
           </View>
         )}
 
+        {showAllCategories && (
+          <View style={styles.allCategoriesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>All Services</Text>
+              <TouchableOpacity onPress={() => setShowAllCategories(false)}>
+                <Text style={styles.seeAllText}>Hide</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.allCategoriesGrid}>
+              {allCategories.map((category) => (
+                <TouchableOpacity
+                  key={(category.catagoryID ?? category.id ?? Math.random()).toString()}
+                  style={styles.allCategoryItem}
+                  onPress={() => {
+                    const categoryId = (category.catagoryID?.toString() || category.id?.toString() || '');
+                    if (!categoryId) return;
+                    handleCategorySelect(categoryId);
+                    setShowAllCategories(false);
+                    router.push({
+                      pathname: '/(customer)/search/results',
+                      params: { categoryId },
+                    });
+                  }}
+                >
+                  <View style={styles.allCategoryIconContainer}>
+                    <Text style={styles.allCategoryIcon}>{category.icon || '🔧'}</Text>
+                  </View>
+                  <Text style={styles.allCategoryName} numberOfLines={2}>
+                    {category.name || 'Service'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={styles.bottomPadding} />
       </ScrollView>
 
@@ -638,20 +693,21 @@ export default function CustomerDashboard() {
         initialFilters={filters}
       />
 
-      <ServiceRequestModal
-        visible={showRequestModal}
-        onClose={() => {
-          setShowRequestModal(false);
-          setSelectedProvider(null);
-        }}
-        provider={selectedProvider}
-        userLocation={location ? {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          // address: address?.formattedAddress || address?.street || 'Current location'
-        } : undefined}
-        onRequest={handleServiceRequest}
-      />
+     // app/(customer)/dashboard.tsx - Fix the ServiceRequestModal usage
+
+<ServiceRequestModal
+  visible={showRequestModal}
+  onClose={() => {
+    setShowRequestModal(false);
+    setSelectedProvider(null);
+  }}
+  provider={selectedProvider}
+  userLocation={location ? {
+    latitude: location.latitude,
+    longitude: location.longitude,
+  } : undefined}
+  // Remove onSubmit completely - the modal handles booking internally
+/>
     </SafeAreaView>
   );
 }
@@ -928,5 +984,42 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
     color: Colors.text.secondary,
+  },
+  allCategoriesSection: {
+    paddingVertical: 16,
+    backgroundColor: Colors.surface,
+    marginBottom: 8,
+  },
+  allCategoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    marginTop: 12,
+  },
+  allCategoryItem: {
+    width: '33.33%',
+    alignItems: 'center',
+    padding: 10,
+    marginBottom: 10,
+  },
+  allCategoryIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: Colors.border,
+  },
+  allCategoryIcon: {
+    fontSize: 24,
+  },
+  allCategoryName: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

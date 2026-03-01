@@ -1,648 +1,592 @@
 // hooks/useCustomerQueries.ts
-import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
-import { Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/app/services/customer.service';
-import type { 
-  ServiceProvider, 
-  ServiceRequest, 
-  Review, 
-  Complaint,
-  Location,
-  User,
-  AvailabilitySlot,
-  ApiResponse 
-} from '@/app/types/customer.types';
+import type { ServiceProvider, Review, ServiceRequest, User } from '@/app/types/customer.types';
 
 // Query Keys
 export const customerKeys = {
   all: ['customer'] as const,
   profile: () => [...customerKeys.all, 'profile'] as const,
-  locations: () => [...customerKeys.all, 'locations'] as const,
-  location: (id: string) => [...customerKeys.locations(), id] as const,
-  requests: () => [...customerKeys.all, 'requests'] as const,
-  request: (id: string) => [...customerKeys.requests(), id] as const,
-  providers: () => [...customerKeys.all, 'providers'] as const,
-  provider: (id: string) => [...customerKeys.providers(), id] as const,
-  reviews: () => [...customerKeys.all, 'reviews'] as const,
-  review: (id: string) => [...customerKeys.reviews(), id] as const,
-  complaints: () => [...customerKeys.all, 'complaints'] as const,
-  complaint: (id: string) => [...customerKeys.complaints(), id] as const,
-  wallet: () => [...customerKeys.all, 'wallet'] as const,
-  transactions: () => [...customerKeys.all, 'transactions'] as const,
-  transaction: (id: string) => [...customerKeys.transactions(), id] as const,
-  favorites: () => [...customerKeys.all, 'favorites'] as const,
   notifications: () => [...customerKeys.all, 'notifications'] as const,
-};
-
-// Utility function to handle query errors
-const handleQueryError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : 'An error occurred';
-  Alert.alert('Error', message);
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-};
-
-// Utility function to handle mutation success
-const handleMutationSuccess = (message?: string) => {
-  if (message) {
-    Alert.alert('Success', message);
-  }
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  notificationsSettings: () => [...customerKeys.all, 'notifications', 'settings'] as const,
+  locations: () => [...customerKeys.all, 'locations'] as const,
+  serviceCity: () => [...customerKeys.all, 'serviceCity'] as const,
+  favorites: () => [...customerKeys.all, 'favorites'] as const,
+  requests: (status?: string) => [...customerKeys.all, 'requests', status] as const,
+  request: (id: string) => [...customerKeys.all, 'requests', id] as const,
+  reviews: () => [...customerKeys.all, 'reviews'] as const,
+  review: (id: string) => [...customerKeys.all, 'reviews', id] as const,
+  complaints: () => [...customerKeys.all, 'complaints'] as const,
+  complaint: (id: string) => [...customerKeys.all, 'complaints', id] as const,
+  providers: {
+    all: ['providers'] as const,
+    search: (params: any) => ['providers', 'search', params] as const,
+    details: (id: string) => ['providers', id] as const,
+    topRated: (limit: number) => ['providers', 'top-rated', limit] as const,
+    nearby: (params: any) => ['providers', 'nearby', params] as const,
+    reviews: (providerId: string, page: number) => ['providers', providerId, 'reviews', page] as const,
+    availability: (providerId: string, date: string) => ['providers', providerId, 'availability', date] as const,
+  },
+  wallet: {
+    balance: () => [...customerKeys.all, 'wallet', 'balance'] as const,
+  },
+  dashboard: {
+    stats: () => [...customerKeys.all, 'dashboard', 'stats'] as const,
+    activity: (limit: number) => [...customerKeys.all, 'dashboard', 'activity', limit] as const,
+  },
 };
 
 // ==================== Profile Hooks ====================
 
-export function useProfile(options?: UseQueryOptions<User>) {
-  return useQuery<User, Error>({
+export const useProfile = () => {
+  return useQuery({
     queryKey: customerKeys.profile(),
     queryFn: async () => {
       const response = await customerService.getProfile();
-      if (!response.success) throw new Error(response.message);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch profile');
+      }
       return response.data as User;
     },
-    ...options,
   });
-}
+};
 
-export function useUpdateProfile(options?: UseMutationOptions<User, Error, Partial<User>>) {
+export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
-
-  return useMutation<User, Error, Partial<User>>({
+  
+  return useMutation({
     mutationFn: async (data: Partial<User>) => {
       const response = await customerService.updateProfile(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data as User;
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update profile');
+      }
+      return response.data;
     },
-  onSuccess: (data, variables, context, meta) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.profile() });
-      handleMutationSuccess('Profile updated successfully');
-      options?.onSuccess?.(data, variables, context, meta);
-    },
-    onError: (error, variables, context, meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context, meta);
     },
   });
-}
+};
 
-export function useUploadProfileImage(options?: UseMutationOptions<{ url: string }, Error, FormData>) {
-  return useMutation<{ url: string }, Error, FormData>({
-    mutationFn: async (formData: FormData) => {
-      const response = await customerService.uploadProfileImage(formData);
-      if (!response.success) throw new Error(response.message);
-      return response.data as { url: string };
-    },
-    onSuccess: (data, variables, context, meta) => {
-      handleMutationSuccess('Profile image updated');
-      options?.onSuccess?.(data, variables, context, meta);
-    },
-    onError: (error, variables, context, meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context, meta);
-    },
-  });
-}
-
-// ==================== Location Hooks ====================
-
-export function useLocations(options?: UseQueryOptions<Location[]>) {
-  return useQuery<Location[], Error>({
-    queryKey: customerKeys.locations(),
-    queryFn: async () => {
-      const response = await customerService.getLocations();
-      if (!response.success) throw new Error(response.message);
-      return response.data as Location[];
-    },
-    ...options,
-  });
-}
-
-export function useAddLocation(options?: UseMutationOptions<Location, Error, Omit<Location, 'id'>>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<Location, Error, Omit<Location, 'id'>>({
-    mutationFn: async (data: Omit<Location, 'id'>) => {
-      const response = await customerService.addLocation(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Location;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
-      handleMutationSuccess('Location added successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useUpdateLocation(id: string, options?: UseMutationOptions<Location, Error, Partial<Location>>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<Location, Error, Partial<Location>>({
-    mutationFn: async (data: Partial<Location>) => {
-      const response = await customerService.updateLocation(id, data);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Location;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
-      queryClient.invalidateQueries({ queryKey: customerKeys.location(id) });
-      handleMutationSuccess('Location updated successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useDeleteLocation(options?: UseMutationOptions<void, Error, string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<void, Error, string>({
-    mutationFn: async (id: string) => {
-      const response = await customerService.deleteLocation(id);
-      if (!response.success) throw new Error(response.message);
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
-      handleMutationSuccess('Location deleted successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useSetPrimaryLocation(options?: UseMutationOptions<Location, Error, string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<Location, Error, string>({
-    mutationFn: async (id: string) => {
-      const response = await customerService.setPrimaryLocation(id);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Location;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
-      handleMutationSuccess('Primary location updated');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-// ==================== Service Request Hooks ====================
-
-export function useServiceRequests(status?: string, options?: UseQueryOptions<ServiceRequest[]>) {
-  return useQuery<ServiceRequest[], Error>({
-    queryKey: [...customerKeys.requests(), status],
-    queryFn: async () => {
-      const response = await customerService.getMyRequests(status);
-      if (!response.success) throw new Error(response.message);
-      return response.data as ServiceRequest[];
-    },
-    ...options,
-  });
-}
-
-export function useServiceRequest(id: string, options?: UseQueryOptions<ServiceRequest>) {
-  return useQuery<ServiceRequest, Error>({
-    queryKey: customerKeys.request(id),
-    queryFn: async () => {
-      const response = await customerService.getRequestDetails(id);
-      if (!response.success) throw new Error(response.message);
-      return response.data as ServiceRequest;
-    },
-    enabled: !!id,
-    ...options,
-  });
-}
-
-export function useCreateServiceRequest(options?: UseMutationOptions<ServiceRequest, Error, any>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<ServiceRequest, Error, any>({
-    mutationFn: async (data: any) => {
-      const response = await customerService.createServiceRequest(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data as ServiceRequest;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
-      handleMutationSuccess('Service request created successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useCancelRequest(options?: UseMutationOptions<ServiceRequest, Error, { id: string; reason: string }>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<ServiceRequest, Error, { id: string; reason: string }>({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      const response = await customerService.cancelRequest(id, reason);
-      if (!response.success) throw new Error(response.message);
-      return response.data as ServiceRequest;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
-      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.id) });
-      handleMutationSuccess('Request cancelled successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-// ==================== Provider Hooks ====================
-
-export function useProviderDetails(id: string, options?: UseQueryOptions<ServiceProvider>) {
-  return useQuery<ServiceProvider, Error>({
-    queryKey: customerKeys.provider(id),
-    queryFn: async () => {
-      const response = await customerService.getProviderDetails(id);
-      if (!response.success) throw new Error(response.message);
-      return response.data as ServiceProvider;
-    },
-    enabled: !!id,
-    ...options,
-  });
-}
-
-export function useProviderAvailability(providerId: string, date: string, options?: UseQueryOptions<AvailabilitySlot[]>) {
-  return useQuery<AvailabilitySlot[], Error>({
-    queryKey: [...customerKeys.provider(providerId), 'availability', date],
-    queryFn: async () => {
-      const response = await customerService.getProviderAvailability(providerId, date);
-      if (!response.success) throw new Error(response.message);
-      return response.data as AvailabilitySlot[];
-    },
-    enabled: !!providerId && !!date,
-    ...options,
-  });
-}
-
-export function useTopRatedProviders(limit: number = 10, options?: UseQueryOptions<ServiceProvider[]>) {
-  return useQuery<ServiceProvider[], Error>({
-    queryKey: [...customerKeys.providers(), 'top-rated', limit],
-    queryFn: async () => {
-      const response = await customerService.getTopRatedProviders(limit);
-      if (!response.success) throw new Error(response.message);
-      return response.data as ServiceProvider[];
-    },
-    ...options,
-  });
-}
-
-// ==================== Review Hooks ====================
-
-export function useReviews(options?: UseQueryOptions<Review[]>) {
-  return useQuery<Review[], Error>({
-    queryKey: customerKeys.reviews(),
-    queryFn: async () => {
-      // This would be implemented in the service
-      throw new Error('Not implemented');
-    },
-    ...options,
-  });
-}
-
-export function useReviewForBooking(bookingId: string, options?: UseQueryOptions<Review>) {
-  return useQuery<Review, Error>({
-    queryKey: [...customerKeys.reviews(), 'booking', bookingId],
-    queryFn: async () => {
-      const response = await customerService.getReviewForBooking(bookingId);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Review;
-    },
-    enabled: !!bookingId,
-    ...options,
-  });
-}
-
-export function useCreateReview(options?: UseMutationOptions<Review, Error, any>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<Review, Error, any>({
-    mutationFn: async (data: any) => {
-      const response = await customerService.createReview(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Review;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
-      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.bookingId) });
-      queryClient.invalidateQueries({ queryKey: customerKeys.reviews() });
-      queryClient.invalidateQueries({ queryKey: customerKeys.providers() });
-      handleMutationSuccess('Thank you for your review!');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useUpdateReview(options?: UseMutationOptions<Review, Error, { id: string; data: Partial<Review> }>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<Review, Error, { id: string; data: Partial<Review> }>({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Review> }) => {
-      const response = await customerService.updateReview(id, data);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Review;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.reviews() });
-      queryClient.invalidateQueries({ queryKey: customerKeys.review(variables.id) });
-      handleMutationSuccess('Review updated successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useDeleteReview(options?: UseMutationOptions<void, Error, string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<void, Error, string>({
-    mutationFn: async (id: string) => {
-      const response = await customerService.deleteReview(id);
-      if (!response.success) throw new Error(response.message);
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.reviews() });
-      handleMutationSuccess('Review deleted successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-// ==================== Complaint Hooks ====================
-
-export function useComplaints(options?: UseQueryOptions<Complaint[]>) {
-  return useQuery<Complaint[], Error>({
-    queryKey: customerKeys.complaints(),
-    queryFn: async () => {
-      const response = await customerService.getMyComplaints();
-      if (!response.success) throw new Error(response.message);
-      return response.data as Complaint[];
-    },
-    ...options,
-  });
-}
-
-export function useComplaintDetails(id: string, options?: UseQueryOptions<Complaint>) {
-  return useQuery<Complaint, Error>({
-    queryKey: customerKeys.complaint(id),
-    queryFn: async () => {
-      const response = await customerService.getComplaintDetails(id);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Complaint;
-    },
-    enabled: !!id,
-    ...options,
-  });
-}
-
-export function useCreateComplaint(options?: UseMutationOptions<Complaint, Error, any>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<Complaint, Error, any>({
-    mutationFn: async (data: any) => {
-      const response = await customerService.createComplaint(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Complaint;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.complaints() });
-      handleMutationSuccess('Complaint submitted successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useAddComplaintResponse(complaintId: string, options?: UseMutationOptions<Complaint, Error, string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<Complaint, Error, string>({
-    mutationFn: async (message: string) => {
-      const response = await customerService.addComplaintResponse(complaintId, message);
-      if (!response.success) throw new Error(response.message);
-      return response.data as Complaint;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.complaint(complaintId) });
-      handleMutationSuccess('Response added successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-// ==================== Payment & Wallet Hooks ====================
-
-export function useInitiatePayment(options?: UseMutationOptions<any, Error, any>) {
-  return useMutation<any, Error, any>({
-    mutationFn: async (data: any) => {
-      const response = await customerService.initiatePayment(data);
-      if (!response.success) throw new Error(response.message);
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: async (data: {
+      current_password: string;
+      new_password: string;
+      new_password_confirmation: string;
+    }) => {
+      const response = await customerService.changePassword(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to change password');
+      }
       return response.data;
     },
-    onSuccess: (data, variables, context,meta) => {
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-    ...options,
   });
-}
-
-export function useVerifyPayment(options?: UseMutationOptions<any, Error, string>) {
-  return useMutation<any, Error, string>({
-    mutationFn: async (transactionId: string) => {
-      const response = await customerService.verifyPayment(transactionId);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    onSuccess: (data, variables, context,meta) => {
-      handleMutationSuccess('Payment verified successfully');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useWalletBalance(options?: Omit<UseQueryOptions<any, Error, any, any>, 'queryKey' | 'queryFn'>) {
-  return useQuery<any, Error>({
-    queryKey: customerKeys.wallet(),
-    queryFn: async () => {
-      const response = await customerService.getWalletBalance();
-      if (!response.success) throw new Error(response.message);
-      return response.data;
-    },
-    ...options,
-  });
-}
-
-export function useTransactionHistory(page: number = 1, options?: UseQueryOptions<any[]>) {
-  return useQuery<any[], Error>({
-    queryKey: [...customerKeys.transactions(), page],
-    queryFn: async () => {
-      const response = await customerService.getTransactionHistory(page);
-      if (!response.success) throw new Error(response.message);
-      return response.data as any[]; // Add type assertion
-    },
-    ...options,
-  });
-}
-
-// ==================== Favorites Hooks ====================
-
-export function useFavorites(options?: UseQueryOptions<ServiceProvider[]>) {
-  return useQuery<ServiceProvider[], Error>({
-    queryKey: customerKeys.favorites(),
-    queryFn: async () => {
-      const response = await customerService.getFavorites();
-      if (!response.success) throw new Error(response.message);
-      return response.data as ServiceProvider[];
-    },
-    ...options,
-  });
-}
-
-export function useAddFavorite(options?: UseMutationOptions<void, Error, string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<void, Error, string>({
-    mutationFn: async (providerId: string) => {
-      const response = await customerService.addFavorite(providerId);
-      if (!response.success) throw new Error(response.message);
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.favorites() });
-      handleMutationSuccess('Added to favorites');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
-
-export function useRemoveFavorite(options?: UseMutationOptions<void, Error, string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<void, Error, string>({
-    mutationFn: async (providerId: string) => {
-      const response = await customerService.removeFavorite(providerId);
-      if (!response.success) throw new Error(response.message);
-    },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.favorites() });
-      handleMutationSuccess('Removed from favorites');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
-    },
-  });
-}
+};
 
 // ==================== Notification Hooks ====================
 
-export function useNotifications(
-  page: number = 1, 
-  options?: UseQueryOptions<any[]>
-) {
-  return useQuery<any[], Error>({
-    queryKey: [...customerKeys.notifications(), page],
+export const useNotificationSettings = () => {
+  return useQuery({
+    queryKey: customerKeys.notificationsSettings(),
     queryFn: async () => {
-      // Pass the page parameter to the service
-      const response = await customerService.getNotifications(page);
-      if (!response.success) throw new Error(response.message);
-      
-      // Ensure we return an array
-      return response.data as any[];
+      const response = await customerService.getNotificationSettings();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch notification settings');
+      }
+      return response.data;
     },
-    ...options,
   });
-}
+};
 
-export function useMarkNotificationRead(options?: UseMutationOptions<void, Error, string>) {
+export const useUpdateNotificationSettings = () => {
   const queryClient = useQueryClient();
-
-  return useMutation<void, Error, string>({
-    mutationFn: async (notificationId: string) => {
-      const response = await customerService.markNotificationRead(notificationId);
-      if (!response.success) throw new Error(response.message);
+  
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const response = await customerService.updateNotificationSettings(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update notification settings');
+      }
+      return response.data;
     },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.notifications() });
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.notificationsSettings() });
     },
   });
-}
+};
 
-export function useMarkAllNotificationsRead(options?: UseMutationOptions<void, Error, void>) {
+// ==================== Location Hooks ====================
+
+export const useLocations = () => {
+  return useQuery({
+    queryKey: customerKeys.locations(),
+    queryFn: async () => {
+      const response = await customerService.getLocations();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch locations');
+      }
+      return response.data;
+    },
+  });
+};
+
+export const useAddLocation = () => {
   const queryClient = useQueryClient();
-
-  return useMutation<void, Error, void>({
-    mutationFn: async () => {
-      const response = await customerService.markAllNotificationsRead();
-      if (!response.success) throw new Error(response.message);
+  
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const response = await customerService.addLocation(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to add location');
+      }
+      return response.data;
     },
-    onSuccess: (data, variables, context,meta) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.notifications() });
-      handleMutationSuccess('All notifications marked as read');
-      options?.onSuccess?.(data, variables, context,meta);
-    },
-    onError: (error, variables, context,meta) => {
-      handleQueryError(error);
-      options?.onError?.(error, variables, context,meta);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
     },
   });
-}
+};
+
+export const useUpdateLocation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await customerService.updateLocation(id, data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update location');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
+    },
+  });
+};
+
+export const useDeleteLocation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await customerService.deleteLocation(id);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to delete location');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
+    },
+  });
+};
+
+export const useSetPrimaryLocation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await customerService.setPrimaryLocation(id);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to set primary location');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.locations() });
+    },
+  });
+};
+
+export const useServiceCity = () => {
+  return useQuery({
+    queryKey: customerKeys.serviceCity(),
+    queryFn: async () => {
+      const response = await customerService.getServiceCity();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch service city');
+      }
+      return response.data;
+    },
+  });
+};
+
+export const useUpdateServiceCity = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { service_city: string }) => {
+      const response = await customerService.updateServiceCity(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update service city');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceCity() });
+      queryClient.invalidateQueries({ queryKey: customerKeys.profile() });
+    },
+  });
+};
+
+// ==================== Provider Search Hooks ====================
+
+export const useProviderSearch = (params: any) => {
+  return useQuery({
+    queryKey: customerKeys.providers.search(params),
+    queryFn: async () => {
+      const response = await customerService.searchProviders(params);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to search providers');
+      }
+      return response.data as ServiceProvider[];
+    },
+    enabled: !!params, // Only run if params exist
+  });
+};
+
+export const useProviderDetails = (id: string) => {
+  return useQuery({
+    queryKey: customerKeys.providers.details(id),
+    queryFn: async () => {
+      const response = await customerService.getProviderDetails(id);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch provider details');
+      }
+      return response.data as ServiceProvider;
+    },
+    enabled: !!id, // Only run if id exists
+  });
+};
+
+export const useTopRatedProviders = (limit: number = 10) => {
+  return useQuery({
+    queryKey: customerKeys.providers.topRated(limit),
+    queryFn: async () => {
+      const response = await customerService.getTopRatedProviders(limit);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch top rated providers');
+      }
+      return response.data as ServiceProvider[];
+    },
+  });
+};
+
+export const useNearbyProviders = (latitude: number, longitude: number, radius: number = 10) => {
+  return useQuery({
+    queryKey: customerKeys.providers.nearby({ latitude, longitude, radius }),
+    queryFn: async () => {
+      const response = await customerService.getNearbyProviders(latitude, longitude, radius);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch nearby providers');
+      }
+      return response.data as ServiceProvider[];
+    },
+    enabled: !!latitude && !!longitude, // Only run if coordinates exist
+  });
+};
+
+export const useProviderReviews = (providerId: string, page: number = 1) => {
+  return useQuery({
+    queryKey: customerKeys.providers.reviews(providerId, page),
+    queryFn: async () => {
+      const response = await customerService.getProviderReviews(providerId, page);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch provider reviews');
+      }
+      return response.data as Review[];
+    },
+    enabled: !!providerId,
+  });
+};
+
+export const useProviderAvailability = (providerId: string, date: string) => {
+  return useQuery({
+    queryKey: customerKeys.providers.availability(providerId, date),
+    queryFn: async () => {
+      const response = await customerService.getProviderAvailability(providerId, date);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch provider availability');
+      }
+      return response.data;
+    },
+    enabled: !!providerId && !!date,
+  });
+};
+
+// ==================== Service Request Hooks ====================
+
+export const useMyRequests = (status?: string) => {
+  return useQuery({
+    queryKey: customerKeys.requests(status),
+    queryFn: async () => {
+      const response = await customerService.getMyRequests(status);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch requests');
+      }
+      return response.data as ServiceRequest[];
+    },
+  });
+};
+
+export const useRequestDetails = (id: string) => {
+  return useQuery({
+    queryKey: customerKeys.request(id),
+    queryFn: async () => {
+      const response = await customerService.getRequestDetails(id);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch request details');
+      }
+      return response.data as ServiceRequest;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useCancelRequest = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const response = await customerService.cancelRequest(id, reason);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to cancel request');
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
+    },
+  });
+};
+
+export const useRescheduleRequest = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { date: string; time: string } }) => {
+      const response = await customerService.rescheduleRequest(id, data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to reschedule request');
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
+    },
+  });
+};
+
+export const useCreateBooking = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: {
+      provider_id: string;
+      service_id: string;
+      scheduled_date: string;
+      scheduled_time: string;
+      address: string;
+      description?: string;
+      estimated_price?: number;
+    }) => {
+      const response = await customerService.createBooking(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create booking');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
+    },
+  });
+};
+
+// ==================== Review Hooks ====================
+
+export const useCreateReview = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const response = await customerService.createReview(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create review');
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.reviews() });
+      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.bookingId) });
+    },
+  });
+};
+
+export const useMyReviews = () => {
+  return useQuery({
+    queryKey: customerKeys.reviews(),
+    queryFn: async () => {
+      const response = await customerService.getMyReviews();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch reviews');
+      }
+      return response.data;
+    },
+  });
+};
+
+// ==================== Complaint Hooks ====================
+
+export const useCreateComplaint = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const response = await customerService.createComplaint(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create complaint');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.complaints() });
+    },
+  });
+};
+
+export const useMyComplaints = () => {
+  return useQuery({
+    queryKey: customerKeys.complaints(),
+    queryFn: async () => {
+      const response = await customerService.getMyComplaints();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch complaints');
+      }
+      return response.data;
+    },
+  });
+};
+
+// ==================== Favorite Hooks ====================
+
+export const useFavorites = () => {
+  return useQuery({
+    queryKey: customerKeys.favorites(),
+    queryFn: async () => {
+      const response = await customerService.getFavorites();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch favorites');
+      }
+      return response.data as ServiceProvider[];
+    },
+  });
+};
+
+export const useAddFavorite = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (providerId: string) => {
+      const response = await customerService.addFavorite(providerId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to add favorite');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.favorites() });
+    },
+  });
+};
+
+export const useRemoveFavorite = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (providerId: string) => {
+      const response = await customerService.removeFavorite(providerId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to remove favorite');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.favorites() });
+    },
+  });
+};
+
+export const useCheckFavorite = (providerId: string) => {
+  return useQuery({
+    queryKey: [...customerKeys.favorites(), providerId, 'check'],
+    queryFn: async () => {
+      const response = await customerService.checkFavorite(providerId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to check favorite');
+      }
+      return response.data;
+    },
+    enabled: !!providerId,
+  });
+};
+
+// ==================== Wallet Hooks ====================
+
+export const useWalletBalance = () => {
+  return useQuery({
+    queryKey: customerKeys.wallet.balance(),
+    queryFn: async () => {
+      const response = await customerService.getWalletBalance();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch wallet balance');
+      }
+      return response.data;
+    },
+  });
+};
+
+// ==================== Dashboard Hooks ====================
+
+export const useDashboardStats = () => {
+  return useQuery({
+    queryKey: customerKeys.dashboard.stats(),
+    queryFn: async () => {
+      const response = await customerService.getDashboardStats();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch dashboard stats');
+      }
+      return response.data;
+    },
+  });
+};
+
+export const useRecentActivity = (limit: number = 10) => {
+  return useQuery({
+    queryKey: customerKeys.dashboard.activity(limit),
+    queryFn: async () => {
+      const response = await customerService.getRecentActivity(limit);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch recent activity');
+      }
+      return response.data;
+    },
+  });
+};
+
+// ==================== Category Hooks ====================
+
+export const useServiceCategories = () => {
+  return useQuery({
+    queryKey: ['serviceCategories'],
+    queryFn: async () => {
+      const response = await customerService.getServiceCategories();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch categories');
+      }
+      return response.data;
+    },
+  });
+};
