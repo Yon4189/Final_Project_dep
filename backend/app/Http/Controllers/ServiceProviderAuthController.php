@@ -31,6 +31,7 @@ class ServiceProviderAuthController extends Controller
             'catagoryID' => 'required|exists:catagories,catagoryID',
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'credentialPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
             'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
             'current_latitude' => 'nullable|numeric|between:-90,90',
             'current_longitude' => 'nullable|numeric|between:-180,180',
@@ -47,6 +48,11 @@ class ServiceProviderAuthController extends Controller
 
         try {
             DB::beginTransaction();
+
+            // Ensure directories exist
+            if (!file_exists(public_path('profilepics'))) mkdir(public_path('profilepics'), 0755, true);
+            if (!file_exists(public_path('idphoto'))) mkdir(public_path('idphoto'), 0755, true);
+            if (!file_exists(public_path('credentials'))) mkdir(public_path('credentials'), 0755, true);
 
             // Handle file uploads
             $profilePath = null;
@@ -65,6 +71,14 @@ class ServiceProviderAuthController extends Controller
                 $idPhotoPath = 'idphoto/' . $idPhotoName;
             }
 
+            $credentialPhotoPath = null;
+            if ($request->hasFile('credentialPhoto')) {
+                $file = $request->file('credentialPhoto');
+                $credentialName = Str::random(20) . '_credential.' . $file->getClientOriginalExtension();
+                $file->move(public_path('credentials'), $credentialName);
+                $credentialPhotoPath = 'credentials/' . $credentialName;
+            }
+
             // Create new provider
             $provider = ServiceProvider::create([
                 'fullname' => $request->fullname,
@@ -75,6 +89,7 @@ class ServiceProviderAuthController extends Controller
                 'catagoryID' => $request->catagoryID,
                 'profilePicture' => $profilePath,
                 'idPhoto' => $idPhotoPath,
+                'credentialPhoto' => $credentialPhotoPath,
                 'idPhotoType' => $request->idPhotoType,
                 'current_latitude' => $request->current_latitude,
                 'current_longitude' => $request->current_longitude,

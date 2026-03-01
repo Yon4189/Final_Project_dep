@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
-import { useServiceRequests } from '../../hooks/useCustomerQueries';
+import { useMyRequests } from '../../hooks/useCustomerQueries';
 import { useCancelRequest } from '../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -27,7 +27,7 @@ export default function BookingsScreen() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: bookings, isLoading, error, refetch } = useServiceRequests();
+  const { data: bookings, isLoading, error, refetch } = useMyRequests();
   const cancelRequest = useCancelRequest();
 
   const handleRefresh = async () => {

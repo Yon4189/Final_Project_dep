@@ -39,13 +39,13 @@ interface ServiceOffering {
   serviceName: string;
   basePrice: string;
   description: string;
-  }
+}
 
 interface City {
   cityID?: string;
   id?: string;
   name: string;
-  }
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function RegisterProviderScreen() {
@@ -71,14 +71,15 @@ export default function RegisterProviderScreen() {
   ]);
 
   const [profilePicture, setProfilePicture] = useState<any>(null);
-  const [idPhoto, setIdPhoto] = useState<any>(null);
-  const [credentialPhoto, setCredentialPhoto] = useState<any>(null);
   const [profilePictureUri, setProfilePictureUri] = useState<string | null>(null);
   const [idPhoto, setIdPhoto] = useState<any>(null);
   const [idPhotoUri, setIdPhotoUri] = useState<string | null>(null);
+  const [credentialPhoto, setCredentialPhoto] = useState<any>(null);
   const [credentialPhotoUri, setCredentialPhotoUri] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [showIdTypeModal, setShowIdTypeModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
   const [showServiceCategoryModal, setShowServiceCategoryModal] = useState<number | null>(null);
@@ -156,27 +157,8 @@ export default function RegisterProviderScreen() {
     ]);
   };
 
-  
-  // Add this temporary test function
-const testApiConnection = async () => {
-  try {
-    console.log('Testing API connection...');
-    const response = await api.get('/test'); // or any simple endpoint
-    console.log('API test response:', response);
-    Alert.alert('API Test', 'Connection successful!');
-  } catch (error) {
-    console.log('API test error:', error);
-    Alert.alert('API Test', 'Connection failed!');
-  }
-};
 
-// Add a test button temporarily in your render (near the register button)
-<AppButton
-  title="Test API"
-  onPress={testApiConnection}
-  fullWidth
-  style={{ marginTop: 10, backgroundColor: 'orange' }}
-/>
+
 
   const removeServiceOffering = (index: number) => {
     if (serviceOfferings.length > 1) {
@@ -254,6 +236,8 @@ const testApiConnection = async () => {
   };
 
   const validatePhoneNumber = (phone: string) => /^(09|07)[0-9]{8}$/.test(phone);
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validatePhone = (phone: string) => validatePhoneNumber(phone);
 
   const validateServiceOfferings = () => {
     for (let i = 0; i < serviceOfferings.length; i++) {
@@ -451,7 +435,7 @@ const testApiConnection = async () => {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
-  const renderModalItem = (label: string, onSelect: () => void) => (
+  const renderModalItem = (item: string | any, onSelect: () => void) => (
     <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
       <Text style={styles.modalItemText}>
         <Text>{typeof item === 'string' ? item : item.name || item.cityName || item}</Text>
@@ -563,7 +547,13 @@ const testApiConnection = async () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.formContainer}>
+        <AppInput
+          label="Full Name"
+          value={formData.fullname}
+          onChangeText={(t: string) => setFormData({ ...formData, fullname: t })}
+          placeholder="John Doe"
+          required
+        />
 
         <AppInput
           label="Email"
@@ -614,7 +604,6 @@ const testApiConnection = async () => {
           <Text style={styles.sectionSubtitle}>
             <Text>Add at least one service you provide</Text>
           </Text>
-
           {serviceOfferings.map((offering, index) => (
             <View key={index} style={styles.serviceCard}>
               <View style={styles.serviceCardHeader}>
@@ -628,7 +617,6 @@ const testApiConnection = async () => {
                 )}
               </View>
 
-              {/* Category Selection */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
                   <Text>Category </Text><Text style={styles.required}>*</Text>
@@ -643,14 +631,14 @@ const testApiConnection = async () => {
                   <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
                 </TouchableOpacity>
               </View>
-            ))}
 
-            {/* Add service button */}
-            <TouchableOpacity style={styles.addServiceButton} onPress={addServiceOffering}>
-              <Ionicons name="add-circle-outline" size={24} color={Colors.primary || '#007AFF'} />
-              <Text style={styles.addServiceText}>Add Another Service</Text>
-            </TouchableOpacity>
-          </View>
+              <AppInput
+                label="Service Name"
+                value={offering.serviceName}
+                onChangeText={(t: string) => updateServiceOffering(index, 'serviceName', t)}
+                placeholder="e.g., Plumbing"
+                required
+              />
 
               <AppInput
                 label="Base Price (ETB)"
@@ -813,7 +801,8 @@ const testApiConnection = async () => {
               showsVerticalScrollIndicator={false}
             />
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
       {/* City Modal */}
       <Modal visible={showCityModal} animationType="slide" transparent>
@@ -857,6 +846,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background
+  },
+  successContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: Colors.background,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+    marginTop: 10,
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   header: {
     padding: 30,
