@@ -98,6 +98,18 @@ class NotificationService
         // dispatch(new SendPushNotificationJob($notification));
     }
 
+        /**
+     * Send notification to any user type
+     */
+    public function toUser($userType, $userId, $type, $title, $message, $data = [], $bookingId = null)
+    {
+        if ($userType === 'customer') {
+            return $this->toCustomer($userId, $type, $title, $message, $data, $bookingId);
+        } else {
+            return $this->toProvider($userId, $type, $title, $message, $data, $bookingId);
+        }
+    }
+
     /**
      * Notification types constants
      */
@@ -113,4 +125,5 @@ class NotificationService
     const TYPE_PROVIDER_APPROVED = 'provider_approved';
     const TYPE_PROVIDER_REJECTED = 'provider_rejected';
     const TYPE_REVIEW_RECEIVED = 'review_received';
+    //const TYPE_NEW_MESSAGE = 'new_message';
 }

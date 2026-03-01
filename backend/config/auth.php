@@ -24,31 +24,17 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        
-        // Your existing guards (keep these)
+
+        // API Guards - Using Sanctum for token-based authentication
         'customer' => [
-            'driver' => 'session',
+            'driver' => 'sanctum',
             'provider' => 'customers',
         ],
         'provider' => [
-            'driver' => 'session',
+            'driver' => 'sanctum',
             'provider' => 'providers',
         ],
         'admin' => [
-            'driver' => 'session',
-            'provider' => 'admins',
-        ],
-
-        // ADD THESE API guards for Sanctum
-        'customer_api' => [
-            'driver' => 'sanctum',
-            'provider' => 'customers',
-        ],
-        'provider_api' => [
-            'driver' => 'sanctum',
-            'provider' => 'providers',
-        ],
-        'admin_api' => [
             'driver' => 'sanctum',
             'provider' => 'admins',
         ],
@@ -65,14 +51,17 @@ return [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
+
         'customers' => [
             'driver' => 'eloquent',
             'model' => App\Models\Customer::class,
         ],
+
         'providers' => [
             'driver' => 'eloquent',
-            'model' => App\Models\ServiceProvider::class, // Note: Change from Provider to ServiceProvider
+            'model' => App\Models\ServiceProvider::class,
         ],
+
         'admins' => [
             'driver' => 'eloquent',
             'model' => App\Models\Admin::class,

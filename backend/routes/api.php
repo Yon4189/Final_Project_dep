@@ -126,6 +126,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
 });
 
 // ==================== PROTECTED PROVIDER ROUTES ====================
+// ==================== PROTECTED PROVIDER ROUTES ====================
 Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // Auth & Profile
     Route::post('/logout', [ServiceProviderAuthController::class, 'logout']);
@@ -169,7 +170,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     Route::get('/withdrawal/status/{withdrawal_ref}', [WithdrawalController::class, 'status']);
     Route::get('/withdrawal/history', [WithdrawalController::class, 'providerHistory']); // Uses auth()->id()
     
-    // Notifications
+    // Notifications - ADD THESE LINES
     Route::get('/notifications', [NotificationController::class, 'getProviderNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 });
@@ -237,6 +238,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
 
 
 // Notifications for both customers and providers
+/*
 Route::middleware('auth:customer,provider')->prefix('notifications')->group(function () {
     Route::get('/', [NotificationController::class, 'index']);
     Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
@@ -245,4 +247,22 @@ Route::middleware('auth:customer,provider')->prefix('notifications')->group(func
     Route::get('/{id}', [NotificationController::class, 'show']);
     Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
+});
+
+*/
+
+
+// Chat routes for both customers and providers
+Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {
+    // Conversations
+    Route::get('/conversations', [ChatController::class, 'getConversations']);
+    Route::post('/conversations', [ChatController::class, 'getOrCreateConversation']);
+    Route::get('/conversations/{id}', [ChatController::class, 'getMessages']);
+    Route::post('/conversations/{id}/read', [ChatController::class, 'markAsRead']);
+    
+    // Messages
+    Route::post('/messages', [ChatController::class, 'sendMessage']);
+    
+    // Unread count
+    Route::get('/unread', [ChatController::class, 'getUnreadCount']);
 });
