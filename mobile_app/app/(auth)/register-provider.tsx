@@ -709,6 +709,7 @@ export default function RegisterProviderScreen() {
         <View style={styles.uploadContainer}>
           <Text style={styles.label}>
             <Text>Business License/Certificate </Text><Text style={styles.required}>*</Text>
+            <Text>what shall I do </Text><Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity style={styles.idImagePicker} onPress={() => pickImage('credential')}>
             {credentialPhotoUri ? (
