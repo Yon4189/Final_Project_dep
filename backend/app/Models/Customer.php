@@ -49,4 +49,21 @@ class Customer extends Authenticatable
     public function reviews() {
         return $this->hasMany(Review::class, 'customerID', 'customerID'); // fk, local key
     }
+
+    /**
+ * Add funds to wallet (for refunds)
+ */
+    public function addToWallet($amount): void
+    {
+        $this->walletBalance = ($this->walletBalance ?? 0) + $amount;
+        $this->save();
+    }
+
+    /**
+     * Get wallet balance
+     */
+    public function getWalletBalanceAttribute()
+    {
+        return $this->attributes['walletBalance'] ?? 0;
+    }
 }

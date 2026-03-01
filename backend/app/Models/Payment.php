@@ -1,4 +1,5 @@
 <?php
+// app/Models/Payment.php
 
 namespace App\Models;
 
@@ -7,47 +8,66 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
+    protected $table = 'payments';
+    protected $primaryKey = 'paymentID';
+
     protected $fillable = [
-        'tx_ref',
+        'bookingID',
+        'customerID',
+        'providerID',
+        'tx_ref',              // Added (was missing)
         'chapa_tx_id',
-        'amount',
+        'amount',              // Added (was missing)
+        'platform_commission',
+        'provider_amount',
         'currency',
         'status',
-        'payment_method',
+        'checkout_url',
+        'callback_url',
+        'return_url',
         'customer_email',
         'customer_first_name',
         'customer_last_name',
         'customer_phone',
-        'customer_id',
-        'booking_id',
-        'checkout_url',
-        'callback_url',
-        'return_url',
         'meta_data',
-        'failure_reason'
+        'failure_reason',
+        'paid_at',
+        'released_at',
+        'refunded_at'
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'platform_commission' => 'decimal:2',
+        'provider_amount' => 'decimal:2',
         'meta_data' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'paid_at' => 'datetime',
+        'released_at' => 'datetime',
+        'refunded_at' => 'datetime'
     ];
 
     /**
-     * Get the customer that owns the payment
-     */
-    public function customer(): BelongsTo
-    {
-        return $this->belongsTo(Customer::class, 'customer_id', 'customerID');
-    }
-
-    /**
-     * Get the booking that owns the payment
+     * Get the booking for this payment
      */
     public function booking(): BelongsTo
     {
-        return $this->belongsTo(Booking::class, 'booking_id', 'bookingID');
+        return $this->belongsTo(Booking::class, 'bookingID', 'bookingID');
+    }
+
+    /**
+     * Get the customer who made the payment
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'customerID', 'customerID');
+    }
+
+    /**
+     * Get the provider receiving the payment
+     */
+    public function provider(): BelongsTo
+    {
+        return $this->belongsTo(ServiceProvider::class, 'providerID', 'providerID');
     }
 
     /**
@@ -55,7 +75,7 @@ class Payment extends Model
      */
     public function isSuccessful(): bool
     {
-        return $this->status === 'success';
+        return $this->status === 'paid' || $this->status === 'released';
     }
 
     /**
@@ -67,58 +87,49 @@ class Payment extends Model
     }
 
     /**
-     * Check if payment failed
+     * Check if payment is in escrow
      */
-    public function isFailed(): bool
+    public function isHeld(): bool
     {
-        return $this->status === 'failed';
+        return $this->status === 'held';
     }
 
     /**
-     * Check if payment is cancelled
+     * Release payment to provider
      */
-    public function isCancelled(): bool
+    public function release(): void
     {
-        return $this->status === 'cancelled';
+        $this->status = 'released';
+        $this->released_at = now();
+        $this->save();
+
+        // Update provider's wallet balance
+        if ($this->provider) {
+            $this->provider->walletBalance = ($this->provider->walletBalance ?? 0) + $this->provider_amount;
+            $this->provider->save();
+        }
     }
 
     /**
-     * Scope a query to only include successful payments
+     * Refund payment to customer
      */
-    public function scopeSuccessful($query)
+    public function refund($amount = null): void
     {
-        return $query->where('status', 'success');
-    }
+        $refundAmount = $amount ?? $this->amount;
+        
+        if ($refundAmount < $this->amount) {
+            $this->status = 'partial_refund';
+        } else {
+            $this->status = 'refunded';
+        }
+        
+        $this->refunded_at = now();
+        $this->save();
 
-    /**
-     * Scope a query to only include pending payments
-     */
-    public function scopePending($query)
-    {
-        return $query->where('status', 'pending');
-    }
-
-    /**
-     * Scope a query to only include failed payments
-     */
-    public function scopeFailed($query)
-    {
-        return $query->where('status', 'failed');
-    }
-
-    /**
-     * Get formatted amount
-     */
-    public function getFormattedAmountAttribute(): string
-    {
-        return number_format($this->amount, 2) . ' ' . $this->currency;
-    }
-
-    /**
-     * Get status with proper formatting
-     */
-    public function getFormattedStatusAttribute(): string
-    {
-        return ucfirst($this->status);
+        // Update customer's wallet balance
+        if ($this->customer) {
+            $this->customer->walletBalance = ($this->customer->walletBalance ?? 0) + $refundAmount;
+            $this->customer->save();
+        }
     }
 }

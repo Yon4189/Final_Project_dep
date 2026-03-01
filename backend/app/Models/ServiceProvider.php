@@ -211,4 +211,38 @@ class ServiceProvider extends Authenticatable
             ->selectRaw($sql, [$latitude, $longitude, $latitude])
             ->orderBy('distance');
     }
+
+
+    // Add these methods for payout handling:
+
+    /**
+     * Add funds to wallet (for payouts)
+     */
+    public function addToWallet($amount): void
+    {
+        $this->walletBalance = ($this->walletBalance ?? 0) + $amount;
+        $this->save();
+    }
+
+    /**
+     * Get wallet balance
+     */
+    public function getWalletBalanceAttribute()
+    {
+        return $this->attributes['walletBalance'] ?? 0;
+    }
+
+    /**
+     * Withdraw from wallet
+     */
+    public function withdrawFromWallet($amount): bool
+    {
+        if (($this->walletBalance ?? 0) < $amount) {
+            return false;
+        }
+        
+        $this->walletBalance -= $amount;
+        $this->save();
+        return true;
+    }
 }
