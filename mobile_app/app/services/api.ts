@@ -1,3 +1,4 @@
+// services/api.ts
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
@@ -197,12 +198,16 @@ class ApiService {
     }
   }
 
-  // Token refresh
+  // Token refresh - Updated to use correct endpoint
   private async refreshAccessToken(): Promise<string | null> {
     if (!this.refreshToken) return null;
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+      const endpoint = this.userType === 'provider' 
+        ? '/provider/refresh-token' 
+        : '/customer/refresh-token';
+      
+      const response = await axios.post(`${API_BASE_URL}${endpoint}`, {
         refresh_token: this.refreshToken,
       });
 
@@ -260,7 +265,6 @@ class ApiService {
             method: config.method?.toUpperCase(),
             url: config.url,
             params: config.params,
-            data: config.data,
             userType: this.userType,
           });
         }
@@ -280,7 +284,7 @@ class ApiService {
           console.log('✅ API Response:', {
             url: response.config.url,
             status: response.status,
-            data: response.data,
+            success: response.data?.success,
           });
         }
         return response;
@@ -293,7 +297,6 @@ class ApiService {
           console.error('❌ API Error:', {
             url: originalConfig?.url,
             status: error.response?.status,
-            data: error.response?.data,
             message: error.message,
           });
         }
@@ -311,14 +314,8 @@ class ApiService {
 
         const { status, data } = error.response;
 
-        // Handle 400 Bad Request & 422 Unprocessable Entity - Log more details
+        // Handle 400 Bad Request & 422 Unprocessable Entity
         if (status === 400 || status === 422) {
-          console.warn(`⚠️ ${status === 400 ? 'Bad Request' : 'Validation Error'}:`, {
-            url: originalConfig?.url,
-            data: data,
-            headers: originalConfig?.headers,
-          });
-
           // Return the error response data so it can be handled by the caller
           return Promise.reject({
             response: error.response,
@@ -366,6 +363,11 @@ class ApiService {
         // Handle 403 Forbidden
         if (status === 403) {
           return Promise.reject(new Error('You do not have permission to access this resource.'));
+        }
+
+        // Handle 404 Not Found
+        if (status === 404) {
+          return Promise.reject(new Error('The requested resource was not found.'));
         }
 
         // Handle other status codes
@@ -425,7 +427,7 @@ class ApiService {
       return response.data;
     } catch (error: any) {
       // Don't retry 400 errors - they are client errors
-      if (error.response?.status === 400) {
+      if (error.response?.status === 400 || error.response?.status === 422) {
         throw error;
       }
 
@@ -506,6 +508,17 @@ class ApiService {
   public async clearAll(): Promise<void> {
     await this.removeToken();
     await this.removeUserData();
+  }
+
+  // Check if user is authenticated
+  public isAuthenticated(): boolean {
+    return !!(this.providerToken || this.customerToken);
+  }
+
+  // Get auth headers
+  public getAuthHeaders(): Record<string, string> {
+    const token = this.getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }
 }
 

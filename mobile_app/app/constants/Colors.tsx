@@ -1,22 +1,55 @@
-// constants/Colors.ts
+// app/constants/Colors.ts
 export const Colors = {
-  primaryDark: '#2980b9',  // Darker blue
-  primary: '#3498db',      // Blue
-  secondary: '#2ecc71',    // Green
-  tertiary: '#9b59b6',     // Purple
-  background: '#f8f9fa',   // Light gray background
-  surface: '#ffffff', 
-  skeleton: '#e0e0e0',     // Light gray for skeleton loading
-  text: {
-    primary: '#2c3e50',    // Dark blue-gray
-    secondary: '#7f8c8d',  // Gray
-    light: '#ffffff',      // White
-  },
-  border: '#e9ecef',       // Light border
-  error: '#e74c3c',        // Red
-  success: '#27ae60',      // Dark green
-  warning: '#f39c12',      // Orange
-  info: '#2980b9',  
-  purple: '#8e44ad',      // Dark blue
+  primary: '#007AFF',
+  secondary: '#5856D6',
+  success: '#34C759',
+  warning: '#FF9500',
+  error: '#FF3B30',
+  info: '#5AC8FA',
   
-};
+  background: '#F2F2F7',
+  surface: '#FFFFFF',
+  
+  text: {
+    primary: '#000000',
+    secondary: '#8E8E93',
+    light: '#FFFFFF',
+    disabled: '#C7C7CC',
+  },
+  
+  border: '#C6C6C8',
+  
+  // Status colors
+  status: {
+    pending: '#FF9500',
+    confirmed: '#007AFF',
+    in_progress: '#5856D6',
+    completed: '#34C759',
+    cancelled: '#FF3B30',
+    disputed: '#FF9500',
+    refunded: '#8E8E93',
+  },
+  
+  // Rating colors
+  rating: {
+    star: '#FFB800',
+    empty: '#E0E0E0',
+  },
+  
+  // Social colors
+  social: {
+    facebook: '#1877F2',
+    google: '#DB4437',
+    twitter: '#1DA1F2',
+  },
+  
+  // Transparent colors
+  transparent: {
+    primary: '#007AFF20',
+    secondary: '#5856D620',
+    success: '#34C75920',
+    warning: '#FF950020',
+    error: '#FF3B3020',
+    info: '#5AC8FA20',
+  },
+} as const;
