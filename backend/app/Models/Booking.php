@@ -59,4 +59,51 @@ class Booking extends Model
     public function review() {
         return $this->hasOne(Review::class, 'bookingID', 'bookingID'); // fk, local key
     }
+
+
+// Add these relationships and methods:
+
+/**
+ * Get the payment for this booking
+ */
+public function payment()
+{
+    return $this->hasOne(Payment::class, 'bookingID', 'bookingID');
+}
+
+/**
+ * Check if booking is paid
+ */
+public function isPaid(): bool
+{
+    return $this->paid_at !== null;
+}
+
+/**
+ * Check if payment is due (accepted but not paid within 24hrs)
+ */
+public function isPaymentDue(): bool
+{
+    return $this->status === 'accepted' && 
+           $this->payment_due_at && 
+           $this->payment_due_at < now() && 
+           !$this->paid_at;
+}
+
+/**
+ * Calculate platform commission (10%)
+ */
+public function calculateCommission(): float
+{
+    return $this->agreed_price * 0.10;
+}
+
+/**
+ * Calculate provider payout (after commission)
+ */
+public function calculateProviderPayout(): float
+{
+    return $this->agreed_price - $this->calculateCommission();
+}
+    
 }
