@@ -24,6 +24,31 @@ const USER_KEY = 'user_data';
 type ApiEventType = 'token_refreshed' | 'unauthorized' | 'network_error' | 'server_error';
 type ApiEventListener = (event: ApiEventType, data?: any) => void;
 
+// Platform-specific storage
+const storage = {
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    } else {
+      return await SecureStore.getItemAsync(key);
+    }
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  }
+};
+
 class ApiService {
   private api: AxiosInstance;
   private providerToken: string | null = null;
@@ -49,6 +74,7 @@ class ApiService {
         'X-App-Version': Constants.expoConfig?.version || '1.0.0',
         'X-App-Build': Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode || '1',
       },
+      withCredentials: false,
     });
 
     this.setupInterceptors();
@@ -70,16 +96,19 @@ class ApiService {
   // Token management
   private async loadStoredToken(): Promise<void> {
     try {
-      // Try to load provider token first
-      this.providerToken = await SecureStore.getItemAsync(PROVIDER_TOKEN_KEY);
+      const providerToken = await storage.getItem(PROVIDER_TOKEN_KEY);
+      this.providerToken = providerToken;
 
-      // If no provider token, try customer token
       if (!this.providerToken) {
-        this.customerToken = await SecureStore.getItemAsync(CUSTOMER_TOKEN_KEY);
+        const customerToken = await storage.getItem(CUSTOMER_TOKEN_KEY);
+        this.customerToken = customerToken;
       }
 
-      this.refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-      this.userType = await SecureStore.getItemAsync(USER_TYPE_KEY) as 'provider' | 'customer' | null;
+      const refreshToken = await storage.getItem(REFRESH_TOKEN_KEY);
+      this.refreshToken = refreshToken;
+      
+      const userType = await storage.getItem(USER_TYPE_KEY);
+      this.userType = userType as 'provider' | 'customer' | null;
     } catch (error) {
       console.warn('Failed to load stored token:', error);
     }
@@ -87,7 +116,7 @@ class ApiService {
 
   public async setProviderToken(token: string, refreshToken?: string): Promise<void> {
     this.providerToken = token;
-    this.customerToken = null; // Clear customer token
+    this.customerToken = null;
     this.userType = 'provider';
 
     if (refreshToken) {
@@ -95,15 +124,15 @@ class ApiService {
     }
 
     try {
-      await SecureStore.setItemAsync(PROVIDER_TOKEN_KEY, token);
-      await SecureStore.setItemAsync(USER_TYPE_KEY, 'provider');
-
-      // Clear customer token if exists
-      await SecureStore.deleteItemAsync(CUSTOMER_TOKEN_KEY);
+      await storage.setItem(PROVIDER_TOKEN_KEY, token);
+      await storage.setItem(USER_TYPE_KEY, 'provider');
+      
+      await storage.removeItem(CUSTOMER_TOKEN_KEY);
 
       if (refreshToken) {
-        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        await storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       }
+      console.log('Provider token stored successfully');
     } catch (error) {
       console.warn('Failed to store provider token:', error);
     }
@@ -111,7 +140,7 @@ class ApiService {
 
   public async setCustomerToken(token: string, refreshToken?: string): Promise<void> {
     this.customerToken = token;
-    this.providerToken = null; // Clear provider token
+    this.providerToken = null;
     this.userType = 'customer';
 
     if (refreshToken) {
@@ -119,15 +148,15 @@ class ApiService {
     }
 
     try {
-      await SecureStore.setItemAsync(CUSTOMER_TOKEN_KEY, token);
-      await SecureStore.setItemAsync(USER_TYPE_KEY, 'customer');
-
-      // Clear provider token if exists
-      await SecureStore.deleteItemAsync(PROVIDER_TOKEN_KEY);
+      await storage.setItem(CUSTOMER_TOKEN_KEY, token);
+      await storage.setItem(USER_TYPE_KEY, 'customer');
+      
+      await storage.removeItem(PROVIDER_TOKEN_KEY);
 
       if (refreshToken) {
-        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        await storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       }
+      console.log('Customer token stored successfully');
     } catch (error) {
       console.warn('Failed to store customer token:', error);
     }
@@ -140,17 +169,16 @@ class ApiService {
     this.userType = null;
 
     try {
-      await SecureStore.deleteItemAsync(PROVIDER_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(CUSTOMER_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(USER_TYPE_KEY);
+      await storage.removeItem(PROVIDER_TOKEN_KEY);
+      await storage.removeItem(CUSTOMER_TOKEN_KEY);
+      await storage.removeItem(REFRESH_TOKEN_KEY);
+      await storage.removeItem(USER_TYPE_KEY);
     } catch (error) {
       console.warn('Failed to remove token:', error);
     }
   }
 
   public getToken(): string | null {
-    // Return the appropriate token based on user type
     if (this.userType === 'provider') {
       return this.providerToken;
     }
@@ -164,7 +192,8 @@ class ApiService {
   // User data management
   public async setUserData(userData: any): Promise<void> {
     try {
-      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+      await storage.setItem(USER_KEY, JSON.stringify(userData));
+      console.log('User data stored successfully');
     } catch (error) {
       console.warn('Failed to store user data:', error);
     }
@@ -172,7 +201,7 @@ class ApiService {
 
   public async getUserData(): Promise<any | null> {
     try {
-      const data = await SecureStore.getItemAsync(USER_KEY);
+      const data = await storage.getItem(USER_KEY);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.warn('Failed to load user data:', error);
@@ -182,7 +211,7 @@ class ApiService {
 
   public async removeUserData(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(USER_KEY);
+      await storage.removeItem(USER_KEY);
     } catch (error) {
       console.warn('Failed to remove user data:', error);
     }
@@ -198,7 +227,7 @@ class ApiService {
     }
   }
 
-  // Token refresh - Updated to use correct endpoint
+  // Token refresh
   private async refreshAccessToken(): Promise<string | null> {
     if (!this.refreshToken) return null;
 
@@ -209,12 +238,13 @@ class ApiService {
       
       const response = await axios.post(`${API_BASE_URL}${endpoint}`, {
         refresh_token: this.refreshToken,
+      }, {
+        withCredentials: false,
       });
 
       if (response.data.success && response.data.data?.token) {
         const { token, refresh_token } = response.data.data;
 
-        // Set the appropriate token based on user type
         if (this.userType === 'provider') {
           await this.setProviderToken(token, refresh_token);
         } else {
@@ -250,22 +280,19 @@ class ApiService {
     // Request interceptor
     this.api.interceptors.request.use(
       async (config) => {
-        // Add token to headers
         const token = this.getToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // Add request ID for tracking
         config.headers['X-Request-ID'] = this.generateRequestId();
 
-        // Log request in development
         if (__DEV__) {
           console.log('🚀 API Request:', {
             method: config.method?.toUpperCase(),
             url: config.url,
             params: config.params,
-            userType: this.userType,
+            // Don't log userType as it might be misleading during login
           });
         }
 
@@ -279,7 +306,6 @@ class ApiService {
     // Response interceptor
     this.api.interceptors.response.use(
       (response) => {
-        // Log response in development
         if (__DEV__) {
           console.log('✅ API Response:', {
             url: response.config.url,
@@ -292,16 +318,16 @@ class ApiService {
       async (error: AxiosError) => {
         const originalConfig = error.config;
 
-        // Log error in development
         if (__DEV__) {
-          console.error('❌ API Error:', {
+          console.error('❌ API Error Details:', {
             url: originalConfig?.url,
             status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data, // This will show the actual error from backend
             message: error.message,
           });
         }
 
-        // Handle network errors
         if (!error.response) {
           const isConnected = await this.checkNetwork();
           if (!isConnected) {
@@ -314,9 +340,7 @@ class ApiService {
 
         const { status, data } = error.response;
 
-        // Handle 400 Bad Request & 422 Unprocessable Entity
         if (status === 400 || status === 422) {
-          // Return the error response data so it can be handled by the caller
           return Promise.reject({
             response: error.response,
             message: (data as any)?.message || (status === 400 ? 'Bad request.' : 'Validation failed.'),
@@ -324,7 +348,6 @@ class ApiService {
           });
         }
 
-        // Handle 401 Unauthorized
         if (status === 401 && originalConfig) {
           if (!this.isRefreshing) {
             this.isRefreshing = true;
@@ -337,7 +360,6 @@ class ApiService {
                 this.processQueue(null, newToken);
                 this.emitEvent('token_refreshed');
 
-                // Retry original request with new token
                 if (originalConfig.headers) {
                   originalConfig.headers.Authorization = `Bearer ${newToken}`;
                 }
@@ -353,24 +375,26 @@ class ApiService {
               return Promise.reject(new Error('Session expired. Please login again.'));
             }
           } else {
-            // Add to queue while token is being refreshed
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject, config: originalConfig });
             });
           }
         }
 
-        // Handle 403 Forbidden
         if (status === 403) {
-          return Promise.reject(new Error('You do not have permission to access this resource.'));
+          // Return the actual error response from the server
+          const serverMessage = (data as any)?.message || 'You do not have permission to access this resource.';
+          const error: any = new Error(serverMessage);
+          error.response = error.response;
+          error.status = status;
+          error.data = data;
+          return Promise.reject(error);
         }
 
-        // Handle 404 Not Found
         if (status === 404) {
           return Promise.reject(new Error('The requested resource was not found.'));
         }
 
-        // Handle other status codes
         const errorMessage = this.getErrorMessage(error);
         const richError: any = new Error(errorMessage);
         richError.responseData = error.response?.data;
@@ -380,12 +404,10 @@ class ApiService {
     );
   }
 
-  // Generate unique request ID
   private generateRequestId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  // Get user-friendly error message
   private getErrorMessage(error: AxiosError): string {
     if (error.response?.data && typeof error.response.data === 'object') {
       const data = error.response.data as any;
@@ -417,7 +439,6 @@ class ApiService {
     }
   }
 
-  // Request methods with retry logic
   private async requestWithRetry<T>(
     requestFn: () => Promise<AxiosResponse<ApiResponse<T>>>,
     retries = MAX_RETRIES
@@ -426,7 +447,6 @@ class ApiService {
       const response = await requestFn();
       return response.data;
     } catch (error: any) {
-      // Don't retry 400 errors - they are client errors
       if (error.response?.status === 400 || error.response?.status === 422) {
         throw error;
       }
@@ -440,94 +460,64 @@ class ApiService {
   }
 
   private shouldRetry(error: any): boolean {
-    // Retry on network errors or 5xx server errors
     return !error.response || (error.response?.status >= 500 && error.response?.status <= 599);
   }
 
   // Public API methods
-  public async get<T>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.requestWithRetry(() => this.api.get<ApiResponse<T>>(url, config));
+  public async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.get<ApiResponse<T>>(url, updatedConfig));
   }
 
-  public async post<T>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.requestWithRetry(() => this.api.post<ApiResponse<T>>(url, data, config));
+  public async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.post<ApiResponse<T>>(url, data, updatedConfig));
   }
 
-  public async put<T>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.requestWithRetry(() => this.api.put<ApiResponse<T>>(url, data, config));
+  public async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.put<ApiResponse<T>>(url, data, updatedConfig));
   }
 
-  public async patch<T>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.requestWithRetry(() => this.api.patch<ApiResponse<T>>(url, data, config));
+  public async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.patch<ApiResponse<T>>(url, data, updatedConfig));
   }
 
-  public async delete<T>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.requestWithRetry(() => this.api.delete<ApiResponse<T>>(url, config));
+  public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.delete<ApiResponse<T>>(url, updatedConfig));
   }
 
-  // File upload with progress
-  public async upload<T>(
-    url: string,
-    formData: FormData,
-    onProgress?: (progress: number) => void
-  ): Promise<ApiResponse<T>> {
+  public async upload<T>(url: string, formData: FormData, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> {
     const config: AxiosRequestConfig = {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && onProgress) {
           const progress = (progressEvent.loaded * 100) / progressEvent.total;
           onProgress(Math.round(progress));
         }
       },
+      withCredentials: false,
     };
-
     return this.post<T>(url, formData, config);
   }
 
-  // Clear all stored data (logout)
   public async clearAll(): Promise<void> {
     await this.removeToken();
     await this.removeUserData();
   }
 
-  // Check if user is authenticated
   public isAuthenticated(): boolean {
     return !!(this.providerToken || this.customerToken);
   }
 
-  // Get auth headers
   public getAuthHeaders(): Record<string, string> {
     const token = this.getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 }
 
-// Export singleton instance
 export const api = new ApiService();
-
-// Export utility functions
-export const setupApi = () => {
-  // Add any additional setup here
-};
-
+export const setupApi = () => {};
 export default api;
