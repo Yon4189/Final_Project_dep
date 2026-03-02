@@ -7,9 +7,11 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Payment;
 use App\Models\Customer;
 use App\Models\Booking;
+use App\Services\NotificationService;
 use Chapa\Chapa\Facades\Chapa as Chapa;
 use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\DB;        
+use Illuminate\Support\Facades\Log; 
 class PaymentController extends Controller
 {
     /**
@@ -113,6 +115,152 @@ class PaymentController extends Controller
             ], 500);
         }
     }
+
+
+/**
+ * NEW METHOD: Initialize payment for a specific booking (after provider accepts)
+ * This is the one we just created for the booking flow
+ */
+    public function initializeBookingPayment(Request $request, $bookingId)
+    {
+        $customer = $request->user(); // Authenticated customer
+
+        try {
+            DB::beginTransaction();
+
+            // Get the booking
+            $booking = Booking::where('bookingID', $bookingId)
+                        ->where('customerID', $customer->customerID)
+                        ->where('status', 'accepted')
+                        ->first();
+
+            if (!$booking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking not found or not ready for payment'
+                ], 404);
+            }
+
+            // Check if payment deadline passed
+            if ($booking->payment_due_at < now()) {
+                $booking->status = 'expired';
+                $booking->save();
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment deadline has passed. Please create a new booking.'
+                ], 400);
+            }
+
+            // Check if payment already exists
+            $existingPayment = Payment::where('bookingID', $bookingId)
+                                ->whereIn('status', ['pending', 'paid', 'released'])
+                                ->first();
+
+            if ($existingPayment) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment already initialized',
+                    'data' => [
+                        'paymentID' => $existingPayment->paymentID,
+                        'checkout_url' => $existingPayment->checkout_url,
+                        'status' => $existingPayment->status
+                    ]
+                ]);
+            }
+
+            // Generate unique transaction reference
+            $tx_ref = 'CHAPA_' . Str::random(12) . '_' . time();
+
+            // Prepare payment data for Chapa
+            $paymentData = [
+                'amount' => $booking->agreed_price,
+                'email' => $customer->email,
+                'tx_ref' => $tx_ref,
+                'currency' => 'ETB',
+                'callback_url' => route('payment.callback', $tx_ref),
+                'return_url' => config('app.frontend_url') . '/payment/return/' . $tx_ref,
+                'first_name' => $customer->fullname,
+                'last_name' => '',
+                'phone_number' => $customer->phone,
+                'customization' => [
+                    'title' => 'Home Service Payment',
+                    'description' => 'Payment for booking #' . $booking->bookingID
+                ],
+                'meta' => [
+                    'booking_id' => $booking->bookingID,
+                    'customer_id' => $customer->customerID,
+                    'provider_id' => $booking->providerID,
+                    'platform' => 'home_service_app'
+                ]
+            ];
+
+            // Initialize payment with Chapa
+            $payment = Chapa::initializePayment($paymentData);
+
+            if ($payment['status'] !== 'success') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment initialization failed',
+                    'data' => $payment
+                ], 400);
+            }
+
+            // Create payment record
+            $paymentRecord = Payment::create([
+                'bookingID' => $booking->bookingID,
+                'customerID' => $customer->customerID,
+                'providerID' => $booking->providerID,
+                'tx_ref' => $tx_ref,
+                'chapa_tx_id' => null,
+                'amount' => $booking->agreed_price,
+                'platform_commission' => $booking->platform_commission,
+                'provider_amount' => $booking->provider_payout,
+                'currency' => 'ETB',
+                'status' => 'pending',
+                'checkout_url' => $payment['data']['checkout_url'],
+                'callback_url' => $paymentData['callback_url'],
+                'return_url' => $paymentData['return_url'],
+                'customer_email' => $customer->email,
+                'customer_first_name' => $customer->fullname,
+                'customer_last_name' => '',
+                'customer_phone' => $customer->phone,
+                'meta_data' => $paymentData['meta'],
+                'failure_reason' => null,
+                'paid_at' => null,
+                'released_at' => null,
+                'refunded_at' => null
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment initialized successfully',
+                'data' => [
+                    'paymentID' => $paymentRecord->paymentID,
+                    'tx_ref' => $tx_ref,
+                    'checkout_url' => $payment['data']['checkout_url'],
+                    'amount' => $booking->agreed_price,
+                    'currency' => 'ETB',
+                    'status' => 'pending',
+                    'expires_at' => $booking->payment_due_at
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Payment initialization error:', ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment initialization failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+// ... (rest of your existing methods: verify, callback, show, customerHistory, index, getPaymentStats, cancel)
 
     /**
      * Verify a payment transaction
@@ -345,4 +493,6 @@ class PaymentController extends Controller
             'message' => 'Payment cancelled successfully'
         ]);
     }
+
+
 }
