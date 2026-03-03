@@ -65,7 +65,7 @@ const Services = () => {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
   };
 
-  // 🚀 FETCH DATA (Categories, Services, and Providers)
+  // FETCH DATA (Categories, Services, and Providers)
   const fetchData = async () => {
     setIsLoading(true);
     setApiError(null);

@@ -7,7 +7,11 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 
+
+console.log("loaded file: Users.jsx");
+
 const Users = () => {
+  console.log("COMPONENT RENDERING: Users component started");
   const location = useLocation();
 
   // Determine user type from URL
@@ -29,6 +33,17 @@ const Users = () => {
   // 2. UI State
   const [searchQuery, setSearchQuery] = useState('');
 
+  useEffect(() => {
+  const token = localStorage.getItem('admin_token');
+  console.log('Admin token on page load:', token);
+  
+  if (!token) {
+    console.log('No admin token found! Redirecting to login...');
+    // Optionally redirect to login page
+    // navigate('/admin/login');
+  }
+}, []);
+
   // Update userType when route changes
   useEffect(() => {
     setUserType(getUserTypeFromPath());
@@ -37,40 +52,60 @@ const Users = () => {
   // 3. Mock Data (replace with API call)
   // mock data was here. its removed 
 
-  const fetchUsers = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
-      const url = userType === "Provider" ? "/admin/providers" : "/admin/customers";
-      console.log("Fetching from URL:", url); // Log the URL being
+    // 3. Fetch Users from API
+    const fetchUsers = async (showLoading = true) => {
+      console.log(" USEFFECT RUNNING: userType =", userType);
+      
+      if (showLoading) setLoading(true);
+      setError(null);
 
-      // fetching data from backedn
-      const apiResponse = await api.get(url);
-      console.log("Raw API data: ", apiResponse.data);
+      
+      try {
+        const url = userType === "Provider" ? "/providers" : "/customers";
+        console.log("Fetching from URL:", url);
 
-      // mapping backend fields with frontend fields
-      const mappedUsers = apiResponse.data.map(u => ({
-        id: u.customerID || u.providerID,
-        name: u.fullname,
-        email: u.email,
-        phone: u.phone,
-        type: userType,
-        status: u.status || "Active",
-        joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
+        // get admin token from local storage
+        const token = localStorage.getItem('admin_token');
+        console.log("token exists:", !!token);
 
-      }));
+        // fetch data with authentication header
+        const apiResponse = await api.get(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+    
+        console.log("Raw API data: ", apiResponse.data);
 
-      setUsers(mappedUsers);
+        // mapping backend fields with frontend fields
+        const mappedUsers = apiResponse.data.data.map(u => ({
+          id: u.customerID || u.providerID,
+          name: u.fullname,
+          email: u.email,
+          phone: u.phone,
+          type: userType,
+          status: u.status || "Active",
+          joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
+        }));
 
-      setDbStatus('connected');
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch users');
-      setDbStatus('disconnected');
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
+        setUsers(mappedUsers);
+        setDbStatus('connected');
+      } catch (err) {
+        console.error(err);
+        
+        // better error handling for authentication issues
+        if (err.response && err.response.status === 401) {
+          setError('Authentication failed - please login again');
+        } else {
+          setError('Failed to fetch users');
+        }
+        
+        setDbStatus('disconnected');
+      } finally {
+        if (showLoading) setLoading(false);
+        }
+    };
 
   useEffect(() => {
     fetchUsers(true);
@@ -87,8 +122,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/admin/providers/${id}/status`
-        : `/admin/customers/${id}/status`;
+        ? `/providers/${id}/status`
+        : `/customers/${id}/status`;
 
       // call backend to update status
       await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
@@ -109,8 +144,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/admin/providers/${id}`
-        : `/admin/customers/${id}`;
+        ? `/providers/${id}`
+        : `/customers/${id}`;
 
       // call backend to delete user
       await api.delete(url);

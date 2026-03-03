@@ -19,31 +19,42 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- Login Handler ---
+// In your Login component (admin login)
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+      e.preventDefault();
+      setError('');
+      setIsLoading(true);
 
-    try {
-      const response = await api.post('/admin/login', { email, password });
-      if (response.data.success) {
-        const adminData = response.data.data;
-        const userSession = {
-          id: adminData.adminID,
-          name: adminData.fullname,
-          email: adminData.email,
-          role: 'admin'
-        };
-        login(userSession, "session_active"); 
-        navigate('/');
+      try {
+        const response = await api.post('/admin/login', { email, password });
+        if (response.data.success) {
+          const adminData = response.data.data.admin;
+          const token = response.data.data.token;
+          
+          // store token in localStorage
+          localStorage.setItem('admin_token', token);
+          
+          const userSession = {
+            id: adminData.adminID,
+            name: adminData.fullname,
+            email: adminData.email,
+            role: 'admin'
+          };
+          
+          // pass the actual token to login function, not "session_active"
+          login(userSession, token);
+          
+          navigate('/');
+        } else {
+          setError(response.data.message || "Login failed.");
+        }
+      } catch (err) {
+        console.error('login error:', err);
+        setError(err.response?.data?.message || "Login failed. Please check your credentials.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed.");
-    } finally {
-      setIsLoading(false);
-    }
   };
-
   // --- Forgot Password Handler ---
   const handleForgotPassword = async (e) => {
     e.preventDefault();

@@ -524,7 +524,7 @@ class CustomerController extends Controller
             'data' => $reviews->items()
         ]);
     }
-
+/*
     public function createComplaint(Request $request)
     {
         $customer = Auth::guard('customer')->user();
@@ -741,7 +741,7 @@ class CustomerController extends Controller
             'data' => $validated
         ]);
     }
-
+*/
     private function generateRequestTimeline($booking)
     {
         $timeline = [];
