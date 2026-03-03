@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Database\QueryException; // 👈 Add this
+use Illuminate\Database\QueryException; 
+use App\Models\Customer;
+use Illuminate\Support\Facades\Hash;
+use App\Models\ServiceProvider;
+
 
 class CategoryController extends Controller
 {

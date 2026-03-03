@@ -7,7 +7,11 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 
+
+console.log("loaded file: Users.jsx");
+
 const Users = () => {
+  console.log("COMPONENT RENDERING: Users component started");
   const location = useLocation();
 
   // Determine user type from URL
@@ -28,6 +32,17 @@ const Users = () => {
 
   // 2. UI State
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+  const token = localStorage.getItem('admin_token');
+  console.log('Admin token on page load:', token);
+  
+  if (!token) {
+    console.log('No admin token found! Redirecting to login...');
+    // Optionally redirect to login page
+    // navigate('/admin/login');
+  }
+}, []);
 
   // Update userType when route changes
   useEffect(() => {
@@ -88,8 +103,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/admin/providers/${id}/status`
-        : `/admin/customers/${id}/status`;
+        ? `/providers/${id}/status`
+        : `/customers/${id}/status`;
 
       // call backend to update status
       await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
@@ -110,8 +125,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/admin/providers/${id}`
-        : `/admin/customers/${id}`;
+        ? `/providers/${id}`
+        : `/customers/${id}`;
 
       // call backend to delete user
       await api.delete(url);

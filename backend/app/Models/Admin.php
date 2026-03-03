@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Foundation\Auth\User as Authenticatable; // change this!
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -21,6 +22,12 @@ class Admin extends Authenticatable
         'phone',
         'password',
         'profilePicture'
+    ];
+
+    // hidden fields (like password) when returning JSON
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     // Optional: automatically hash password when setting it

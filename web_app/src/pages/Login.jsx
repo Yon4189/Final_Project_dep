@@ -19,10 +19,11 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- Login Handler ---
+// In your Login component (admin login)
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+      e.preventDefault();
+      setError('');
+      setIsLoading(true);
 
     try {
       const response = await api.post('/admin/login', { email, password });
@@ -40,13 +41,7 @@ const Login = () => {
         login(userSession, token);
         navigate('/');
       }
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed.");
-    } finally {
-      setIsLoading(false);
-    }
   };
-
   // --- Forgot Password Handler ---
   const handleForgotPassword = async (e) => {
     e.preventDefault();

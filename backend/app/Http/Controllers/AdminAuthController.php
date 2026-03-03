@@ -20,28 +20,21 @@ class AdminAuthController extends Controller
      * 1. Admin Login Logic
      */
     public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation errors',
+            'errors' => $validator->errors()
+        ], 422);
+    }
 
-        $admin = Admin::where('email', $request->email)->first();
-
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid credentials'
-            ], 401);
-        }
+    $admin = Admin::where('email', $request->email)->first();
 
         $token = $admin->createToken('admin-token')->plainTextToken;
 
@@ -52,6 +45,21 @@ class AdminAuthController extends Controller
             'token' => $token
         ]);
     }
+
+    //  GENERATE TOKEN (this will now work after updating the model)
+    $token = $admin->createToken('admin-token')->plainTextToken;
+
+    unset($admin->password);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'data' => [
+            'admin' => $admin,
+            'token' => $token  // 👈 TOKEN IS NOW INCLUDED!
+        ]
+    ]);
+}
 
     /**
      * 2. Platform Statistics – FIXED pending count to match pendingProviders()

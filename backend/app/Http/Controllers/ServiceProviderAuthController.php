@@ -177,7 +177,7 @@ class ServiceProviderAuthController extends Controller
         }
 
         // Check if provider is approved
-        if ($provider->status !== 'approved') {
+        /*if ($provider->status !== 'approved') {
             $message = $provider->status === 'pending' 
                 ? 'Your account is pending admin approval' 
                 : 'Your account has been rejected. Please contact support.';
@@ -187,8 +187,11 @@ class ServiceProviderAuthController extends Controller
                 'message' => $message,
                 'status' => $provider->status
             ], 403);
-        }
-
+        } */  
+            /* provider can login even if not approved, 
+            but they won't show up in search results until approved. 
+             *This allows them to update/finish their profile and services while waiting for approval.
+            */
         // Update location if provided
         if ($request->has('current_latitude') && $request->has('current_longitude')) {
             $provider->current_latitude = $request->current_latitude;
