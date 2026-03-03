@@ -20,35 +20,43 @@ class AdminAuthController extends Controller
      * 1. Admin Login Logic
      */
     public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $admin = Admin::where('email', $request->email)->first();
-
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid credentials'
-            ], 401);
-        }
-
+    if ($validator->fails()) {
         return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'data' => $admin
-        ]);
+            'success' => false,
+            'message' => 'Validation errors',
+            'errors' => $validator->errors()
+        ], 422);
     }
+
+    $admin = Admin::where('email', $request->email)->first();
+
+    if (!$admin || !Hash::check($request->password, $admin->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid credentials'
+        ], 401);
+    }
+
+    //  GENERATE TOKEN (this will now work after updating the model)
+    $token = $admin->createToken('admin-token')->plainTextToken;
+
+    unset($admin->password);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'data' => [
+            'admin' => $admin,
+            'token' => $token  // 👈 TOKEN IS NOW INCLUDED!
+        ]
+    ]);
+}
 
     /**
      * 2. Platform Statistics – FIXED pending count to match pendingProviders()
@@ -256,11 +264,42 @@ class AdminAuthController extends Controller
 
     // ===============fucntions for User Mangment tab for admin============
     public function getProviders(){
-        return ServiceProvider::all();
-    }
+        $provider = ServiceProvider::all();
+        return response()->json([
+            'success' => true,
+            'data' => $provider
+        ]);    }
 
-    public function getCustomers(){
-        return Customer::all();
+    public function getCustomers()
+    {
+    try {
+        $customers = Customer::all();
+        
+        // Check if any customers found
+        if ($customers->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No customers found',
+                'data' => []
+            ], 200);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'count' => $customers->count(),
+            'data' => $customers
+        ], 200);
+        
+    } catch (\Exception $e) {
+        // Log the error for debugging
+        Log::error('Failed to fetch customers: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch customers',
+            'error' => $e->getMessage()
+        ], 500);
+    }
     }
 
     // Delete customer
@@ -305,6 +344,5 @@ class AdminAuthController extends Controller
     return response()->json(['message' => 'Status updated', 'status' => $provider->status]);
     }
 
-//==============================================================
 
 }

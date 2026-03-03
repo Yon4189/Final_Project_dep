@@ -176,7 +176,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
 });
 
 // ==================== ADMIN ROUTES ====================
-Route::middleware('auth:admin')->prefix('admin')->group(function () {
+Route::middleware('auth:admin')->group(function () {
     // Statistics
     Route::get('/stats', [AdminAuthController::class, 'getStats']);
     Route::get('/payments/stats', [PaymentController::class, 'getPaymentStats']);
@@ -210,6 +210,12 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::post('/withdrawal/process/{withdrawal_id}', [WithdrawalController::class, 'process']);
     Route::post('/withdrawal/cancel/{withdrawal_id}', [WithdrawalController::class, 'cancel']);
 });
+
+// Route::prefix('admin')->middleware('auth:admin')->group(function () {
+//     Route::get('/providers', [AdminAuthController::class, 'getAllProviders']);
+//     Route::get('/customers', [AdminAuthController::class, 'getCustomers']);
+//     // you can add more admin routes here
+// });
 
 // ==================== PUBLIC NOTIFICATIONS (Temporary - Should be protected) ====================
 // This should be moved to protected routes. Keeping for backward compatibility
