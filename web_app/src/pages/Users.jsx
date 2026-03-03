@@ -48,8 +48,10 @@ const Users = () => {
       const apiResponse = await api.get(url);
       console.log("Raw API data: ", apiResponse.data);
 
+      const responseData = apiResponse.data.data || [];
+
       // mapping backend fields with frontend fields
-      const mappedUsers = apiResponse.data.map(u => ({
+      const mappedUsers = responseData.map(u => ({
         id: u.customerID || u.providerID,
         name: u.fullname,
         email: u.email,
@@ -57,7 +59,6 @@ const Users = () => {
         type: userType,
         status: u.status || "Active",
         joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
-
       }));
 
       setUsers(mappedUsers);

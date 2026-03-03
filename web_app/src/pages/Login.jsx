@@ -6,15 +6,15 @@ import api from '../api/axios';
 
 const Login = () => {
   // Mode toggle: 'login' or 'forgot'
-  const [viewMode, setViewMode] = useState('login'); 
-  
+  const [viewMode, setViewMode] = useState('login');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState(''); // For forgot password feedback
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -28,13 +28,16 @@ const Login = () => {
       const response = await api.post('/admin/login', { email, password });
       if (response.data.success) {
         const adminData = response.data.data;
+        const token = response.data.token;
         const userSession = {
           id: adminData.adminID,
           name: adminData.fullname,
           email: adminData.email,
+          phone: adminData.phone,
+          profilePicture: adminData.profilePicture,
           role: 'admin'
         };
-        login(userSession, "session_active"); 
+        login(userSession, token);
         navigate('/');
       }
     } catch (err) {
@@ -67,7 +70,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 md:p-14 animate-in fade-in zoom-in duration-500">
-        
+
         <div className="text-center mb-10">
           <h2 className="text-3xl font-black text-slate-800">
             {viewMode === 'login' ? 'Admin Login' : 'Reset Password'}
@@ -93,7 +96,7 @@ const Login = () => {
           /* LOGIN FORM */
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="relative">
-              <input 
+              <input
                 type="email" required placeholder="Enter your email"
                 className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
                 value={email} onChange={(e) => setEmail(e.target.value)}
@@ -102,7 +105,7 @@ const Login = () => {
             </div>
 
             <div className="relative">
-              <input 
+              <input
                 type={showPassword ? "text" : "password"} required placeholder="Enter your password"
                 name="admin_password_unique"
                 autoComplete="new-password"
@@ -115,8 +118,8 @@ const Login = () => {
             </div>
 
             <div className="text-right">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => { setViewMode('forgot'); setError(''); setSuccessMsg(''); }}
                 className="text-blue-600 text-xs font-bold hover:underline"
               >
@@ -132,7 +135,7 @@ const Login = () => {
           /* FORGOT PASSWORD FORM */
           <form onSubmit={handleForgotPassword} className="space-y-6">
             <div className="relative">
-              <input 
+              <input
                 type="email" required placeholder="Your email address"
                 className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
                 value={email} onChange={(e) => setEmail(e.target.value)}
@@ -144,8 +147,8 @@ const Login = () => {
               {isLoading ? <Loader2 className="animate-spin" size={18} /> : 'Send Link'}
             </button>
 
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => { setViewMode('login'); setError(''); setSuccessMsg(''); }}
               className="w-full flex items-center justify-center gap-2 text-slate-500 text-xs font-bold hover:text-slate-800 transition-all"
             >

@@ -179,10 +179,13 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
 Route::middleware('auth:admin')->prefix('admin')->group(function () {
     // Statistics
     Route::get('/stats', [AdminAuthController::class, 'getStats']);
+    // Platform Settings
+    Route::post('/settings', [AdminAuthController::class, 'updateSettings']);
+    Route::post('/profile/update', [AdminAuthController::class, 'updateProfile']);
+    Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
     Route::get('/payments/stats', [PaymentController::class, 'getPaymentStats']);
     Route::get('/withdrawals/stats', [WithdrawalController::class, 'getWithdrawalStats']);
-    
-    // Provider Management
+    Route::get('/bookings', [AdminAuthController::class, 'getAllBookings']);
     Route::get('/providers', [AdminAuthController::class, 'getAllProviders']);
     Route::get('/providers/pending', [AdminAuthController::class, 'pendingProviders']);
     Route::get('/providers/approved', [AdminAuthController::class, 'approvedProviders']);
@@ -198,9 +201,13 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::delete('/customers/{id}', [AdminAuthController::class, 'deleteCustomer']);
     
     // Category Management
+    Route::get('/categories', [CategoryController::class, 'getCategories']);
     Route::post('/categories', [CategoryController::class, 'addCategory']);
     Route::put('/categories/{id}', [CategoryController::class, 'editCategory']);
     Route::delete('/categories/{id}', [CategoryController::class, 'deleteCategory']);
+
+    // Service Management
+    Route::get('/services', [ServiceController::class, 'index']);
     
     // Payments
     Route::get('/payments', [PaymentController::class, 'index']);

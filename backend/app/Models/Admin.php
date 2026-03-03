@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 
-class Admin extends Model
+class Admin extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, HasApiTokens, Notifiable;
 
     protected $table = 'admins';
     protected $primaryKey = 'adminID';
@@ -17,7 +19,8 @@ class Admin extends Model
         'fullname',
         'email',
         'phone',
-        'password'
+        'password',
+        'profilePicture'
     ];
 
     // Optional: automatically hash password when setting it
