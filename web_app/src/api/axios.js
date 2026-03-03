@@ -13,32 +13,16 @@ const api = axios.create({
   }
 });
 
-//  ADD THIS INTERCEPTOR - adds token to every request
+// Add a request interceptor to include the auth token
 api.interceptors.request.use(
-  config => {
+  (config) => {
     const token = localStorage.getItem('admin_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  error => {
-    return Promise.reject(error);
-  }
-);
-
-//  OPTIONAL: Add response interceptor for handling 401 errors
-api.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response && error.response.status === 401) {
-      // token expired or invalid
-      localStorage.removeItem('admin_token');
-      // redirect to login page if not already there
-      if (window.location.pathname !== '/admin/login') {
-        window.location.href = '/admin/login';
-      }
-    }
+  (error) => {
     return Promise.reject(error);
   }
 );

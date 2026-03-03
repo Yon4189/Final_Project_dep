@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable; // change this!
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Laravel\Sanctum\HasApiTokens; // add this!
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 
-class Admin extends Authenticatable // changed from Model
+class Admin extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable; // added HasApiTokens
+    use HasFactory, HasApiTokens, Notifiable;
 
     protected $table = 'admins';
     protected $primaryKey = 'adminID';
@@ -19,7 +20,8 @@ class Admin extends Authenticatable // changed from Model
         'fullname',
         'email',
         'phone',
-        'password'
+        'password',
+        'profilePicture'
     ];
 
     // hidden fields (like password) when returning JSON

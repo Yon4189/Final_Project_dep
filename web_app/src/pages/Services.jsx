@@ -71,9 +71,9 @@ const Services = () => {
     setApiError(null);
     try {
       const [catRes, svcRes, provRes] = await Promise.allSettled([
-        api.get('/categories'),
-        api.get('/services'),
-        api.get('/providers')
+        api.get('/admin/categories'),
+        api.get('/admin/services'),
+        api.get('/admin/providers')
       ]);
 
       if (catRes.status === 'fulfilled') {
@@ -150,10 +150,10 @@ const Services = () => {
     setIsSubmitting(true);
     try {
       if (editingCategory) {
-        await api.put(`/categories/${editingCategory.catagoryID}`, formData);
+        await api.put(`/admin/categories/${editingCategory.catagoryID}`, formData);
         triggerToast('Category updated!');
       } else {
-        await api.post('/categories', formData);
+        await api.post('/admin/categories', formData);
         triggerToast('New Category added!');
       }
       setIsModalOpen(false);
@@ -178,7 +178,7 @@ const Services = () => {
   const confirmDelete = async () => {
     setIsSubmitting(true);
     try {
-      await api.delete(`/categories/${deleteConfirm.id}`);
+      await api.delete(`/admin/categories/${deleteConfirm.id}`);
       triggerToast('Deleted successfully');
       setDeleteConfirm({ show: false, id: null, name: '' });
       fetchData();
@@ -206,9 +206,8 @@ const Services = () => {
 
       {/* TOAST SYSTEM */}
       {toast.show && (
-        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right-10 border ${
-          toast.type === 'success' ? 'bg-slate-900 text-green-400 border-green-500/20' : 'bg-red-600 text-white'
-        }`}>
+        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right-10 border ${toast.type === 'success' ? 'bg-slate-900 text-green-400 border-green-500/20' : 'bg-red-600 text-white'
+          }`}>
           {toast.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
         </div>
@@ -230,8 +229,8 @@ const Services = () => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Database size={16} className={
               dbStatus === 'connected' ? 'text-green-500' :
-              dbStatus === 'disconnected' ? 'text-red-500' :
-              'text-yellow-500 animate-pulse'
+                dbStatus === 'disconnected' ? 'text-red-500' :
+                  'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-black uppercase tracking-wider">
               {dbStatus === 'connected' && 'Database Connected'}
@@ -319,9 +318,8 @@ const Services = () => {
                         <td className="px-8 py-5 font-mono text-xs font-bold text-slate-300">#{item.catagoryID}</td>
                         <td className="px-8 py-5 font-black text-slate-800">{item.name}</td>
                         <td className="px-8 py-5">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${
-                            item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                            }`}>
                             {item.status || 'Active'}
                           </span>
                         </td>
@@ -353,7 +351,7 @@ const Services = () => {
                             {getCategoryName(item.catagoryID)}
                           </span>
                         </td>
-                        <td className="px-8 py-5 font-black text-slate-800 font-mono tracking-tighter">{item.estimatedCost}</td>
+                        <td className="px-8 py-5 font-black text-slate-800 font-mono tracking-tighter">{item.estimatedPrice}</td>
                       </>
                     )}
                   </tr>

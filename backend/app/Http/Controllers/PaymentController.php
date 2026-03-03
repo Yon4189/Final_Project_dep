@@ -414,7 +414,7 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['customer', 'booking']);
+        $query = Payment::with(['customer', 'booking', 'provider']);
 
         // Filter by status
         if ($request->has('status')) {

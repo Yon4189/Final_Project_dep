@@ -42,7 +42,7 @@ const Dashboard = () => {
     if (showLoading) setIsLoading(true);
     try {
       const [queueRes, statsRes] = await Promise.all([
-        api.get('/providers/pending'),
+        api.get('/admin/providers/pending'),
         api.get('/admin/stats')
       ]);
 
@@ -86,7 +86,7 @@ const Dashboard = () => {
   const processVerifyAction = async (id, status, reason = null) => {
     setProcessingId(id);
     try {
-      const response = await api.post(`/providers/${id}/verify`, {
+      const response = await api.post(`/admin/providers/${id}/verify`, {
         status,
         verification_reason: reason
       });
