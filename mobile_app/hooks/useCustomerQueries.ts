@@ -1,7 +1,7 @@
 // hooks/useCustomerQueries.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/app/services/customer.service';
-import type { ServiceProvider, Review, ServiceRequest, User } from '@/app/types/customer.types';
+import type { ServiceProvider, Review, User } from '@/app/types/customer.types';
 
 // Query Keys
 export const customerKeys = {
@@ -12,12 +12,12 @@ export const customerKeys = {
   locations: () => [...customerKeys.all, 'locations'] as const,
   serviceCity: () => [...customerKeys.all, 'serviceCity'] as const,
   favorites: () => [...customerKeys.all, 'favorites'] as const,
-  requests: (status?: string) => [...customerKeys.all, 'requests', status] as const,
-  request: (id: string) => [...customerKeys.all, 'requests', id] as const,
   reviews: () => [...customerKeys.all, 'reviews'] as const,
   review: (id: string) => [...customerKeys.all, 'reviews', id] as const,
   complaints: () => [...customerKeys.all, 'complaints'] as const,
   complaint: (id: string) => [...customerKeys.all, 'complaints', id] as const,
+  serviceRequests: () => [...customerKeys.all, 'serviceRequests'] as const,
+  serviceRequest: (id: string) => [...customerKeys.all, 'serviceRequests', id] as const,
   providers: {
     all: ['providers'] as const,
     search: (params: any) => ['providers', 'search', params] as const,
@@ -33,6 +33,9 @@ export const customerKeys = {
   dashboard: {
     stats: () => [...customerKeys.all, 'dashboard', 'stats'] as const,
     activity: (limit: number) => [...customerKeys.all, 'dashboard', 'activity', limit] as const,
+  },
+  categories: {
+    all: ['serviceCategories'] as const,
   },
 };
 
@@ -53,7 +56,7 @@ export const useProfile = () => {
 
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: Partial<User>) => {
       const response = await customerService.updateProfile(data);
@@ -86,6 +89,53 @@ export const useChangePassword = () => {
 
 // ==================== Notification Hooks ====================
 
+export const useNotifications = () => {
+  return useQuery({
+    queryKey: customerKeys.notifications(),
+    queryFn: async () => {
+      const response = await customerService.getNotifications();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch notifications');
+      }
+      return response.data;
+    },
+  });
+};
+
+export const useMarkNotificationRead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const response = await customerService.markNotificationRead(notificationId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to mark notification as read');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.notifications() });
+    },
+  });
+};
+
+export const useMarkAllNotificationsRead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await customerService.markAllNotificationsRead();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to mark all notifications as read');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.notifications() });
+    },
+  });
+};
+
 export const useNotificationSettings = () => {
   return useQuery({
     queryKey: customerKeys.notificationsSettings(),
@@ -101,7 +151,7 @@ export const useNotificationSettings = () => {
 
 export const useUpdateNotificationSettings = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: any) => {
       const response = await customerService.updateNotificationSettings(data);
@@ -133,7 +183,7 @@ export const useLocations = () => {
 
 export const useAddLocation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: any) => {
       const response = await customerService.addLocation(data);
@@ -150,7 +200,7 @@ export const useAddLocation = () => {
 
 export const useUpdateLocation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const response = await customerService.updateLocation(id, data);
@@ -167,7 +217,7 @@ export const useUpdateLocation = () => {
 
 export const useDeleteLocation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await customerService.deleteLocation(id);
@@ -184,7 +234,7 @@ export const useDeleteLocation = () => {
 
 export const useSetPrimaryLocation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await customerService.setPrimaryLocation(id);
@@ -214,7 +264,7 @@ export const useServiceCity = () => {
 
 export const useUpdateServiceCity = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: { service_city: string }) => {
       const response = await customerService.updateServiceCity(data);
@@ -317,36 +367,53 @@ export const useProviderAvailability = (providerId: string, date: string) => {
 
 // ==================== Service Request Hooks ====================
 
-export const useMyRequests = (status?: string) => {
+export const useServiceRequests = (status?: string) => {
   return useQuery({
-    queryKey: customerKeys.requests(status),
+    queryKey: status ? [...customerKeys.serviceRequests(), status] : customerKeys.serviceRequests(),
     queryFn: async () => {
       const response = await customerService.getMyRequests(status);
       if (!response.success) {
-        throw new Error(response.message || 'Failed to fetch requests');
+        throw new Error(response.message || 'Failed to fetch service requests');
       }
-      return response.data as ServiceRequest[];
+      return response.data;
     },
   });
 };
 
-export const useRequestDetails = (id: string) => {
+export const useServiceRequestDetails = (id: string) => {
   return useQuery({
-    queryKey: customerKeys.request(id),
+    queryKey: customerKeys.serviceRequest(id),
     queryFn: async () => {
       const response = await customerService.getRequestDetails(id);
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch request details');
       }
-      return response.data as ServiceRequest;
+      return response.data;
     },
     enabled: !!id,
   });
 };
 
-export const useCancelRequest = () => {
+export const useCreateServiceRequest = () => {
   const queryClient = useQueryClient();
-  
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const response = await customerService.createBooking(data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create service request');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceRequests() });
+    },
+  });
+};
+
+export const useCancelServiceRequest = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const response = await customerService.cancelRequest(id, reason);
@@ -356,15 +423,15 @@ export const useCancelRequest = () => {
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.id) });
-      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceRequest(variables.id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceRequests() });
     },
   });
 };
 
-export const useRescheduleRequest = () => {
+export const useRescheduleServiceRequest = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: { date: string; time: string } }) => {
       const response = await customerService.rescheduleRequest(id, data);
@@ -374,33 +441,8 @@ export const useRescheduleRequest = () => {
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.id) });
-      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
-    },
-  });
-};
-
-export const useCreateBooking = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (data: {
-      provider_id: string;
-      service_id: string;
-      scheduled_date: string;
-      scheduled_time: string;
-      address: string;
-      description?: string;
-      estimated_price?: number;
-    }) => {
-      const response = await customerService.createBooking(data);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to create booking');
-      }
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.requests() });
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceRequest(variables.id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceRequests() });
     },
   });
 };
@@ -409,7 +451,7 @@ export const useCreateBooking = () => {
 
 export const useCreateReview = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: any) => {
       const response = await customerService.createReview(data);
@@ -420,7 +462,11 @@ export const useCreateReview = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: customerKeys.reviews() });
-      queryClient.invalidateQueries({ queryKey: customerKeys.request(variables.bookingId) });
+      if (variables.providerId) {
+        queryClient.invalidateQueries({
+          queryKey: customerKeys.providers.reviews(variables.providerId, 1)
+        });
+      }
     },
   });
 };
@@ -438,11 +484,76 @@ export const useMyReviews = () => {
   });
 };
 
+export const useUpdateReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await customerService.updateReview(id, data);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update review');
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.review(variables.id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.reviews() });
+    },
+  });
+};
+
+export const useDeleteReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await customerService.deleteReview(id);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to delete review');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.reviews() });
+    },
+  });
+};
+
 // ==================== Complaint Hooks ====================
+
+export const useMyComplaints = () => {
+  return useQuery({
+    queryKey: customerKeys.complaints(),
+    queryFn: async () => {
+      const response = await customerService.getMyComplaints();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch complaints');
+      }
+      return response.data;
+    },
+  });
+};
+
+// Alias for backward compatibility - must come AFTER useMyComplaints is defined
+export const useComplaints = useMyComplaints;
+
+export const useComplaintDetails = (id: string) => {
+  return useQuery({
+    queryKey: customerKeys.complaint(id),
+    queryFn: async () => {
+      const response = await customerService.getComplaintDetails(id);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch complaint details');
+      }
+      return response.data;
+    },
+    enabled: !!id,
+  });
+};
 
 export const useCreateComplaint = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: any) => {
       const response = await customerService.createComplaint(data);
@@ -457,15 +568,20 @@ export const useCreateComplaint = () => {
   });
 };
 
-export const useMyComplaints = () => {
-  return useQuery({
-    queryKey: customerKeys.complaints(),
-    queryFn: async () => {
-      const response = await customerService.getMyComplaints();
+export const useAddComplaintResponse = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, message }: { id: string; message: string }) => {
+      const response = await customerService.addComplaintResponse(id, message);
       if (!response.success) {
-        throw new Error(response.message || 'Failed to fetch complaints');
+        throw new Error(response.message || 'Failed to add response');
       }
       return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.complaint(variables.id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.complaints() });
     },
   });
 };
@@ -487,7 +603,7 @@ export const useFavorites = () => {
 
 export const useAddFavorite = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (providerId: string) => {
       const response = await customerService.addFavorite(providerId);
@@ -504,7 +620,7 @@ export const useAddFavorite = () => {
 
 export const useRemoveFavorite = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (providerId: string) => {
       const response = await customerService.removeFavorite(providerId);
@@ -548,6 +664,9 @@ export const useWalletBalance = () => {
   });
 };
 
+// Note: useAddFunds and useTransactionHistory are not available yet
+// They will be added when the backend endpoints are ready
+
 // ==================== Dashboard Hooks ====================
 
 export const useDashboardStats = () => {
@@ -580,7 +699,7 @@ export const useRecentActivity = (limit: number = 10) => {
 
 export const useServiceCategories = () => {
   return useQuery({
-    queryKey: ['serviceCategories'],
+    queryKey: customerKeys.categories.all,
     queryFn: async () => {
       const response = await customerService.getServiceCategories();
       if (!response.success) {
@@ -588,5 +707,19 @@ export const useServiceCategories = () => {
       }
       return response.data;
     },
+  });
+};
+
+export const useCategoryServices = (categoryId: string) => {
+  return useQuery({
+    queryKey: [...customerKeys.categories.all, categoryId, 'services'],
+    queryFn: async () => {
+      const response = await customerService.getServicesByCategory(categoryId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch category services');
+      }
+      return response.data;
+    },
+    enabled: !!categoryId,
   });
 };

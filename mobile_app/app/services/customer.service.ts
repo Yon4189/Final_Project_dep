@@ -22,6 +22,7 @@ interface LocationData {
 }
 
 // Type guard for validating location data
+
 function isValidLocation(location: unknown): location is LocationData {
   if (!location || typeof location !== 'object') return false;
   

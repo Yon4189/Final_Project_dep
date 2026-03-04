@@ -1,5 +1,5 @@
 // app/(customer)/search/results.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useSearch } from '../../../hooks/useSearch';
 import { ProviderCard } from '../../../components/customer/ProviderCard';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { EmptyState } from '../../../components/common/EmptyState';
+import { ServiceRequestModal } from '../../../components/customer/ServiceRequestModal';
 import type { ServiceProvider } from '@/app/types/customer.types';
 
 const { width } = Dimensions.get('window');
@@ -29,12 +30,15 @@ export default function SearchResultsScreen() {
     categoryId?: string;
     category?: string;
   }>();
+
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [sortBy, setSortBy] = useState('rating');
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
   const [ratingFilter, setRatingFilter] = useState(0);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState(params.query || params.q || '');
+  const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   const categoryId = params.categoryId || params.category;
 
@@ -44,7 +48,6 @@ export default function SearchResultsScreen() {
     initialFilters: {
       ...(categoryId ? { categoryId } : {}),
       sortBy: sortBy as 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews',
-     
       maxDistance: 50,
     },
   });
@@ -52,22 +55,28 @@ export default function SearchResultsScreen() {
   // Apply availability filter client-side
   const filteredProviders = useMemo(() => {
     if (!providers) return [];
-    
+
     if (availabilityFilter === 'all') return providers;
-    
+
     return providers.filter(provider => {
       if (availabilityFilter === 'online') {
         return provider.isAvailable === true;
       } else if (availabilityFilter === 'available_today') {
-        // This would depend on your provider's availability data
-        return true; // You can implement this based on your data structure
+        return true;
       }
       return true;
     });
   }, [providers, availabilityFilter]);
 
-  const handleProviderPress = (provider: ServiceProvider) => {
+  // Handle profile view - when tapping the card
+  const handleProfilePress = (provider: ServiceProvider) => {
     router.push(`/(customer)/provider/${provider.id}`);
+  };
+
+  // Handle booking - when tapping "Book Now" button
+  const handleBookPress = (provider: ServiceProvider) => {
+    setSelectedProvider(provider);
+    setShowBookingModal(true);
   };
 
   const handleFilterApply = () => {
@@ -79,6 +88,85 @@ export default function SearchResultsScreen() {
     setPriceRange({ min: 0, max: 1000 });
     setRatingFilter(0);
     setAvailabilityFilter('all');
+  };
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+      </TouchableOpacity>
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search for services or providers..."
+          placeholderTextColor={Colors.text.secondary}
+          returnKeyType="search"
+        />
+      </View>
+      <TouchableOpacity style={styles.filterButton} onPress={() => setFiltersVisible(true)}>
+        <MaterialCommunityIcons name="filter-variant" size={24} color={Colors.surface} />
+        <Text style={styles.filterButtonText}>Filters</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderSortInfo = () => (
+    <View style={styles.sortInfo}>
+      <Text style={styles.sortInfoText}>
+        {filteredProviders?.length || 0} providers found
+      </Text>
+      <View style={styles.sortBadge}>
+        <Text style={styles.sortBadgeText}>
+          {sortBy === 'rating' ? 'Sorted by rating' :
+            sortBy === 'price_low' ? 'Sorted by price (low to high)' :
+              sortBy === 'price_high' ? 'Sorted by price (high to low)' :
+                sortBy === 'distance' ? 'Sorted by distance' : 'Sorted by reviews'}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderProviders = () => {
+    if (isLoading) {
+      return <LoadingSpinner />;
+    }
+
+    if (error) {
+      return (
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Search Failed"
+          message="Please check your internet connection and try again."
+        />
+      );
+    }
+
+    if (!filteredProviders || filteredProviders.length === 0) {
+      return (
+        <EmptyState
+          icon="search-outline"
+          title="No Results Found"
+          message={`No providers found for "${searchQuery}". Try adjusting your search or filters.`}
+        />
+      );
+    }
+
+    return (
+      <View style={styles.providersContainer}>
+        {filteredProviders.map((provider) => (
+          <ProviderCard
+            key={provider.id}
+            provider={provider}
+            onPress={() => handleProfilePress(provider)}
+            onBookPress={() => handleBookPress(provider)}
+          // Don't set showActions - let it default to false to show Book Now
+          />
+        ))}
+      </View>
+    );
   };
 
   const renderFiltersModal = () => (
@@ -108,10 +196,10 @@ export default function SearchResultsScreen() {
                   onPress={() => setSortBy(option)}
                 >
                   <Text style={[styles.filterOptionText, sortBy === option && styles.filterOptionTextSelected]}>
-                    {option === 'rating' ? 'Highest Rated' : 
-                     option === 'price_low' ? 'Price: Low to High' :
-                     option === 'price_high' ? 'Price: High to Low' :
-                     option === 'distance' ? 'Nearest' : 'Most Reviewed'}
+                    {option === 'rating' ? 'Highest Rated' :
+                      option === 'price_low' ? 'Price: Low to High' :
+                        option === 'price_high' ? 'Price: High to Low' :
+                          option === 'distance' ? 'Nearest' : 'Most Reviewed'}
                   </Text>
                   {sortBy === option && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
                 </TouchableOpacity>
@@ -127,7 +215,7 @@ export default function SearchResultsScreen() {
                   <TextInput
                     style={styles.priceInput}
                     value={priceRange.min.toString()}
-                    onChangeText={(text) => setPriceRange({...priceRange, min: parseInt(text) || 0})}
+                    onChangeText={(text) => setPriceRange({ ...priceRange, min: parseInt(text) || 0 })}
                     keyboardType="numeric"
                     placeholder="0"
                     placeholderTextColor={Colors.text.secondary}
@@ -139,7 +227,7 @@ export default function SearchResultsScreen() {
                   <TextInput
                     style={styles.priceInput}
                     value={priceRange.max.toString()}
-                    onChangeText={(text) => setPriceRange({...priceRange, max: parseInt(text) || 1000})}
+                    onChangeText={(text) => setPriceRange({ ...priceRange, max: parseInt(text) || 1000 })}
                     keyboardType="numeric"
                     placeholder="1000"
                     placeholderTextColor={Colors.text.secondary}
@@ -187,8 +275,8 @@ export default function SearchResultsScreen() {
                   onPress={() => setAvailabilityFilter(option)}
                 >
                   <Text style={[styles.filterOptionText, availabilityFilter === option && styles.filterOptionTextSelected]}>
-                    {option === 'all' ? 'All Providers' : 
-                     option === 'online' ? 'Currently Online' : 'Available Today'}
+                    {option === 'all' ? 'All Providers' :
+                      option === 'online' ? 'Currently Online' : 'Available Today'}
                   </Text>
                   {availabilityFilter === option && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
                 </TouchableOpacity>
@@ -209,87 +297,6 @@ export default function SearchResultsScreen() {
     </Modal>
   );
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-      </TouchableOpacity>
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
-        <TextInput
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search for services or providers..."
-          placeholderTextColor={Colors.text.secondary}
-          returnKeyType="search"
-          onSubmitEditing={() => {
-            // Trigger search with new query
-            // The useSearch hook will auto-search due to initialQuery change
-          }}
-        />
-      </View>
-      <TouchableOpacity style={styles.filterButton} onPress={() => setFiltersVisible(true)}>
-        <MaterialCommunityIcons name="filter-variant" size={24} color={Colors.surface} />
-        <Text style={styles.filterButtonText}>Filters</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderSortInfo = () => (
-    <View style={styles.sortInfo}>
-      <Text style={styles.sortInfoText}>
-        {filteredProviders?.length || 0} providers found
-      </Text>
-      <View style={styles.sortBadge}>
-        <Text style={styles.sortBadgeText}>
-          {sortBy === 'rating' ? 'Sorted by rating' : 
-           sortBy === 'price_low' ? 'Sorted by price (low to high)' :
-           sortBy === 'price_high' ? 'Sorted by price (high to low)' :
-           sortBy === 'distance' ? 'Sorted by distance' : 'Sorted by reviews'}
-        </Text>
-      </View>
-    </View>
-  );
-
-  const renderProviders = () => {
-    if (isLoading) {
-      return <LoadingSpinner />;
-    }
-
-    if (error) {
-      return (
-        <EmptyState
-          icon="alert-circle-outline"
-          title="Search Failed"
-          message="Please check your internet connection and try again."
-        />
-      );
-    }
-
-    if (!filteredProviders || filteredProviders.length === 0) {
-      return (
-        <EmptyState
-          icon="search-outline"
-          title="No Results Found"
-          message={`No providers found for "${searchQuery}". Try adjusting your search or filters.`}
-        />
-      );
-    }
-
-    return (
-      <View style={styles.providersContainer}>
-        {filteredProviders.map((provider) => (
-          <ProviderCard
-            key={provider.id}
-            provider={provider}
-            onPress={() => handleProviderPress(provider)}
-          />
-        ))}
-      </View>
-    );
-  };
-
   return (
     <View style={styles.container}>
       {renderHeader()}
@@ -298,6 +305,17 @@ export default function SearchResultsScreen() {
         {renderProviders()}
       </ScrollView>
       {renderFiltersModal()}
+
+      {/* Booking Modal */}
+      <ServiceRequestModal
+        visible={showBookingModal}
+        onClose={() => {
+          setShowBookingModal(false);
+          setSelectedProvider(null);
+        }}
+        provider={selectedProvider}
+      // Add userLocation if you have it from context/state
+      />
     </View>
   );
 }
