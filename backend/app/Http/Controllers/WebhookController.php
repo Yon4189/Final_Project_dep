@@ -4,14 +4,27 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\Payment;
 use App\Models\Withdrawal;
+use App\Models\Booking;
+use App\Models\Wallet;
+use App\Models\WalletTransaction;
+use App\Services\WalletService;
 use Illuminate\Support\Str;
 
 class WebhookController extends Controller
 {
+    protected $walletService;
+
+    public function __construct(WalletService $walletService)
+    {
+        $this->walletService = $walletService;
+    }
+
     /**
      * Handle Chapa payment webhook
+     * This is the most reliable way to get payment confirmation
      */
     public function handleChapaWebhook(Request $request)
     {
@@ -32,21 +45,23 @@ class WebhookController extends Controller
         }
 
         try {
-            $event = $request->input('event');
-            $data = $request->input('data');
+            $data = $request->all();
+            $event = $data['event'] ?? null;
+            $payload = $data['data'] ?? [];
 
+            // Handle different event types
             switch ($event) {
-                case 'payment.success':
-                    return $this->handlePaymentSuccess($data);
+                case 'charge.success':
+                    return $this->handlePaymentSuccess($payload);
                 
-                case 'payment.failed':
-                    return $this->handlePaymentFailed($data);
+                case 'charge.failed':
+                    return $this->handlePaymentFailed($payload);
                 
                 case 'transfer.success':
-                    return $this->handleTransferSuccess($data);
+                    return $this->handleTransferSuccess($payload);
                 
                 case 'transfer.failed':
-                    return $this->handleTransferFailed($data);
+                    return $this->handleTransferFailed($payload);
                 
                 default:
                     Log::info('Unhandled webhook event', ['event' => $event]);
@@ -72,13 +87,15 @@ class WebhookController extends Controller
     {
         $txRef = $data['tx_ref'] ?? null;
         $chapaTxId = $data['id'] ?? null;
+        $amount = $data['amount'] ?? 0;
+        $currency = $data['currency'] ?? 'ETB';
 
         if (!$txRef) {
             Log::error('Payment success webhook missing tx_ref', $data);
             return response()->json(['error' => 'Missing transaction reference'], 400);
         }
 
-        // Find and update payment
+        // Find payment by tx_ref
         $payment = Payment::where('tx_ref', $txRef)->first();
         
         if (!$payment) {
@@ -86,36 +103,66 @@ class WebhookController extends Controller
             return response()->json(['error' => 'Payment not found'], 404);
         }
 
-        // Update payment status
-        $payment->status = 'success';
-        $payment->chapa_tx_id = $chapaTxId;
-        $payment->payment_method = $data['payment_method'] ?? null;
-        $payment->save();
-
-        // Update booking status if linked
-        if ($payment->booking_id) {
-            $booking = $payment->booking;
-            if ($booking) {
-                $booking->status = 'paid';
-                $booking->save();
-                
-                Log::info('Booking status updated to paid', [
-                    'booking_id' => $booking->bookingID,
-                    'payment_id' => $payment->id
-                ]);
-            }
+        // Verify amount matches
+        if (abs($amount - $payment->amount) > 0.01) {
+            Log::error('Payment amount mismatch in webhook', [
+                'tx_ref' => $txRef,
+                'expected' => $payment->amount,
+                'received' => $amount
+            ]);
+            $payment->status = 'failed';
+            $payment->failure_reason = 'Amount mismatch in webhook';
+            $payment->save();
+            return response()->json(['error' => 'Amount mismatch'], 400);
         }
 
-        // Trigger any additional business logic
-        $this->triggerPaymentSuccessActions($payment);
+        // Only process if payment is in pending/processing state
+        if (!in_array($payment->status, ['pending', 'processing'])) {
+            Log::info('Payment already processed', [
+                'tx_ref' => $txRef,
+                'status' => $payment->status
+            ]);
+            return response()->json(['status' => 'already_processed']);
+        }
 
-        Log::info('Payment success processed', [
-            'payment_id' => $payment->id,
+        // Use database transaction to ensure data consistency
+        DB::transaction(function () use ($payment, $chapaTxId, $data) {
+            // Update payment status to held (in escrow)
+            $payment->status = 'held';
+            $payment->chapa_tx_id = $chapaTxId;
+            $payment->payment_method = $data['payment_method'] ?? 'chapa';
+            $payment->chapa_response = $data;
+            $payment->paid_at = now();
+            $payment->held_until = now()->addHours(48); // Auto-release after 48 hours
+            $payment->save();
+
+            // Update booking status if linked
+            if ($payment->bookingID) {
+                $booking = Booking::find($payment->bookingID);
+                if ($booking) {
+                    $booking->booking_status = 'paid';
+                    $booking->paymentID = $payment->paymentID;
+                    $booking->customer_confirmation_deadline = now()->addHours(48);
+                    $booking->save();
+                    
+                    Log::info('Booking status updated to paid', [
+                        'booking_id' => $booking->bookingID,
+                        'payment_id' => $payment->paymentID
+                    ]);
+                }
+            }
+
+            // Trigger any additional business logic
+            $this->triggerPaymentSuccessActions($payment);
+        });
+
+        Log::info('Payment success processed via webhook', [
+            'payment_id' => $payment->paymentID,
             'tx_ref' => $txRef,
             'amount' => $payment->amount
         ]);
 
-        return response()->json(['status' => 'processed']);
+        return response()->json(['status' => 'success']);
     }
 
     /**
@@ -124,7 +171,7 @@ class WebhookController extends Controller
     private function handlePaymentFailed($data)
     {
         $txRef = $data['tx_ref'] ?? null;
-        $failureReason = $data['message'] ?? 'Payment failed';
+        $failureReason = $data['message'] ?? $data['failure_reason'] ?? 'Payment failed';
 
         if (!$txRef) {
             Log::error('Payment failed webhook missing tx_ref', $data);
@@ -138,24 +185,27 @@ class WebhookController extends Controller
             return response()->json(['error' => 'Payment not found'], 404);
         }
 
-        $payment->status = 'failed';
-        $payment->failure_reason = $failureReason;
-        $payment->save();
+        DB::transaction(function () use ($payment, $failureReason, $data) {
+            $payment->status = 'failed';
+            $payment->failure_reason = $failureReason;
+            $payment->chapa_response = $data;
+            $payment->save();
 
-        // Update booking status if linked
-        if ($payment->booking_id) {
-            $booking = $payment->booking;
-            if ($booking) {
-                $booking->status = 'payment_failed';
-                $booking->save();
+            // Update booking status if linked
+            if ($payment->bookingID) {
+                $booking = Booking::find($payment->bookingID);
+                if ($booking) {
+                    $booking->booking_status = 'payment_failed';
+                    $booking->save();
+                }
             }
-        }
 
-        // Trigger failure notifications
-        $this->triggerPaymentFailureActions($payment);
+            // Trigger failure notifications
+            $this->triggerPaymentFailureActions($payment);
+        });
 
-        Log::info('Payment failure processed', [
-            'payment_id' => $payment->id,
+        Log::info('Payment failure processed via webhook', [
+            'payment_id' => $payment->paymentID,
             'tx_ref' => $txRef,
             'reason' => $failureReason
         ]);
@@ -164,12 +214,12 @@ class WebhookController extends Controller
     }
 
     /**
-     * Handle successful transfer webhook
+     * Handle successful transfer webhook (for withdrawals)
      */
     private function handleTransferSuccess($data)
     {
+        $reference = $data['reference'] ?? $data['tx_ref'] ?? null;
         $transferId = $data['id'] ?? null;
-        $reference = $data['reference'] ?? null;
 
         if (!$reference) {
             Log::error('Transfer success webhook missing reference', $data);
@@ -183,24 +233,30 @@ class WebhookController extends Controller
             return response()->json(['error' => 'Withdrawal not found'], 404);
         }
 
-        $withdrawal->status = 'completed';
-        $withdrawal->chapa_transfer_id = $transferId;
-        $withdrawal->chapa_transfer_status = 'successful';
-        $withdrawal->completed_at = now();
-        $withdrawal->save();
+        DB::transaction(function () use ($withdrawal, $transferId, $data) {
+            $withdrawal->status = 'processed';
+            $withdrawal->chapa_transfer_id = $transferId;
+            $withdrawal->processed_at = now();
+            $withdrawal->metadata = array_merge($withdrawal->metadata ?? [], [
+                'chapa_response' => $data
+            ]);
+            $withdrawal->save();
 
-        // Update provider's earned amount
-        $provider = $withdrawal->provider;
-        if ($provider) {
-            $provider->total_earned -= $withdrawal->amount;
-            $provider->save();
-        }
+            // Mark associated payments as withdrawn
+            Payment::where('providerID', $withdrawal->providerID)
+                ->where('status', 'released')
+                ->where('is_withdrawn', false)
+                ->update([
+                    'is_withdrawn' => true,
+                    'withdrawn_at' => now()
+                ]);
 
-        // Trigger success notifications
-        $this->triggerTransferSuccessActions($withdrawal);
+            // Trigger success notifications
+            $this->triggerTransferSuccessActions($withdrawal);
+        });
 
         Log::info('Transfer success processed', [
-            'withdrawal_id' => $withdrawal->id,
+            'withdrawal_id' => $withdrawal->withdrawalID,
             'reference' => $reference,
             'amount' => $withdrawal->amount
         ]);
@@ -213,9 +269,8 @@ class WebhookController extends Controller
      */
     private function handleTransferFailed($data)
     {
-        $transferId = $data['id'] ?? null;
-        $reference = $data['reference'] ?? null;
-        $failureReason = $data['message'] ?? 'Transfer failed';
+        $reference = $data['reference'] ?? $data['tx_ref'] ?? null;
+        $failureReason = $data['message'] ?? $data['failure_reason'] ?? 'Transfer failed';
 
         if (!$reference) {
             Log::error('Transfer failed webhook missing reference', $data);
@@ -229,17 +284,43 @@ class WebhookController extends Controller
             return response()->json(['error' => 'Withdrawal not found'], 404);
         }
 
-        $withdrawal->status = 'failed';
-        $withdrawal->chapa_transfer_id = $transferId;
-        $withdrawal->chapa_transfer_status = 'failed';
-        $withdrawal->failure_reason = $failureReason;
-        $withdrawal->save();
+        DB::transaction(function () use ($withdrawal, $failureReason, $data) {
+            $withdrawal->status = 'failed';
+            $withdrawal->failure_reason = $failureReason;
+            $withdrawal->metadata = array_merge($withdrawal->metadata ?? [], [
+                'chapa_response' => $data
+            ]);
+            $withdrawal->save();
 
-        // Trigger failure notifications
-        $this->triggerTransferFailureActions($withdrawal);
+            // Return funds to wallet
+            $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
+            if ($wallet) {
+                $balanceBefore = $wallet->available_balance;
+                $wallet->available_balance += $withdrawal->amount;
+                $wallet->save();
+
+                // Create transaction record
+                WalletTransaction::create([
+                    'reference' => 'TXN-' . Str::random(12),
+                    'walletID' => $wallet->walletID,
+                    'type' => 'withdrawal_failed',
+                    'amount' => $withdrawal->amount,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $wallet->available_balance,
+                    'description' => "Withdrawal #{$withdrawal->withdrawal_ref} failed - funds returned",
+                    'metadata' => [
+                        'withdrawal_id' => $withdrawal->withdrawalID,
+                        'failure_reason' => $failureReason
+                    ]
+                ]);
+            }
+
+            // Trigger failure notifications
+            $this->triggerTransferFailureActions($withdrawal);
+        });
 
         Log::info('Transfer failure processed', [
-            'withdrawal_id' => $withdrawal->id,
+            'withdrawal_id' => $withdrawal->withdrawalID,
             'reference' => $reference,
             'reason' => $failureReason
         ]);
@@ -262,27 +343,25 @@ class WebhookController extends Controller
     private function triggerPaymentSuccessActions(Payment $payment)
     {
         try {
-            // Send confirmation email to customer
-            if ($payment->customer) {
-                // TODO: Implement email notification
-                Log::info('Payment confirmation email would be sent', [
-                    'customer_email' => $payment->customer_email,
-                    'payment_id' => $payment->id
-                ]);
-            }
+            // Send confirmation notification to customer
+            // This would typically be done via NotificationService
+            Log::info('Payment success actions triggered', [
+                'payment_id' => $payment->paymentID,
+                'customer_id' => $payment->customerID
+            ]);
 
-            // Send notification to service provider if booking exists
-            if ($payment->booking) {
-                // TODO: Implement provider notification
-                Log::info('Provider payment notification would be sent', [
-                    'booking_id' => $payment->booking_id,
-                    'payment_id' => $payment->id
+            // Notify provider about new paid booking
+            if ($payment->bookingID) {
+                // TODO: Implement provider notification via NotificationService
+                Log::info('Provider notification would be sent', [
+                    'provider_id' => $payment->providerID,
+                    'booking_id' => $payment->bookingID
                 ]);
             }
 
         } catch (\Exception $e) {
             Log::error('Error triggering payment success actions', [
-                'payment_id' => $payment->id,
+                'payment_id' => $payment->paymentID,
                 'error' => $e->getMessage()
             ]);
         }
@@ -295,17 +374,14 @@ class WebhookController extends Controller
     {
         try {
             // Send failure notification to customer
-            if ($payment->customer) {
-                // TODO: Implement email notification
-                Log::info('Payment failure notification would be sent', [
-                    'customer_email' => $payment->customer_email,
-                    'payment_id' => $payment->id
-                ]);
-            }
+            Log::info('Payment failure actions triggered', [
+                'payment_id' => $payment->paymentID,
+                'customer_id' => $payment->customerID
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error triggering payment failure actions', [
-                'payment_id' => $payment->id,
+                'payment_id' => $payment->paymentID,
                 'error' => $e->getMessage()
             ]);
         }
@@ -317,18 +393,16 @@ class WebhookController extends Controller
     private function triggerTransferSuccessActions(Withdrawal $withdrawal)
     {
         try {
-            // Send confirmation to provider
-            if ($withdrawal->provider) {
-                // TODO: Implement email notification
-                Log::info('Transfer success notification would be sent', [
-                    'provider_id' => $withdrawal->provider_id,
-                    'withdrawal_id' => $withdrawal->id
-                ]);
-            }
+            // Send success notification to provider
+            Log::info('Transfer success actions triggered', [
+                'withdrawal_id' => $withdrawal->withdrawalID,
+                'provider_id' => $withdrawal->providerID,
+                'amount' => $withdrawal->amount
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error triggering transfer success actions', [
-                'withdrawal_id' => $withdrawal->id,
+                'withdrawal_id' => $withdrawal->withdrawalID,
                 'error' => $e->getMessage()
             ]);
         }
@@ -341,17 +415,15 @@ class WebhookController extends Controller
     {
         try {
             // Send failure notification to provider
-            if ($withdrawal->provider) {
-                // TODO: Implement email notification
-                Log::info('Transfer failure notification would be sent', [
-                    'provider_id' => $withdrawal->provider_id,
-                    'withdrawal_id' => $withdrawal->id
-                ]);
-            }
+            Log::info('Transfer failure actions triggered', [
+                'withdrawal_id' => $withdrawal->withdrawalID,
+                'provider_id' => $withdrawal->providerID,
+                'reason' => $withdrawal->failure_reason
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error triggering transfer failure actions', [
-                'withdrawal_id' => $withdrawal->id,
+                'withdrawal_id' => $withdrawal->withdrawalID,
                 'error' => $e->getMessage()
             ]);
         }

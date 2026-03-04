@@ -5,7 +5,7 @@ use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\ServiceProviderAuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AdminAuthController;
-use App\Http\Controllers\ProvidersearchController;
+use App\Http\Controllers\ProviderSearchController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceController;
@@ -16,9 +16,10 @@ use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerSearchController;
-use App\Http\Controllers\BookingController; // You'll need to create this
-use App\Http\Controllers\ChatController; // You'll need to create this
-
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\AdminWithdrawalController;
 
 // ==================== PUBLIC ROUTES ====================
 Route::get('/cities', [ServiceCityController::class, 'index']);
@@ -53,8 +54,9 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 // ==================== PUBLIC SEARCH ====================
 Route::get('/search/providers', [ProviderSearchController::class, 'search']);
 
-// ==================== WEBHOOKS (PUBLIC) ====================
+// ==================== WEBHOOKS & CALLBACKS (PUBLIC) ====================
 Route::post('/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
+Route::get('/payment/callback/{tx_ref}', [PaymentController::class, 'callback'])->name('payment.callback');
 
 // ==================== PROTECTED CUSTOMER ROUTES ====================
 Route::middleware('auth:customer')->prefix('customer')->group(function () {
@@ -117,15 +119,16 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     // Search Suggestions
     Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
     
-    // Payments
+    // ========== PAYMENT ROUTES ==========
     Route::post('/payment/initialize', [PaymentController::class, 'initialize']);
-    Route::get('/payment/verify/{tx_ref}', [PaymentController::class, 'verify']);
+    Route::get('/payment/verify', [PaymentController::class, 'verify']); // Query param: tx_ref
+    Route::get('/payment/history', [PaymentController::class, 'history']);
     Route::get('/payment/{tx_ref}', [PaymentController::class, 'show']);
-    Route::post('/payment/cancel/{tx_ref}', [PaymentController::class, 'cancel']);
-    Route::get('/payment/history', [PaymentController::class, 'customerHistory']); // Uses auth()->id()
+    
+    // Booking Confirmation (triggers payment release)
+    Route::post('/bookings/{bookingId}/confirm', [PaymentController::class, 'confirmCompletion']);
 });
 
-// ==================== PROTECTED PROVIDER ROUTES ====================
 // ==================== PROTECTED PROVIDER ROUTES ====================
 Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // Auth & Profile
@@ -165,27 +168,31 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // Reviews
     Route::get('/reviews', [ProviderDashboardController::class, 'getReviews']);
     
-    // Withdrawals
-    Route::post('/withdrawal/create', [WithdrawalController::class, 'create']);
-    Route::get('/withdrawal/status/{withdrawal_ref}', [WithdrawalController::class, 'status']);
-    Route::get('/withdrawal/history', [WithdrawalController::class, 'providerHistory']); // Uses auth()->id()
+    // ========== WALLET & WITHDRAWAL ROUTES ==========
+    Route::get('/wallet', [WalletController::class, 'dashboard']);
+    Route::get('/wallet/transactions', [WalletController::class, 'transactions']);
+    Route::post('/withdrawals', [WalletController::class, 'requestWithdrawal']);
+    Route::get('/withdrawals', [WalletController::class, 'withdrawals']);
     
-    // Notifications - ADD THESE LINES
+    // Notifications
     Route::get('/notifications', [NotificationController::class, 'getProviderNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 });
 
 // ==================== ADMIN ROUTES ====================
-Route::middleware('auth:admin')->group(function () {
+Route::middleware('auth:admin')->prefix('admin')->group(function () {
     // Statistics
     Route::get('/stats', [AdminAuthController::class, 'getStats']);
+    
     // Platform Settings
     Route::post('/settings', [AdminAuthController::class, 'updateSettings']);
     Route::post('/profile/update', [AdminAuthController::class, 'updateProfile']);
     Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
-    Route::get('/payments/stats', [PaymentController::class, 'getPaymentStats']);
-    Route::get('/withdrawals/stats', [WithdrawalController::class, 'getWithdrawalStats']);
+    
+    // Bookings
     Route::get('/bookings', [AdminAuthController::class, 'getAllBookings']);
+    
+    // Provider Management
     Route::get('/providers', [AdminAuthController::class, 'getAllProviders']);
     Route::get('/providers/pending', [AdminAuthController::class, 'pendingProviders']);
     Route::get('/providers/approved', [AdminAuthController::class, 'approvedProviders']);
@@ -208,64 +215,21 @@ Route::middleware('auth:admin')->group(function () {
 
     // Service Management
     Route::get('/services', [ServiceController::class, 'index']);
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::put('/services/{id}', [ServiceController::class, 'update']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
     
-    // Payments
+    // ========== PAYMENT & WITHDRAWAL ADMIN ROUTES ==========
     Route::get('/payments', [PaymentController::class, 'index']);
+    Route::get('/payments/stats', [PaymentController::class, 'getPaymentStats']);
     
-    // Withdrawals
-    Route::get('/withdrawals', [WithdrawalController::class, 'index']);
-    Route::post('/withdrawal/process/{withdrawal_id}', [WithdrawalController::class, 'process']);
-    Route::post('/withdrawal/cancel/{withdrawal_id}', [WithdrawalController::class, 'cancel']);
+    Route::get('/withdrawals', [AdminWithdrawalController::class, 'index']);
+    Route::get('/withdrawals/stats', [AdminWithdrawalController::class, 'stats']);
+    Route::post('/withdrawals/{withdrawalId}/approve', [AdminWithdrawalController::class, 'approve']);
+    Route::post('/withdrawals/{withdrawalId}/reject', [AdminWithdrawalController::class, 'reject']);
 });
 
-// Route::prefix('admin')->middleware('auth:admin')->group(function () {
-//     Route::get('/providers', [AdminAuthController::class, 'getAllProviders']);
-//     Route::get('/customers', [AdminAuthController::class, 'getCustomers']);
-//     // you can add more admin routes here
-// });
-
-// ==================== PUBLIC NOTIFICATIONS (Temporary - Should be protected) ====================
-// This should be moved to protected routes. Keeping for backward compatibility
-Route::get('provider/{providerID}/notifications', [NotificationController::class, 'index']);
-
-
-// Customer routes (protected by customer sanctum)
-Route::middleware('auth:customer')->prefix('customer')->group(function () {
-    // Bookings
-    Route::post('/bookings', [BookingController::class, 'store']);
-    Route::get('/bookings', [BookingController::class, 'customerBookings']);
-    Route::get('/bookings/{id}', [BookingController::class, 'show']);
-    Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
-});
-
-// Provider routes (protected by provider sanctum)
-Route::middleware('auth:provider')->prefix('provider')->group(function () {
-    Route::get('/bookings', [BookingController::class, 'providerBookings']);
-    Route::get('/bookings/{id}', [BookingController::class, 'show']);
-    Route::post('/bookings/{id}/accept', [BookingController::class, 'accept']);
-    Route::post('/bookings/{id}/reject', [BookingController::class, 'reject']);
-    Route::post('/bookings/{id}/complete', [BookingController::class, 'complete']);
-});
-
-
-
-
-// Notifications for both customers and providers
-/*
-Route::middleware('auth:customer,provider')->prefix('notifications')->group(function () {
-    Route::get('/', [NotificationController::class, 'index']);
-    Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
-    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-    Route::delete('/delete-all', [NotificationController::class, 'deleteAll']);
-    Route::get('/{id}', [NotificationController::class, 'show']);
-    Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::delete('/{id}', [NotificationController::class, 'destroy']);
-});
-
-*/
-
-
-// Chat routes for both customers and providers
+// ==================== CHAT ROUTES (Shared) ====================
 Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {
     // Conversations
     Route::get('/conversations', [ChatController::class, 'getConversations']);
@@ -279,3 +243,6 @@ Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {
     // Unread count
     Route::get('/unread', [ChatController::class, 'getUnreadCount']);
 });
+
+// ==================== NOTIFICATION ROUTES (Temporary backward compatibility) ====================
+Route::get('provider/{providerID}/notifications', [NotificationController::class, 'index']);
