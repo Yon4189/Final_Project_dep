@@ -3,7 +3,7 @@ import {
   Users, UserCheck, Clock, Banknote, Layers, Wrench,
   CheckCircle, XCircle, Loader2, Image as ImageIcon, RefreshCw,
   FileCheck, Calendar, Database, AlertCircle, Info, DollarSign,
-  Eye, X  // 👈 added Eye icon
+  Eye, X  
 } from 'lucide-react';
 import api from '../api/axios';
 import StatCard from '../components/StatCard';
@@ -38,25 +38,53 @@ const Dashboard = () => {
     inputReason: ''
   });
 
-  const fetchData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    try {
-      const [queueRes, statsRes] = await Promise.all([
-        api.get('/providers/pending'),
-        api.get('/admin/stats')
-      ]);
+const fetchData = async (showLoading = true) => {
+  if (showLoading) setIsLoading(true);
+  try {
+    // get admin token from local storage
+    const token = localStorage.getItem('admin_token');
+    console.log("dashboard token exists:", !!token);
 
-      if (queueRes.data.success) setVerificationQueue(queueRes.data.data);
-      if (statsRes.data.success) setCounts(statsRes.data.data);
+    // create headers with token
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json'
+    };
 
-      setDbStatus('connected');
-    } catch (err) {
-      setDbStatus('disconnected');
-      console.error("Fetch Error:", err);
-    } finally {
-      if (showLoading) setIsLoading(false);
+    const [queueRes, statsRes] = await Promise.all([
+      api.get('/providers/pending', { headers }),
+      api.get('/dashboard/stats', { headers })
+    ]);
+
+    console.log('Queue response:', queueRes.data);
+    console.log('Stats response:', statsRes.data);
+
+    if (queueRes.data && queueRes.data.success) {
+      setVerificationQueue(queueRes.data.data || []);
     }
-  };
+    
+    if (statsRes.data && statsRes.data.success) {
+      setCounts(statsRes.data.data || {
+        providers: 0,
+        customers: 0,
+        pending: 0,
+        categories: 0,
+        services: 0,
+        revenue: 0
+      });
+    }
+
+    setDbStatus('connected');
+  } catch (err) {
+    setDbStatus('disconnected');
+    console.error("Fetch Error:", err);
+    if (err.response && err.response.status === 401) {
+      console.log("Authentication failed - token may be expired");
+    }
+  } finally {
+    if (showLoading) setIsLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchData(true);
@@ -82,7 +110,7 @@ const Dashboard = () => {
     processVerifyAction(id, 'approved');
   };
 
-  // Actually send verify/reject request
+  //  send verify/reject request
   const processVerifyAction = async (id, status, reason = null) => {
     setProcessingId(id);
     try {

@@ -127,7 +127,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
 
 // ==================== PROTECTED PROVIDER ROUTES ====================
 // ==================== PROTECTED PROVIDER ROUTES ====================
-Route::middleware('auth:provider')->prefix('provider')->group(function () {
+Route::middleware('auth:provider')->group(function () {
     // Auth & Profile
     Route::post('/logout', [ServiceProviderAuthController::class, 'logout']);
     Route::get('/profile', [ServiceProviderAuthController::class, 'profile']);
