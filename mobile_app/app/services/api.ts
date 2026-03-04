@@ -30,21 +30,34 @@ const storage = {
     if (Platform.OS === 'web') {
       return localStorage.getItem(key);
     } else {
-      return await SecureStore.getItemAsync(key);
+      try {
+        return await SecureStore.getItemAsync(key);
+      } catch (error) {
+        console.warn(`Failed to get item ${key} from SecureStore:`, error);
+        return null;
+      }
     }
   },
   async setItem(key: string, value: string): Promise<void> {
     if (Platform.OS === 'web') {
       localStorage.setItem(key, value);
     } else {
-      await SecureStore.setItemAsync(key, value);
+      try {
+        await SecureStore.setItemAsync(key, value);
+      } catch (error) {
+        console.warn(`Failed to set item ${key} in SecureStore:`, error);
+      }
     }
   },
   async removeItem(key: string): Promise<void> {
     if (Platform.OS === 'web') {
       localStorage.removeItem(key);
     } else {
-      await SecureStore.deleteItemAsync(key);
+      try {
+        await SecureStore.deleteItemAsync(key);
+      } catch (error) {
+        console.warn(`Failed to remove item ${key} from SecureStore:`, error);
+      }
     }
   }
 };
@@ -78,7 +91,10 @@ class ApiService {
     });
 
     this.setupInterceptors();
-    this.loadStoredToken();
+    // Load stored token immediately
+    this.loadStoredToken().then(() => {
+      console.log('Token loaded on initialization:', this.isAuthenticated());
+    });
   }
 
   // Event handling
@@ -96,19 +112,25 @@ class ApiService {
   // Token management
   private async loadStoredToken(): Promise<void> {
     try {
-      const providerToken = await storage.getItem(PROVIDER_TOKEN_KEY);
-      this.providerToken = providerToken;
-
-      if (!this.providerToken) {
-        const customerToken = await storage.getItem(CUSTOMER_TOKEN_KEY);
-        this.customerToken = customerToken;
-      }
-
-      const refreshToken = await storage.getItem(REFRESH_TOKEN_KEY);
-      this.refreshToken = refreshToken;
+      const [providerToken, customerToken, refreshToken, userTypeStr] = await Promise.all([
+        storage.getItem(PROVIDER_TOKEN_KEY),
+        storage.getItem(CUSTOMER_TOKEN_KEY),
+        storage.getItem(REFRESH_TOKEN_KEY),
+        storage.getItem(USER_TYPE_KEY)
+      ]);
       
-      const userType = await storage.getItem(USER_TYPE_KEY);
-      this.userType = userType as 'provider' | 'customer' | null;
+      this.providerToken = providerToken;
+      this.customerToken = customerToken;
+      this.refreshToken = refreshToken;
+      this.userType = userTypeStr as 'provider' | 'customer' | null;
+      
+      console.log('Tokens loaded:', {
+        hasProviderToken: !!this.providerToken,
+        hasCustomerToken: !!this.customerToken,
+        hasRefreshToken: !!this.refreshToken,
+        userType: this.userType,
+        isAuthenticated: this.isAuthenticated()
+      });
     } catch (error) {
       console.warn('Failed to load stored token:', error);
     }
@@ -229,20 +251,25 @@ class ApiService {
 
   // Token refresh
   private async refreshAccessToken(): Promise<string | null> {
-    if (!this.refreshToken) return null;
+    if (!this.refreshToken) {
+      console.log('No refresh token available');
+      return null;
+    }
 
     try {
       const endpoint = this.userType === 'provider' 
-        ? '/provider/refresh-token' 
-        : '/customer/refresh-token';
+        ? '/auth/provider/refresh' 
+        : '/auth/customer/refresh';
+      
+      console.log('Attempting to refresh token at:', endpoint);
       
       const response = await axios.post(`${API_BASE_URL}${endpoint}`, {
         refresh_token: this.refreshToken,
-      }, {
-        withCredentials: false,
       });
 
-      if (response.data.success && response.data.data?.token) {
+      console.log('Refresh response:', response.data);
+
+      if (response.data?.success && response.data?.data?.token) {
         const { token, refresh_token } = response.data.data;
 
         if (this.userType === 'provider') {
@@ -256,6 +283,8 @@ class ApiService {
       return null;
     } catch (error) {
       console.error('Token refresh failed:', error);
+      // Clear tokens on refresh failure
+      await this.removeToken();
       return null;
     }
   }
@@ -283,6 +312,12 @@ class ApiService {
         const token = this.getToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+          console.log(`🔑 Token attached to request: ${config.url}`, {
+            hasToken: true,
+            tokenPreview: `${token.substring(0, 15)}...`
+          });
+        } else {
+          console.log(`⚠️ No token for request: ${config.url}`);
         }
 
         config.headers['X-Request-ID'] = this.generateRequestId();
@@ -290,15 +325,16 @@ class ApiService {
         if (__DEV__) {
           console.log('🚀 API Request:', {
             method: config.method?.toUpperCase(),
-            url: config.url,
-            params: config.params,
-            // Don't log userType as it might be misleading during login
+            url: `${API_BASE_URL}${config.url}`,
+            hasToken: !!token,
+            userType: this.userType,
           });
         }
 
         return config;
       },
       (error) => {
+        console.error('Request interceptor error:', error);
         return Promise.reject(error);
       }
     );
@@ -316,85 +352,119 @@ class ApiService {
         return response;
       },
       async (error: AxiosError) => {
-        const originalConfig = error.config;
+        const originalConfig = error.config as AxiosRequestConfig & { _retry?: boolean };
 
         if (__DEV__) {
           console.error('❌ API Error Details:', {
             url: originalConfig?.url,
             status: error.response?.status,
             statusText: error.response?.statusText,
-            data: error.response?.data, // This will show the actual error from backend
+            data: error.response?.data,
             message: error.message,
           });
         }
 
+        // Handle network errors
         if (!error.response) {
           const isConnected = await this.checkNetwork();
           if (!isConnected) {
             this.emitEvent('network_error');
-            return Promise.reject(new Error('No internet connection'));
+            const networkError: any = new Error('No internet connection');
+            networkError.statusCode = 0;
+            networkError.isNetworkError = true;
+            return Promise.reject(networkError);
           }
           this.emitEvent('server_error');
-          return Promise.reject(new Error('Network error. Please try again.'));
+          const serverError: any = new Error('Network error. Please try again.');
+          serverError.statusCode = 0;
+          serverError.isNetworkError = true;
+          return Promise.reject(serverError);
         }
 
         const { status, data } = error.response;
 
+        // Handle validation errors
         if (status === 400 || status === 422) {
-          return Promise.reject({
-            response: error.response,
-            message: (data as any)?.message || (status === 400 ? 'Bad request.' : 'Validation failed.'),
-            errors: (data as any)?.errors
-          });
+          const validationError: any = new Error((data as any)?.message || (status === 400 ? 'Bad request.' : 'Validation failed.'));
+          validationError.response = error.response;
+          validationError.statusCode = status;
+          validationError.errors = (data as any)?.errors;
+          return Promise.reject(validationError);
         }
 
-        if (status === 401 && originalConfig) {
-          if (!this.isRefreshing) {
-            this.isRefreshing = true;
-            this.emitEvent('unauthorized');
-
-            try {
-              const newToken = await this.refreshAccessToken();
-
-              if (newToken) {
-                this.processQueue(null, newToken);
-                this.emitEvent('token_refreshed');
-
-                if (originalConfig.headers) {
-                  originalConfig.headers.Authorization = `Bearer ${newToken}`;
-                }
-                return this.api(originalConfig);
-              } else {
-                this.processQueue(new Error('Refresh failed'));
-                await this.removeToken();
-                return Promise.reject(new Error('Session expired. Please login again.'));
-              }
-            } catch (refreshError) {
-              this.processQueue(refreshError as Error);
-              await this.removeToken();
-              return Promise.reject(new Error('Session expired. Please login again.'));
-            }
-          } else {
+        // Handle 401 Unauthorized
+        if (status === 401 && originalConfig && !originalConfig._retry) {
+          console.log('Handling 401 error, token refresh needed');
+          
+          if (this.isRefreshing) {
+            console.log('Token refresh in progress, queueing request');
+            // If refreshing, queue the request
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject, config: originalConfig });
             });
           }
+
+          originalConfig._retry = true;
+          this.isRefreshing = true;
+          this.emitEvent('unauthorized', { url: originalConfig.url });
+
+          try {
+            const newToken = await this.refreshAccessToken();
+
+            if (newToken) {
+              console.log('Token refreshed successfully, retrying queued requests');
+              this.processQueue(null, newToken);
+              this.emitEvent('token_refreshed');
+
+              // Retry the original request with new token
+              if (originalConfig.headers) {
+                originalConfig.headers.Authorization = `Bearer ${newToken}`;
+              }
+              return this.api(originalConfig);
+            } else {
+              console.log('Token refresh failed, clearing tokens');
+              this.processQueue(new Error('Refresh failed'));
+              await this.removeToken();
+              await this.removeUserData();
+              
+              const sessionError: any = new Error('Session expired. Please login again.');
+              sessionError.statusCode = 401;
+              sessionError.requiresLogin = true;
+              return Promise.reject(sessionError);
+            }
+          } catch (refreshError) {
+            console.error('Token refresh error:', refreshError);
+            this.processQueue(refreshError as Error);
+            await this.removeToken();
+            await this.removeUserData();
+            
+            const sessionError: any = new Error('Session expired. Please login again.');
+            sessionError.statusCode = 401;
+            sessionError.requiresLogin = true;
+            return Promise.reject(sessionError);
+          } finally {
+            this.isRefreshing = false;
+          }
         }
 
+        // Handle 403 Forbidden
         if (status === 403) {
-          // Return the actual error response from the server
           const serverMessage = (data as any)?.message || 'You do not have permission to access this resource.';
-          const error: any = new Error(serverMessage);
-          error.response = error.response;
-          error.status = status;
-          error.data = data;
-          return Promise.reject(error);
+          const forbiddenError: any = new Error(serverMessage);
+          forbiddenError.response = error.response;
+          forbiddenError.statusCode = status;
+          forbiddenError.data = data;
+          return Promise.reject(forbiddenError);
         }
 
+        // Handle 404 Not Found
         if (status === 404) {
-          return Promise.reject(new Error('The requested resource was not found.'));
+          const notFoundError: any = new Error('The requested resource was not found.');
+          notFoundError.statusCode = 404;
+          return Promise.reject(notFoundError);
         }
 
+        // Handle other errors
         const errorMessage = this.getErrorMessage(error);
         const richError: any = new Error(errorMessage);
         richError.responseData = error.response?.data;
@@ -447,11 +517,17 @@ class ApiService {
       const response = await requestFn();
       return response.data;
     } catch (error: any) {
+      // Don't retry authentication errors
+      if (error.statusCode === 401 || error.statusCode === 403) {
+        throw error;
+      }
+
       if (error.response?.status === 400 || error.response?.status === 422) {
         throw error;
       }
 
       if (retries > 0 && this.shouldRetry(error)) {
+        console.log(`Retrying request, ${retries} attempts left`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return this.requestWithRetry(requestFn, retries - 1);
       }
@@ -460,36 +536,45 @@ class ApiService {
   }
 
   private shouldRetry(error: any): boolean {
-    return !error.response || (error.response?.status >= 500 && error.response?.status <= 599);
+    // Retry on network errors or server errors (5xx)
+    return !error.response || 
+           (error.response?.status >= 500 && error.response?.status <= 599) ||
+           error.isNetworkError;
   }
 
   // Public API methods
   public async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`GET request to: ${url}`);
     const updatedConfig = { ...config, withCredentials: false };
     return this.requestWithRetry(() => this.api.get<ApiResponse<T>>(url, updatedConfig));
   }
 
   public async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`POST request to: ${url}`);
     const updatedConfig = { ...config, withCredentials: false };
     return this.requestWithRetry(() => this.api.post<ApiResponse<T>>(url, data, updatedConfig));
   }
 
   public async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`PUT request to: ${url}`);
     const updatedConfig = { ...config, withCredentials: false };
     return this.requestWithRetry(() => this.api.put<ApiResponse<T>>(url, data, updatedConfig));
   }
 
   public async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`PATCH request to: ${url}`);
     const updatedConfig = { ...config, withCredentials: false };
     return this.requestWithRetry(() => this.api.patch<ApiResponse<T>>(url, data, updatedConfig));
   }
 
   public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`DELETE request to: ${url}`);
     const updatedConfig = { ...config, withCredentials: false };
     return this.requestWithRetry(() => this.api.delete<ApiResponse<T>>(url, updatedConfig));
   }
 
   public async upload<T>(url: string, formData: FormData, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> {
+    console.log(`UPLOAD request to: ${url}`);
     const config: AxiosRequestConfig = {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (progressEvent) => {
@@ -506,6 +591,7 @@ class ApiService {
   public async clearAll(): Promise<void> {
     await this.removeToken();
     await this.removeUserData();
+    console.log('All auth data cleared');
   }
 
   public isAuthenticated(): boolean {

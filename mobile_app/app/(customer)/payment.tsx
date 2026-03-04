@@ -14,20 +14,22 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { usePaymentMethods, useInitializeChapaPayment, useVerifyChapaPayment } from '../../hooks/usePayment';
-import { useCreateServiceRequest } from '../../hooks/useCustomerQueries';
-import { paymentService } from '../../app/services/payment.service';
+import { useCreateBooking } from '../../hooks/useCustomerBookings'; // Fixed import
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 
 export default function PaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  
+  // Extract params that might come from ServiceRequestModal
+  const checkoutUrl = params.checkoutUrl as string;
+  const bookingId = params.bookingId as string;
+  const amount = parseFloat(params.amount as string || '0');
+  
   const [paymentMethod, setPaymentMethod] = useState<string>('chapa');
   const [isPaying, setIsPaying] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
-
-  // Parse amount from string to number
-  const amount = parseFloat(params.amount as string || '0');
 
   // Calculate total with platform fee
   const platformFee = amount * 0.05;
@@ -36,7 +38,7 @@ export default function PaymentScreen() {
   const { data: paymentMethods, isLoading: loadingMethods } = usePaymentMethods();
   const initializeChapaPayment = useInitializeChapaPayment();
   const verifyChapaPayment = useVerifyChapaPayment();
-  const createRequest = useCreateServiceRequest();
+  const createBooking = useCreateBooking(); // Fixed variable name
 
   useEffect(() => {
     // Handle deep link callback from Chapa
@@ -52,13 +54,42 @@ export default function PaymentScreen() {
 
   useEffect(() => {
     // Check if there's a callback URL in the initial URL
-    const initialUrl = Linking.parseInitialURLAsync();
-    initialUrl.then(url => {
+    Linking.parseInitialURLAsync().then(url => {
       if (url && url.path?.includes('payment/callback')) {
         handlePaymentCallback(url.toString());
       }
     });
   }, []);
+
+  // If we have a checkoutUrl directly, open it
+  useEffect(() => {
+    if (checkoutUrl && paymentStatus === 'pending') {
+      console.log('Direct checkout URL received:', checkoutUrl);
+      openCheckoutUrl(checkoutUrl);
+    }
+  }, [checkoutUrl]);
+
+  const openCheckoutUrl = async (url: string) => {
+    setIsPaying(true);
+    setPaymentStatus('processing');
+    
+    try {
+      const result = await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        controlsColor: Colors.primary,
+      });
+
+      if (result.type === 'cancel') {
+        setPaymentStatus('pending');
+        setIsPaying(false);
+      }
+    } catch (error) {
+      console.error('Error opening browser:', error);
+      setPaymentStatus('failed');
+      setIsPaying(false);
+      Alert.alert('Error', 'Failed to open payment page. Please try again.');
+    }
+  };
 
   const handlePaymentCallback = async (url: string) => {
     try {
@@ -74,7 +105,20 @@ export default function PaymentScreen() {
         
         if (verification.status === 'success') {
           setPaymentStatus('completed');
-          await createServiceRequest(verification.transactionId);
+          Alert.alert(
+            'Payment Successful!',
+            'Your payment has been processed successfully.',
+            [
+              {
+                text: 'View Bookings',
+                onPress: () => router.push('/(customer)/bookings'),
+              },
+              {
+                text: 'OK',
+                onPress: () => router.back(),
+              },
+            ]
+          );
         } else {
           setPaymentStatus('failed');
           Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
@@ -89,40 +133,6 @@ export default function PaymentScreen() {
       Alert.alert('Error', 'An error occurred while processing your payment.');
     } finally {
       setIsPaying(false);
-    }
-  };
-
-  const createServiceRequest = async (transactionId?: string) => {
-    try {
-      await createRequest.mutateAsync({
-        providerId: params.providerId,
-        serviceId: params.serviceId,
-        scheduledDate: params.scheduledDate,
-        scheduledTime: params.scheduledTime,
-        address: params.address,
-        description: params.description || '',
-        specialInstructions: params.specialInstructions || '',
-        paymentMethod: 'chapa',
-        transactionId: transactionId,
-      });
-
-      Alert.alert(
-        'Booking Confirmed!',
-        'Your service has been booked and payment has been processed successfully.',
-        [
-          {
-            text: 'View Bookings',
-            onPress: () => router.push('/(customer)/bookings'),
-          },
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Failed to create service request:', error);
-      Alert.alert('Error', 'Failed to create service request. Please contact support.');
     }
   };
 
@@ -142,32 +152,21 @@ export default function PaymentScreen() {
         amount: totalAmount,
         currency: 'ETB',
         email: 'customer@example.com', // This should come from user profile
-        firstName: 'Customer', // This should come from user profile
-        lastName: 'User', // This should come from user profile
+        firstName: 'Customer',
+        lastName: 'User',
         title: 'Service Booking Payment',
-        description: `Payment for ${params.serviceId} service`,
-        bookingId: `${params.providerId}_${Date.now()}`,
+        description: `Payment for service booking`,
+        bookingId: bookingId || `${Date.now()}`,
         metadata: {
           providerId: params.providerId,
           serviceId: params.serviceId,
-          scheduledDate: params.scheduledDate,
-          scheduledTime: params.scheduledTime,
         },
       };
 
       const paymentIntent = await initializeChapaPayment.mutateAsync(paymentData);
 
       if (paymentIntent.checkoutUrl) {
-        // Open Chapa payment page
-        const result = await WebBrowser.openBrowserAsync(paymentIntent.checkoutUrl, {
-          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-          controlsColor: Colors.primary,
-        });
-
-        if (result.type === 'cancel') {
-          setPaymentStatus('pending');
-          setIsPaying(false);
-        }
+        await openCheckoutUrl(paymentIntent.checkoutUrl);
       } else {
         throw new Error('Failed to initialize payment');
       }
@@ -183,7 +182,28 @@ export default function PaymentScreen() {
     try {
       setIsPaying(true);
       setPaymentStatus('completed');
-      await createServiceRequest();
+      
+      // Create booking for cash payment
+      if (bookingId) {
+        // Booking already created, just confirm
+        Alert.alert(
+          'Booking Confirmed',
+          'Your service has been booked successfully.',
+          [
+            {
+              text: 'View Bookings',
+              onPress: () => router.push('/(customer)/bookings'),
+            },
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        // Need to create booking first
+        Alert.alert('Error', 'Booking information missing.');
+      }
     } catch (error) {
       console.error('Cash payment error:', error);
       setPaymentStatus('failed');
@@ -283,11 +303,13 @@ export default function PaymentScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Payment Methods */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Payment Method</Text>
-          {renderPaymentMethods()}
-        </View>
+        {/* Payment Methods - only show if no checkoutUrl */}
+        {!checkoutUrl && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Select Payment Method</Text>
+            {renderPaymentMethods()}
+          </View>
+        )}
 
         {/* Payment Summary */}
         <View style={styles.section}>
@@ -301,10 +323,10 @@ export default function PaymentScreen() {
         <View style={styles.section}>
           {paymentStatus === 'pending' && (
             <>
-              {paymentMethod === 'chapa' ? (
+              {checkoutUrl ? (
                 <TouchableOpacity
                   style={[styles.payButton, isPaying && styles.payButtonDisabled]}
-                  onPress={handleChapaPayment}
+                  onPress={() => openCheckoutUrl(checkoutUrl)}
                   disabled={isPaying}
                 >
                   {isPaying ? (
@@ -312,25 +334,44 @@ export default function PaymentScreen() {
                   ) : (
                     <>
                       <Ionicons name="card" size={20} color={Colors.surface} />
-                      <Text style={styles.payButtonText}>Pay with Chapa</Text>
+                      <Text style={styles.payButtonText}>Complete Payment</Text>
                     </>
                   )}
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity
-                  style={[styles.payButton, isPaying && styles.payButtonDisabled]}
-                  onPress={handleCashPayment}
-                  disabled={isPaying}
-                >
-                  {isPaying ? (
-                    <ActivityIndicator size="small" color={Colors.surface} />
+                <>
+                  {paymentMethod === 'chapa' ? (
+                    <TouchableOpacity
+                      style={[styles.payButton, isPaying && styles.payButtonDisabled]}
+                      onPress={handleChapaPayment}
+                      disabled={isPaying}
+                    >
+                      {isPaying ? (
+                        <ActivityIndicator size="small" color={Colors.surface} />
+                      ) : (
+                        <>
+                          <Ionicons name="card" size={20} color={Colors.surface} />
+                          <Text style={styles.payButtonText}>Pay with Chapa</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   ) : (
-                    <>
-                      <Ionicons name="cash" size={20} color={Colors.surface} />
-                      <Text style={styles.payButtonText}>Pay Cash on Service</Text>
-                    </>
+                    <TouchableOpacity
+                      style={[styles.payButton, isPaying && styles.payButtonDisabled]}
+                      onPress={handleCashPayment}
+                      disabled={isPaying}
+                    >
+                      {isPaying ? (
+                        <ActivityIndicator size="small" color={Colors.surface} />
+                      ) : (
+                        <>
+                          <Ionicons name="cash" size={20} color={Colors.surface} />
+                          <Text style={styles.payButtonText}>Pay Cash on Service</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </>
               )}
               
               <TouchableOpacity
@@ -389,14 +430,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 60,
     paddingBottom: 16,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   backButton: {
-    padding: 8,
+    padding: 4,
   },
   headerTitle: {
     fontSize: 18,

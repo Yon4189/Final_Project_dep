@@ -52,7 +52,7 @@ export default function LoginScreen() {
 
     try {
       const endpoint = userType === "customer" ? "/customer/login" : "/provider/login";
-      
+
       console.log(`🔐 Attempting ${userType} login at ${endpoint}`);
       console.log(`📧 Email: ${formData.email}`);
 
@@ -68,17 +68,17 @@ export default function LoginScreen() {
       if (response && response.success === true) {
         const responseData = response.data || {};
         const token = responseData.token;
-        
+
         if (token) {
           console.log('🔑 Token received, storing securely...');
-          
+
           // Store tokens based on user type
           if (userType === 'provider') {
             await api.setProviderToken(token, responseData.refresh_token);
-            console.log('✅ Provider token stored');
+            console.log('✔ Provider token stored');
           } else {
             await api.setCustomerToken(token, responseData.refresh_token);
-            console.log('✅ Customer token stored');
+            console.log('✔ Customer token stored');
           }
 
           // Store user data
@@ -120,20 +120,20 @@ export default function LoginScreen() {
         response: error.response?.data,
         status: error.response?.status,
       });
-      
+
       // Handle different error types
       let errorMessage = "Login failed. Please try again.";
       let errorTitle = "Login Error";
-      
+
       if (error.response) {
         // The request was made and the server responded with a status code
         errorTitle = `Error ${error.response.status}`;
-        
+
         // Check for specific pending approval case
         if (error.response.data?.message?.toLowerCase().includes('pending admin approval')) {
           errorTitle = "Account Pending Approval";
           errorMessage = "Your provider account is currently pending admin approval. You will be notified once your account is approved. Please check back later.";
-          
+
           // Show a custom alert with additional options
           Alert.alert(
             "Account Pending Approval",
@@ -156,7 +156,7 @@ export default function LoginScreen() {
           setLoading(false);
           return;
         }
-        
+
         // Try to get the error message from the response data
         if (error.response.data) {
           if (typeof error.response.data === 'string') {
@@ -197,7 +197,7 @@ export default function LoginScreen() {
         // Something happened in setting up the request
         errorMessage = error.message || "An unexpected error occurred";
       }
-      
+
       Alert.alert(errorTitle, errorMessage);
     } finally {
       setLoading(false);
@@ -206,8 +206,8 @@ export default function LoginScreen() {
 
   // Rest of your component remains the same...
   return (
-    <ScrollView 
-      style={styles.container} 
+    <ScrollView
+      style={styles.container}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={styles.contentContainer}
     >
@@ -297,7 +297,7 @@ export default function LoginScreen() {
                 placeholder="Enter your password"
                 secureTextEntry
                 required
-                //editable={!loading}
+              //editable={!loading}
               />
             </View>
           </View>

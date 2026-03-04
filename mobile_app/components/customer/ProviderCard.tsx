@@ -13,7 +13,8 @@ import type { ServiceProvider } from '@/app/types/customer.types';
 
 interface ProviderCardProps {
   provider: ServiceProvider;
-  onPress: () => void;
+  onPress: () => void; // For profile navigation when tapping the card
+  onBookPress?: () => void; // For booking when tapping the book button
   showDistance?: boolean;
   showBadges?: boolean;
   showActions?: boolean;
@@ -24,6 +25,7 @@ interface ProviderCardProps {
 export const ProviderCard: React.FC<ProviderCardProps> = ({
   provider,
   onPress,
+  onBookPress,
   showDistance = true,
   showBadges = true,
   showActions = false,
@@ -46,6 +48,13 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
 
   const getServiceCount = () => {
     return provider.services?.length || 0;
+  };
+
+  // Handle book button press
+  const handleBookPress = () => {
+    if (onBookPress) {
+      onBookPress();
+    }
   };
 
   return (
@@ -124,10 +133,14 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.bookButton}>
+          <TouchableOpacity
+            style={styles.bookButton}
+            onPress={handleBookPress}
+            activeOpacity={0.7}
+          >
             <Text style={styles.bookButtonText}>Book Now</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.surface} />
-          </View>
+          </TouchableOpacity>
         )}
       </View>
 
