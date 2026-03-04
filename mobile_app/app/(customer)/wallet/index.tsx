@@ -97,7 +97,7 @@ export default function WalletScreen() {
       pending: Colors.warning,
       processing: Colors.info,
       failed: Colors.error,
-      refunded: Colors.purple,
+      refunded: Colors.primary,
       cancelled: Colors.text.secondary,
     };
     return colors[status as keyof typeof colors] || Colors.text.secondary;
@@ -162,7 +162,7 @@ export default function WalletScreen() {
 
   const renderHeader = () => (
     <LinearGradient
-      colors={[Colors.primary, Colors.primaryDark]}
+      colors={[Colors.primary, Colors.primary]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.header}

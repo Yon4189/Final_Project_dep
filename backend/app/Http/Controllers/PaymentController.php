@@ -1,383 +1,251 @@
 <?php
+// app/Http/Controllers/PaymentController.php
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use App\Models\Payment;
-use App\Models\Customer;
 use App\Models\Booking;
-use App\Services\NotificationService;
-use Chapa\Chapa\Facades\Chapa as Chapa;
+use App\Models\Payment;
+use App\Services\ChapaService;
+use App\Services\WalletService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;        
-use Illuminate\Support\Facades\Log; 
+
 class PaymentController extends Controller
 {
+    protected $chapaService;
+    protected $walletService;
+
+    public function __construct(ChapaService $chapaService, WalletService $walletService)
+    {
+        $this->chapaService = $chapaService;
+        $this->walletService = $walletService;
+    }
+
     /**
-     * Initialize a payment transaction
+     * Initialize payment for booking
      */
     public function initialize(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:1',
-            'customer_id' => 'required|exists:customers,customerID',
-            'booking_id' => 'nullable|exists:bookings,bookingID',
-            'customer_email' => 'required|email',
-            'customer_first_name' => 'required|string|max:255',
-            'customer_last_name' => 'required|string|max:255',
-            'customer_phone' => 'nullable|string|regex:/^09[0-9]{8}$/',
-            'payment_method' => 'nullable|string',
-            'callback_url' => 'nullable|url',
-            'return_url' => 'nullable|url',
+        $request->validate([
+            'booking_id' => 'required|exists:bookings,bookingID',
+            'return_url' => 'nullable|url'
         ]);
 
-        if ($validator->fails()) {
+        $customer = $request->user();
+        $booking = Booking::where('bookingID', $request->booking_id)
+            ->where('customerID', $customer->customerID)
+            ->where('booking_status', 'pending_payment')
+            ->first();
+
+        if (!$booking) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Booking not found or not ready for payment'
+            ], 404);
         }
 
-        try {
-            // Generate unique transaction reference
-            $tx_ref = 'chapa_' . Str::random(12) . '_' . time();
-            
-            // Prepare payment data
-            $paymentData = [
-                'amount' => $request->amount,
-                'email' => $request->customer_email,
-                'tx_ref' => $tx_ref,
-                'currency' => 'ETB',
-                'callback_url' => $request->callback_url ?? route('payment.callback', $tx_ref),
-                'return_url' => $request->return_url ?? config('app.url') . '/payment/return/' . $tx_ref,
-                'first_name' => $request->customer_first_name,
-                'last_name' => $request->customer_last_name,
-                'phone_number' => $request->customer_phone,
-                'customization' => [
-                    'title' => 'Home Service Payment',
-                    'description' => 'Payment for home service booking'
-                ],
-                'meta' => [
-                    'customer_id' => $request->customer_id,
-                    'booking_id' => $request->booking_id,
-                    'platform' => 'home_service_app'
-                ]
-            ];
+        // Check if payment already exists
+        $existingPayment = Payment::where('bookingID', $booking->bookingID)
+            ->whereIn('status', ['pending', 'processing', 'held'])
+            ->first();
 
-            // Initialize payment with Chapa
-            $payment = Chapa::initializePayment($paymentData);
-
-            if ($payment['status'] !== 'success') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment initialization failed',
-                    'data' => $payment
-                ], 400);
-            }
-
-            // Save payment record to database
-            $paymentRecord = Payment::create([
-                'tx_ref' => $tx_ref,
-                'amount' => $request->amount,
-                'currency' => 'ETB',
-                'status' => 'pending',
-                'payment_method' => $request->payment_method,
-                'customer_email' => $request->customer_email,
-                'customer_first_name' => $request->customer_first_name,
-                'customer_last_name' => $request->customer_last_name,
-                'customer_phone' => $request->customer_phone,
-                'customer_id' => $request->customer_id,
-                'booking_id' => $request->booking_id,
-                'checkout_url' => $payment['data']['checkout_url'],
-                'callback_url' => $paymentData['callback_url'],
-                'return_url' => $paymentData['return_url'],
-                'meta_data' => $paymentData['meta']
-            ]);
-
+        if ($existingPayment) {
             return response()->json([
                 'success' => true,
-                'message' => 'Payment initialized successfully',
+                'message' => 'Payment already initialized',
                 'data' => [
-                    'payment_id' => $paymentRecord->id,
-                    'tx_ref' => $tx_ref,
-                    'checkout_url' => $payment['data']['checkout_url'],
-                    'amount' => $request->amount,
-                    'currency' => 'ETB'
+                    'payment_id' => $existingPayment->paymentID,
+                    'tx_ref' => $existingPayment->tx_ref,
+                    'checkout_url' => $existingPayment->checkout_url,
+                    'status' => $existingPayment->status
+                ]
+            ]);
+        }
+
+        return DB::transaction(function () use ($customer, $booking, $request) {
+            // Calculate commission (10%)
+            $commission = $booking->agreed_price * 0.10;
+            $providerAmount = $booking->agreed_price - $commission;
+
+            // Generate UNIQUE transaction reference
+            $txRef = sprintf(
+                'BOOKING-%d-CUST-%d-%s-%s',
+                $booking->bookingID,
+                $customer->customerID,
+                now()->format('YmdHis'),
+                Str::random(6)
+            );
+
+            // Create payment record with tx_ref BEFORE sending to Chapa
+            $payment = Payment::create([
+                'tx_ref' => $txRef,
+                'bookingID' => $booking->bookingID,
+                'customerID' => $customer->customerID,
+                'providerID' => $booking->providerID,
+                'amount' => $booking->agreed_price,
+                'platform_commission' => $commission,
+                'provider_amount' => $providerAmount,
+                'status' => 'pending',
+                'currency' => 'ETB',
+                'callback_url' => route('payment.callback', ['tx_ref' => $txRef]),
+                'return_url' => $request->return_url ?? config('app.frontend_url') . '/payment/return',
+                'meta_data' => [
+                    'booking_reference' => $booking->bookingID,
+                    'customer_name' => $customer->fullname,
+                    'customer_email' => $customer->email
                 ]
             ]);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment initialization error: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-
-/**
- * NEW METHOD: Initialize payment for a specific booking (after provider accepts)
- * This is the one we just created for the booking flow
- */
-    public function initializeBookingPayment(Request $request, $bookingId)
-    {
-        $customer = $request->user(); // Authenticated customer
-
-        try {
-            DB::beginTransaction();
-
-            // Get the booking
-            $booking = Booking::where('bookingID', $bookingId)
-                        ->where('customerID', $customer->customerID)
-                        ->where('status', 'accepted')
-                        ->first();
-
-            if (!$booking) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Booking not found or not ready for payment'
-                ], 404);
-            }
-
-            // Check if payment deadline passed
-            if ($booking->payment_due_at < now()) {
-                $booking->status = 'expired';
-                $booking->save();
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment deadline has passed. Please create a new booking.'
-                ], 400);
-            }
-
-            // Check if payment already exists
-            $existingPayment = Payment::where('bookingID', $bookingId)
-                                ->whereIn('status', ['pending', 'paid', 'released'])
-                                ->first();
-
-            if ($existingPayment) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Payment already initialized',
-                    'data' => [
-                        'paymentID' => $existingPayment->paymentID,
-                        'checkout_url' => $existingPayment->checkout_url,
-                        'status' => $existingPayment->status
-                    ]
-                ]);
-            }
-
-            // Generate unique transaction reference
-            $tx_ref = 'CHAPA_' . Str::random(12) . '_' . time();
-
-            // Prepare payment data for Chapa
+            // Prepare Chapa payment data with EXACT same tx_ref
             $paymentData = [
                 'amount' => $booking->agreed_price,
-                'email' => $customer->email,
-                'tx_ref' => $tx_ref,
                 'currency' => 'ETB',
-                'callback_url' => route('payment.callback', $tx_ref),
-                'return_url' => config('app.frontend_url') . '/payment/return/' . $tx_ref,
+                'email' => $customer->email,
                 'first_name' => $customer->fullname,
-                'last_name' => '',
-                'phone_number' => $customer->phone,
+                'tx_ref' => $txRef,
+                'callback_url' => $payment->callback_url,
+                'return_url' => $payment->return_url,
                 'customization' => [
                     'title' => 'Home Service Payment',
-                    'description' => 'Payment for booking #' . $booking->bookingID
+                    'description' => "Payment for booking #{$booking->bookingID}"
                 ],
                 'meta' => [
                     'booking_id' => $booking->bookingID,
                     'customer_id' => $customer->customerID,
                     'provider_id' => $booking->providerID,
-                    'platform' => 'home_service_app'
+                    'tx_ref' => $txRef
                 ]
             ];
 
-            // Initialize payment with Chapa
-            $payment = Chapa::initializePayment($paymentData);
+            // Initialize with Chapa
+            $chapaResponse = $this->chapaService->initializePayment($paymentData);
 
-            if ($payment['status'] !== 'success') {
-                DB::rollBack();
+            if ($chapaResponse['status'] !== 'success') {
+                $payment->status = 'failed';
+                $payment->failure_reason = $chapaResponse['message'] ?? 'Chapa initialization failed';
+                $payment->save();
+                
                 return response()->json([
                     'success' => false,
                     'message' => 'Payment initialization failed',
-                    'data' => $payment
+                    'errors' => $chapaResponse
                 ], 400);
             }
 
-            // Create payment record
-            $paymentRecord = Payment::create([
-                'bookingID' => $booking->bookingID,
-                'customerID' => $customer->customerID,
-                'providerID' => $booking->providerID,
-                'tx_ref' => $tx_ref,
-                'chapa_tx_id' => null,
-                'amount' => $booking->agreed_price,
-                'platform_commission' => $booking->platform_commission,
-                'provider_amount' => $booking->provider_payout,
-                'currency' => 'ETB',
-                'status' => 'pending',
-                'checkout_url' => $payment['data']['checkout_url'],
-                'callback_url' => $paymentData['callback_url'],
-                'return_url' => $paymentData['return_url'],
-                'customer_email' => $customer->email,
-                'customer_first_name' => $customer->fullname,
-                'customer_last_name' => '',
-                'customer_phone' => $customer->phone,
-                'meta_data' => $paymentData['meta'],
-                'failure_reason' => null,
-                'paid_at' => null,
-                'released_at' => null,
-                'refunded_at' => null
-            ]);
+            // Update payment with checkout URL
+            $payment->status = 'processing';
+            $payment->checkout_url = $chapaResponse['data']['checkout_url'];
+            $payment->chapa_response = $chapaResponse;
+            $payment->save();
 
-            DB::commit();
+            Log::info('Payment initialized', [
+                'tx_ref' => $txRef,
+                'booking_id' => $booking->bookingID,
+                'customer_id' => $customer->customerID
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Payment initialized successfully',
                 'data' => [
-                    'paymentID' => $paymentRecord->paymentID,
-                    'tx_ref' => $tx_ref,
-                    'checkout_url' => $payment['data']['checkout_url'],
-                    'amount' => $booking->agreed_price,
-                    'currency' => 'ETB',
-                    'status' => 'pending',
-                    'expires_at' => $booking->payment_due_at
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Payment initialization error:', ['error' => $e->getMessage()]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment initialization failed: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-// ... (rest of your existing methods: verify, callback, show, customerHistory, index, getPaymentStats, cancel)
-
-    /**
-     * Verify a payment transaction
-     */
-    public function verify($tx_ref)
-    {
-        try {
-            // Verify transaction with Chapa
-            $verification = Chapa::verifyTransaction($tx_ref);
-
-            if (!$verification || !isset($verification['status'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment verification failed'
-                ], 400);
-            }
-
-            // Update payment record
-            $payment = Payment::where('tx_ref', $tx_ref)->first();
-            
-            if (!$payment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment record not found'
-                ], 404);
-            }
-
-            // Update payment status based on verification
-            $payment->status = $verification['status'] === 'success' ? 'success' : 'failed';
-            $payment->chapa_tx_id = $verification['data']['tx_ref'] ?? null;
-            $payment->payment_method = $verification['data']['payment_method'] ?? null;
-            
-            if ($verification['status'] !== 'success') {
-                $payment->failure_reason = $verification['message'] ?? 'Payment failed';
-            }
-
-            $payment->save();
-
-            // If payment is successful and linked to a booking, update booking status
-            if ($payment->status === 'success' && $payment->booking_id) {
-                $booking = Booking::find($payment->booking_id);
-                if ($booking) {
-                    $booking->status = 'paid';
-                    $booking->save();
-                }
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment verified successfully',
-                'data' => [
-                    'payment_id' => $payment->id,
-                    'tx_ref' => $tx_ref,
-                    'status' => $payment->status,
+                    'payment_id' => $payment->paymentID,
+                    'tx_ref' => $txRef,
+                    'checkout_url' => $payment->checkout_url,
                     'amount' => $payment->amount,
-                    'currency' => $payment->currency,
-                    'payment_method' => $payment->payment_method,
-                    'verified_at' => now()
+                    'status' => $payment->status
                 ]
             ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment verification error: ' . $e->getMessage()
-            ], 500);
-        }
+        });
     }
 
     /**
-     * Handle payment callback from Chapa
+     * Handle Chapa callback
      */
     public function callback(Request $request, $tx_ref)
     {
-        try {
-            // Get callback data from Chapa
-            $callbackData = $request->only(['trx_ref', 'ref_id', 'status']);
+        Log::info('Chapa callback received', [
+            'tx_ref' => $tx_ref,
+            'data' => $request->all()
+        ]);
 
-            // Find payment record
-            $payment = Payment::where('tx_ref', $tx_ref)->first();
+        // Find payment by tx_ref
+        $payment = Payment::where('tx_ref', $tx_ref)->first();
+
+        if (!$payment) {
+            Log::error('Payment not found for callback', ['tx_ref' => $tx_ref]);
+            return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+        }
+
+        // Verify with Chapa API
+        $verification = $this->chapaService->verifyPayment($tx_ref);
+
+        if ($verification['status'] !== 'success') {
+            Log::error('Payment verification failed', ['tx_ref' => $tx_ref]);
+            $payment->status = 'failed';
+            $payment->failure_reason = 'Verification failed';
+            $payment->save();
             
-            if (!$payment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment record not found'
-                ], 404);
-            }
+            return response()->json(['success' => false, 'message' => 'Verification failed'], 400);
+        }
 
-            // Update payment status
-            $payment->status = $callbackData['status'] === 'success' ? 'success' : 'failed';
-            $payment->chapa_tx_id = $callbackData['ref_id'] ?? null;
+        // Verify amount matches
+        if (abs($verification['data']['amount'] - $payment->amount) > 0.01) {
+            Log::error('Payment amount mismatch', ['tx_ref' => $tx_ref]);
+            $payment->status = 'failed';
+            $payment->failure_reason = 'Amount mismatch';
+            $payment->save();
+            
+            return response()->json(['success' => false, 'message' => 'Amount mismatch'], 400);
+        }
+
+        // Only process if payment is in pending/processing state
+        if (!in_array($payment->status, ['pending', 'processing'])) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment already processed',
+                'data' => ['status' => $payment->status]
+            ]);
+        }
+
+        // Update payment as successful and held in escrow
+        DB::transaction(function () use ($payment, $verification) {
+            $payment->status = 'held';
+            $payment->chapa_tx_id = $verification['data']['id'];
+            $payment->paid_at = now();
+            $payment->held_until = now()->addHours(48); // Auto-release after 48 hours
             $payment->save();
 
-            // If payment is successful, verify with Chapa API for complete details
-            if ($callbackData['status'] === 'success') {
-                $this->verify($tx_ref);
+            // Update booking status
+            $booking = Booking::find($payment->bookingID);
+            if ($booking) {
+                $booking->booking_status = 'paid';
+                $booking->paymentID = $payment->paymentID;
+                $booking->customer_confirmation_deadline = now()->addHours(48);
+                $booking->save();
+
+                Log::info('Booking marked as paid', [
+                    'booking_id' => $booking->bookingID,
+                    'tx_ref' => $payment->tx_ref
+                ]);
             }
+        });
 
-            // Redirect to return URL with status
-            $returnUrl = $payment->return_url . '?status=' . $callbackData['status'] . '&tx_ref=' . $tx_ref;
-            return redirect($returnUrl);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Callback processing error: ' . $e->getMessage()
-            ], 500);
-        }
+        // Redirect to return URL with status
+        $returnUrl = $payment->return_url . '?status=success&tx_ref=' . $tx_ref;
+        return redirect($returnUrl);
     }
 
     /**
-     * Get payment details
+     * Verify payment (called from frontend after return)
      */
-    public function show($tx_ref)
+    public function verify(Request $request)
     {
-        $payment = Payment::where('tx_ref', $tx_ref)
-            ->with(['customer', 'booking'])
+        $request->validate(['tx_ref' => 'required|string']);
+
+        $payment = Payment::where('tx_ref', $request->tx_ref)
+            ->with(['booking', 'booking.provider'])
             ->first();
 
         if (!$payment) {
@@ -389,18 +257,75 @@ class PaymentController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $payment
+            'data' => [
+                'payment_id' => $payment->paymentID,
+                'tx_ref' => $payment->tx_ref,
+                'status' => $payment->status,
+                'amount' => $payment->amount,
+                'booking_id' => $payment->bookingID,
+                'booking_status' => $payment->booking->booking_status ?? null,
+                'held_until' => $payment->held_until,
+                'paid_at' => $payment->paid_at
+            ]
+        ]);
+    }
+
+    /**
+     * Customer confirms work completed
+     */
+    public function confirmCompletion(Request $request, $bookingId)
+    {
+        $customer = $request->user();
+        $booking = Booking::where('bookingID', $bookingId)
+            ->where('customerID', $customer->customerID)
+            ->where('booking_status', 'waiting_customer_confirmation')
+            ->first();
+
+        if (!$booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking not found or not awaiting confirmation'
+            ], 404);
+        }
+
+        DB::transaction(function () use ($booking) {
+            $payment = Payment::find($booking->paymentID);
+            
+            if (!$payment || $payment->status !== 'held') {
+                throw new \Exception('Payment not in held state');
+            }
+
+            $payment->status = 'releasable';
+            $payment->save();
+
+            $booking->booking_status = 'completed';
+            $booking->customer_confirmed_at = now();
+            $booking->save();
+
+            // Release payment to provider wallet
+            $this->walletService->releasePayment($payment);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Service confirmed successfully',
+            'data' => [
+                'booking_id' => $booking->bookingID,
+                'status' => 'completed'
+            ]
         ]);
     }
 
     /**
      * Get customer payment history
      */
-    public function customerHistory($customer_id)
+    public function history(Request $request)
     {
-        $payments = Payment::where('customer_id', $customer_id)
+        $customer = $request->user();
+        
+        $payments = Payment::where('customerID', $customer->customerID)
+            ->with(['booking', 'booking.provider'])
             ->orderBy('created_at', 'desc')
-            ->with(['booking'])
             ->paginate(20);
 
         return response()->json([
@@ -410,10 +335,77 @@ class PaymentController extends Controller
     }
 
     /**
+     * Get single payment details by tx_ref
+     */
+    public function show($tx_ref)
+    {
+        $payment = Payment::where('tx_ref', $tx_ref)
+            ->with(['booking', 'booking.provider', 'customer'])
+            ->first();
+
+        if (!$payment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found'
+            ], 404);
+        }
+
+        // Check authorization (customer or admin)
+        $user = request()->user();
+        if ($user && $user->customerID !== $payment->customerID && !$user->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $payment
+        ]);
+    }
+
+    /**
+     * Cancel a pending payment
+     */
+    public function cancel(Request $request, $tx_ref)
+    {
+        $payment = Payment::where('tx_ref', $tx_ref)
+            ->whereIn('status', ['pending', 'processing'])
+            ->first();
+
+        if (!$payment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found or cannot be cancelled'
+            ], 404);
+        }
+
+        // Check authorization
+        $user = $request->user();
+        if ($user->customerID !== $payment->customerID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $payment->status = 'cancelled';
+        $payment->failure_reason = 'Cancelled by user';
+        $payment->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment cancelled successfully'
+        ]);
+    }
+
+    /**
      * Get all payments (admin only)
      */
     public function index(Request $request)
     {
+        // Admin authorization should be handled by middleware
         $query = Payment::with(['customer', 'booking', 'provider']);
 
         // Filter by status
@@ -429,9 +421,14 @@ class PaymentController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Filter by payment method
-        if ($request->has('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
+        // Filter by provider
+        if ($request->has('provider_id')) {
+            $query->where('providerID', $request->provider_id);
+        }
+
+        // Filter by customer
+        if ($request->has('customer_id')) {
+            $query->where('customerID', $request->customer_id);
         }
 
         $payments = $query->orderBy('created_at', 'desc')->paginate(50);
@@ -449,17 +446,29 @@ class PaymentController extends Controller
     {
         $stats = [
             'total_payments' => Payment::count(),
-            'successful_payments' => Payment::where('status', 'success')->count(),
+            'successful_payments' => Payment::whereIn('status', ['held', 'releasable', 'released'])->count(),
             'failed_payments' => Payment::where('status', 'failed')->count(),
-            'pending_payments' => Payment::where('status', 'pending')->count(),
-            'total_revenue' => Payment::where('status', 'success')->sum('amount'),
-            'today_revenue' => Payment::where('status', 'success')
-                ->whereDate('created_at', today())
+            'pending_payments' => Payment::whereIn('status', ['pending', 'processing'])->count(),
+            'held_payments' => Payment::where('status', 'held')->count(),
+            'released_payments' => Payment::where('status', 'released')->count(),
+            
+            'total_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('amount'),
+            'total_commission' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission'),
+            'total_provider_payout' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('provider_amount'),
+            
+            'today_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])
+                ->whereDate('paid_at', today())
                 ->sum('amount'),
-            'monthly_revenue' => Payment::where('status', 'success')
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
+            
+            'monthly_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])
+                ->whereMonth('paid_at', now()->month)
+                ->whereYear('paid_at', now()->year)
                 ->sum('amount'),
+            
+            'released_this_month' => Payment::where('status', 'released')
+                ->whereMonth('released_at', now()->month)
+                ->whereYear('released_at', now()->year)
+                ->sum('provider_amount'),
         ];
 
         return response()->json([
@@ -469,30 +478,117 @@ class PaymentController extends Controller
     }
 
     /**
-     * Cancel a pending payment
+     * Get customer payment history by customer ID (for admin)
      */
-    public function cancel($tx_ref)
+    public function customerHistory($customerId)
     {
-        $payment = Payment::where('tx_ref', $tx_ref)
-            ->where('status', 'pending')
+        $payments = Payment::where('customerID', $customerId)
+            ->with(['booking', 'booking.provider'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $payments
+        ]);
+    }
+
+    /**
+     * Manual payment release (admin only - for disputes)
+     */
+    public function manualRelease(Request $request, $paymentId)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500'
+        ]);
+
+        $payment = Payment::where('paymentID', $paymentId)
+            ->where('status', 'held')
             ->first();
 
         if (!$payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found or cannot be cancelled'
+                'message' => 'Payment not found or not in held state'
             ], 404);
         }
 
-        $payment->status = 'cancelled';
-        $payment->failure_reason = 'Cancelled by user';
-        $payment->save();
+        DB::transaction(function () use ($payment, $request) {
+            $payment->status = 'releasable';
+            $payment->meta_data = array_merge($payment->meta_data ?? [], [
+                'manual_release' => [
+                    'released_by' => auth()->id(),
+                    'released_at' => now()->toDateTimeString(),
+                    'reason' => $request->reason
+                ]
+            ]);
+            $payment->save();
+
+            $booking = Booking::find($payment->bookingID);
+            if ($booking) {
+                $booking->booking_status = 'completed';
+                $booking->customer_confirmed_at = now();
+                $booking->save();
+            }
+
+            $this->walletService->releasePayment($payment);
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Payment cancelled successfully'
+            'message' => 'Payment released manually'
         ]);
     }
 
+    /**
+     * Refund payment (admin only)
+     */
+    public function refund(Request $request, $paymentId)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500'
+        ]);
 
+        $payment = Payment::where('paymentID', $paymentId)
+            ->whereIn('status', ['held', 'releasable', 'released'])
+            ->first();
+
+        if (!$payment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found or cannot be refunded'
+            ], 404);
+        }
+
+        DB::transaction(function () use ($payment, $request) {
+            // If payment was already released, need to deduct from wallet
+            if ($payment->status === 'released' && $payment->is_withdrawn === false) {
+                // This would require deducting from wallet - complex
+                // For now, just mark as refunded
+            }
+
+            $payment->status = 'refunded';
+            $payment->refunded_at = now();
+            $payment->meta_data = array_merge($payment->meta_data ?? [], [
+                'refund' => [
+                    'refunded_by' => auth()->id(),
+                    'refunded_at' => now()->toDateTimeString(),
+                    'reason' => $request->reason
+                ]
+            ]);
+            $payment->save();
+
+            // Update booking
+            $booking = Booking::find($payment->bookingID);
+            if ($booking) {
+                $booking->booking_status = 'cancelled';
+                $booking->save();
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment refunded successfully'
+        ]);
+    }
 }
