@@ -9,7 +9,7 @@ import Login from './pages/Login';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Verification from './pages/Verification';
-import Users from './pages/Users'; 
+import Users from './pages/Users';
 import Services from './pages/Services';
 import Bookings from './pages/Bookings';
 import Disputes from './pages/Disputes';
@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -44,11 +44,11 @@ function App() {
           {/* ✅ 1. PUBLIC ROUTES - Anyone can see these */}
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/payment/:txRef" element={<Payment />} /> 
+          <Route path="/payment/:txRef" element={<Payment />} />
 
           {/* 🔐 2. PROTECTED ROUTES - Only logged-in users */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <Layout />
@@ -65,7 +65,7 @@ function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/users/customers" element={<Users />} />
             <Route path="/users/providers" element={<Users />} />
-            <Route path="services"   element={<Services />} />
+            <Route path="services" element={<Services />} />
             <Route path="/services/categories" element={<Services />} />
             <Route path="/services/services" element={<Services />} />
             <Route path="/bookings" element={<Bookings />} />
@@ -73,10 +73,10 @@ function App() {
             <Route path="/bookings/accepted" element={<Bookings />} />
             <Route path="/bookings/completed" element={<Bookings />} />
             <Route path="/bookings/cancelled" element={<Bookings />} />
-            <Route path="disputes"   element={<Disputes />} />
-            <Route path="payments"   element={<Payments />} />
-            <Route path="settings"   element={<Settings />} />
-            <Route path="profile"    element={<Profile />} />
+            <Route path="disputes" element={<Disputes />} />
+            <Route path="payments" element={<Payments />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="profile" element={<Profile />} />
 
             {/* Remove the /reset-password line from here! */}
 

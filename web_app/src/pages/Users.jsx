@@ -34,15 +34,15 @@ const Users = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-  const token = localStorage.getItem('admin_token');
-  console.log('Admin token on page load:', token);
-  
-  if (!token) {
-    console.log('No admin token found! Redirecting to login...');
-    // Optionally redirect to login page
-    // navigate('/admin/login');
-  }
-}, []);
+    const token = localStorage.getItem('admin_token');
+    console.log('Admin token on page load:', token);
+
+    if (!token) {
+      console.log('No admin token found! Redirecting to login...');
+      // Optionally redirect to login page
+      // navigate('/admin/login');
+    }
+  }, []);
 
   // Update userType when route changes
   useEffect(() => {
