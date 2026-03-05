@@ -3,9 +3,11 @@ import { Ionicons } from "@expo/vector-icons";
 export interface ProviderProfile {
   id: string;
   userId: string;
-  businessName: string;
+  fullname: string; // Add this from database
+  businessName: string; // Keep for backward compatibility
   bio: string;
-  profileImage?: string;
+  profilePicture?: string; // Change from profileImage to profilePicture
+  profileImage?: string; // Keep for backward compatibility
   coverImage?: string;
   phone: string;
   email: string;

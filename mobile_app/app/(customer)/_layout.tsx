@@ -18,14 +18,14 @@ export default function CustomerLayout() {
         headerShadowVisible: false,
         contentStyle: { backgroundColor: Colors.background },
         headerLeft: () => (
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => {
               if (router.canGoBack()) {
                 router.back();
               } else {
                 router.replace('/(customer)/dashboard');
               }
-            }} 
+            }}
             style={{ marginLeft: 16 }}
           >
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
@@ -33,180 +33,140 @@ export default function CustomerLayout() {
         ),
       }}
     >
-      <Stack.Screen 
-        name="dashboard" 
-        options={{ 
+      <Stack.Screen
+        name="dashboard"
+        options={{
           headerShown: false,
-          title: 'Dashboard'
-        }} 
+          title: 'Dashboard',
+        }}
       />
-      
-      <Stack.Screen 
-        name="profile" 
-        options={{ 
+
+      <Stack.Screen
+        name="profile"
+        options={{
           title: 'My Profile',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="change-password" 
-        options={{ 
+
+      <Stack.Screen
+        name="change-password"
+        options={{
           title: 'Change Password',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="locations" 
-        options={{ 
+
+      <Stack.Screen
+        name="locations"
+        options={{
           title: 'Service City',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="notifications" 
-        options={{ 
+
+      <Stack.Screen
+        name="notifications"
+        options={{
           title: 'Notifications',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="bookings" 
-        options={{ 
+
+      <Stack.Screen
+        name="bookings"
+        options={{
           title: 'My Bookings',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="payment" 
-        options={{ 
+
+      <Stack.Screen
+        name="bookings/[id]"
+        options={{
+          title: 'Booking Details',
+          headerShown: true,
+        }}
+      />
+
+      <Stack.Screen
+        name="payment"
+        options={{
           title: 'Payment',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="payment-methods" 
-        options={{ 
-          title: 'Payment Methods',
-          headerShown: true
-        }} 
-      />
-      
-      <Stack.Screen 
-        name="provider/[id]" 
-        options={{ 
+
+      <Stack.Screen
+        name="provider/[id]"
+        options={{
           title: 'Provider Details',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="provider/[id]/reviews" 
-        options={{ 
-          title: 'All Reviews',
-          headerShown: true
-        }} 
-      />
-      
-      <Stack.Screen 
-        name="search/results" 
-        options={{ 
+
+      <Stack.Screen
+        name="search/results"
+        options={{
           title: 'Search Results',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="requests/index" 
-        options={{ 
+
+      <Stack.Screen
+        name="requests/index"
+        options={{
           title: 'My Requests',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="requests/[id]" 
-        options={{ 
+
+      <Stack.Screen
+        name="requests/[id]"
+        options={{
           title: 'Request Details',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="complaints/index" 
-        options={{ 
+
+      <Stack.Screen
+        name="complaints/index"
+        options={{
           title: 'My Complaints',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="complaints/new" 
-        options={{ 
+
+      <Stack.Screen
+        name="complaints/new"
+        options={{
           title: 'New Complaint',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="complaints/[id]" 
-        options={{ 
+
+      <Stack.Screen
+        name="complaints/[id]"
+        options={{
           title: 'Complaint Details',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="wallet/index" 
-        options={{ 
+
+      <Stack.Screen
+        name="wallet/index"
+        options={{
           title: 'My Wallet',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
-      
-      <Stack.Screen 
-        name="help" 
-        options={{ 
-          title: 'Help Center',
-          headerShown: true
-        }} 
-      />
-      
-      <Stack.Screen 
-        name="support" 
-        options={{ 
-          title: 'Contact Support',
-          headerShown: true
-        }} 
-      />
-      
-      <Stack.Screen 
-        name="terms" 
-        options={{ 
-          title: 'Terms & Conditions',
-          headerShown: true
-        }} 
-      />
-      
-      <Stack.Screen 
-        name="privacy" 
-        options={{ 
-          title: 'Privacy Policy',
-          headerShown: true
-        }} 
-      />
-      
-      <Stack.Screen 
-        name="chat/[id]" 
-        options={{ 
+
+      <Stack.Screen
+        name="chat/[id]"
+        options={{
           title: 'Chat',
-          headerShown: true
-        }} 
+          headerShown: true,
+        }}
       />
     </Stack>
   );

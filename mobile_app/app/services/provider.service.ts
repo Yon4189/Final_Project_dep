@@ -17,6 +17,29 @@ import type { ApiResponse } from '../types/customer.types';
 class ProviderService {
   private readonly BASE_PATH = '/provider';
 
+  // Helper method to get provider ID from storage
+ // Helper method to get provider ID from storage
+private async getProviderId(): Promise<string | null> {
+  try {
+    const userData = await storage.getItem('user_data');
+    if (userData && typeof userData === 'string') {
+      const parsed = JSON.parse(userData);
+      return parsed.providerID || parsed.id || null;
+    }
+    
+    // Also try to get from provider profile in storage
+    const profileData = await storage.getItem('provider_profile');
+    if (profileData && typeof profileData === 'string') {
+      const parsed = JSON.parse(profileData);
+      return parsed.providerID || parsed.id || null;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting provider ID:', error);
+    return null;
+  }
+}
   // ==================== Profile Management ====================
 
   async getProfile(): Promise<ApiResponse<ProviderProfile>> {
@@ -24,6 +47,16 @@ class ProviderService {
     
     if (response.success && response.data) {
       await storage.setItem('provider_profile', response.data);
+      
+      // Also store user_data with provider info
+      const userData = {
+        id: (response.data as any).providerID || (response.data as any).id,
+        providerID: (response.data as any).providerID,
+        fullname: (response.data as any).fullname || (response.data as any).businessName,
+        email: (response.data as any).email,
+        phone: (response.data as any).phone,
+      };
+      await storage.setItem('user_data', JSON.stringify(userData));
     }
     
     return response;
@@ -237,6 +270,45 @@ class ProviderService {
     completionRate: number;
     responseRate: number;
   }>> {
+    // Get the authenticated provider ID from storage
+    const providerId = await this.getProviderId();
+    
+    if (!providerId) {
+      // If no provider ID found, try to get profile first
+      try {
+        const profileResponse = await this.getProfile();
+        if (profileResponse.success && profileResponse.data) {
+          const id = (profileResponse.data as any).providerID || (profileResponse.data as any).id;
+          if (id) {
+            return api.get<{
+              pendingRequests: number;
+              todayJobs: number;
+              weeklyEarnings: number;
+              rating: number;
+              completionRate: number;
+              responseRate: number;
+            }>(`${this.BASE_PATH}/dashboard/stats?providerID=${id}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching profile for provider ID:', error);
+      }
+      
+      // If still no ID, return error
+      return {
+        success: false,
+        message: 'Provider ID not found. Please log in again.',
+        data: {
+          pendingRequests: 0,
+          todayJobs: 0,
+          weeklyEarnings: 0,
+          rating: 0,
+          completionRate: 0,
+          responseRate: 0,
+        }
+      };
+    }
+    
     return api.get<{
       pendingRequests: number;
       todayJobs: number;
@@ -244,7 +316,7 @@ class ProviderService {
       rating: number;
       completionRate: number;
       responseRate: number;
-    }>(`${this.BASE_PATH}/dashboard/stats`);
+    }>(`${this.BASE_PATH}/dashboard/stats?providerID=${providerId}`);
   }
 
   async getTodaySchedule(): Promise<ApiResponse<ServiceRequest[]>> {

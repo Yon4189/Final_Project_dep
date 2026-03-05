@@ -145,7 +145,7 @@ export default function ProviderProfile() {
 
       <View style={styles.ratingContainer}>
         <Ionicons name="star" size={16} color={Colors.warning} />
-        <Text style={styles.ratingText}>{profile?.rating?.toFixed(1) || '0.0'}</Text>
+        <Text style={styles.ratingText}>{Number(profile?.rating || 0).toFixed(1) || '0.0'}</Text>
         <Text style={styles.reviewCount}>({profile?.reviewCount || 0} reviews)</Text>
       </View>
 
