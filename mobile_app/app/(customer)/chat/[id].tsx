@@ -666,7 +666,7 @@ export default function ChatScreen() {
           placeholder="Type a message..."
           placeholderTextColor={Colors.text.secondary}
           multiline
-          maxLength={1000}
+          maxLength={1001}
           editable={!isSending}
         />
         <TouchableOpacity
