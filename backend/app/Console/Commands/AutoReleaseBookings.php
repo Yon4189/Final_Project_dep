@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Console\Command;
@@ -31,36 +32,61 @@ class AutoReleaseBookings extends Command
     public function handle()
     {
         $this->info('Running auto-release for bookings...');
-        $now = now();
+        
+        // Find bookings that are completed but payment not released
+        // Using the actual columns from your schema
         $bookings = Booking::where('status', 'completed')
-            ->where('payment_status', 'releasable')
-            ->where('auto_release_at', '<=', $now)
-            ->whereNull('customer_confirmed_at')
+            ->whereHas('payment', function($query) {
+                $query->where('status', 'paid')  // Payment is paid but not released
+                      ->whereNull('released_at');
+            })
+            ->where('completed_at', '<=', now()->subHours(48))  // 48 hours after completion
             ->get();
+            
         $count = 0;
+        
         foreach ($bookings as $booking) {
-            DB::transaction(function () use ($booking) {
-                $provider = $booking->providerID;
-                $wallet = Wallet::where('service_provider_id', $provider)->first();
-                if ($wallet && $booking->pending_balance > 0) {
-                    $wallet->available_balance += $booking->pending_balance;
-                    $wallet->save();
-                    WalletTransaction::create([
-                        'wallet_id' => $wallet->id,
-                        'type' => 'credit',
-                        'amount' => $booking->pending_balance,
-                        'description' => 'Auto-release for booking #' . $booking->bookingID,
-                        'booking_id' => $booking->bookingID,
-                    ]);
-                    $booking->available_balance += $booking->pending_balance;
-                    $booking->pending_balance = 0;
-                    $booking->payment_status = 'released';
-                    $booking->save();
-                    Log::info('Auto-released booking #' . $booking->bookingID);
+            DB::transaction(function () use ($booking, &$count) {
+                // Get the payment record
+                $payment = Payment::where('bookingID', $booking->bookingID)->first();
+                
+                if (!$payment) {
+                    Log::warning('No payment found for booking #' . $booking->bookingID);
+                    return;
                 }
+                
+                // Get provider's wallet
+                $wallet = Wallet::firstOrCreate(
+                    ['providerID' => $booking->providerID],
+                    ['available_balance' => 0, 'pending_balance' => 0]
+                );
+                
+                // Amount to release (provider_amount from payment table)
+                $providerAmount = $payment->provider_amount; // This already has commission deducted
+                
+                // Add to wallet
+                $wallet->available_balance += $providerAmount;
+                $wallet->save();
+                
+                // Create transaction record
+                WalletTransaction::create([
+                    'walletID' => $wallet->walletID,
+                    'type' => 'credit',
+                    'amount' => $providerAmount,
+                    'description' => 'Auto-release for booking #' . $booking->bookingID . ' (48h after completion)',
+                    'bookingID' => $booking->bookingID,
+                ]);
+                
+                // Update payment status
+                $payment->status = 'released';
+                $payment->released_at = now();
+                $payment->save();
+                
+                Log::info('Auto-released booking #' . $booking->bookingID);
+                $count++;
             });
-            $count++;
         }
+        
         $this->info("Auto-released $count bookings.");
     }
 }

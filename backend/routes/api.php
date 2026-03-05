@@ -246,3 +246,26 @@ Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {
 
 // ==================== NOTIFICATION ROUTES (Temporary backward compatibility) ====================
 Route::get('provider/{providerID}/notifications', [NotificationController::class, 'index']);
+
+
+// Provider wallet routes
+Route::middleware('auth:provider')->prefix('provider')->group(function () {
+    Route::get('/wallet', [WalletController::class, 'dashboard']);
+    Route::get('/wallet/summary', [WalletController::class, 'summary']);
+    Route::post('/withdrawals', [WalletController::class, 'requestWithdrawal']);
+    Route::get('/withdrawals', [WalletController::class, 'withdrawals']);
+    Route::get('/withdrawals/{id}', [WalletController::class, 'showWithdrawal']);
+    Route::post('/withdrawals/{id}/cancel', [WalletController::class, 'cancelWithdrawal']);
+    Route::get('/transactions', [WalletController::class, 'transactions']);
+});
+
+
+// Admin withdrawal management routes
+Route::middleware('auth:admin')->prefix('admin')->group(function () {
+    // Withdrawal endpoints
+    Route::get('/withdrawals/pending', [AdminWithdrawalController::class, 'getPendingWithdrawals']);
+    Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approveWithdrawal']);
+    Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'rejectWithdrawal']);
+    Route::get('/withdrawals/stats', [AdminWithdrawalController::class, 'stats']);
+    Route::get('/withdrawals', [AdminWithdrawalController::class, 'index']); // Optional: list all with filters
+});

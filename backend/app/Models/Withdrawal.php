@@ -7,12 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Withdrawal extends Model
 {
+    protected $table = 'withdrawals';
+    protected $primaryKey = 'withdrawalID'; // Change from default 'id'
+
     protected $fillable = [
-        'withdrawal_ref',
+        'withdrawalID', // Added
+        'providerID',   // Changed from 'provider_id'
         'amount',
         'currency',
         'status',
-        'provider_id',
         'provider_bank_name',
         'provider_account_number',
         'provider_account_holder_name',
@@ -20,7 +23,7 @@ class Withdrawal extends Model
         'chapa_transfer_status',
         'platform_fee',
         'net_amount',
-        'processing_notes',
+        'admin_notes',      // Changed from 'processing_notes'
         'failure_reason',
         'processed_at',
         'completed_at'
@@ -41,7 +44,23 @@ class Withdrawal extends Model
      */
     public function provider(): BelongsTo
     {
-        return $this->belongsTo(ServiceProvider::class, 'provider_id', 'providerID');
+        return $this->belongsTo(ServiceProvider::class, 'providerID', 'providerID');
+    }
+
+    /**
+     * Get the wallet associated with this withdrawal
+     */
+    public function wallet()
+    {
+        return $this->belongsTo(Wallet::class, 'providerID', 'providerID');
+    }
+
+    /**
+     * Get the transactions for this withdrawal
+     */
+    public function transactions()
+    {
+        return $this->hasMany(WalletTransaction::class, 'withdrawalID', 'withdrawalID');
     }
 
     /**
@@ -50,6 +69,22 @@ class Withdrawal extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending';
+    }
+
+    /**
+     * Check if withdrawal is approved
+     */
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    /**
+     * Check if withdrawal is rejected
+     */
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
     }
 
     /**
@@ -90,6 +125,22 @@ class Withdrawal extends Model
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
+    }
+
+    /**
+     * Scope a query to only include approved withdrawals
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    /**
+     * Scope a query to only include rejected withdrawals
+     */
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 'rejected');
     }
 
     /**
