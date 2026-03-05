@@ -19,11 +19,11 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- Login Handler ---
-// In your Login component (admin login)
+  // In your Login component (admin login)
   const handleSubmit = async (e) => {
-      e.preventDefault();
-      setError('');
-      setIsLoading(true);
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
     try {
       const response = await api.post('/admin/login', { email, password });
@@ -41,6 +41,11 @@ const Login = () => {
         login(userSession, token);
         navigate('/');
       }
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid credentials or server error.");
+    } finally {
+      setIsLoading(false);
+    }
   };
   // --- Forgot Password Handler ---
   const handleForgotPassword = async (e) => {
@@ -147,7 +152,7 @@ const Login = () => {
               onClick={() => { setViewMode('login'); setError(''); setSuccessMsg(''); }}
               className="w-full flex items-center justify-center gap-2 text-slate-500 text-xs font-bold hover:text-slate-800 transition-all"
             >
-              <ArrowLeft size={16} /> Bak to Login
+              <ArrowLeft size={16} /> Back to Login
             </button>
           </form>
         )}
