@@ -3,7 +3,7 @@ import {
   Users, UserCheck, Clock, Banknote, Layers, Wrench,
   CheckCircle, XCircle, Loader2, Image as ImageIcon, RefreshCw,
   FileCheck, Calendar, Database, AlertCircle, Info, DollarSign,
-  Eye, X  // 👈 added Eye icon
+  Eye, X  
 } from 'lucide-react';
 import api from '../api/axios';
 import StatCard from '../components/StatCard';
@@ -41,18 +41,39 @@ const Dashboard = () => {
   const fetchData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
+      // create headers with token if needed
+      // const headers = { ... };
+      // If you need auth, uncomment and use headers in requests
+      // const [queueRes, statsRes] = await Promise.all([
+      //   api.get('/providers/pending', { headers }),
+      //   api.get('/dashboard/stats', { headers })
+      // ]);
       const [queueRes, statsRes] = await Promise.all([
         api.get('/admin/providers/pending'),
         api.get('/admin/stats')
       ]);
-
-      if (queueRes.data.success) setVerificationQueue(queueRes.data.data);
-      if (statsRes.data.success) setCounts(statsRes.data.data);
-
+      console.log('Queue response:', queueRes.data);
+      console.log('Stats response:', statsRes.data);
+      if (queueRes.data && queueRes.data.success) {
+        setVerificationQueue(queueRes.data.data || []);
+      }
+      if (statsRes.data && statsRes.data.success) {
+        setCounts(statsRes.data.data || {
+          providers: 0,
+          customers: 0,
+          pending: 0,
+          categories: 0,
+          services: 0,
+          revenue: 0
+        });
+      }
       setDbStatus('connected');
     } catch (err) {
       setDbStatus('disconnected');
       console.error("Fetch Error:", err);
+      if (err.response && err.response.status === 401) {
+        console.log("Authentication failed - token may be expired");
+      }
     } finally {
       if (showLoading) setIsLoading(false);
     }
@@ -82,7 +103,7 @@ const Dashboard = () => {
     processVerifyAction(id, 'approved');
   };
 
-  // Actually send verify/reject request
+  //  send verify/reject request
   const processVerifyAction = async (id, status, reason = null) => {
     setProcessingId(id);
     try {

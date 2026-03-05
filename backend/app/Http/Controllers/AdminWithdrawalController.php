@@ -15,146 +15,76 @@ class AdminWithdrawalController extends Controller
     /**
      * List all withdrawals
      */
-    public function index(Request $request)
+    /**
+     * List all pending withdrawals (new schema)
+     */
+    public function index()
     {
-        $query = Withdrawal::with(['provider', 'provider.user']);
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('provider_id')) {
-            $query->where('providerID', $request->provider_id);
-        }
-
-        $withdrawals = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        $stats = [
-            'pending_total' => Withdrawal::where('status', 'pending')->sum('amount'),
-            'pending_count' => Withdrawal::where('status', 'pending')->count(),
-            'approved_today' => Withdrawal::where('status', 'approved')
-                ->whereDate('approved_at', today())
-                ->sum('amount')
-        ];
-
-        return response()->json([
-            'success' => true,
-            'data' => $withdrawals,
-            'stats' => $stats
-        ]);
+        $withdrawals = Withdrawal::where('status', 'pending')->with('wallet.serviceProvider')->latest()->get();
+        return response()->json(['data' => $withdrawals]);
     }
 
     /**
      * Approve withdrawal
      */
-    public function approve(Request $request, $withdrawalId)
+    /**
+     * Approve a withdrawal (new schema)
+     */
+    public function approve(Request $request, $id)
     {
-        $request->validate([
-            'admin_notes' => 'nullable|string|max:500'
-        ]);
-
-        $withdrawal = Withdrawal::where('withdrawalID', $withdrawalId)
-            ->where('status', 'pending')
-            ->first();
-
-        if (!$withdrawal) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Withdrawal not found'
-            ], 404);
+        $withdrawal = Withdrawal::findOrFail($id);
+        if ($withdrawal->status !== 'pending') {
+            return response()->json(['error' => 'Withdrawal not pending'], 422);
         }
-
-        return DB::transaction(function () use ($withdrawal, $request) {
+        DB::transaction(function () use ($withdrawal) {
             $withdrawal->status = 'approved';
-            $withdrawal->admin_notes = $request->admin_notes;
-            $withdrawal->approved_by = auth()->id();
-            $withdrawal->approved_at = now();
             $withdrawal->processed_at = now();
             $withdrawal->save();
-
-            // Mark payments as withdrawn
-            $updatedCount = Payment::where('providerID', $withdrawal->providerID)
-                ->where('status', 'released')
-                ->where('is_withdrawn', false)
-                ->update([
-                    'is_withdrawn' => true,
-                    'withdrawn_at' => now()
-                ]);
-
-            $wallet = $withdrawal->wallet;
-            $wallet->total_withdrawn += $withdrawal->amount;
-            $wallet->save();
-
             WalletTransaction::create([
-                'reference' => 'TXN-' . Str::random(12),
-                'walletID' => $wallet->walletID,
-                'type' => 'withdrawal_approved',
-                'amount' => -$withdrawal->amount,
-                'balance_before' => $wallet->available_balance,
-                'balance_after' => $wallet->available_balance,
-                'description' => "Withdrawal #{$withdrawal->withdrawal_ref} approved"
+                'wallet_id' => $withdrawal->wallet_id,
+                'type' => 'debit',
+                'amount' => $withdrawal->amount,
+                'description' => 'Withdrawal approved',
+                'withdrawal_id' => $withdrawal->id,
             ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Withdrawal approved',
-                'data' => [
-                    'withdrawal' => $withdrawal,
-                    'payments_marked' => $updatedCount
-                ]
-            ]);
+            // TODO: Send notification to provider
         });
+        return response()->json(['message' => 'Withdrawal approved']);
     }
 
     /**
      * Reject withdrawal
      */
-    public function reject(Request $request, $withdrawalId)
+    /**
+     * Reject a withdrawal (new schema)
+     */
+    public function reject(Request $request, $id)
     {
         $request->validate([
-            'rejection_reason' => 'required|string|max:500'
+            'admin_notes' => 'required|string',
         ]);
-
-        $withdrawal = Withdrawal::where('withdrawalID', $withdrawalId)
-            ->where('status', 'pending')
-            ->first();
-
-        if (!$withdrawal) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Withdrawal not found'
-            ], 404);
+        $withdrawal = Withdrawal::findOrFail($id);
+        if ($withdrawal->status !== 'pending') {
+            return response()->json(['error' => 'Withdrawal not pending'], 422);
         }
-
-        return DB::transaction(function () use ($withdrawal, $request) {
+        DB::transaction(function () use ($withdrawal, $request) {
             $wallet = $withdrawal->wallet;
-            $balanceBefore = $wallet->available_balance;
-
             $wallet->available_balance += $withdrawal->amount;
             $wallet->save();
-
             $withdrawal->status = 'rejected';
-            $withdrawal->rejection_reason = $request->rejection_reason;
-            $withdrawal->approved_by = auth()->id();
-            $withdrawal->approved_at = now();
+            $withdrawal->admin_notes = $request->admin_notes;
+            $withdrawal->processed_at = now();
             $withdrawal->save();
-
             WalletTransaction::create([
-                'reference' => 'TXN-' . Str::random(12),
-                'walletID' => $wallet->walletID,
-                'type' => 'withdrawal_rejected',
+                'wallet_id' => $wallet->id,
+                'type' => 'credit',
                 'amount' => $withdrawal->amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $wallet->available_balance,
-                'description' => "Withdrawal #{$withdrawal->withdrawal_ref} rejected - funds returned"
+                'description' => 'Withdrawal rejected, funds returned',
+                'withdrawal_id' => $withdrawal->id,
             ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Withdrawal rejected',
-                'data' => $withdrawal
-            ]);
+            // TODO: Send notification to provider
         });
+        return response()->json(['message' => 'Withdrawal rejected and funds returned']);
     }
 
     /**

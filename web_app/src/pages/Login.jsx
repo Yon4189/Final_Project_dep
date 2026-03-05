@@ -24,7 +24,6 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     try {
       const response = await api.post('/admin/login', { email, password });
       if (response.data.success) {
@@ -40,9 +39,11 @@ const Login = () => {
         };
         login(userSession, token);
         navigate('/');
+      } else {
+        setError(response.data.message || 'Login failed');
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid credentials or server error.");
+      setError(err.response?.data?.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }

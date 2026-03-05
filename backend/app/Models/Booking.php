@@ -24,7 +24,13 @@ class Booking extends Model
         'accepted_at',
         'provider_started_at',
         'provider_arrived_at',
-        'completed_at'
+        'completed_at',
+        // Payment fields
+        'payment_status',
+        'pending_balance',
+        'available_balance',
+        'auto_release_at',
+        'customer_confirmed_at',
     ];
 
     protected $casts = [
@@ -34,7 +40,27 @@ class Booking extends Model
         'provider_started_at' => 'datetime',
         'provider_arrived_at' => 'datetime',
         'completed_at' => 'datetime',
+        'auto_release_at' => 'datetime',
+        'customer_confirmed_at' => 'datetime',
     ];
+    /**
+     * Get wallet transaction for this booking
+     */
+    public function walletTransaction()
+    {
+        return $this->hasOne(\App\Models\WalletTransaction::class, 'booking_id', 'bookingID');
+    }
+    /**
+     * Check if booking is releasable
+     */
+    public function isReleasable(): bool
+    {
+        return $this->status === 'completed' &&
+            $this->payment_status === 'releasable' &&
+            $this->auto_release_at &&
+            $this->auto_release_at <= now() &&
+            is_null($this->customer_confirmed_at);
+    }
 
     // a booking belongs to a customer
     public function customer() {

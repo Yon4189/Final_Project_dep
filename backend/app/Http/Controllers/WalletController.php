@@ -24,162 +24,97 @@ class WalletController extends Controller
     /**
      * Get wallet dashboard
      */
+    /**
+     * Get provider wallet info (new schema)
+     */
     public function dashboard(Request $request)
     {
         $provider = $request->user();
-        
-        $wallet = Wallet::firstOrCreate(
-            ['providerID' => $provider->providerID],
-            [
-                'pending_balance' => 0,
+        $wallet = $provider->wallet;
+        if (!$wallet) {
+            $wallet = Wallet::create([
+                'service_provider_id' => $provider->providerID,
                 'available_balance' => 0,
-                'total_earned' => 0,
-                'total_withdrawn' => 0,
-                'commission_held' => 0,
-                'currency' => 'ETB'
-            ]
-        );
-
-        // Calculate balances
-        $pendingBalance = Payment::where('providerID', $provider->providerID)
-            ->where('status', 'held')
-            ->sum('provider_amount');
-
-        $availableBalance = Payment::where('providerID', $provider->providerID)
-            ->where('status', 'released')
-            ->where('is_withdrawn', false)
-            ->sum('provider_amount');
-
-        $wallet->pending_balance = $pendingBalance;
-        $wallet->available_balance = $availableBalance;
-        $wallet->save();
-
-        $recentTransactions = WalletTransaction::where('walletID', $wallet->walletID)
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        $pendingWithdrawals = Withdrawal::where('providerID', $provider->providerID)
-            ->where('status', 'pending')
-            ->get();
-
+                'pending_balance' => 0,
+            ]);
+        }
+        $recentTransactions = $wallet->transactions()->latest()->limit(10)->get();
+        $pendingWithdrawals = $wallet->withdrawals()->where('status', 'pending')->get();
         return response()->json([
-            'success' => true,
-            'data' => [
-                'wallet' => [
-                    'pending_balance' => $wallet->pending_balance,
-                    'available_balance' => $wallet->available_balance,
-                    'total_earned' => $wallet->total_earned,
-                    'total_withdrawn' => $wallet->total_withdrawn
-                ],
-                'pending_withdrawals' => $pendingWithdrawals,
-                'recent_transactions' => $recentTransactions
-            ]
+            'wallet' => $wallet,
+            'pending_withdrawals' => $pendingWithdrawals,
+            'recent_transactions' => $recentTransactions
         ]);
     }
 
     /**
      * Request withdrawal
      */
+    /**
+     * Request withdrawal (new schema)
+     */
     public function requestWithdrawal(Request $request)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:50',
-            'bank_name' => 'required|string|max:255',
-            'account_name' => 'required|string|max:255',
-            'account_number' => 'required|string|max:255'
+            'amount' => 'required|numeric|min:1',
         ]);
-
         $provider = $request->user();
-        
-        $wallet = Wallet::where('providerID', $provider->providerID)->first();
-        
-        if (!$wallet || $wallet->available_balance < $request->amount) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Insufficient available balance'
-            ], 400);
+        $wallet = $provider->wallet;
+        $amount = $request->amount;
+        if (!$wallet || $wallet->available_balance < $amount) {
+            return response()->json(['error' => 'Insufficient balance'], 422);
         }
-
-        return DB::transaction(function () use ($provider, $wallet, $request) {
-            $fee = 5; // Fixed fee
-            $netAmount = $request->amount - $fee;
-            $withdrawalRef = 'WDR-' . Str::random(12) . '-' . time();
-
-            $withdrawal = Withdrawal::create([
-                'withdrawal_ref' => $withdrawalRef,
-                'providerID' => $provider->providerID,
-                'walletID' => $wallet->walletID,
-                'amount' => $request->amount,
-                'fee' => $fee,
-                'net_amount' => $netAmount,
-                'bank_name' => $request->bank_name,
-                'account_name' => $request->account_name,
-                'account_number' => $request->account_number,
-                'status' => 'pending'
-            ]);
-
-            $balanceBefore = $wallet->available_balance;
-            $wallet->available_balance -= $request->amount;
+        DB::transaction(function () use ($wallet, $amount) {
+            $wallet->available_balance -= $amount;
             $wallet->save();
-
-            WalletTransaction::create([
-                'reference' => 'TXN-' . Str::random(12),
-                'walletID' => $wallet->walletID,
-                'type' => 'withdrawal_requested',
-                'amount' => -$request->amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $wallet->available_balance,
-                'description' => "Withdrawal request #{$withdrawalRef}"
+            $withdrawal = Withdrawal::create([
+                'wallet_id' => $wallet->id,
+                'amount' => $amount,
+                'status' => 'pending',
             ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Withdrawal request submitted',
-                'data' => $withdrawal
+            WalletTransaction::create([
+                'wallet_id' => $wallet->id,
+                'type' => 'debit',
+                'amount' => $amount,
+                'description' => 'Withdrawal request',
+                'withdrawal_id' => $withdrawal->id,
             ]);
         });
+        // TODO: Notify admin (queue/email)
+        return response()->json(['message' => 'Withdrawal requested']);
     }
 
     /**
      * Get withdrawal history
      */
+    /**
+     * Get withdrawal history (new schema)
+     */
     public function withdrawals(Request $request)
     {
         $provider = $request->user();
-        
-        $withdrawals = Withdrawal::where('providerID', $provider->providerID)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $withdrawals
-        ]);
+        $wallet = $provider->wallet;
+        if (!$wallet) {
+            return response()->json(['data' => []]);
+        }
+        $withdrawals = $wallet->withdrawals()->latest()->paginate(20);
+        return response()->json(['data' => $withdrawals]);
     }
 
     /**
      * Get transaction history
      */
+    /**
+     * Get wallet transaction history (new schema)
+     */
     public function transactions(Request $request)
     {
         $provider = $request->user();
-        $wallet = Wallet::where('providerID', $provider->providerID)->first();
-
+        $wallet = $provider->wallet;
         if (!$wallet) {
-            return response()->json([
-                'success' => true,
-                'data' => []
-            ]);
+            return response()->json(['data' => []]);
         }
-
-        $transactions = WalletTransaction::where('walletID', $wallet->walletID)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $transactions
-        ]);
+        $transactions = $wallet->transactions()->latest()->paginate(20);
+        return response()->json(['data' => $transactions]);
     }
 }

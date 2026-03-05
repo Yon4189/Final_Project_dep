@@ -171,8 +171,8 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // ========== WALLET & WITHDRAWAL ROUTES ==========
     Route::get('/wallet', [WalletController::class, 'dashboard']);
     Route::get('/wallet/transactions', [WalletController::class, 'transactions']);
-    Route::post('/withdrawals', [WalletController::class, 'requestWithdrawal']);
-    Route::get('/withdrawals', [WalletController::class, 'withdrawals']);
+    Route::post('/wallet/withdraw', [WalletController::class, 'requestWithdrawal']);
+    Route::get('/wallet/withdrawals', [WalletController::class, 'withdrawals']);
     
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'getProviderNotifications']);
@@ -225,8 +225,8 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     
     Route::get('/withdrawals', [AdminWithdrawalController::class, 'index']);
     Route::get('/withdrawals/stats', [AdminWithdrawalController::class, 'stats']);
-    Route::post('/withdrawals/{withdrawalId}/approve', [AdminWithdrawalController::class, 'approve']);
-    Route::post('/withdrawals/{withdrawalId}/reject', [AdminWithdrawalController::class, 'reject']);
+    Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approve']);
+    Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'reject']);
 });
 
 // ==================== CHAT ROUTES (Shared) ====================

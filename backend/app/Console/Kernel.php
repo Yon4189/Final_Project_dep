@@ -15,7 +15,8 @@ class Kernel extends ConsoleKernel
     {
         // Expire unpaid bookings every hour
         $schedule->command('bookings:expire-unpaid')->hourly();
-        
+        // Auto-release bookings every hour
+        $schedule->command('bookings:auto-release')->hourly();
         // You can add more scheduled tasks here
     }
 
