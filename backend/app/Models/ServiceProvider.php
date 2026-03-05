@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Booking;
+use App\Models\Wallet;
+use App\Models\Withdrawal;
+use App\Models\Service;
 
 class ServiceProvider extends Authenticatable
 {
@@ -62,6 +66,22 @@ class ServiceProvider extends Authenticatable
     ];
 
     /**
+     * Get the wallet for this provider
+     */
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class, 'providerID', 'providerID');
+    }
+
+    /**
+     * Get withdrawal requests for this provider
+     */
+    public function withdrawals()
+    {
+        return $this->hasMany(Withdrawal::class, 'providerID', 'providerID');
+    }
+
+    /**
      * Get the services for this provider
      */
     public function services()
@@ -93,7 +113,7 @@ class ServiceProvider extends Authenticatable
     public function activeBookings()
     {
         return $this->hasMany(Booking::class, 'providerID', 'providerID')
-                    ->whereIn('status', ['accepted'])
+                    ->whereIn('status', ['accepted', 'in_progress'])
                     ->where('scheduledDate', '>', now());
     }
 
@@ -138,6 +158,14 @@ class ServiceProvider extends Authenticatable
     }
 
     /**
+     * Get payments received by this provider
+     */
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'providerID', 'providerID');
+    }
+
+    /**
      * Check if provider is approved
      */
     public function isApproved(): bool
@@ -172,6 +200,38 @@ class ServiceProvider extends Authenticatable
         $avgRating = $this->reviews()->avg('rating') ?? 0;
         $this->rating = round($avgRating, 2);
         $this->save();
+    }
+
+    /**
+     * Get total earnings from all completed payments
+     */
+    public function getTotalEarningsAttribute(): float
+    {
+        return $this->payments()
+            ->where('status', 'released')
+            ->sum('provider_amount') ?? 0;
+    }
+
+    /**
+     * Get pending earnings (releasable but not yet in available balance)
+     */
+    public function getPendingEarningsAttribute(): float
+    {
+        if ($this->wallet) {
+            return $this->wallet->pending_balance;
+        }
+        return 0;
+    }
+
+    /**
+     * Get available balance for withdrawal
+     */
+    public function getAvailableBalanceAttribute(): float
+    {
+        if ($this->wallet) {
+            return $this->wallet->available_balance;
+        }
+        return 0;
     }
 
     /**
@@ -212,20 +272,32 @@ class ServiceProvider extends Authenticatable
             ->orderBy('distance');
     }
 
-
-    // Add these methods for payout handling:
-
     /**
-     * Add funds to wallet (for payouts)
+     * Add funds to wallet (for payouts) - Legacy method
+     * @deprecated Use wallet->pending_balance instead
      */
     public function addToWallet($amount): void
     {
         $this->walletBalance = ($this->walletBalance ?? 0) + $amount;
         $this->save();
+        
+        // Also update the wallet table if it exists
+        if ($this->wallet) {
+            $this->wallet->pending_balance += $amount;
+            $this->wallet->save();
+        } else {
+            // Create wallet if it doesn't exist
+            Wallet::create([
+                'providerID' => $this->providerID,
+                'available_balance' => 0,
+                'pending_balance' => $amount
+            ]);
+        }
     }
 
     /**
-     * Get wallet balance
+     * Get wallet balance - Legacy method
+     * @deprecated Use available_balance attribute instead
      */
     public function getWalletBalanceAttribute()
     {
@@ -233,7 +305,8 @@ class ServiceProvider extends Authenticatable
     }
 
     /**
-     * Withdraw from wallet
+     * Withdraw from wallet - Legacy method
+     * @deprecated Use withdrawal request system instead
      */
     public function withdrawFromWallet($amount): bool
     {

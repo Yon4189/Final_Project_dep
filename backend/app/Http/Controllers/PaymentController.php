@@ -163,30 +163,37 @@ class PaymentController extends Controller
     /**
      * Handle Chapa callback
      */
+    /**
+     * Handle Chapa webhook/callback (tx_ref is the key)
+     */
     public function callback(Request $request, $tx_ref)
     {
-        Log::info('Chapa callback received', [
+        Log::info('Chapa webhook received', [
             'tx_ref' => $tx_ref,
-            'data' => $request->all()
+            'payload' => $request->all()
         ]);
 
         // Find payment by tx_ref
         $payment = Payment::where('tx_ref', $tx_ref)->first();
-
         if (!$payment) {
-            Log::error('Payment not found for callback', ['tx_ref' => $tx_ref]);
+            Log::error('Payment not found for webhook', ['tx_ref' => $tx_ref]);
             return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+        }
+
+        // Verify signature if provided (best practice)
+        $signature = $request->header('chapa-signature');
+        if ($signature && !$this->chapaService->verifySignature($request->getContent(), $signature)) {
+            Log::error('Chapa signature verification failed', ['tx_ref' => $tx_ref]);
+            return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
         }
 
         // Verify with Chapa API
         $verification = $this->chapaService->verifyPayment($tx_ref);
-
         if ($verification['status'] !== 'success') {
             Log::error('Payment verification failed', ['tx_ref' => $tx_ref]);
             $payment->status = 'failed';
             $payment->failure_reason = 'Verification failed';
             $payment->save();
-            
             return response()->json(['success' => false, 'message' => 'Verification failed'], 400);
         }
 
@@ -196,7 +203,6 @@ class PaymentController extends Controller
             $payment->status = 'failed';
             $payment->failure_reason = 'Amount mismatch';
             $payment->save();
-            
             return response()->json(['success' => false, 'message' => 'Amount mismatch'], 400);
         }
 
@@ -217,24 +223,23 @@ class PaymentController extends Controller
             $payment->held_until = now()->addHours(48); // Auto-release after 48 hours
             $payment->save();
 
-            // Update booking status
+            // Update booking status and balances
             $booking = Booking::find($payment->bookingID);
             if ($booking) {
-                $booking->booking_status = 'paid';
-                $booking->paymentID = $payment->paymentID;
-                $booking->customer_confirmation_deadline = now()->addHours(48);
+                $booking->payment_status = 'releasable';
+                $booking->pending_balance = $payment->provider_amount;
+                $booking->auto_release_at = now()->addHours(48);
+                $booking->status = 'completed'; // or 'paid' if you want a separate status
                 $booking->save();
-
-                Log::info('Booking marked as paid', [
+                Log::info('Booking marked as paid and releasable', [
                     'booking_id' => $booking->bookingID,
                     'tx_ref' => $payment->tx_ref
                 ]);
             }
         });
 
-        // Redirect to return URL with status
-        $returnUrl = $payment->return_url . '?status=success&tx_ref=' . $tx_ref;
-        return redirect($returnUrl);
+        // Respond with success
+        return response()->json(['success' => true, 'message' => 'Payment processed']);
     }
 
     /**

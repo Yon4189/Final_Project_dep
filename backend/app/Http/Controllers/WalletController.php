@@ -11,6 +11,7 @@ use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class WalletController extends Controller
 {
@@ -22,164 +23,393 @@ class WalletController extends Controller
     }
 
     /**
-     * Get wallet dashboard
+     * Get provider wallet info (dashboard view)
+     * GET /api/provider/wallet
      */
     public function dashboard(Request $request)
     {
-        $provider = $request->user();
-        
-        $wallet = Wallet::firstOrCreate(
-            ['providerID' => $provider->providerID],
-            [
-                'pending_balance' => 0,
-                'available_balance' => 0,
-                'total_earned' => 0,
-                'total_withdrawn' => 0,
-                'commission_held' => 0,
-                'currency' => 'ETB'
-            ]
-        );
+        try {
+            $provider = $request->user();
+            $wallet = $provider->wallet;
+            
+            if (!$wallet) {
+                $wallet = Wallet::create([
+                    'providerID' => $provider->providerID,
+                    'available_balance' => 0,
+                    'pending_balance' => 0,
+                ]);
+            }
+            
+            // Get recent transactions
+            $recentTransactions = $wallet->transactions()
+                ->latest()
+                ->limit(10)
+                ->get();
+            
+            // Get pending withdrawals
+            $pendingWithdrawals = Withdrawal::where('providerID', $provider->providerID)
+                ->where('status', 'pending')
+                ->get();
+            
+            // Get approved/rejected withdrawals for reference
+            $recentWithdrawals = Withdrawal::where('providerID', $provider->providerID)
+                ->whereIn('status', ['approved', 'rejected'])
+                ->latest()
+                ->limit(5)
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'wallet' => [
+                        'walletID' => $wallet->walletID,
+                        'available_balance' => (float) $wallet->available_balance,
+                        'pending_balance' => (float) $wallet->pending_balance,
+                        'total_balance' => (float) ($wallet->available_balance + $wallet->pending_balance),
+                        'created_at' => $wallet->created_at,
+                        'updated_at' => $wallet->updated_at
+                    ],
+                    'pending_withdrawals' => $pendingWithdrawals,
+                    'recent_withdrawals' => $recentWithdrawals,
+                    'recent_transactions' => $recentTransactions
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Wallet dashboard error: ' . $e->getMessage(), [
+                'provider_id' => $request->user()->providerID ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load wallet data'
+            ], 500);
+        }
+    }
 
-        // Calculate balances
-        $pendingBalance = Payment::where('providerID', $provider->providerID)
-            ->where('status', 'held')
-            ->sum('provider_amount');
-
-        $availableBalance = Payment::where('providerID', $provider->providerID)
-            ->where('status', 'released')
-            ->where('is_withdrawn', false)
-            ->sum('provider_amount');
-
-        $wallet->pending_balance = $pendingBalance;
-        $wallet->available_balance = $availableBalance;
-        $wallet->save();
-
-        $recentTransactions = WalletTransaction::where('walletID', $wallet->walletID)
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        $pendingWithdrawals = Withdrawal::where('providerID', $provider->providerID)
-            ->where('status', 'pending')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'wallet' => [
-                    'pending_balance' => $wallet->pending_balance,
-                    'available_balance' => $wallet->available_balance,
-                    'total_earned' => $wallet->total_earned,
-                    'total_withdrawn' => $wallet->total_withdrawn
-                ],
-                'pending_withdrawals' => $pendingWithdrawals,
-                'recent_transactions' => $recentTransactions
-            ]
-        ]);
+    /**
+     * Get wallet summary (simplified version for quick access)
+     * GET /api/provider/wallet/summary
+     */
+    public function summary(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            $wallet = $provider->wallet;
+            
+            if (!$wallet) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'available_balance' => 0,
+                        'pending_balance' => 0,
+                        'total_balance' => 0
+                    ]
+                ]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'available_balance' => (float) $wallet->available_balance,
+                    'pending_balance' => (float) $wallet->pending_balance,
+                    'total_balance' => (float) ($wallet->available_balance + $wallet->pending_balance)
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load wallet summary'
+            ], 500);
+        }
     }
 
     /**
      * Request withdrawal
+     * POST /api/provider/withdrawals
      */
     public function requestWithdrawal(Request $request)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:50',
-            'bank_name' => 'required|string|max:255',
-            'account_name' => 'required|string|max:255',
-            'account_number' => 'required|string|max:255'
+            'amount' => 'required|numeric|min:50', // Minimum 50 ETB
         ]);
-
-        $provider = $request->user();
         
-        $wallet = Wallet::where('providerID', $provider->providerID)->first();
-        
-        if (!$wallet || $wallet->available_balance < $request->amount) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Insufficient available balance'
-            ], 400);
-        }
-
-        return DB::transaction(function () use ($provider, $wallet, $request) {
-            $fee = 5; // Fixed fee
-            $netAmount = $request->amount - $fee;
-            $withdrawalRef = 'WDR-' . Str::random(12) . '-' . time();
-
-            $withdrawal = Withdrawal::create([
-                'withdrawal_ref' => $withdrawalRef,
-                'providerID' => $provider->providerID,
-                'walletID' => $wallet->walletID,
-                'amount' => $request->amount,
-                'fee' => $fee,
-                'net_amount' => $netAmount,
-                'bank_name' => $request->bank_name,
-                'account_name' => $request->account_name,
-                'account_number' => $request->account_number,
-                'status' => 'pending'
-            ]);
-
-            $balanceBefore = $wallet->available_balance;
-            $wallet->available_balance -= $request->amount;
-            $wallet->save();
-
-            WalletTransaction::create([
-                'reference' => 'TXN-' . Str::random(12),
-                'walletID' => $wallet->walletID,
-                'type' => 'withdrawal_requested',
-                'amount' => -$request->amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $wallet->available_balance,
-                'description' => "Withdrawal request #{$withdrawalRef}"
-            ]);
-
+        try {
+            $provider = $request->user();
+            $wallet = $provider->wallet;
+            $amount = $request->amount;
+            
+            if (!$wallet) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Wallet not found'
+                ], 404);
+            }
+            
+            if ($wallet->available_balance < $amount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient balance',
+                    'data' => [
+                        'available_balance' => (float) $wallet->available_balance,
+                        'requested' => (float) $amount
+                    ]
+                ], 422);
+            }
+            
+            // Check if there's already a pending withdrawal
+            $pendingExists = Withdrawal::where('providerID', $provider->providerID)
+                ->where('status', 'pending')
+                ->exists();
+                
+            if ($pendingExists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have a pending withdrawal request. Please wait for it to be processed.'
+                ], 422);
+            }
+            
+            // Declare variable outside the closure
+            $withdrawal = null;
+            
+            DB::transaction(function () use ($wallet, $amount, $provider, &$withdrawal) {
+                // Deduct from available balance
+                $wallet->available_balance -= $amount;
+                $wallet->save();
+                
+                // Create withdrawal record
+                $withdrawal = Withdrawal::create([
+                    'providerID' => $provider->providerID,
+                    'amount' => $amount,
+                    'status' => 'pending',
+                    'processed_at' => null,
+                    'admin_notes' => null
+                ]);
+                
+                if (!$withdrawal) {
+                    throw new \Exception('Failed to create withdrawal record');
+                }
+                
+                // Create transaction record
+                WalletTransaction::create([
+                    'walletID' => $wallet->walletID,
+                    'type' => 'debit',
+                    'amount' => $amount,
+                    'description' => 'Withdrawal request #' . $withdrawal->withdrawalID . ' (pending)',
+                    'bookingID' => null,
+                    'withdrawalID' => $withdrawal->withdrawalID
+                ]);
+            });
+            
+            if (!$withdrawal) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to process withdrawal request'
+                ], 500);
+            }
+            
+            // TODO: Send notification to admin about new withdrawal request
+            
             return response()->json([
                 'success' => true,
-                'message' => 'Withdrawal request submitted',
-                'data' => $withdrawal
+                'message' => 'Withdrawal request submitted successfully',
+                'data' => [
+                    'withdrawal' => [
+                        'withdrawalID' => $withdrawal->withdrawalID,
+                        'amount' => (float) $withdrawal->amount,
+                        'status' => $withdrawal->status,
+                        'created_at' => $withdrawal->created_at
+                    ],
+                    'new_balance' => (float) $wallet->fresh()->available_balance
+                ]
             ]);
-        });
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Withdrawal request error: ' . $e->getMessage(), [
+                'provider_id' => $request->user()->providerID ?? null,
+                'amount' => $request->amount,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process withdrawal request: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
      * Get withdrawal history
+     * GET /api/provider/withdrawals
      */
     public function withdrawals(Request $request)
     {
-        $provider = $request->user();
-        
-        $withdrawals = Withdrawal::where('providerID', $provider->providerID)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        try {
+            $provider = $request->user();
+            
+            $withdrawals = Withdrawal::where('providerID', $provider->providerID)
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $withdrawals
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Withdrawal history error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load withdrawal history'
+            ], 500);
+        }
+    }
 
-        return response()->json([
-            'success' => true,
-            'data' => $withdrawals
-        ]);
+    /**
+     * Get single withdrawal details
+     * GET /api/provider/withdrawals/{id}
+     */
+    public function showWithdrawal(Request $request, $id)
+    {
+        try {
+            $provider = $request->user();
+            
+            $withdrawal = Withdrawal::where('withdrawalID', $id)
+                ->where('providerID', $provider->providerID)
+                ->first();
+            
+            if (!$withdrawal) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Withdrawal not found'
+                ], 404);
+            }
+            
+            // Get associated transaction
+            $transaction = WalletTransaction::where('withdrawalID', $withdrawal->withdrawalID)->first();
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'withdrawal' => $withdrawal,
+                    'transaction' => $transaction
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load withdrawal details'
+            ], 500);
+        }
     }
 
     /**
      * Get transaction history
+     * GET /api/provider/transactions
      */
     public function transactions(Request $request)
     {
-        $provider = $request->user();
-        $wallet = Wallet::where('providerID', $provider->providerID)->first();
-
-        if (!$wallet) {
+        try {
+            $provider = $request->user();
+            $wallet = $provider->wallet;
+            
+            if (!$wallet) {
+                return response()->json([
+                    'success' => true,
+                    'data' => []
+                ]);
+            }
+            
+            $transactions = $wallet->transactions()
+                ->with(['booking', 'withdrawal'])
+                ->latest()
+                ->paginate(20);
+            
             return response()->json([
                 'success' => true,
-                'data' => []
+                'data' => $transactions
             ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Transaction history error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load transaction history'
+            ], 500);
         }
+    }
 
-        $transactions = WalletTransaction::where('walletID', $wallet->walletID)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $transactions
-        ]);
+    /**
+     * Cancel a pending withdrawal request
+     * POST /api/provider/withdrawals/{id}/cancel
+     */
+    public function cancelWithdrawal(Request $request, $id)
+    {
+        try {
+            $provider = $request->user();
+            
+            $withdrawal = Withdrawal::where('withdrawalID', $id)
+                ->where('providerID', $provider->providerID)
+                ->where('status', 'pending')
+                ->first();
+            
+            if (!$withdrawal) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pending withdrawal not found'
+                ], 404);
+            }
+            
+            DB::transaction(function () use ($withdrawal, $provider) {
+                // Get wallet
+                $wallet = Wallet::where('providerID', $provider->providerID)->first();
+                
+                if ($wallet) {
+                    // Return amount to available balance
+                    $wallet->available_balance += $withdrawal->amount;
+                    $wallet->save();
+                    
+                    // Create transaction record for reversal
+                    WalletTransaction::create([
+                        'walletID' => $wallet->walletID,
+                        'type' => 'credit',
+                        'amount' => $withdrawal->amount,
+                        'description' => 'Cancelled withdrawal #' . $withdrawal->withdrawalID,
+                        'bookingID' => null,
+                        'withdrawalID' => $withdrawal->withdrawalID
+                    ]);
+                }
+                
+                // Update withdrawal status
+                $withdrawal->status = 'cancelled';
+                $withdrawal->admin_notes = 'Cancelled by provider';
+                $withdrawal->processed_at = now();
+                $withdrawal->save();
+            });
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Withdrawal request cancelled successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Cancel withdrawal error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel withdrawal request'
+            ], 500);
+        }
     }
 }

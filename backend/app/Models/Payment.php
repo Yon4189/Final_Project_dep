@@ -15,9 +15,9 @@ class Payment extends Model
         'bookingID',
         'customerID',
         'providerID',
-        'tx_ref',              // Added (was missing)
+        'tx_ref',
         'chapa_tx_id',
-        'amount',              // Added (was missing)
+        'amount',
         'platform_commission',
         'provider_amount',
         'currency',
@@ -69,6 +69,14 @@ class Payment extends Model
     {
         return $this->belongsTo(ServiceProvider::class, 'providerID', 'providerID');
     }
+    
+    /**
+     * Get the wallet transaction for this payment
+     */
+    public function walletTransaction()
+    {
+        return $this->hasOne(WalletTransaction::class, 'bookingID', 'bookingID');
+    }
 
     /**
      * Check if payment is successful
@@ -91,29 +99,62 @@ class Payment extends Model
      */
     public function isHeld(): bool
     {
-        return $this->status === 'held';
+        return $this->status === 'held' || $this->status === 'paid';
     }
 
     /**
-     * Release payment to provider
+     * Check if payment is releasable (customer confirmed or auto-release)
      */
-    public function release(): void
+    public function isReleasable(): bool
+    {
+        return $this->status === 'releasable';
+    }
+
+    /**
+     * Check if payment is released
+     */
+    public function isReleased(): bool
+    {
+        return $this->status === 'released';
+    }
+
+    /**
+     * Mark payment as held after successful Chapa verification
+     */
+    public function markAsHeld(): void
+    {
+        $this->status = 'paid'; // Using 'paid' as held status
+        $this->paid_at = now();
+        $this->save();
+    }
+
+    /**
+     * Mark payment as releasable (customer confirmed or auto-release triggered)
+     */
+    public function markAsReleasable(): void
+    {
+        $this->status = 'releasable';
+        $this->save();
+    }
+
+    /**
+     * Release payment to provider wallet
+     * This is called AFTER customer confirmation or auto-release
+     */
+    public function releaseToWallet(): void
     {
         $this->status = 'released';
         $this->released_at = now();
         $this->save();
 
-        // Update provider's wallet balance
-        if ($this->provider) {
-            $this->provider->walletBalance = ($this->provider->walletBalance ?? 0) + $this->provider_amount;
-            $this->provider->save();
-        }
+        // Note: We don't update provider.walletBalance directly anymore
+        // The wallet system handles this via Wallet and WalletTransaction
     }
 
     /**
      * Refund payment to customer
      */
-    public function refund($amount = null): void
+    public function refund($amount = null, $reason = null): void
     {
         $refundAmount = $amount ?? $this->amount;
         
@@ -126,10 +167,70 @@ class Payment extends Model
         $this->refunded_at = now();
         $this->save();
 
+        // If money was already in wallet, we need to handle reversal
+        if ($this->status === 'released' && $this->provider) {
+            $wallet = Wallet::where('providerID', $this->providerID)->first();
+            if ($wallet) {
+                // Deduct from available balance if already released
+                $wallet->available_balance -= $this->provider_amount;
+                $wallet->save();
+                
+                // Create transaction record
+                WalletTransaction::create([
+                    'walletID' => $wallet->walletID,
+                    'type' => 'debit',
+                    'amount' => $this->provider_amount,
+                    'description' => 'Refund reversal for booking #' . $this->bookingID . ($reason ? ': ' . $reason : ''),
+                    'bookingID' => $this->bookingID
+                ]);
+            }
+        }
+
         // Update customer's wallet balance
         if ($this->customer) {
             $this->customer->walletBalance = ($this->customer->walletBalance ?? 0) + $refundAmount;
             $this->customer->save();
         }
+    }
+
+    /**
+     * Get payment status text
+     */
+    public function getStatusTextAttribute(): string
+    {
+        return match($this->status) {
+            'pending' => 'Pending',
+            'paid' => 'Paid (In Escrow)',
+            'releasable' => 'Ready to Release',
+            'released' => 'Released to Provider',
+            'partial_refund' => 'Partially Refunded',
+            'refunded' => 'Fully Refunded',
+            'failed' => 'Failed',
+            default => ucfirst($this->status)
+        };
+    }
+
+    /**
+     * Scope for payments in escrow
+     */
+    public function scopeInEscrow($query)
+    {
+        return $query->whereIn('status', ['paid', 'releasable']);
+    }
+
+    /**
+     * Scope for released payments
+     */
+    public function scopeReleased($query)
+    {
+        return $query->where('status', 'released');
+    }
+
+    /**
+     * Scope for refunded payments
+     */
+    public function scopeRefunded($query)
+    {
+        return $query->whereIn('status', ['refunded', 'partial_refund']);
     }
 }
