@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Search, CheckCircle, XCircle, Loader2, Database,
-  Eye, FileCheck, X, Image as ImageIcon
+  Eye, FileCheck, X, Image as ImageIcon, AlertCircle
 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -40,11 +40,11 @@ const Verification = () => {
   const fetchProviders = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      let endpoint = '/providers/pending';
-      if (filter === 'Approved') endpoint = '/providers/approved';
-      if (filter === 'Rejected') endpoint = '/providers/rejected';
-      if (filter === 'Suspended') endpoint = '/providers/suspended';
-      if (filter === 'All') endpoint = '/providers';
+      let endpoint = '/admin/providers/pending';
+      if (filter === 'Approved') endpoint = '/admin/providers/approved';
+      if (filter === 'Rejected') endpoint = '/admin/providers/rejected';
+      if (filter === 'Suspended') endpoint = '/admin/providers/suspended';
+      if (filter === 'All') endpoint = '/admin/providers';
 
       const response = await api.get(endpoint);
       if (response.data.success) {
@@ -70,7 +70,7 @@ const Verification = () => {
     if (!window.confirm(`Approve ${name} and notify them via email?`)) return;
     setProcessingId(id);
     try {
-      const response = await api.post(`/providers/${id}/verify`, { status: 'approved' });
+      const response = await api.post(`/admin/providers/${id}/verify`, { status: 'approved' });
       if (response.data.success) {
         fetchProviders();
         alert("Account Approved & Email Sent!");
@@ -93,7 +93,7 @@ const Verification = () => {
     if (!selectedProvider) return;
     setProcessingId(selectedProvider.id);
     try {
-      const response = await api.post(`/providers/${selectedProvider.id}/verify`, {
+      const response = await api.post(`/admin/providers/${selectedProvider.id}/verify`, {
         status: 'rejected',
         verification_reason: rejectionReason
       });
@@ -104,6 +104,25 @@ const Verification = () => {
       }
     } catch {
       alert('Network Error');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleSuspend = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to suspend ${name}? They will be notified and hidden from search.`)) return;
+    setProcessingId(id);
+    try {
+      const response = await api.post(`/admin/providers/${id}/verify`, {
+        status: 'suspended',
+        verification_reason: 'Account suspended by administration.'
+      });
+      if (response.data.success) {
+        fetchProviders();
+        alert("Provider Suspended Successfully.");
+      }
+    } catch {
+      alert('Action failed.');
     } finally {
       setProcessingId(null);
     }
@@ -336,6 +355,22 @@ const Verification = () => {
                                 className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
                               >
                                 <XCircle size={14} /> Reject
+                              </button>
+                            )}
+                            {item.status === 'approved' && (
+                              <button
+                                onClick={() => handleSuspend(item.id, item.name)}
+                                className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
+                              >
+                                <AlertCircle size={14} /> Suspend
+                              </button>
+                            )}
+                            {item.status === 'suspended' && (
+                              <button
+                                onClick={() => handleApprove(item.id, item.name)}
+                                className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
+                              >
+                                <CheckCircle size={14} /> Reactivate
                               </button>
                             )}
                           </>

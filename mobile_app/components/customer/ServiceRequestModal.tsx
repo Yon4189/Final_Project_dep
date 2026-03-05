@@ -12,13 +12,21 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors } from '@/app/constants/Colors';
 import AppButton from '../AppButton';
 import { paymentService } from '@/app/services/payment.service';
-import { useCreateBooking } from '@/hooks/useCustomerQueries';
-import type { ServiceProvider } from '@/app/types/customer.types';
+import { useCreateBooking } from '@/hooks/useCustomerBookings';
+import { api } from '@/app/services/api';
+import { customerService } from '@/app/services/customer.service';
+import type { 
+  ServiceProvider, 
+  ProfessionalService, 
+  AvailabilitySlot,
+  TimeSlot 
+} from '@/app/types/customer.types';
 
 interface ServiceRequestModalProps {
   visible: boolean;
@@ -29,7 +37,7 @@ interface ServiceRequestModalProps {
     longitude: number;
     address?: string;
   };
-  selectedService?: string;
+  selectedService?: string; // This could be service ID or name
 }
 
 export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
@@ -39,22 +47,69 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   userLocation,
   selectedService,
 }) => {
+  const router = useRouter();
   const createBooking = useCreateBooking();
-  
+
+  // Service selection state
+  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [selectedServiceName, setSelectedServiceName] = useState<string>('');
+  const [showServicePicker, setShowServicePicker] = useState(false);
+  const [servicePrice, setServicePrice] = useState<number>(0);
+  const [serviceDuration, setServiceDuration] = useState<string>('');
+
+  // Date/Time state
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  
+  // Available time slots from API - always fetch when date changes
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  
+  // Minimum selectable date (today)
+  const [minDate] = useState(new Date());
+
+  // Form fields
   const [address, setAddress] = useState(userLocation?.address || '');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedServiceName, setSelectedServiceName] = useState(selectedService || '');
+  const [userData, setUserData] = useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Get provider's services
+  const providerServices = provider?.services || [];
+
+  // Check authentication and load user data on mount
   useEffect(() => {
-    if (selectedService) {
-      setSelectedServiceName(selectedService);
+    if (visible) {
+      checkAuthAndLoadUser();
     }
-  }, [selectedService]);
+  }, [visible]);
+
+  // Initialize service if selectedService prop is provided
+  useEffect(() => {
+    if (selectedService && providerServices.length > 0) {
+      // Try to find service by ID or name
+      const service = providerServices.find(
+        s => s.serviceId?.toString() === selectedService || 
+             s.serviceName === selectedService ||
+             s.service?.name === selectedService ||
+             s.id?.toString() === selectedService
+      );
+      
+      if (service) {
+        handleServiceSelect(service);
+      }
+    }
+  }, [selectedService, providerServices]);
+
+  // Load available time slots when date changes - ALWAYS fetch, regardless of service selection
+  useEffect(() => {
+    if (provider && selectedDate) {
+      fetchAvailableTimeSlots();
+    }
+  }, [selectedDate, provider]);
 
   useEffect(() => {
     if (userLocation?.address) {
@@ -62,18 +117,140 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     }
   }, [userLocation]);
 
+  const checkAuthAndLoadUser = async () => {
+    try {
+      const authenticated = await api.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      
+      if (authenticated) {
+        await loadUserData();
+      } else {
+        console.log('User not authenticated');
+        Alert.alert(
+          'Authentication Required',
+          'Please log in to continue with your service request.',
+          [
+            {
+              text: 'Login',
+              onPress: () => {
+                onClose();
+                router.push('/(auth)/login');
+              }
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+    }
+  };
+
+  const loadUserData = async () => {
+    try {
+      const data = await api.getUserData();
+      if (data) {
+        setUserData(data);
+      } else {
+        try {
+          const profileResponse = await customerService.getProfile();
+          if (profileResponse.success) {
+            setUserData(profileResponse.data);
+            await api.setUserData(profileResponse.data);
+          }
+        } catch (profileError) {
+          console.error('Failed to fetch profile:', profileError);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+    }
+  };
+
+  const fetchAvailableTimeSlots = async () => {
+    if (!provider) return;
+    
+    setLoadingTimeSlots(true);
+    try {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      const response = await customerService.getProviderAvailability(
+        provider.id.toString(),
+        formattedDate
+      );
+      
+      if (response.success && response.data) {
+        // Transform AvailabilitySlot[] to TimeSlot[]
+        const slots: TimeSlot[] = response.data.map((slot: AvailabilitySlot) => ({
+          time: slot.startTime,
+          available: !slot.isBooked,
+          slotId: slot.id
+        }));
+        setAvailableTimeSlots(slots);
+      } else {
+        // Fallback to mock time slots if API fails
+        setAvailableTimeSlots(generateMockTimeSlots());
+      }
+    } catch (error) {
+      console.error('Failed to fetch time slots:', error);
+      // Fallback to mock time slots
+      setAvailableTimeSlots(generateMockTimeSlots());
+    } finally {
+      setLoadingTimeSlots(false);
+    }
+  };
+
+  const generateMockTimeSlots = (): TimeSlot[] => {
+    const slots: TimeSlot[] = [];
+    for (let hour = 8; hour <= 18; hour++) {
+      slots.push({ time: `${hour.toString().padStart(2, '0')}:00`, available: true });
+      if (hour < 18) {
+        slots.push({ time: `${hour.toString().padStart(2, '0')}:30`, available: true });
+      }
+    }
+    return slots;
+  };
+
   const handleDateChange = (event: any, date?: Date) => {
     setShowDatePicker(false);
     if (date) {
       setSelectedDate(date);
+      // Reset time when date changes
+      setSelectedTime(new Date());
     }
   };
 
-  const handleTimeChange = (event: any, time?: Date) => {
-    setShowTimePicker(false);
-    if (time) {
-      setSelectedTime(time);
+  const handleTimeSelect = (timeSlot: TimeSlot) => {
+    if (!timeSlot.available) {
+      Alert.alert('Not Available', 'This time slot is already booked. Please select another time.');
+      return;
     }
+    
+    const [hours, minutes] = timeSlot.time.split(':').map(Number);
+    const newTime = new Date(selectedDate);
+    newTime.setHours(hours, minutes, 0, 0);
+    setSelectedTime(newTime);
+  };
+
+  const handleServiceSelect = (service: ProfessionalService) => {
+    setSelectedServiceId(service.serviceId?.toString() || service.id?.toString() || '');
+    setSelectedServiceName(service.serviceName || service.service?.name || 'Service');
+    
+    // Get price - check multiple possible locations
+    const price = service.customPrice || service.price || service.service?.basePrice || 0;
+    setServicePrice(price);
+    
+    // Get duration if available
+    if (service.estimatedDuration) {
+      setServiceDuration(`${service.estimatedDuration} minutes`);
+    } else if (service.service?.estimatedDuration) {
+      const duration = service.service.estimatedDuration;
+      setServiceDuration(`${duration.min}-${duration.max} ${duration.unit}`);
+    }
+    
+    setShowServicePicker(false);
   };
 
   const formatDate = (date: Date) => {
@@ -93,7 +270,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   };
 
   const validateForm = () => {
-    if (!selectedServiceName) {
+    if (!selectedServiceId) {
       Alert.alert('Error', 'Please select a service');
       return false;
     }
@@ -101,11 +278,71 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       Alert.alert('Error', 'Please enter your address');
       return false;
     }
+    
+    // Validate selected time is in the future
+    const now = new Date();
+    const selectedDateTime = new Date(selectedDate);
+    selectedDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+    
+    if (selectedDateTime < now) {
+      Alert.alert('Error', 'Please select a future date and time');
+      return false;
+    }
+    
+    // Validate time slot is available
+    const selectedTimeString = formatTime(selectedTime);
+    const selectedSlot = availableTimeSlots.find(
+      slot => slot.time === selectedTimeString
+    );
+    
+    if (selectedSlot && !selectedSlot.available) {
+      Alert.alert('Error', 'Selected time slot is no longer available. Please choose another time.');
+      return false;
+    }
+    
     return true;
   };
 
-  const handleSubmit = async () => {
+  const extractCheckoutUrl = (response: any): string | null => {
+    if (!response) return null;
+    
+    if (response.checkoutUrl) return response.checkoutUrl;
+    if (response.checkout_url) return response.checkout_url;
+    if (response.data) {
+      if (response.data.checkoutUrl) return response.data.checkoutUrl;
+      if (response.data.checkout_url) return response.data.checkout_url;
+    }
+    if (typeof response === 'string' && response.startsWith('http')) {
+      return response;
+    }
+    
+    return null;
+  };
+
+  const handleConfirmAndPay = async () => {
     if (!validateForm() || !provider) return;
+
+    const authenticated = await api.isAuthenticated();
+    if (!authenticated) {
+      Alert.alert(
+        'Session Expired',
+        'Your session has expired. Please log in again.',
+        [
+          {
+            text: 'Login',
+            onPress: () => {
+              onClose();
+              router.push('/(auth)/login');
+            }
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
+      return;
+    }
 
     setLoading(true);
     try {
@@ -113,50 +350,243 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       const scheduledDate = selectedDate.toISOString().split('T')[0];
       const scheduledTime = formatTime(selectedTime);
 
-      // Create booking
-      const bookingResponse = await createBooking.mutateAsync({
-        provider_id: provider.id,
-        service_id: selectedServiceName, // This should be the actual service ID
-        scheduled_date: scheduledDate,
-        scheduled_time: scheduledTime,
-        address: address,
-        description: description,
-        estimated_price: provider.priceRange?.min || 0,
+      console.log('Creating booking with:', {
+        providerID: Number(provider.id),
+        serviceID: Number(selectedServiceId),
+        scheduledDate: scheduledDate,
+        agreed_price: servicePrice,
+        service_address: address,
+        notes: description,
       });
 
-      if (bookingResponse) {
-        // Initialize payment
-        const paymentResponse = await paymentService.initializeChapaPayment({
-          amount: provider.priceRange?.min || 0,
-          email: 'customer@example.com', // This should come from user profile
-          firstName: 'Customer',
-          lastName: 'User',
-          phoneNumber: '0912345678',
-          customerId: 'cust_123', // This should come from user profile
+      const bookingResponse = await createBooking.mutateAsync({
+        providerID: Number(provider.id),
+        serviceID: Number(selectedServiceId),
+        scheduledDate: scheduledDate,
+        agreed_price: servicePrice,
+        service_address: address,
+        notes: description,
+      });
+
+      console.log('Booking response:', bookingResponse);
+
+      if (bookingResponse && bookingResponse.id) {
+        // Get user data for payment with fallbacks
+        const customerEmail = userData?.email || userData?.emailAddress || 'customer@example.com';
+        const customerFullName = userData?.fullname || userData?.name || 'Customer User';
+        const customerFirstName = customerFullName.split(' ')[0] || 'Customer';
+        const customerLastName = customerFullName.split(' ').slice(1).join(' ') || 'User';
+        const customerPhone = userData?.phone || userData?.phoneNumber || '0912345678';
+        const customerId = userData?.customerID || userData?.id || 'cust_123';
+
+        console.log('Initializing payment with:', {
+          amount: servicePrice,
+          email: customerEmail,
+          firstName: customerFirstName,
+          lastName: customerLastName,
           bookingId: bookingResponse.id,
-          description: `Payment for ${selectedServiceName} with ${provider.businessName}`,
         });
 
-        if (paymentResponse.checkoutUrl) {
-          // Close modal
+        // Initialize payment with Chapa
+        const paymentResponse = await paymentService.initializeChapaPayment({
+          amount: servicePrice,
+          email: customerEmail,
+          firstName: customerFirstName,
+          lastName: customerLastName,
+          phoneNumber: customerPhone,
+          customerId: customerId,
+          bookingId: bookingResponse.id,
+          description: `Payment for ${selectedServiceName} with ${provider.businessName || provider.name}`,
+        });
+
+        console.log('Payment response:', paymentResponse);
+
+        const checkoutUrl = extractCheckoutUrl(paymentResponse);
+
+        if (checkoutUrl) {
           onClose();
-          
-          // Open payment URL
-          if (Platform.OS === 'web') {
-            window.open(paymentResponse.checkoutUrl, '_blank');
-          } else {
-            // For mobile, you might want to navigate to a WebView screen
-            // This will need to be implemented based on your navigation
-            Alert.alert('Success', 'Redirecting to payment...');
-          }
+          setTimeout(() => {
+            if (Platform.OS === 'web') {
+              window.open(checkoutUrl, '_blank');
+            } else {
+              router.push({
+                pathname: '/(customer)/payment',
+                params: {
+                  checkoutUrl: checkoutUrl,
+                  bookingId: bookingResponse.id.toString(),
+                  amount: servicePrice.toString(),
+                  providerId: provider.id.toString(),
+                  serviceId: selectedServiceId,
+                }
+              });
+            }
+          }, 500);
+        } else {
+          Alert.alert('Error', 'Failed to initialize payment. No checkout URL received.');
         }
+      } else {
+        Alert.alert('Error', 'Failed to create booking. No booking ID received.');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create booking');
+      console.error('Booking creation error:', error);
+      
+      if (error.response?.status === 401) {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please log in again.',
+          [
+            {
+              text: 'Login',
+              onPress: () => {
+                onClose();
+                router.push('/(auth)/login');
+              }
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+      } else {
+        let errorMessage = 'Failed to create booking. Please try again.';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Render service selection dropdown
+  const renderServicePicker = () => {
+    if (!providerServices || providerServices.length === 0) {
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service</Text>
+          <Text style={styles.serviceName}>No services available</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Select Service *</Text>
+        <TouchableOpacity
+          style={styles.serviceSelector}
+          onPress={() => setShowServicePicker(!showServicePicker)}
+        >
+          <Text style={selectedServiceId ? styles.serviceSelectorText : styles.serviceSelectorPlaceholder}>
+            {selectedServiceName || 'Choose a service'}
+          </Text>
+          <Ionicons 
+            name={showServicePicker ? 'chevron-up' : 'chevron-down'} 
+            size={20} 
+            color={Colors.text.secondary} 
+          />
+        </TouchableOpacity>
+
+        {showServicePicker && (
+          <View style={styles.serviceList}>
+            <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled={true}>
+              {providerServices.map((service: ProfessionalService, index: number) => {
+                const serviceId = service.serviceId?.toString() || service.id?.toString() || index.toString();
+                const serviceName = service.serviceName || service.service?.name || 'Service';
+                const servicePrice = service.customPrice || service.price || service.service?.basePrice || 0;
+                
+                // Get duration if available
+                let durationText = '';
+                if (service.estimatedDuration) {
+                  durationText = `${service.estimatedDuration} min`;
+                } else if (service.service?.estimatedDuration) {
+                  const duration = service.service.estimatedDuration;
+                  durationText = `${duration.min}-${duration.max} ${duration.unit}`;
+                }
+                
+                return (
+                  <TouchableOpacity
+                    key={serviceId}
+                    style={[
+                      styles.serviceItem,
+                      selectedServiceId === serviceId && styles.serviceItemSelected
+                    ]}
+                    onPress={() => handleServiceSelect(service)}
+                  >
+                    <View style={styles.serviceItemLeft}>
+                      <Text style={styles.serviceItemName}>{serviceName}</Text>
+                      {durationText ? (
+                        <Text style={styles.serviceItemDuration}>{durationText}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={styles.serviceItemPrice}>ETB {servicePrice}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Render time slots
+  const renderTimeSlots = () => {
+    if (loadingTimeSlots) {
+      return (
+        <View style={styles.timeSlotsLoading}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={styles.timeSlotsLoadingText}>Loading available times...</Text>
+        </View>
+      );
+    }
+
+    if (availableTimeSlots.length === 0) {
+      return (
+        <View style={styles.noTimeSlots}>
+          <Text style={styles.noTimeSlotsText}>No available time slots for this date</Text>
+        </View>
+      );
+    }
+
+    const selectedTimeString = formatTime(selectedTime);
+
+    return (
+      <View style={styles.timeSlotsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {availableTimeSlots.map((slot) => (
+            <TouchableOpacity
+              key={slot.time}
+              style={[
+                styles.timeSlot,
+                !slot.available && styles.timeSlotUnavailable,
+                selectedTimeString === slot.time && slot.available && styles.timeSlotSelected
+              ]}
+              onPress={() => handleTimeSelect(slot)}
+              disabled={!slot.available}
+            >
+              <Text style={[
+                styles.timeSlotText,
+                !slot.available && styles.timeSlotTextUnavailable,
+                selectedTimeString === slot.time && slot.available && styles.timeSlotTextSelected
+              ]}>
+                {slot.time}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  // If not authenticated, don't render the modal content
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (!provider) return null;
 
@@ -179,7 +609,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Provider Info */}
             <View style={styles.providerInfo}>
-              <Text style={styles.providerName}>{provider.businessName}</Text>
+              <Text style={styles.providerName}>
+                {provider.businessName || provider.name || 'Provider'}
+              </Text>
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={16} color={Colors.warning} />
                 <Text style={styles.ratingText}>
@@ -188,15 +620,12 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               </View>
             </View>
 
-            {/* Service Selection */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Service</Text>
-              <Text style={styles.serviceName}>{selectedServiceName || 'Please select a service'}</Text>
-            </View>
+            {/* Service Selection - ALWAYS ACTIVE */}
+            {renderServicePicker()}
 
-            {/* Date Selection */}
+            {/* Date Selection - ALWAYS ACTIVE */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Date</Text>
+              <Text style={styles.sectionTitle}>Select Date *</Text>
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowDatePicker(true)}
@@ -210,34 +639,20 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                   mode="date"
                   display="default"
                   onChange={handleDateChange}
-                  minimumDate={new Date()}
+                  minimumDate={minDate}
                 />
               )}
             </View>
 
-            {/* Time Selection */}
+            {/* Time Selection - ALWAYS ACTIVE (shows slots for the selected date) */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Time</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Ionicons name="time-outline" size={20} color={Colors.primary} />
-                <Text style={styles.dateText}>{formatTime(selectedTime)}</Text>
-              </TouchableOpacity>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={selectedTime}
-                  mode="time"
-                  display="default"
-                  onChange={handleTimeChange}
-                />
-              )}
+              <Text style={styles.sectionTitle}>Select Time *</Text>
+              {renderTimeSlots()}
             </View>
 
-            {/* Address */}
+            {/* Address - ALWAYS ACTIVE */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Address</Text>
+              <Text style={styles.sectionTitle}>Service Address *</Text>
               <TextInput
                 style={styles.addressInput}
                 value={address}
@@ -248,7 +663,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               />
             </View>
 
-            {/* Description */}
+            {/* Description - ALWAYS ACTIVE */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Description (Optional)</Text>
               <TextInput
@@ -262,16 +677,19 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               />
             </View>
 
-            {/* Price Estimate */}
-            <View style={styles.priceSection}>
-              <Text style={styles.priceLabel}>Estimated Price</Text>
-              <Text style={styles.priceValue}>
-                ETB {provider.priceRange?.min || 0} - {provider.priceRange?.max || 0}
-              </Text>
-              <Text style={styles.priceNote}>
-                Final price may vary based on service requirements
-              </Text>
-            </View>
+            {/* Price Estimate - Shows after service is selected */}
+            {servicePrice > 0 && (
+              <View style={styles.priceSection}>
+                <Text style={styles.priceLabel}>Total Price</Text>
+                <Text style={styles.priceValue}>ETB {servicePrice}</Text>
+                {serviceDuration ? (
+                  <Text style={styles.priceNote}>Estimated duration: {serviceDuration}</Text>
+                ) : null}
+                <Text style={styles.priceNote}>
+                  Platform fee will be added at checkout
+                </Text>
+              </View>
+            )}
           </ScrollView>
 
           {/* Action Buttons */}
@@ -279,12 +697,12 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            
+
             <AppButton
               title="Confirm & Pay"
-              onPress={handleSubmit}
+              onPress={handleConfirmAndPay}
               loading={loading || createBooking.isPending}
-              disabled={loading || createBooking.isPending}
+              disabled={loading || createBooking.isPending || !selectedServiceId}
               style={styles.confirmButton}
             />
           </View>
@@ -358,6 +776,62 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderRadius: 10,
   },
+  serviceSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  serviceSelectorText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+  },
+  serviceSelectorPlaceholder: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+  },
+  serviceList: {
+    marginTop: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    maxHeight: 250,
+  },
+  serviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  serviceItemSelected: {
+    backgroundColor: Colors.primary + '10',
+  },
+  serviceItemLeft: {
+    flex: 1,
+  },
+  serviceItemName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  serviceItemDuration: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  serviceItemPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginLeft: 12,
+  },
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,6 +845,62 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 16,
     color: Colors.text.primary,
+  },
+  timeSlotsContainer: {
+    marginTop: 8,
+  },
+  timeSlot: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: Colors.background,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginRight: 8,
+  },
+  timeSlotSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  timeSlotUnavailable: {
+    backgroundColor: Colors.background,
+    borderColor: Colors.error + '40',
+    opacity: 0.5,
+  },
+  timeSlotText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+  },
+  timeSlotTextSelected: {
+    color: Colors.surface,
+    fontWeight: '500',
+  },
+  timeSlotTextUnavailable: {
+    color: Colors.text.secondary,
+    textDecorationLine: 'line-through',
+  },
+  timeSlotsLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    gap: 8,
+  },
+  timeSlotsLoadingText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  noTimeSlots: {
+    padding: 16,
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  noTimeSlotsText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
   },
   addressInput: {
     backgroundColor: Colors.background,
@@ -417,6 +947,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.text.secondary,
     fontStyle: 'italic',
+    marginTop: 4,
   },
   actionButtons: {
     flexDirection: 'row',

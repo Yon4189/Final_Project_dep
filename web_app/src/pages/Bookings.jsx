@@ -96,24 +96,30 @@ const Bookings = () => {
     }
   ];
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchBookings = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setBookings(mockBookings);
-      setDbStatus('connected');
+      const response = await api.get('/admin/bookings');
+      if (response.data.success) {
+        setBookings(response.data.data);
+        setDbStatus('connected');
+      }
     } catch (err) {
       console.error(err);
       setError('Failed to fetch bookings');
       setDbStatus('disconnected');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(true);
+    const interval = setInterval(() => {
+      fetchBookings(false);
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Filter by status and search
@@ -258,9 +264,9 @@ const Bookings = () => {
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-300">
             {/* Modal Header */}
             <div className={`p-8 text-white flex justify-between items-center ${selectedBooking.status === 'Cancelled' ? 'bg-red-600' :
-                selectedBooking.status === 'Completed' ? 'bg-green-600' :
-                  selectedBooking.status === 'Accepted' ? 'bg-blue-600' :
-                    'bg-yellow-600' // Pending
+              selectedBooking.status === 'Completed' ? 'bg-green-600' :
+                selectedBooking.status === 'Accepted' ? 'bg-blue-600' :
+                  'bg-yellow-600' // Pending
               }`}>
               <div>
                 <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Case File</p>

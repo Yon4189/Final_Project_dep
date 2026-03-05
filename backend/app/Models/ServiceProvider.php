@@ -11,6 +11,14 @@ class ServiceProvider extends Authenticatable
 {
     use HasFactory, HasApiTokens, Notifiable;
 
+    /**
+     * Get the wallet for this provider
+     */
+    public function wallet()
+    {
+        return $this->hasOne(\App\Models\Wallet::class, 'service_provider_id', 'providerID');
+    }
+
     protected $table = 'service_providers';
     protected $primaryKey = 'providerID';
 

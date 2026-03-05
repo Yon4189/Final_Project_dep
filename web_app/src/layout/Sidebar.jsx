@@ -12,7 +12,7 @@ import {
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
@@ -20,6 +20,7 @@ const Sidebar = () => {
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
 
   const otherMenuItems = [
+    { name: 'My Profile', path: '/profile', icon: User },
     { name: 'Dispute Resolution', path: '/disputes', icon: Scale },
     { name: 'Payment Analytics', path: '/payments', icon: BarChart3 },
     { name: 'Settings', path: '/settings', icon: Settings },
@@ -47,11 +48,10 @@ const Sidebar = () => {
         {/* Dashboard */}
         <Link
           to="/"
-          className={`flex items-center gap-3 px-6 py-3 transition-all duration-200 ${
-            location.pathname === '/'
+          className={`flex items-center gap-3 px-6 py-3 transition-all duration-200 ${location.pathname === '/'
               ? 'bg-admin-accent text-white shadow-lg border-r-4 border-white'
               : 'hover:bg-slate-800 hover:text-white'
-          }`}
+            }`}
         >
           <LayoutDashboard size={20} strokeWidth={location.pathname === '/' ? 2.5 : 2} />
           <span className="text-sm font-medium">Dashboard</span>
@@ -61,9 +61,8 @@ const Sidebar = () => {
         <div className="mt-2">
           <button
             onClick={() => setIsServicesOpen(!isServicesOpen)}
-            className={`w-full flex items-center justify-between px-6 py-3 transition-all duration-200 ${
-              isServicesActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center justify-between px-6 py-3 transition-all duration-200 ${isServicesActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <span className="flex items-center gap-3">
               <Folder size={20} strokeWidth={isServicesActive ? 2.5 : 2} />
@@ -87,9 +86,8 @@ const Sidebar = () => {
         <div className="mt-2">
           <button
             onClick={() => setIsVerificationOpen(!isVerificationOpen)}
-            className={`w-full flex items-center justify-between px-6 py-3 transition-all ${
-              isVerificationActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'
-            }`}
+            className={`w-full flex items-center justify-between px-6 py-3 transition-all ${isVerificationActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'
+              }`}
           >
             <span className="flex items-center gap-3">
               <UserCheck size={20} strokeWidth={isVerificationActive ? 2.5 : 2} />
@@ -119,9 +117,8 @@ const Sidebar = () => {
         <div className="mt-2">
           <button
             onClick={() => setIsUsersOpen(!isUsersOpen)}
-            className={`w-full flex items-center justify-between px-6 py-3 transition-all ${
-              isUsersActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'
-            }`}
+            className={`w-full flex items-center justify-between px-6 py-3 transition-all ${isUsersActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'
+              }`}
           >
             <span className="flex items-center gap-3">
               <Users size={20} strokeWidth={isUsersActive ? 2.5 : 2} />
@@ -145,9 +142,8 @@ const Sidebar = () => {
         <div className="mt-2">
           <button
             onClick={() => setIsBookingsOpen(!isBookingsOpen)}
-            className={`w-full flex items-center justify-between px-6 py-3 transition-all ${
-              isBookingsActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'
-            }`}
+            className={`w-full flex items-center justify-between px-6 py-3 transition-all ${isBookingsActive ? 'bg-admin-accent text-white' : 'hover:bg-slate-800'
+              }`}
           >
             <span className="flex items-center gap-3">
               <ClipboardList size={20} strokeWidth={isBookingsActive ? 2.5 : 2} />
@@ -181,9 +177,8 @@ const Sidebar = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-6 py-3 transition-all ${
-                isActive ? 'bg-admin-accent text-white shadow-lg border-r-4 border-white' : 'hover:bg-slate-800 hover:text-white'
-              }`}
+              className={`flex items-center gap-3 px-6 py-3 transition-all ${isActive ? 'bg-admin-accent text-white shadow-lg border-r-4 border-white' : 'hover:bg-slate-800 hover:text-white'
+                }`}
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
               <span className="text-sm font-medium">{item.name}</span>

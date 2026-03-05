@@ -38,53 +38,46 @@ const Dashboard = () => {
     inputReason: ''
   });
 
-const fetchData = async (showLoading = true) => {
-  if (showLoading) setIsLoading(true);
-  try {
-    // get admin token from local storage
-    const token = localStorage.getItem('admin_token');
-    console.log("dashboard token exists:", !!token);
-
-    // create headers with token
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json'
-    };
-
-    const [queueRes, statsRes] = await Promise.all([
-      api.get('/providers/pending', { headers }),
-      api.get('/dashboard/stats', { headers })
-    ]);
-
-    console.log('Queue response:', queueRes.data);
-    console.log('Stats response:', statsRes.data);
-
-    if (queueRes.data && queueRes.data.success) {
-      setVerificationQueue(queueRes.data.data || []);
+  const fetchData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      // create headers with token if needed
+      // const headers = { ... };
+      // If you need auth, uncomment and use headers in requests
+      // const [queueRes, statsRes] = await Promise.all([
+      //   api.get('/providers/pending', { headers }),
+      //   api.get('/dashboard/stats', { headers })
+      // ]);
+      const [queueRes, statsRes] = await Promise.all([
+        api.get('/admin/providers/pending'),
+        api.get('/admin/stats')
+      ]);
+      console.log('Queue response:', queueRes.data);
+      console.log('Stats response:', statsRes.data);
+      if (queueRes.data && queueRes.data.success) {
+        setVerificationQueue(queueRes.data.data || []);
+      }
+      if (statsRes.data && statsRes.data.success) {
+        setCounts(statsRes.data.data || {
+          providers: 0,
+          customers: 0,
+          pending: 0,
+          categories: 0,
+          services: 0,
+          revenue: 0
+        });
+      }
+      setDbStatus('connected');
+    } catch (err) {
+      setDbStatus('disconnected');
+      console.error("Fetch Error:", err);
+      if (err.response && err.response.status === 401) {
+        console.log("Authentication failed - token may be expired");
+      }
+    } finally {
+      if (showLoading) setIsLoading(false);
     }
-    
-    if (statsRes.data && statsRes.data.success) {
-      setCounts(statsRes.data.data || {
-        providers: 0,
-        customers: 0,
-        pending: 0,
-        categories: 0,
-        services: 0,
-        revenue: 0
-      });
-    }
-
-    setDbStatus('connected');
-  } catch (err) {
-    setDbStatus('disconnected');
-    console.error("Fetch Error:", err);
-    if (err.response && err.response.status === 401) {
-      console.log("Authentication failed - token may be expired");
-    }
-  } finally {
-    if (showLoading) setIsLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchData(true);
@@ -114,7 +107,7 @@ const fetchData = async (showLoading = true) => {
   const processVerifyAction = async (id, status, reason = null) => {
     setProcessingId(id);
     try {
-      const response = await api.post(`/providers/${id}/verify`, {
+      const response = await api.post(`/admin/providers/${id}/verify`, {
         status,
         verification_reason: reason
       });

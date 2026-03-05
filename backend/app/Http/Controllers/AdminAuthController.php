@@ -36,11 +36,14 @@ class AdminAuthController extends Controller
 
     $admin = Admin::where('email', $request->email)->first();
 
-    if (!$admin || !Hash::check($request->password, $admin->password)) {
+        $token = $admin->createToken('admin-token')->plainTextToken;
+
         return response()->json([
-            'success' => false,
-            'message' => 'Invalid credentials'
-        ], 401);
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => $admin,
+            'token' => $token
+        ]);
     }
 
     //  GENERATE TOKEN (this will now work after updating the model)
@@ -150,6 +153,17 @@ class AdminAuthController extends Controller
                 <p>Hello <strong>{$provider->fullname}</strong>,</p>
                 <p>Your Service Provider account has been <strong>approved</strong> by our administration team.</p>
                 <p>You can now log in to the mobile app and start receiving service requests.</p>
+            </div>";
+    } elseif ($statusLabel === 'suspended') {
+        $reason = $request->verification_reason ?? 'Administrative decision.';
+        $emailBody = "
+            <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                <h2 style='color: #8b5cf6;'>Account Suspended</h2>
+                <p>Hello <strong>{$provider->fullname}</strong>,</p>
+                <p>We wish to inform you that your Service Provider account has been <strong>suspended</strong> by our administration team.</p>
+                <p><strong>Reason:</strong> {$reason}</p>
+                <p>During suspension, you will not be able to receive new service requests or browse the platform.</p>
+                <p>If you have questions, please contact our support team.</p>
             </div>";
     } else {
         $reason = $request->verification_reason ?? 'The provided documents were not clear or valid.';
@@ -264,42 +278,17 @@ class AdminAuthController extends Controller
 
     // ===============fucntions for User Mangment tab for admin============
     public function getProviders(){
-        $provider = ServiceProvider::all();
         return response()->json([
             'success' => true,
-            'data' => $provider
-        ]);    }
-
-    public function getCustomers()
-    {
-    try {
-        $customers = Customer::all();
-        
-        // Check if any customers found
-        if ($customers->isEmpty()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'No customers found',
-                'data' => []
-            ], 200);
-        }
-        
-        return response()->json([
-            'success' => true,
-            'count' => $customers->count(),
-            'data' => $customers
-        ], 200);
-        
-    } catch (\Exception $e) {
-        // Log the error for debugging
-        Log::error('Failed to fetch customers: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch customers',
-            'error' => $e->getMessage()
-        ], 500);
+            'data' => ServiceProvider::all()
+        ]);
     }
+
+    public function getCustomers(){
+        return response()->json([
+            'success' => true,
+            'data' => Customer::all()
+        ]);
     }
 
     // Delete customer
@@ -344,5 +333,111 @@ class AdminAuthController extends Controller
     return response()->json(['message' => 'Status updated', 'status' => $provider->status]);
     }
 
+    public function getAllBookings()
+    {
+        try {
+            $bookings = Booking::with(['customer', 'provider', 'service'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function($b) {
+                    return [
+                        'id' => $b->bookingID,
+                        'customer' => $b->customer->fullname ?? 'Unknown',
+                        'provider' => $b->provider->fullname ?? 'Unknown',
+                        'service' => $b->service->title ?? 'Unknown',
+                        'status' => ucfirst($b->status),
+                        'date' => $b->scheduledDate ? $b->scheduledDate->format('M d, Y') : 'N/A',
+                        'time' => $b->scheduledDate ? $b->scheduledDate->format('h:i A') : 'N/A',
+                        'location' => $b->service_address ?? 'Location pinned',
+                        'amount' => ($b->agreed_price ?? 0) . ' ETB'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $bookings
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch bookings',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+//==============================================================
+
+    /**
+     * 9. Update Admin Profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'fullname' => 'required|string|max:255',
+            'email'    => 'required|email|unique:admins,email,' . $admin->adminID . ',adminID',
+            'phone'    => 'nullable|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        $admin->update([
+            'fullname' => $request->fullname,
+            'email'    => $request->email,
+            'phone'    => $request->phone,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'data'    => $admin
+        ]);
+    }
+
+    /**
+     * 10. Update Admin Profile Picture
+     */
+    public function updateProfilePicture(Request $request)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $filename = 'admin_' . $admin->adminID . '_' . time() . '.' . $file->getClientOriginalExtension();
+            
+            // Store in public/profiles
+            $file->move(public_path('profiles'), $filename);
+            
+            // Save path in DB
+            $path = 'profiles/' . $filename;
+            $admin->update(['profilePicture' => $path]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile picture updated',
+                'path' => $path
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'No image uploaded'], 400);
+    }
 
 }

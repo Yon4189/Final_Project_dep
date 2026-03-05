@@ -9,7 +9,6 @@ import {
   FlatList,
   RefreshControl,
   Image,
-  ActivityIndicator,
   SafeAreaView,
   Platform,
   Alert,
@@ -19,21 +18,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { useLocation } from '../../hooks/useLocation';
 import { useSearch } from '../../hooks/useSearch';
-import { useTopRatedProviders } from '../../hooks/useCustomerQueries';
+import { useTopRatedProviders } from '@/hooks/useCustomerQueries';
 import { ServiceSearch } from '../../components/customer/ServiceSearch';
 import { ProviderCard } from '../../components/customer/ProviderCard';
 import { FilterModal } from '../../components/customer/FilterModal';
 import { ServiceRequestModal } from '../../components/customer/ServiceRequestModal';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
+import { api } from '@/app/services/api';
 import { customerService } from '@/app/services/customer.service';
 import { paymentService } from '@/app/services/payment.service';
 import type { ServiceProvider } from '@/app/types/customer.types';
-
+import { ActivityIndicator } from 'react-native';
 // Import the appropriate map based on platform
 let MapComponent: any;
 if (Platform.OS === 'web') {
-  // For web, use the Leaflet map
+  // For web, use the Leaflet mapF
   MapComponent = require('../../components/Map/index').default;
 } else {
   // For mobile, use the React Native Maps component
@@ -43,10 +43,10 @@ if (Platform.OS === 'web') {
 export default function CustomerDashboard() {
   const router = useRouter();
   const { location, loading: locationLoading } = useLocation();
-  
+
   console.log('Dashboard - Location:', location);
   console.log('Dashboard - Location Loading:', locationLoading);
-  
+
   const {
     query,
     setQuery,
@@ -75,13 +75,38 @@ export default function CustomerDashboard() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [allCategories, setAllCategories] = useState<any[]>([]);
-  const [showAllCategories, setShowAllCategories] = useState(false);
-
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  // Add these with your other useState declarations
+    const [complaints, setComplaints] = useState<any[]>([]);
+    const [loadingComplaints, setLoadingComplaints] = useState(false);
+    const [pendingComplaints, setPendingComplaints] = useState(0);
   // Load user data and service categories on mount
+  // Add this with your other functions
+const loadComplaints = async () => {
+  try {
+    setLoadingComplaints(true);
+    const response = await customerService.getMyComplaints();
+    if (response.success && response.data) {
+      const complaintsData = response.data;
+      setComplaints(complaintsData);
+      
+      // Count pending complaints
+      const pending = complaintsData.filter((c: any) => 
+        c.status === 'pending' || c.status === 'under_review'
+      ).length;
+      
+      setPendingComplaints(pending);
+    }
+  } catch (error) {
+    console.error('Error loading complaints:', error);
+  } finally {
+    setLoadingComplaints(false);
+  }
+};
   useEffect(() => {
     loadUserData();
     loadServiceCategories();
+    loadUnreadNotifications();
   }, []);
 
   // Trigger initial search when location becomes available
@@ -92,54 +117,27 @@ export default function CustomerDashboard() {
     }
   }, [location, locationLoading, refreshSearch]);
 
-  const loadServiceCategories = async () => {
-    try {
-      setLoadingCategories(true);
-      const response = await customerService.getServiceCategories();
-      if (response.success && response.data) {
-        setServiceCategories(response.data);
-        setAllCategories(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load service categories:', error);
-      // Fallback to empty array if API fails
-      setServiceCategories([]);
-      setAllCategories([]);
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
-
-  const fetchAllCategories = async () => {
-    try {
-      setLoadingCategories(true);
-      const response = await customerService.getServiceCategories();
-      if (response.success && response.data) {
-        setAllCategories(response.data);
-        setShowAllCategories(true);
-      }
-    } catch (error) {
-      console.error('Failed to fetch all service categories:', error);
-      Alert.alert('Error', 'Failed to load all categories. Please try again.');
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
-
-  const searchCategories = serviceCategories
-    .map((c: any) => ({
-      id: (c.catagoryID ?? c.id ?? '').toString(),
-      name: c.name ?? 'Service',
-      icon: c.icon,
-    }))
-    .filter((c: any) => c.id);
-
   const loadUserData = async () => {
     try {
       setLoadingUser(true);
-      const profileResponse = await customerService.getProfile();
-      if (profileResponse.success) {
-        setUser(profileResponse.data);
+
+      // First try to get user data from stored data
+      const userData = await api.getUserData();
+      console.log('Stored user data:', userData);
+
+      if (userData) {
+        setUser(userData);
+      } else {
+        // If no stored data, try to fetch profile
+        try {
+          const profileResponse = await customerService.getProfile();
+          if (profileResponse.success) {
+            setUser(profileResponse.data);
+            await api.setUserData(profileResponse.data);
+          }
+        } catch (error) {
+          console.error('Failed to load profile:', error);
+        }
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
@@ -148,12 +146,59 @@ export default function CustomerDashboard() {
     }
   };
 
+  const loadUnreadNotifications = async () => {
+    try {
+      const response = await api.get('/customer/notifications/unread-count');
+      console.log('Notification response:', response);
+
+      if (response.success && response.data) {
+        // Handle different possible response structures
+        if (typeof response.data === 'object') {
+          const data = response.data as any;
+          // Check for count in different possible locations
+          if (data.count !== undefined) {
+            setUnreadNotifications(data.count);
+          } else if (data.unread !== undefined) {
+            setUnreadNotifications(data.unread);
+          } else if (data.total !== undefined) {
+            setUnreadNotifications(data.total);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Error fetching notifications count:', error);
+    }
+  };
+
+  const loadServiceCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const response = await customerService.getServiceCategories();
+      if (response.success && response.data) {
+        // Transform the data to ensure consistent format
+        const transformedCategories = response.data.map((category: any) => ({
+          id: (category.catagoryID ?? category.id ?? '').toString(),
+          name: category.name ?? 'Service',
+          icon: category.icon || '🔧',
+          description: category.description || '',
+        }));
+        setServiceCategories(transformedCategories);
+      }
+    } catch (error) {
+      console.error('Failed to load service categories:', error);
+      // Fallback to empty array if API fails
+      setServiceCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
   // Generate search suggestions based on query
   useEffect(() => {
     console.log('Dashboard - Query changed:', query);
     console.log('Dashboard - Location available:', !!location);
     console.log('Dashboard - Providers count:', providers.length);
-    
+
     if (query.length > 1) {
       // Get suggestions from API
       const fetchSuggestions = async () => {
@@ -183,58 +228,21 @@ export default function CustomerDashboard() {
   const handleCategorySelect = (categoryId: string) => {
     console.log('Dashboard - Category selected:', categoryId);
     setSelectedCategory(categoryId);
-    updateFilters({ categoryId });
+
+    // Navigate to search results with category filter
+    router.push({
+      pathname: '/(customer)/search/results',
+      params: {
+        categoryId,
+        sortBy: 'rating',
+        minRating: '0',
+        maxDistance: '50'
+      }
+    });
   };
 
-  // Test function to manually trigger search
-  const testSearch = async () => {
-    console.log('Dashboard - Testing search...');
-    console.log('Dashboard - Location available:', !!location);
-    
-    // Test 1: Try search without location first
-    try {
-      console.log('Dashboard - Testing search without location...');
-      const response1 = await customerService.searchProviders({
-        query: 'plumbing',
-        sortBy: 'rating',
-        minRating: 0,
-        maxDistance: 50,
-        page: 1,
-        perPage: 10,
-      });
-      console.log('Dashboard - Test search response (no location):', response1);
-    } catch (error) {
-      console.error('Dashboard - Test search error (no location):', error);
-    }
-
-    // Test 2: Try with location if available
-    if (location) {
-      try {
-        console.log('Dashboard - Testing search with location...');
-        const response2 = await customerService.searchProviders({
-          query: 'plumbing',
-          sortBy: 'rating',
-          minRating: 0,
-          maxDistance: 50,
-          page: 1,
-          perPage: 10,
-        });
-        console.log('Dashboard - Test search response (with location):', response2);
-      } catch (error) {
-        console.error('Dashboard - Test search error (with location):', error);
-      }
-    } else {
-      console.log('Dashboard - No location available for search');
-    }
-
-    // Test 3: Try a simple API call to see if backend is reachable
-    try {
-      console.log('Dashboard - Testing backend connectivity...');
-      const profileResponse = await customerService.getProfile();
-      console.log('Dashboard - Backend connectivity test:', profileResponse.success ? 'SUCCESS' : 'FAILED');
-    } catch (error) {
-      console.error('Dashboard - Backend connectivity error:', error);
-    }
+  const handleViewAllCategories = () => {
+    router.push('/(customer)/categories');
   };
 
   const handleProviderSelect = (provider: ServiceProvider) => {
@@ -268,9 +276,9 @@ export default function CustomerDashboard() {
         const paymentResponse = await paymentService.initializeChapaPayment({
           amount: requestData.estimatedPrice || 0,
           email: user?.email || 'customer@example.com',
-          firstName: user?.firstName || 'Customer',
-          lastName: user?.lastName || 'User',
-          phoneNumber: user?.phoneNumber,
+          firstName: user?.fullname?.split(' ')[0] || 'Customer',
+          lastName: user?.fullname?.split(' ').slice(1).join(' ') || 'User',
+          phoneNumber: user?.phone,
           customerId: user?.customerID,
           bookingId: bookingResponse.data.id,
           paymentMethod: requestData.paymentMethod,
@@ -281,7 +289,7 @@ export default function CustomerDashboard() {
           // Close modal and redirect to payment
           setShowRequestModal(false);
           setSelectedProvider(null);
-          
+
           // Open payment URL in browser/webview
           if (Platform.OS === 'web') {
             window.open(paymentResponse.checkoutUrl, '_blank');
@@ -301,43 +309,75 @@ export default function CustomerDashboard() {
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshSearch();
+    await loadUnreadNotifications();
+    await loadServiceCategories();
     setRefreshing(false);
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.greeting}>
-          Hello, {loadingUser ? '👋' : user?.firstName ? user.firstName.split(' ')[0] : 'User'}! 👋
-        </Text>
-        <Text style={styles.subtitle}>Find trusted service providers</Text>
-      </View>
+  const renderHeader = () => {
+    // Get user's first name from fullname
+    let displayName = 'User';
+    if (user?.fullname) {
+      displayName = user.fullname.split(' ')[0]; // Get first name
+    } else if (user?.firstName) {
+      displayName = user.firstName.split(' ')[0];
+    }
 
-      <View style={styles.headerActions}>
-        {/* Temporary test button */} 
-        <TouchableOpacity
-          style={styles.notificationButton}
-          onPress={() => router.push('/(customer)/notifications')}
-        >
-          <Ionicons name="notifications-outline" size={24} color={Colors.text.primary} />
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationBadgeText}>3</Text>
-          </View>
-        </TouchableOpacity>
+    return (
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>
+            Hello, {loadingUser ? '👋' : displayName}! 👋
+          </Text>
+          <Text style={styles.subtitle}>Find trusted service providers</Text>
+        </View>
 
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => router.push('/(customer)/profile')}
-        >
-          {user?.profileImage ? (
-            <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
-          ) : (
-            <Ionicons name="person-circle" size={40} color="gray" />
-          )}
-        </TouchableOpacity>
-      </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push('/(customer)/notifications')}
+          >
+            <Ionicons name="notifications-outline" size={24} color={Colors.text.primary} />
+            {unreadNotifications > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadNotifications}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => router.push('/(customer)/profile')}
+          >
+            {/* Complaints Button */}
+<TouchableOpacity
+  style={styles.headerButton}
+  onPress={() => router.push('/(customer)/complaints')}
+>
+  <Ionicons name="alert-circle-outline" size={24} color={Colors.text.primary} />
+  {pendingComplaints > 0 && (
+    <View style={[styles.badge, styles.complaintBadge]}>
+      <Text style={styles.badgeText}>{pendingComplaints}</Text>
     </View>
-  );
+  )}
+</TouchableOpacity>
+            {user?.profilePicture ? (
+              <Image
+                source={{
+                  uri: user.profilePicture.startsWith('http')
+                    ? user.profilePicture
+                    : `http://localhost:8000/${user.profilePicture}`
+                }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <Ionicons name="person-circle" size={40} color={Colors.primary} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   const renderCategories = () => {
     if (loadingCategories) {
@@ -363,11 +403,14 @@ export default function CustomerDashboard() {
       return null;
     }
 
+    // Show only first 8 categories horizontally
+    const displayedCategories = serviceCategories.slice(0, 8);
+
     return (
       <View style={styles.categoriesSection}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Service Categories</Text>
-          <TouchableOpacity onPress={fetchAllCategories}>
+          <TouchableOpacity onPress={handleViewAllCategories}>
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
@@ -376,26 +419,19 @@ export default function CustomerDashboard() {
           showsHorizontalScrollIndicator={false}
           style={styles.categoriesScroll}
         >
-          {serviceCategories.map((category) => (
+          {displayedCategories.map((category) => (
             <TouchableOpacity
-              key={(category.catagoryID ?? category.id ?? Math.random()).toString()}
+              key={category.id}
               style={[
                 styles.categoryCard,
-                selectedCategory === (category.catagoryID?.toString() || category.id?.toString() || '') && styles.categoryCardSelected,
+                selectedCategory === category.id && styles.categoryCardSelected,
               ]}
-              onPress={() => {
-                const categoryId = (category.catagoryID?.toString() || category.id?.toString() || '');
-                if (!categoryId) return;
-                handleCategorySelect(categoryId);
-                // Update search to filter by category
-                updateFilters({ categoryId });
-                refreshSearch();
-              }}
+              onPress={() => handleCategorySelect(category.id)}
             >
               <View style={styles.categoryIconContainer}>
-                <Text style={styles.categoryIcon}>{category.icon || '🔧'}</Text>
+                <Text style={styles.categoryIcon}>{category.icon}</Text>
               </View>
-              <Text style={styles.categoryName}>{category.name || 'Service'}</Text>
+              <Text style={styles.categoryName}>{category.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -412,6 +448,25 @@ export default function CustomerDashboard() {
       return null;
     }
 
+    const handleViewAllTopRated = () => {
+      // Navigate to search results with top rated filters
+      router.push({
+        pathname: '/(customer)/search/results',
+        params: {
+          sortBy: 'rating',
+          minRating: '4',
+          // You can add more filters here
+          // categoryId: filters.categoryId || '',
+          // maxDistance: '50',
+        }
+      });
+    };
+
+    const handleProviderPress = (provider: ServiceProvider) => {
+      // Navigate to provider details page where they can book
+      router.push(`/(customer)/provider/${provider.id}`);
+    };
+
     return (
       <View style={styles.topRatedSection}>
         <View style={styles.sectionHeader}>
@@ -419,7 +474,7 @@ export default function CustomerDashboard() {
             <Ionicons name="star" size={20} color={Colors.warning} />
             <Text style={styles.sectionTitle}>Top Rated Pros</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
+          <TouchableOpacity onPress={handleViewAllTopRated}>
             <Text style={styles.seeAllText}>View All</Text>
           </TouchableOpacity>
         </View>
@@ -433,7 +488,7 @@ export default function CustomerDashboard() {
             <TouchableOpacity
               key={provider.id}
               style={styles.topRatedCard}
-              onPress={() => handleProviderSelect(provider)}
+              onPress={() => handleProviderPress(provider)}
             >
               <Image
                 source={{ uri: provider.profileImage || 'https://via.placeholder.com/60' }}
@@ -449,8 +504,8 @@ export default function CustomerDashboard() {
               <Text style={styles.topRatedReviews}>({provider.reviewCount} reviews)</Text>
               {provider.distance && (
                 <Text style={styles.topRatedDistance}>
-                  {provider.distance < 1 
-                    ? `${Math.round(provider.distance * 1000)}m` 
+                  {provider.distance < 1
+                    ? `${Math.round(provider.distance * 1000)}m`
                     : `${provider.distance.toFixed(1)}km`
                   }
                 </Text>
@@ -538,7 +593,7 @@ export default function CustomerDashboard() {
   };
 
   const renderProviderList = () => (
-        <FlatList
+    <FlatList
       data={providers}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
@@ -602,7 +657,11 @@ export default function CustomerDashboard() {
           onCategorySelect={handleCategorySelect}
           suggestions={suggestions}
           searchResults={providers}
-          categories={searchCategories}
+          categories={serviceCategories.map(c => ({
+            id: c.id,
+            name: c.name,
+            icon: c.icon
+          }))}
         />
       </View>
 
@@ -627,56 +686,14 @@ export default function CustomerDashboard() {
           <View style={styles.popularServices}>
             <Text style={styles.popularTitle}>Popular Services Near You</Text>
             <View style={styles.popularGrid}>
-              {searchCategories.slice(0, 6).map((category) => (
+              {serviceCategories.slice(0, 6).map((category) => (
                 <TouchableOpacity
                   key={category.id}
                   style={styles.popularItem}
-                  onPress={() => {
-                    handleCategorySelect(category.id);
-                    router.push({
-                      pathname: '/(customer)/search/results',
-                      params: { categoryId: category.id },
-                    });
-                  }}
+                  onPress={() => handleCategorySelect(category.id)}
                 >
-                  <Text style={styles.popularItemIcon}>{category.icon || '🔧'}</Text>
+                  <Text style={styles.popularItemIcon}>{category.icon}</Text>
                   <Text style={styles.popularItemText}>{category.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {showAllCategories && (
-          <View style={styles.allCategoriesSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>All Services</Text>
-              <TouchableOpacity onPress={() => setShowAllCategories(false)}>
-                <Text style={styles.seeAllText}>Hide</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.allCategoriesGrid}>
-              {allCategories.map((category) => (
-                <TouchableOpacity
-                  key={(category.catagoryID ?? category.id ?? Math.random()).toString()}
-                  style={styles.allCategoryItem}
-                  onPress={() => {
-                    const categoryId = (category.catagoryID?.toString() || category.id?.toString() || '');
-                    if (!categoryId) return;
-                    handleCategorySelect(categoryId);
-                    setShowAllCategories(false);
-                    router.push({
-                      pathname: '/(customer)/search/results',
-                      params: { categoryId },
-                    });
-                  }}
-                >
-                  <View style={styles.allCategoryIconContainer}>
-                    <Text style={styles.allCategoryIcon}>{category.icon || '🔧'}</Text>
-                  </View>
-                  <Text style={styles.allCategoryName} numberOfLines={2}>
-                    {category.name || 'Service'}
-                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -693,21 +710,18 @@ export default function CustomerDashboard() {
         initialFilters={filters}
       />
 
-     // app/(customer)/dashboard.tsx - Fix the ServiceRequestModal usage
-
-<ServiceRequestModal
-  visible={showRequestModal}
-  onClose={() => {
-    setShowRequestModal(false);
-    setSelectedProvider(null);
-  }}
-  provider={selectedProvider}
-  userLocation={location ? {
-    latitude: location.latitude,
-    longitude: location.longitude,
-  } : undefined}
-  // Remove onSubmit completely - the modal handles booking internally
-/>
+      <ServiceRequestModal
+        visible={showRequestModal}
+        onClose={() => {
+          setShowRequestModal(false);
+          setSelectedProvider(null);
+        }}
+        provider={selectedProvider}
+        userLocation={location ? {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        } : undefined}
+      />
     </SafeAreaView>
   );
 }
@@ -736,6 +750,10 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginTop: 2,
   },
+  complaintBadge: {
+  backgroundColor: Colors.warning,
+},
+
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -782,7 +800,7 @@ const styles = StyleSheet.create({
   categoriesSection: {
     paddingVertical: 16,
     backgroundColor: Colors.surface,
-    marginBottom: 8,
+    marginBottom: 30,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -808,6 +826,7 @@ const styles = StyleSheet.create({
   },
   categoriesScroll: {
     paddingLeft: 20,
+    marginBottom: 29,
   },
   categoryCard: {
     alignItems: 'center',
@@ -854,6 +873,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  headerButton: {
+  position: 'relative',
+  marginRight: 16,
+  padding: 4,
+},
+badge: {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  backgroundColor: Colors.error,
+  borderRadius: 10,
+  minWidth: 18,
+  height: 18,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+badgeText: {
+  color: Colors.surface,
+  fontSize: 10,
+  fontWeight: 'bold',
+},
   topRatedImage: {
     width: 60,
     height: 60,
@@ -963,18 +1003,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     opacity: 0.7,
   },
-  testButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  testButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
-  },
   initialLoading: {
     flex: 1,
     justifyContent: 'center',
@@ -984,42 +1012,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
     color: Colors.text.secondary,
-  },
-  allCategoriesSection: {
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    marginBottom: 8,
-  },
-  allCategoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 20,
-    marginTop: 12,
-  },
-  allCategoryItem: {
-    width: '33.33%',
-    alignItems: 'center',
-    padding: 10,
-    marginBottom: 10,
-  },
-  allCategoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  allCategoryIcon: {
-    fontSize: 24,
-  },
-  allCategoryName: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 16,
   },
 });

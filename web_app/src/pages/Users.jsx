@@ -52,60 +52,41 @@ const Users = () => {
   // 3. Mock Data (replace with API call)
   // mock data was here. its removed 
 
-    // 3. Fetch Users from API
-    const fetchUsers = async (showLoading = true) => {
-      console.log(" USEFFECT RUNNING: userType =", userType);
-      
-      if (showLoading) setLoading(true);
-      setError(null);
+  const fetchUsers = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    setError(null);
+    try {
+      const url = userType === "Provider" ? "/admin/providers" : "/admin/customers";
+      console.log("Fetching from URL:", url); // Log the URL being
 
-      
-      try {
-        const url = userType === "Provider" ? "/providers" : "/customers";
-        console.log("Fetching from URL:", url);
+      // fetching data from backedn
+      const apiResponse = await api.get(url);
+      console.log("Raw API data: ", apiResponse.data);
 
-        // get admin token from local storage
-        const token = localStorage.getItem('admin_token');
-        console.log("token exists:", !!token);
+      const responseData = apiResponse.data.data || [];
 
-        // fetch data with authentication header
-        const apiResponse = await api.get(url, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-    
-        console.log("Raw API data: ", apiResponse.data);
+      // mapping backend fields with frontend fields
+      const mappedUsers = responseData.map(u => ({
+        id: u.customerID || u.providerID,
+        name: u.fullname,
+        email: u.email,
+        phone: u.phone,
+        type: userType,
+        status: u.status || "Active",
+        joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
+      }));
 
-        // mapping backend fields with frontend fields
-        const mappedUsers = apiResponse.data.data.map(u => ({
-          id: u.customerID || u.providerID,
-          name: u.fullname,
-          email: u.email,
-          phone: u.phone,
-          type: userType,
-          status: u.status || "Active",
-          joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
-        }));
+      setUsers(mappedUsers);
 
-        setUsers(mappedUsers);
-        setDbStatus('connected');
-      } catch (err) {
-        console.error(err);
-        
-        // better error handling for authentication issues
-        if (err.response && err.response.status === 401) {
-          setError('Authentication failed - please login again');
-        } else {
-          setError('Failed to fetch users');
-        }
-        
-        setDbStatus('disconnected');
-      } finally {
-        if (showLoading) setLoading(false);
-        }
-    };
+      setDbStatus('connected');
+    } catch (err) {
+      console.error(err);
+      setError('Failed to fetch users');
+      setDbStatus('disconnected');
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchUsers(true);
