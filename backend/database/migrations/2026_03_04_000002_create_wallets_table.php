@@ -12,13 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('wallets', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('service_provider_id')->unique();
+            $table->id('walletID');
+            $table->unsignedBigInteger('providerID')->unique();
             $table->decimal('available_balance', 12, 2)->default(0);
             $table->decimal('pending_balance', 12, 2)->default(0);
             $table->timestamps();
 
-            $table->foreign('service_provider_id')->references('id')->on('service_providers')->onDelete('cascade');
+            $table->foreign('providerID')
+                  ->references('providerID')
+                  ->on('service_providers')
+                  ->onDelete('cascade');
         });
     }
 

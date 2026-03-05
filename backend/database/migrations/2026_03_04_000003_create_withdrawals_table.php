@@ -12,15 +12,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('withdrawals', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('wallet_id');
+            $table->id('withdrawalID');
+            $table->unsignedBigInteger('providerID');
             $table->decimal('amount', 12, 2);
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamp('processed_at')->nullable();
             $table->text('admin_notes')->nullable();
             $table->timestamps();
 
-            $table->foreign('wallet_id')->references('id')->on('wallets')->onDelete('cascade');
+            $table->foreign('providerID')
+                  ->references('providerID')
+                  ->on('service_providers')
+                  ->onDelete('cascade');
+                  
+            $table->index('providerID');
         });
     }
 
