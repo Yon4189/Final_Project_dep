@@ -27,8 +27,9 @@ const Login = () => {
     try {
       const response = await api.post('/admin/login', { email, password });
       if (response.data.success) {
-        const adminData = response.data.data;
-        const token = response.data.token;
+        // The backend returns { success: true, message: "...", data: { admin: {...}, token: "..." } }
+        const { admin: adminData, token } = response.data.data;
+
         const userSession = {
           id: adminData.adminID,
           name: adminData.fullname,
