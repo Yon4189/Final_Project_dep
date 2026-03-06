@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -13,54 +14,59 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Models\Booking;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Laravel\Sanctum\HasApiTokens;
 
-class AdminAuthController extends Controller
+
+class AdminAuthController extends Authenticatable 
 {
     /**
      * 1. Admin Login Logic
      */
     public function login(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-        'password' => 'required|string',
-    ]);
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation errors',
-            'errors' => $validator->errors()
-        ], 422);
-    }
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-    $admin = Admin::where('email', $request->email)->first();
+        $admin = Admin::where('email', $request->email)->first();
 
+        if (!$admin || !Hash::check($request->password, $admin->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials'
+            ], 401);
+        }
+
+        // GENERATE TOKENjhoihoi - INSIDE the function
         $token = $admin->createToken('admin-token')->plainTextToken;
+
+        // Remove password from response
+        unset($admin->password);
 
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
-            'data' => $admin,
-            'token' => $token
+            'data' => [
+                'admin' => $admin,
+                'token' => $token
+            ]
         ]);
     }
 
-    //  GENERATE TOKEN (this will now work after updating the model)
-    $token = $admin->createToken('admin-token')->plainTextToken;
 
-    unset($admin->password);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Login successful',
-        'data' => [
-            'admin' => $admin,
-            'token' => $token  // 👈 TOKEN IS NOW INCLUDED!
-        ]
-    ]);
-}
-
+        
     /**
      * 2. Platform Statistics – FIXED pending count to match pendingProviders()
      */
@@ -391,7 +397,9 @@ class AdminAuthController extends Controller
                 'errors'  => $validator->errors()
             ], 422);
         }
-
+        if (!$admin) {
+            return response()->json(['error' => 'Admin not found'], 404);
+        }
         $admin->update([
             'fullname' => $request->fullname,
             'email'    => $request->email,
@@ -425,7 +433,9 @@ class AdminAuthController extends Controller
             
             // Store in public/profiles
             $file->move(public_path('profiles'), $filename);
-            
+            if (!$admin) {
+                return response()->json(['error' => 'Admin not found'], 404);
+            }
             // Save path in DB
             $path = 'profiles/' . $filename;
             $admin->update(['profilePicture' => $path]);

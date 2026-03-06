@@ -21,34 +21,50 @@ const Login = () => {
   // --- Login Handler ---
   // In your Login component (admin login)
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    try {
-      const response = await api.post('/admin/login', { email, password });
-      if (response.data.success) {
-        const adminData = response.data.data;
-        const token = response.data.token;
-        const userSession = {
-          id: adminData.adminID,
-          name: adminData.fullname,
-          email: adminData.email,
-          phone: adminData.phone,
-          profilePicture: adminData.profilePicture,
-          role: 'admin'
-        };
-        login(userSession, token);
-        navigate('/');
-      } else {
-        setError(response.data.message || 'Login failed');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-    } finally {
-      setIsLoading(false);
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
+  
+  try {
+    const response = await api.post('/admin/login', { email, password });
+    
+    if (response.data.success) {
+      // extract admin data and token from response
+      const adminData = response.data.data.admin;  // fixed: access admin object
+      const token = response.data.data.token;      // fixed: access token from data object
+      
+      // store token in localStorage
+      localStorage.setItem('admin_token', token);
+      
+      // create user session object
+      const userSession = {
+        id: adminData.adminID,
+        name: adminData.fullname,
+        email: adminData.email,
+        phone: adminData.phone,
+        profilePicture: adminData.profilePicture,
+        role: 'admin'
+      };
+      
+      // store user data in localStorage
+      localStorage.setItem('admin_user', JSON.stringify(userSession));
+      
+      // call login function from auth context
+      login(userSession, token);
+      
+      // redirect to dashboard
+      navigate('/');
+    } else {
+      setError(response.data.message || 'Login failed');
     }
-  };
-  // --- Forgot Password Handler ---
+  } catch (err) {
+    setError(err.response?.data?.message || 'Login failed');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// --- Forgot Password Handler ---
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');

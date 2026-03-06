@@ -1,119 +1,295 @@
 <?php
+
 // app/Http/Controllers/AdminWithdrawalController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Withdrawal;
-use App\Models\Payment;
+use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class AdminWithdrawalController extends Controller
 {
     /**
-     * List all withdrawals
+     * List all pending withdrawals with provider details
+     * 
+     * GET /api/admin/withdrawals/pending
      */
-    /**
-     * List all pending withdrawals (new schema)
-     */
-    public function index()
+    public function getPendingWithdrawals()
     {
-        $withdrawals = Withdrawal::where('status', 'pending')->with('wallet.serviceProvider')->latest()->get();
-        return response()->json(['data' => $withdrawals]);
+        try {
+            $withdrawals = Withdrawal::where('status', 'pending')
+                ->with('provider') // Assuming you have provider relationship
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $withdrawals
+            ], 200);
+            
+        } catch (\Exception $e) {
+            Log::error('Get pending withdrawals failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve pending withdrawals'
+            ], 500);
+        }
     }
 
     /**
-     * Approve withdrawal
+     * Approve a withdrawal
+     * 
+     * POST /api/admin/withdrawals/{id}/approve
      */
-    /**
-     * Approve a withdrawal (new schema)
-     */
-    public function approve(Request $request, $id)
+    public function approveWithdrawal($id)
     {
-        $withdrawal = Withdrawal::findOrFail($id);
-        if ($withdrawal->status !== 'pending') {
-            return response()->json(['error' => 'Withdrawal not pending'], 422);
-        }
-        DB::transaction(function () use ($withdrawal) {
+        DB::beginTransaction();
+        
+        try {
+            $withdrawal = Withdrawal::where('withdrawalID', $id)
+                ->where('status', 'pending')
+                ->first();
+            
+            if (!$withdrawal) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Withdrawal not found or already processed'
+                ], 404);
+            }
+            
+            // Update withdrawal status
             $withdrawal->status = 'approved';
             $withdrawal->processed_at = now();
             $withdrawal->save();
+            
+            // Get provider's wallet
+            $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
+            
+            if (!$wallet) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Provider wallet not found'
+                ], 404);
+            }
+            
+            // Create wallet transaction record
             WalletTransaction::create([
-                'wallet_id' => $withdrawal->wallet_id,
-                'type' => 'debit',
+                'walletID' => $wallet->walletID,
+                'type' => 'withdrawal',
                 'amount' => $withdrawal->amount,
-                'description' => 'Withdrawal approved',
-                'withdrawal_id' => $withdrawal->id,
+                'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' approved',
+                'bookingID' => null,
+                'withdrawalID' => $withdrawal->withdrawalID
             ]);
-            // TODO: Send notification to provider
-        });
-        return response()->json(['message' => 'Withdrawal approved']);
+            
+            DB::commit();
+            
+            // TODO: Send email notification to provider
+            // Mail::to($withdrawal->provider->email)->send(new WithdrawalApproved($withdrawal));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Withdrawal approved successfully',
+                'data' => $withdrawal
+            ], 200);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Approve withdrawal failed: ' . $e->getMessage(), [
+                'withdrawal_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to approve withdrawal: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Reject withdrawal
+     * Reject a withdrawal with reason
+     * 
+     * POST /api/admin/withdrawals/{id}/reject
      */
-    /**
-     * Reject a withdrawal (new schema)
-     */
-    public function reject(Request $request, $id)
+    public function rejectWithdrawal(Request $request, $id)
     {
         $request->validate([
-            'admin_notes' => 'required|string',
+            'reason' => 'required|string|min:5'
         ]);
-        $withdrawal = Withdrawal::findOrFail($id);
-        if ($withdrawal->status !== 'pending') {
-            return response()->json(['error' => 'Withdrawal not pending'], 422);
-        }
-        DB::transaction(function () use ($withdrawal, $request) {
-            $wallet = $withdrawal->wallet;
+        
+        DB::beginTransaction();
+        
+        try {
+            $withdrawal = Withdrawal::where('withdrawalID', $id)
+                ->where('status', 'pending')
+                ->first();
+            
+            if (!$withdrawal) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Withdrawal not found or already processed'
+                ], 404);
+            }
+            
+            // Get provider's wallet
+            $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
+            
+            if (!$wallet) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Provider wallet not found'
+                ], 404);
+            }
+            
+            // Return amount to available balance
             $wallet->available_balance += $withdrawal->amount;
             $wallet->save();
+            
+            // Update withdrawal
             $withdrawal->status = 'rejected';
-            $withdrawal->admin_notes = $request->admin_notes;
+            $withdrawal->admin_notes = $request->reason;
             $withdrawal->processed_at = now();
             $withdrawal->save();
+            
+            // Create wallet transaction record for refund
             WalletTransaction::create([
-                'wallet_id' => $wallet->id,
+                'walletID' => $wallet->walletID,
                 'type' => 'credit',
                 'amount' => $withdrawal->amount,
-                'description' => 'Withdrawal rejected, funds returned',
-                'withdrawal_id' => $withdrawal->id,
+                'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' rejected: ' . $request->reason,
+                'bookingID' => null,
+                'withdrawalID' => $withdrawal->withdrawalID
             ]);
-            // TODO: Send notification to provider
-        });
-        return response()->json(['message' => 'Withdrawal rejected and funds returned']);
+            
+            DB::commit();
+            
+            // TODO: Send email notification to provider with rejection reason
+            // Mail::to($withdrawal->provider->email)->send(new WithdrawalRejected($withdrawal, $request->reason));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Withdrawal rejected and funds returned to wallet',
+                'data' => $withdrawal
+            ], 200);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Reject withdrawal failed: ' . $e->getMessage(), [
+                'withdrawal_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reject withdrawal: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Get withdrawal statistics
+     * Get withdrawal statistics for admin dashboard
+     * 
+     * GET /api/admin/withdrawals/stats
      */
     public function stats()
     {
-        $stats = [
-            'pending' => [
-                'count' => Withdrawal::where('status', 'pending')->count(),
-                'total' => Withdrawal::where('status', 'pending')->sum('amount')
-            ],
-            'approved_today' => [
-                'count' => Withdrawal::where('status', 'approved')
-                    ->whereDate('approved_at', today())
-                    ->count(),
-                'total' => Withdrawal::where('status', 'approved')
-                    ->whereDate('approved_at', today())
-                    ->sum('amount')
-            ],
-            'total_processed' => [
-                'count' => Withdrawal::whereIn('status', ['approved', 'processed'])->count(),
-                'total' => Withdrawal::whereIn('status', ['approved', 'processed'])->sum('amount')
-            ]
-        ];
+        try {
+            $pending = Withdrawal::where('status', 'pending')->get();
+            $approved = Withdrawal::where('status', 'approved')->get();
+            $rejected = Withdrawal::where('status', 'rejected')->get();
+            
+            // Today's stats
+            $today = now()->startOfDay();
+            $approvedToday = Withdrawal::where('status', 'approved')
+                ->where('processed_at', '>=', $today)
+                ->get();
+            
+            $stats = [
+                'pending' => [
+                    'count' => $pending->count(),
+                    'total' => $pending->sum('amount')
+                ],
+                'approved' => [
+                    'count' => $approved->count(),
+                    'total' => $approved->sum('amount')
+                ],
+                'rejected' => [
+                    'count' => $rejected->count(),
+                    'total' => $rejected->sum('amount')
+                ],
+                'approved_today' => [
+                    'count' => $approvedToday->count(),
+                    'total' => $approvedToday->sum('amount')
+                ]
+            ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $stats
+            ], 200);
+            
+        } catch (\Exception $e) {
+            Log::error('Get withdrawal stats failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve withdrawal statistics'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all withdrawals with filtering (optional)
+     * 
+     * GET /api/admin/withdrawals?status=pending&from=2026-01-01&to=2026-03-05
+     */
+    public function index(Request $request)
+    {
+        try {
+            $query = Withdrawal::with('provider');
+            
+            // Filter by status
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+            
+            // Filter by date range
+            if ($request->has('from')) {
+                $query->where('created_at', '>=', $request->from);
+            }
+            
+            if ($request->has('to')) {
+                $query->where('created_at', '<=', $request->to);
+            }
+            
+            $withdrawals = $query->orderBy('created_at', 'desc')->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $withdrawals
+            ], 200);
+            
+        } catch (\Exception $e) {
+            Log::error('Get withdrawals failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve withdrawals'
+            ], 500);
+        }
     }
 }

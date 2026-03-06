@@ -315,6 +315,113 @@ class BookingController extends Controller
         }
     }
 
+
+
+
+        /**
+     * Customer confirms service completion
+     * 
+     * @param Request $request
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function confirmCompletion(Request $request, $id)
+    {
+        try {
+            // Get authenticated customer
+            $customer = $request->user();
+            
+            // Find booking - must belong to this customer and be in waiting confirmation status
+            $booking = Booking::where('bookingID', $id)
+                ->where('customerID', $customer->customerID)
+                ->where('status', 'waiting_customer_confirmation')
+                ->first();
+            
+            if (!$booking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking not found or not ready for confirmation'
+                ], 404);
+            }
+            
+            // Get the payment record
+            $payment = Payment::where('bookingID', $booking->bookingID)
+                ->where('status', 'paid')
+                ->first();
+            
+            if (!$payment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment record not found'
+                ], 404);
+            }
+            
+            DB::beginTransaction();
+            
+            try {
+                // Update booking
+                $booking->status = 'completed';
+                $booking->customer_confirmed_at = now();
+                $booking->save();
+                
+                // Get or create provider's wallet
+                $wallet = Wallet::firstOrCreate(
+                    ['providerID' => $booking->providerID],
+                    ['available_balance' => 0, 'pending_balance' => 0]
+                );
+                
+                // Amount to add to pending balance (provider_amount already has commission deducted)
+                $providerAmount = $payment->provider_amount;
+                
+                // Add to pending balance
+                $wallet->pending_balance += $providerAmount;
+                $wallet->save();
+                
+                // Create wallet transaction record
+                WalletTransaction::create([
+                    'walletID' => $wallet->walletID,
+                    'type' => 'credit',
+                    'amount' => $providerAmount,
+                    'description' => 'Payment for booking #' . $booking->bookingID . ' (confirmed by customer)',
+                    'bookingID' => $booking->bookingID,
+                    'withdrawalID' => null
+                ]);
+                
+                // Update payment status
+                $payment->status = 'releasable'; // or keep as 'paid' until released
+                $payment->save();
+                
+                DB::commit();
+                
+                // TODO: Send notification to provider
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Service completion confirmed. Payment will be available for withdrawal after release.',
+                    'data' => [
+                        'bookingID' => $booking->bookingID,
+                        'status' => $booking->status,
+                        'provider_amount' => $providerAmount
+                    ]
+                ], 200);
+                
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Confirm completion failed: ' . $e->getMessage(), [
+                'booking_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to confirm completion: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     /**
      * Get booking details
      */
