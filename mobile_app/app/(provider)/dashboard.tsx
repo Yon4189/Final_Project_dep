@@ -56,6 +56,17 @@ export default function ProviderDashboard() {
     refetch,
   } = useProviderQueries();
 
+  // 🔥 ADD THIS useEffect HERE - right after all hooks
+  useEffect(() => {
+    if (profile) {
+      console.log('🔥 Provider profile:', profile);
+      console.log('🔥 fullname:', (profile as any).fullname);
+      console.log('🔥 businessName:', profile.businessName);
+    } else {
+      console.log('🔥 Profile is null');
+    }
+  }, [profile]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await refetch();
@@ -64,15 +75,18 @@ export default function ProviderDashboard() {
 
   const renderHeader = () => (
     <LinearGradient
-      colors={[Colors.primary, Colors.primaryDark]}
+      colors={[Colors.primary, Colors.primary]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.header}
     >
+      
       <View style={styles.headerTop}>
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.profileName}>{profile?.businessName || 'Provider'}</Text>
+         <Text style={styles.profileName}>
+                          {profile?.fullname || profile?.businessName || 'Provider'}
+              </Text>
         </View>
         
         <View style={styles.headerActions}>
@@ -156,7 +170,7 @@ export default function ProviderDashboard() {
         onPress={() => router.push('/(provider)/reviews/index')}
       >
         <View style={styles.ratingLeft}>
-          <Text style={styles.ratingValue}>{profile?.rating?.toFixed(1) || '0.0'}</Text>
+          <Text style={styles.ratingValue}>{Number(profile?.rating || 0).toFixed(1) || '0.0'}</Text>
           <View style={styles.starsContainer}>
             {[1, 2, 3, 4, 5].map((star) => (
               <Ionicons
@@ -405,7 +419,6 @@ export default function ProviderDashboard() {
                 icon="calendar-outline"
                 title="No requests"
                 message={`You have no ${selectedTab} requests`}
-                variant="compact"
               />
             }
             contentContainerStyle={styles.requestsList}

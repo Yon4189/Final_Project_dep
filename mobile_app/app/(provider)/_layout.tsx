@@ -1,34 +1,37 @@
 // app/(provider)/_layout.tsx
-import React, { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { TouchableOpacity, View, Text, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { useProviderStore } from '@/app/store/providerStore';
-import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export default function ProviderLayout() {
   const router = useRouter();
-  const segments = useSegments();
-  const { profile, isLoading, loadProfile } = useProviderStore();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Safely access store with default values
+  let store;
+  try {
+    store = useProviderStore();
+  } catch (error) {
+    console.error('Provider store not available:', error);
+  }
+
+  const loadProfile = store?.loadProfile;
 
   useEffect(() => {
-    loadProfile();
+    setIsMounted(true);
   }, []);
 
-  // Check if provider is verified for certain screens
-  const isVerificationScreen = segments[segments.length - 1] === 'verification';
-  const isProfileScreen = segments[segments.length - 1] === 'profile';
+  useEffect(() => {
+    if (loadProfile && typeof loadProfile === 'function' && isMounted) {
+      loadProfile();
+    }
+  }, [loadProfile, isMounted]);
 
-  if (isLoading) {
-    return <LoadingSpinner fullScreen />;
-  }
-
-  // Redirect to verification if profile not verified and not on verification/profile screens
-  if (profile && !profile.verificationStatus && !isVerificationScreen && !isProfileScreen) {
-    router.replace('/(provider)/verification');
-  }
-
+  // Always render the Stack navigator — never conditionally unmount it.
+  // This prevents getRehydratedState errors in React Navigation.
   return (
     <Stack
       screenOptions={{
@@ -45,9 +48,9 @@ export default function ProviderLayout() {
           backgroundColor: Colors.background,
         },
         headerBackVisible: false,
-        headerLeft: ({ canGoBack }) => 
+        headerLeft: ({ canGoBack }) =>
           canGoBack ? (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
               <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           ) : null,
@@ -61,42 +64,53 @@ export default function ProviderLayout() {
         }}
       />
 
-      {/* Requests Stack */}
+      {/* Notifications */}
+      <Stack.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+        }}
+      />
+
+      {/* Profile */}
+      <Stack.Screen
+        name="profile"
+        options={{
+          title: 'My Profile',
+        }}
+      />
+
+      {/* Requests */}
       <Stack.Screen
         name="requests/index"
         options={{
           title: 'Service Requests',
           headerRight: () => (
-            <TouchableOpacity onPress={() => {}} style={{ marginLeft: 16 }}>
+            <TouchableOpacity onPress={() => {}} style={{ marginRight: 16 }}>
               <Ionicons name="filter-outline" size={22} color={Colors.text.primary} />
             </TouchableOpacity>
           ),
         }}
       />
 
-      <Stack.Screen
-        name="requests/[id]"
-        options={{
-          title: 'Request Details',
-        }}
-      />
-
-      {/* Earnings Stack */}
+      {/* Earnings */}
       <Stack.Screen
         name="earnings/index"
         options={{
           title: 'Earnings',
           headerRight: () => (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => router.push('/(provider)/earnings/withdraw')}
-              style={{ marginLeft: 16 }}
+              style={{ marginRight: 16 }}
             >
-              <View style={{
-                backgroundColor: Colors.primary,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 16,
-              }}>
+              <View
+                style={{
+                  backgroundColor: Colors.primary,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                }}
+              >
                 <Text style={{ color: Colors.surface, fontSize: 12, fontWeight: '600' }}>
                   Withdraw
                 </Text>
@@ -113,51 +127,7 @@ export default function ProviderLayout() {
         }}
       />
 
-      {/* Profile Stack */}
-      <Stack.Screen
-        name="profile"
-        options={{
-          title: 'My Profile',
-          headerRight: () => (
-            <TouchableOpacity 
-              onPress={() => router.push('/(provider)/profile/edit')}
-              style={{ marginLeft: 16 }}
-            >
-              <Ionicons name="create-outline" size={22} color={Colors.primary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
-      <Stack.Screen
-        name="profile/edit"
-        options={{
-          title: 'Edit Profile',
-        }}
-      />
-
-      <Stack.Screen
-        name="profile/services"
-        options={{
-          title: 'My Services',
-        }}
-      />
-
-      <Stack.Screen
-        name="profile/bank"
-        options={{
-          title: 'Bank Details',
-        }}
-      />
-
-      <Stack.Screen
-        name="profile/verification"
-        options={{
-          title: 'Verification',
-        }}
-      />
-
-      {/* Reviews Stack */}
+      {/* Reviews */}
       <Stack.Screen
         name="reviews/index"
         options={{
@@ -165,7 +135,7 @@ export default function ProviderLayout() {
         }}
       />
 
-      {/* Disputes Stack */}
+      {/* Disputes */}
       <Stack.Screen
         name="disputes/index"
         options={{
@@ -180,35 +150,6 @@ export default function ProviderLayout() {
         }}
       />
 
-      <Stack.Screen
-        name="disputes/[id]"
-        options={{
-          title: 'Dispute Details',
-        }}
-      />
-
-      {/* Schedule Stack */}
-      <Stack.Screen
-        name="schedule/index"
-        options={{
-          title: 'My Schedule',
-          headerRight: () => (
-            <TouchableOpacity 
-              onPress={() => router.push('/(provider)/schedule/settings')}
-              style={{ marginLeft: 16 }}
-            >
-              <Ionicons name="settings-outline" size={22} color={Colors.text.primary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
-      <Stack.Screen
-        name="schedule/settings"
-        options={{
-          title: 'Working Hours',
-        }}
-      />
     </Stack>
   );
 }

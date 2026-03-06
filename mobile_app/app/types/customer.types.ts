@@ -312,8 +312,7 @@ export interface Booking {
   customerId: ID;
   providerId: ID;
   professionalProfileId?: ID;
-  serviceId: ID;
-  locationId?: ID;
+  serviceId: ID;  locationId?: ID;
   status: BookingStatus;
   scheduledDate: string;
   startTime: string;

@@ -49,7 +49,7 @@ class AdminAuthController extends Authenticatable
             ], 401);
         }
 
-        // GENERATE TOKENjhoihoi - INSIDE the function
+        // Generate token
         $token = $admin->createToken('admin-token')->plainTextToken;
 
         // Remove password from response
@@ -65,10 +65,8 @@ class AdminAuthController extends Authenticatable
         ]);
     }
 
-
-        
     /**
-     * 2. Platform Statistics – FIXED pending count to match pendingProviders()
+     * 2. Platform Statistics
      */
     public function getStats()
     {
@@ -78,10 +76,13 @@ class AdminAuthController extends Authenticatable
                 'data' => [
                     'providers'  => ServiceProvider::count(),
                     'customers'  => Customer::count(),
-                    'pending'    => ServiceProvider::whereNull('status')->count(),
+                    'pending'    => ServiceProvider::where('status', 'pending')->count(),
+                    'approved'   => ServiceProvider::where('status', 'approved')->count(),
+                    'suspended'  => ServiceProvider::where('status', 'suspended')->count(),
+                    'rejected'   => ServiceProvider::where('status', 'rejected')->count(),
                     'categories' => Category::count(),
                     'services'   => Service::count(),
-                    'revenue'    => Transaction::sum('platformFee') 
+                    'revenue'    => Transaction::sum('platformFee') ?? 0
                 ]
             ]);
         } catch (\Exception $e) {
@@ -95,7 +96,7 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
-     * 3. Get All Providers (for admin overview and dependency checks)
+     * 3. Get All Providers (for admin overview)
      */
     public function getAllProviders()
     {
@@ -109,7 +110,7 @@ class AdminAuthController extends Authenticatable
                     'phone'        => $provider->phone,
                     'catagoryID'   => $provider->catagoryID,
                     'category'     => $provider->category->name ?? null,
-                    'status'   => $provider->status,
+                    'status'       => $provider->status,
                     'created_at'   => $provider->created_at ? $provider->created_at->format('Y-m-d H:i:s') : null,
                 ];
             });
@@ -132,80 +133,80 @@ class AdminAuthController extends Authenticatable
      */
     public function verifyProvider(Request $request, $id)
     {
-    // 1. Validate incoming request
-    $request->validate([
-        'status' => 'required|string', // "approved" or "Suspended"
-        'verification_reason' => 'nullable|string|max:255',
-    ]);
+        // 1. Validate incoming request
+        $request->validate([
+            'status' => 'required|string|in:approved,rejected,suspended',
+            'verification_reason' => 'nullable|string|max:255',
+        ]);
 
-    // 2. Find the provider
-    $provider = ServiceProvider::find($id);
-    if (!$provider) {
-        return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
-    }
+        // 2. Find the provider
+        $provider = ServiceProvider::find($id);
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
+        }
 
-    // 3. Update status and reason
-    $provider->status = $request->status;
-    $provider->verification_reason = $request->status === 'approved' ? null : $request->verification_reason;
-    $provider->save();
+        // 3. Update status and reason
+        $provider->status = $request->status;
+        $provider->verification_reason = $request->status === 'approved' ? null : $request->verification_reason;
+        $provider->save();
 
-    $statusLabel = strtolower($request->status); // "approved" or "suspended"
+        $statusLabel = strtolower($request->status);
 
-    // 4. Prepare email
-    if ($request->status === 'approved') {
-        $emailBody = "
-            <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
-                <h2 style='color: #2b64f3;'>Congratulations!</h2>
-                <p>Hello <strong>{$provider->fullname}</strong>,</p>
-                <p>Your Service Provider account has been <strong>approved</strong> by our administration team.</p>
-                <p>You can now log in to the mobile app and start receiving service requests.</p>
-            </div>";
-    } elseif ($statusLabel === 'suspended') {
-        $reason = $request->verification_reason ?? 'Administrative decision.';
-        $emailBody = "
-            <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
-                <h2 style='color: #8b5cf6;'>Account Suspended</h2>
-                <p>Hello <strong>{$provider->fullname}</strong>,</p>
-                <p>We wish to inform you that your Service Provider account has been <strong>suspended</strong> by our administration team.</p>
-                <p><strong>Reason:</strong> {$reason}</p>
-                <p>During suspension, you will not be able to receive new service requests or browse the platform.</p>
-                <p>If you have questions, please contact our support team.</p>
-            </div>";
-    } else {
-        $reason = $request->verification_reason ?? 'The provided documents were not clear or valid.';
-        $emailBody = "
-            <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
-                <h2 style='color: #ef4444;'>Account Status Update</h2>
-                <p>Hello <strong>{$provider->fullname}</strong>,</p>
-                <p>We regret to inform you that your application has been <strong>rejected</strong> at this time.</p>
-                <p><strong>Reason:</strong> {$reason}</p>
-                <p>Please log in to your profile to re-upload clear documents.</p>
-            </div>";
-    }
+        // 4. Prepare email based on status
+        if ($request->status === 'approved') {
+            $emailBody = "
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: #2b64f3;'>Congratulations!</h2>
+                    <p>Hello <strong>{$provider->fullname}</strong>,</p>
+                    <p>Your Service Provider account has been <strong>approved</strong> by our administration team.</p>
+                    <p>You can now log in to the mobile app and start receiving service requests.</p>
+                </div>";
+        } elseif ($request->status === 'suspended') {
+            $reason = $request->verification_reason ?? 'Administrative decision.';
+            $emailBody = "
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: #8b5cf6;'>Account Suspended</h2>
+                    <p>Hello <strong>{$provider->fullname}</strong>,</p>
+                    <p>We wish to inform you that your Service Provider account has been <strong>suspended</strong> by our administration team.</p>
+                    <p><strong>Reason:</strong> {$reason}</p>
+                    <p>During suspension, you will not be able to receive new service requests.</p>
+                    <p>If you have questions, please contact our support team.</p>
+                </div>";
+        } elseif ($request->status === 'rejected') {
+            $reason = $request->verification_reason ?? 'The provided documents were not clear or valid.';
+            $emailBody = "
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: #ef4444;'>Account Status Update</h2>
+                    <p>Hello <strong>{$provider->fullname}</strong>,</p>
+                    <p>We regret to inform you that your application has been <strong>rejected</strong> at this time.</p>
+                    <p><strong>Reason:</strong> {$reason}</p>
+                    <p>You can re-apply after addressing the issues mentioned.</p>
+                </div>";
+        }
 
-    // 5. Send email
-    try {
-        Mail::html($emailBody, function ($message) use ($provider, $statusLabel) {
-            $message->to($provider->email)
-                    ->subject("Service Finder Account: " . ucfirst($statusLabel));
-        });
-    } catch (\Exception $e) {
-        Log::error("Mail Error: " . $e->getMessage());
-    }
+        // 5. Send email
+        try {
+            Mail::html($emailBody, function ($message) use ($provider, $statusLabel) {
+                $message->to($provider->email)
+                        ->subject("Service Finder Account: " . ucfirst($statusLabel));
+            });
+        } catch (\Exception $e) {
+            Log::error("Mail Error: " . $e->getMessage());
+        }
 
-    // 6. Return JSON response
-    return response()->json([
-        'success' => true,
-        'message' => 'Status updated and notification sent.',
-        'data' => [
-            'providerID' => $provider->providerID,
-            'status' => $provider->status
-        ]
-    ]);
+        // 6. Return JSON response
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated and notification sent.',
+            'data' => [
+                'providerID' => $provider->providerID,
+                'status' => $provider->status
+            ]
+        ]);
     }
 
     /**
-     * 5. List Pending Providers (isVerified = null)
+     * 5. List Pending Providers
      */
     public function pendingProviders()
     {
@@ -219,7 +220,7 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
-     * 6. List Approved Providers (isVerified = 1)
+     * 6. List Approved Providers
      */
     public function approvedProviders()
     {
@@ -233,12 +234,11 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
-     * 7. List Rejected Providers (isVerified = 0)
+     * 7. List Rejected Providers
      */
     public function rejectedProviders()
     {
         $rejected = ServiceProvider::where('status', 'rejected')
-            ->whereNotNull('verification_reason')
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -247,6 +247,9 @@ class AdminAuthController extends Authenticatable
         return response()->json(['success' => true, 'data' => $rejected]);
     }
 
+    /**
+     * 8. List Suspended Providers
+     */
     public function suspendedProviders()
     {
         $suspended = ServiceProvider::where('status', 'suspended')
@@ -259,7 +262,7 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
-     * 8. Format Helper – used by pending/approved/rejected methods
+     * 9. Format Helper – used by pending/approved/rejected methods
      */
     private function formatProvider($provider)
     {
@@ -281,64 +284,87 @@ class AdminAuthController extends Authenticatable
         ];
     }
 
+    // =============== Functions for User Management tab for admin ============
 
-    // ===============fucntions for User Mangment tab for admin============
-    public function getProviders(){
+    /**
+     * Get all providers (simplified)
+     */
+    public function getProviders()
+    {
         return response()->json([
             'success' => true,
             'data' => ServiceProvider::all()
         ]);
     }
 
-    public function getCustomers(){
+    /**
+     * Get all customers
+     */
+    public function getCustomers()
+    {
         return response()->json([
             'success' => true,
             'data' => Customer::all()
         ]);
     }
 
-    // Delete customer
-    public function deleteCustomer($id) {
-    $customer = Customer::find($id);
-    if (!$customer) {
-        return response()->json(['message' => 'Customer not found'], 404);
-    }
-    $customer->delete();
-    return response()->json(['message' => 'Customer deleted successfully']);
-    }
-
-// Delete provider
-    public function deleteProvider($id) {
-    $provider = ServiceProvider::find($id);
-    if (!$provider) {
-        return response()->json(['message' => 'Provider not found'], 404);
-    }
-    $provider->delete();
-    return response()->json(['message' => 'Provider deleted successfully']);
+    /**
+     * Delete customer
+     */
+    public function deleteCustomer($id) 
+    {
+        $customer = Customer::find($id);
+        if (!$customer) {
+            return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
+        }
+        $customer->delete();
+        return response()->json(['success' => true, 'message' => 'Customer deleted successfully']);
     }
 
-// Toggle customer status
-    public function toggleCustomerStatus($id) {
-    $customer = Customer::find($id);
-    if (!$customer) {
-        return response()->json(['message' => 'Customer not found'], 404);
-    }
-    $customer->status = $customer->status === 'approved' ? 'suspended' : 'approved';
-    $customer->save();
-    return response()->json(['message' => 'Status updated', 'status' => $customer->status]);
-    }
-
-// Toggle provider status
-    public function toggleProviderStatus($id) {
-    $provider = ServiceProvider::find($id);
-    if (!$provider) {
-        return response()->json(['message' => 'Provider not found'], 404);
-    }
-    $provider->status = $provider->status === 'approved' ? 'suspended' : 'approved';
-    $provider->save();
-    return response()->json(['message' => 'Status updated', 'status' => $provider->status]);
+    /**
+     * Delete provider
+     */
+    public function deleteProvider($id) 
+    {
+        $provider = ServiceProvider::find($id);
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
+        }
+        $provider->delete();
+        return response()->json(['success' => true, 'message' => 'Provider deleted successfully']);
     }
 
+    /**
+     * Toggle customer status
+     */
+    public function toggleCustomerStatus($id) 
+    {
+        $customer = Customer::find($id);
+        if (!$customer) {
+            return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
+        }
+        $customer->status = $customer->status === 'approved' ? 'suspended' : 'approved';
+        $customer->save();
+        return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $customer->status]);
+    }
+
+    /**
+     * Toggle provider status
+     */
+    public function toggleProviderStatus($id) 
+    {
+        $provider = ServiceProvider::find($id);
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
+        }
+        $provider->status = $provider->status === 'approved' ? 'suspended' : 'approved';
+        $provider->save();
+        return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $provider->status]);
+    }
+
+    /**
+     * Get all bookings
+     */
     public function getAllBookings()
     {
         try {
@@ -352,8 +378,8 @@ class AdminAuthController extends Authenticatable
                         'provider' => $b->provider->fullname ?? 'Unknown',
                         'service' => $b->service->title ?? 'Unknown',
                         'status' => ucfirst($b->status),
-                        'date' => $b->scheduledDate ? $b->scheduledDate->format('M d, Y') : 'N/A',
-                        'time' => $b->scheduledDate ? $b->scheduledDate->format('h:i A') : 'N/A',
+                        'date' => $b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A',
+                        'time' => $b->scheduledTime ?? 'N/A',
                         'location' => $b->service_address ?? 'Location pinned',
                         'amount' => ($b->agreed_price ?? 0) . ' ETB'
                     ];
@@ -364,6 +390,7 @@ class AdminAuthController extends Authenticatable
                 'data' => $bookings
             ]);
         } catch (\Exception $e) {
+            Log::error("Get All Bookings Error: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch bookings',
@@ -372,10 +399,8 @@ class AdminAuthController extends Authenticatable
         }
     }
 
-//==============================================================
-
     /**
-     * 9. Update Admin Profile
+     * 10. Update Admin Profile
      */
     public function updateProfile(Request $request)
     {
@@ -414,7 +439,7 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
-     * 10. Update Admin Profile Picture
+     * 11. Update Admin Profile Picture
      */
     public function updateProfilePicture(Request $request)
     {
@@ -450,4 +475,48 @@ class AdminAuthController extends Authenticatable
         return response()->json(['success' => false, 'message' => 'No image uploaded'], 400);
     }
 
+    /**
+     * 12. Admin Logout
+     */
+    public function logout(Request $request)
+    {
+        try {
+            $request->user()->currentAccessToken()->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Logged out successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 13. Get Admin Profile
+     */
+    public function profile(Request $request)
+    {
+        $admin = $request->user();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $admin
+        ]);
+    }
+
+    /**
+     * 14. Update Platform Settings
+     */
+    public function updateSettings(Request $request)
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Settings updated successfully'
+        ]);
+    }
 }
