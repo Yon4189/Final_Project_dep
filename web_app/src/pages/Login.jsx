@@ -19,34 +19,43 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- Login Handler ---
-  // In your Login component (admin login)
+// In your Login component (admin login)
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    try {
-      const response = await api.post('/admin/login', { email, password });
-      if (response.data.success) {
-        // The backend returns { success: true, message: "...", data: { admin: {...}, token: "..." } }
-        const { admin: adminData, token } = response.data.data;
-
-        const userSession = {
-          id: adminData.adminID,
-          name: adminData.fullname,
-          email: adminData.email,
-          phone: adminData.phone,
-          profilePicture: adminData.profilePicture,
-          role: 'admin'
-        };
-        login(userSession, token);
-        navigate('/');
-      } else {
-        setError(response.data.message || 'Login failed');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-    } finally {
-      setIsLoading(false);
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
+  
+  try {
+    const response = await api.post('/admin/login', { email, password });
+    
+    if (response.data.success) {
+      // extract admin data and token from response
+      const adminData = response.data.data.admin;  // fixed: access admin object
+      const token = response.data.data.token;      // fixed: access token from data object
+      
+      // store token in localStorage
+      localStorage.setItem('admin_token', token);
+      
+      // create user session object
+      const userSession = {
+        id: adminData.adminID,
+        name: adminData.fullname,
+        email: adminData.email,
+        phone: adminData.phone,
+        profilePicture: adminData.profilePicture,
+        role: 'admin'
+      };
+      
+      // store user data in localStorage
+      localStorage.setItem('admin_user', JSON.stringify(userSession));
+      
+      // call login function from auth context
+      login(userSession, token);
+      
+      // redirect to dashboard
+      navigate('/');
+    } else {
+      setError(response.data.message || 'Login failed');
     }
   } catch (err) {
     setError(err.response?.data?.message || 'Login failed');
@@ -160,7 +169,7 @@ const Login = () => {
               onClick={() => { setViewMode('login'); setError(''); setSuccessMsg(''); }}
               className="w-full flex items-center justify-center gap-2 text-slate-500 text-xs font-bold hover:text-slate-800 transition-all"
             >
-              <ArrowLeft size={16} /> Back to Login
+              <ArrowLeft size={16} /> Bak to Login
             </button>
           </form>
         )}
