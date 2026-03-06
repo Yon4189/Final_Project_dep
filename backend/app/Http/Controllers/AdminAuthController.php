@@ -3,9 +3,6 @@
 
 namespace App\Http\Controllers;
 
-if (function_exists('opcache_reset')) {
-    opcache_reset();
-}
 use Illuminate\Http\Request;
 use App\Models\Admin;
 use App\Models\ServiceProvider;
@@ -69,6 +66,7 @@ class AdminAuthController extends Authenticatable
     }
 
 
+        
     /**
      * 2. Platform Statistics – FIXED pending count to match pendingProviders()
      */
