@@ -26,7 +26,7 @@ class CustomerSearchController extends Controller
         $verifiedOnly = $request->query('verified_only');
         $availableNow = $request->query('available_now');
 
-        $providers = ServiceProvider::where('status', 'Active')
+        $providers = ServiceProvider::where('status', 'approved')
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($subQuery) use ($query) {
                     $subQuery->where('fullname', 'like', "%{$query}%")

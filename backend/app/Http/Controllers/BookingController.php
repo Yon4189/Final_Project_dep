@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\NotificationService;
+use App\Models\Payment;
+use App\Models\Wallet;
+use App\Models\WalletTransaction;
 
 class BookingController extends Controller
 {
@@ -66,7 +69,7 @@ class BookingController extends Controller
 
             // Create the booking
             $booking = Booking::create([
-                'customerID' => auth()->id(), // Assuming customer is logged in
+                'customerID' => auth('customer')->user()->customerID, // Assuming customer is logged in
                 'providerID' => $request->providerID,
                 'serviceID' => $request->serviceID,
                 'scheduledDate' => $request->scheduledDate,
@@ -85,9 +88,9 @@ class BookingController extends Controller
                 $request->providerID,
                 'booking_request',  // or NotificationService::TYPE_BOOKING_REQUEST
                 'New Booking Request',
-                'You have a new booking request from ' . auth()->user()->fullname,
+                'You have a new booking request from ' . auth('customer')->user()->fullname,
                 [
-                    'customer_name' => auth()->user()->fullname,
+                    'customer_name' => auth('customer')->user()->fullname,
                     'service_name' => $service->title,
                     'scheduled_date' => $booking->scheduledDate->format('Y-m-d H:i'),
                     'agreed_price' => $booking->agreed_price,
@@ -118,7 +121,7 @@ class BookingController extends Controller
                         'price' => $booking->agreed_price
                     ],
                     'scheduledDate' => $booking->scheduledDate,
-                    'location' => $booking->service_address ?? [
+                    'service_city' => $booking->service_address ?? [
                         'latitude' => $booking->service_latitude,
                         'longitude' => $booking->service_longitude
                     ]
@@ -461,7 +464,7 @@ class BookingController extends Controller
                 'notes' => $booking->notes,
                 'created_at' => $booking->created_at,
                 'expires_at' => $booking->expires_at,
-                'location' => $booking->service_address ?? [
+                'service_city' => $booking->service_address ?? [
                     'latitude' => $booking->service_latitude,
                     'longitude' => $booking->service_longitude
                 ],

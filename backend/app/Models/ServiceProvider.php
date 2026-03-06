@@ -318,4 +318,12 @@ class ServiceProvider extends Authenticatable
         $this->save();
         return true;
     }
+
+        /**
+     * Get the city that the provider belongs to
+     */
+    public function serviceCity()
+    {
+        return $this->belongsTo(ServiceCity::class, 'service_city', 'name');
+    }
 }

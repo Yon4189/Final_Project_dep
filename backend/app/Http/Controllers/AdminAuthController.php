@@ -272,7 +272,7 @@ class AdminAuthController extends Authenticatable
             'name'                => $provider->fullname,
             'profilePicture'      => $provider->profilePicture,
             'service_type'        => $provider->category->name ?? 'General',
-            'service_title'       => $service->title ?? $provider->category->name ?? 'General Service',
+            'service_title'       => $service->title ?? null,
             'service_description' => $service->description ?? $provider->bio ?? null,
             'estimated_cost'      => $service->estimatedPrice ?? $service->estimatedCost ?? $provider->estimatedPrice ?? null,
             'submission_date'     => $provider->created_at ? $provider->created_at->format('M d, Y') : 'N/A',

@@ -91,7 +91,7 @@ class CustomerController extends Controller
                     'profile_image' => 'https://via.placeholder.com/150',
                     'created_at' => now(),
                     'updated_at' => now(),
-                    'locations' => [],
+                    'service_city' => [],
                     'notificationSettings' => [
                         'email' => true,
                         'push' => true,
@@ -107,7 +107,7 @@ class CustomerController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $customer->load(['locations', 'notificationSettings'])
+            'data' => $customer//->load(['serviceCity', 'notificationSettings'])
         ]);
     }
 

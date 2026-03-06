@@ -52,7 +52,7 @@ Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink
 Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
 
 // ==================== PUBLIC SEARCH ====================
-Route::get('/search/providers', [ProviderSearchController::class, 'search']);
+//Route::get('/search/providers', [ProviderSearchController::class, 'search']);
 
 // ==================== WEBHOOKS & CALLBACKS (PUBLIC) ====================
 Route::post('/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
@@ -213,11 +213,6 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::put('/categories/{id}', [CategoryController::class, 'editCategory']);
     Route::delete('/categories/{id}', [CategoryController::class, 'deleteCategory']);
 
-    // Service Management
-    Route::get('/services', [ServiceController::class, 'index']);
-    Route::post('/services', [ServiceController::class, 'store']);
-    Route::put('/services/{id}', [ServiceController::class, 'update']);
-    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
     
     // ========== PAYMENT & WITHDRAWAL ADMIN ROUTES ==========
     Route::get('/payments', [PaymentController::class, 'index']);
@@ -257,6 +252,12 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     Route::get('/withdrawals/{id}', [WalletController::class, 'showWithdrawal']);
     Route::post('/withdrawals/{id}/cancel', [WalletController::class, 'cancelWithdrawal']);
     Route::get('/transactions', [WalletController::class, 'transactions']);
+        // Service Management
+    Route::get('/services', [ServiceController::class, 'index']);
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::put('/services/{id}', [ServiceController::class, 'update']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+
 });
 
 
@@ -268,4 +269,9 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'rejectWithdrawal']);
     Route::get('/withdrawals/stats', [AdminWithdrawalController::class, 'stats']);
     Route::get('/withdrawals', [AdminWithdrawalController::class, 'index']); // Optional: list all with filters
+});
+
+
+Route::get('/test', function() {
+    return response()->json(['message' => 'API is working']);
 });

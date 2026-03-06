@@ -66,4 +66,32 @@ class Customer extends Authenticatable
     {
         return $this->attributes['walletBalance'] ?? 0;
     }
+
+
+    /**
+ * Get the city that the customer belongs to
+ */
+    public function serviceCity()
+    {
+        return $this->belongsTo(ServiceCity::class, 'service_city', 'name');
+        // 'service_city' is the column in customers table
+        // 'name' is the column in service_cities table
+    }
+
+    /**
+ * Get all saved locations for this customer
+ */
+public function locations()
+{
+    return $this->hasMany(UserLocation::class, 'customer_id', 'customerID');
+}
+
+
+/**
+ * Get notification settings for this customer
+ */
+// public function notificationSettings()
+// {
+//     return $this->hasOne(NotificationSetting::class, 'customer_id', 'customerID');
+// }
 }
