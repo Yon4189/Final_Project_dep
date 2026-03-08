@@ -8,20 +8,20 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps, no-unused-vars
-    const savedUser = localStorage.getItem('admin_user');
+    const savedUser = sessionStorage.getItem('admin_user');
     if (savedUser) setUser(JSON.parse(savedUser));
     setLoading(false);
   }, []);
 
   const login = (userData, token) => {
     setUser(userData);
-    localStorage.setItem('admin_token', token);
-    localStorage.setItem('admin_user', JSON.stringify(userData));
+    sessionStorage.setItem('admin_token', token);
+    sessionStorage.setItem('admin_user', JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.clear();
+    sessionStorage.clear();
   };
 
   return (

@@ -34,7 +34,7 @@ const Users = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
+    const token = sessionStorage.getItem('admin_token');
     console.log('Admin token on page load:', token);
 
     if (!token) {
