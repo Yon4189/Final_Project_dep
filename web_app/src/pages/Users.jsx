@@ -7,6 +7,48 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 
+// Sub-component for rendering the user avatar
+const UserAvatar = ({ user }) => {
+  const [imgError, setImgError] = useState(false);
+  const baseUrl = `http://${window.location.hostname}:8000`;
+
+  if (user.profilePicture && !imgError) {
+    // If the image is a full URL (e.g., from Google auth)
+    const isFullUrl = user.profilePicture.startsWith('http');
+
+    // Check for common public directories
+    const hasStoragePrefix = user.profilePicture.startsWith('storage/');
+    const hasProfilesPrefix = user.profilePicture.startsWith('profiles/');
+    const hasProfilePicsPrefix = user.profilePicture.startsWith('profilepics/');
+
+    let imageUrl = user.profilePicture;
+    if (!isFullUrl) {
+      if (hasStoragePrefix || hasProfilesPrefix || hasProfilePicsPrefix) {
+        // Remove leading slash if any to avoid double slashes
+        const cleanPath = user.profilePicture.replace(/^\//, '');
+        imageUrl = `${baseUrl}/${cleanPath}`;
+      } else {
+        const cleanPath = user.profilePicture.replace(/^\//, '');
+        imageUrl = `${baseUrl}/storage/${cleanPath}`;
+      }
+    }
+
+    return (
+      <img
+        src={imageUrl}
+        alt={user.name}
+        className="w-10 h-10 rounded-full object-cover border border-slate-200 flex-shrink-0"
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 uppercase flex-shrink-0">
+      {user.name?.charAt(0)}
+    </div>
+  );
+};
+
 
 console.log("loaded file: Users.jsx");
 
@@ -73,6 +115,8 @@ const Users = () => {
         phone: u.phone,
         type: userType,
         status: u.status || "Active",
+        location: u.location || u.service_city || "Not Provided",
+        profilePicture: u.profilePicture || null,
         joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
       }));
 
@@ -233,8 +277,8 @@ const Users = () => {
               <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
                 <tr>
                   <th className="px-8 py-5">User Details</th>
-                  <th className="px-8 py-5">Role</th>
                   <th className="px-8 py-5">Contact</th>
+                  <th className="px-8 py-5">Location</th>
                   <th className="px-8 py-5">Joined</th>
                   <th className="px-8 py-5">Status</th>
                   <th className="px-8 py-5 text-right">Actions</th>
@@ -245,20 +289,11 @@ const Users = () => {
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 uppercase">
-                          {user.name.charAt(0)}
-                        </div>
+                        <UserAvatar user={user} />
                         <div>
                           <div className="font-bold text-slate-900">{user.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{user.id}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={`text-xs font-bold px-3 py-1 rounded-lg ${user.type === 'Provider' ? 'text-purple-600 bg-purple-50' : 'text-blue-600 bg-blue-50'
-                        }`}>
-                        {user.type}
-                      </span>
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex flex-col gap-1">
@@ -270,6 +305,7 @@ const Users = () => {
                         </div>
                       </div>
                     </td>
+                    <td className="px-8 py-5 text-sm text-slate-500">{user.location}</td>
                     <td className="px-8 py-5 text-sm text-slate-500">{user.joined}</td>
                     <td className="px-8 py-5">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${user.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'

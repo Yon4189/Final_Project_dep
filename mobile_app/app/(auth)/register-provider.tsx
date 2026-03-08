@@ -357,13 +357,13 @@ export default function RegisterProviderScreen() {
       console.log('Services being sent:', servicesToSend);
 
       if (profilePicture) {
-        data.append('profilePicture', profilePicture);
+        data.append('profilePicture', Platform.OS === 'web' ? profilePicture : profilePicture as any);
       }
       if (idPhoto) {
-        data.append('idPhoto', idPhoto);
+        data.append('idPhoto', Platform.OS === 'web' ? idPhoto : idPhoto as any);
       }
       if (credentialPhoto) {
-        data.append('credentialPhoto', credentialPhoto);
+        data.append('credentialPhoto', Platform.OS === 'web' ? credentialPhoto : credentialPhoto as any);
       }
 
       console.log('Sending registration request...');
