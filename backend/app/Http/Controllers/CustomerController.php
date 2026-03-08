@@ -13,8 +13,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Validator; 
+use Illuminate\Support\Facades\Log;
 
-class CustomerController extends Controller
+class CustomerController extends Authenticatable
 {
     private function resolveCustomer()
     {
@@ -130,9 +133,9 @@ class CustomerController extends Controller
             'date_of_birth' => 'sometimes|date',
             'gender' => 'sometimes|in:male,female,other',
         ]);
-
+        
         $customer->update($validated);
-
+    
         return response()->json([
             'success' => true,
             'data' => $customer
@@ -169,7 +172,10 @@ class CustomerController extends Controller
 
     public function changePassword(Request $request)
     {
+        
         $customer = Auth::guard('customer')->user();
+        //dd(get_class($customer), $customer);
+
         
         if (!$customer) {
             return response()->json([
@@ -223,42 +229,122 @@ class CustomerController extends Controller
 
     public function createBooking(Request $request)
     {
-        $customer = $this->resolveCustomer();
-        if (!$customer) {
+        try {
+            $customer = $this->resolveCustomer();
+            if (!$customer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer not found. Please login again.'
+                ], 404);
+            }
+            
+            // validate all required fields
+            $validator = Validator::make($request->all(), [
+                'providerID' => 'required|exists:service_providers,providerID',
+                'serviceID' => 'required|exists:services,serviceID',
+                'scheduledDate' => 'required|date|after:today',
+                'agreed_price' => 'required|numeric|min:0',
+                'service_address' => 'required|string|max:255',
+                'notes' => 'nullable|string|max:1000'
+            ], [
+                'providerID.required' => 'please select a provider',
+                'serviceID.required' => 'please select a service',
+                'scheduledDate.required' => 'please select a date for the service',
+                'scheduledDate.after' => 'scheduled date must be in the future',
+                'agreed_price.required' => 'please enter the agreed price',
+                'agreed_price.min' => 'price cannot be negative',
+                'service_address.required' => 'please enter your address'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'please fill all required fields',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $validated = $validator->validated();
+
+            $service = Service::with(['provider', 'category'])->find($validated['serviceID']);
+            if (!$service) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'service not found'
+                ], 404);
+            }
+
+            // check if provider offers this service
+            if ($service->providerID != $validated['providerID']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'this provider does not offer the selected service'
+                ], 400);
+            }
+
+            // check if customer already booked THIS EXACT SERVICE with this provider
+            $existingBooking = Booking::where('customerID', $customer->customerID)
+                ->where('providerID', $validated['providerID'])
+                ->where('serviceID', $validated['serviceID'])  // check specific service
+                ->whereIn('status', ['pending', 'accepted', 'in_progress'])
+                ->first();
+
+            if ($existingBooking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'you already have an active booking for this service'
+                ], 400);
+            }
+
+            // create booking
+            $booking = Booking::create([
+                'customerID' => $customer->customerID,
+                'serviceID' => $service->serviceID,
+                'providerID' => $validated['providerID'],
+                'status' => 'pending',
+                'scheduledDate' => $validated['scheduledDate'],
+                'agreed_price' => $validated['agreed_price'],
+                'service_address' => $validated['service_address'],
+                'notes' => $validated['notes'] ?? null,
+                'expires_at' => now()->addHours(24) // booking expires in 24 hours
+            ]);
+
+            // log the booking creation
+            Log::info('booking created successfully', [
+                'booking_id' => $booking->bookingID,
+                'customer_id' => $customer->customerID,
+                'provider_id' => $validated['providerID']
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'booking created successfully',
+                'data' => $this->bookingToServiceRequestPayload(
+                    $booking->load(['service.category', 'provider'])
+                )
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Customer not found'
-            ], 404);
-        }
-        
-        $validated = $request->validate([
-            'provider_id' => 'nullable|exists:service_providers,providerID',
-            'service_id' => 'required|exists:services,serviceID',
-            'scheduled_date' => 'required|date',
-        ]);
-
-        $service = Service::with(['provider', 'category'])->find($validated['service_id']);
-        if (!$service) {
+                'message' => 'validation failed',
+                'errors' => $e->errors()
+            ], 422);
+            
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('database error creating booking: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Service not found'
-            ], 404);
+                'message' => 'database error occurred. please try again.'
+            ], 500);
+            
+        } catch (\Exception $e) {
+            Log::error('unexpected error creating booking: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'an unexpected error occurred. please try again.'
+            ], 500);
         }
-
-        $booking = Booking::create([
-            'customerID' => $customer->customerID,
-            'serviceID' => $service->serviceID,
-            'providerID' => $validated['provider_id'] ?? $service->providerID,
-            'status' => 'pending',
-            'scheduledDate' => $validated['scheduled_date'],
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'data' => $this->bookingToServiceRequestPayload(
-                $booking->load(['service.category', 'provider'])
-            )
-        ]);
     }
 
     public function getRequestDetails($id)

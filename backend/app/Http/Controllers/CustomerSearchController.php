@@ -8,194 +8,199 @@ use App\Models\Service;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Booking;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class CustomerSearchController extends Controller
 {
-public function searchProviders(Request $request)
-{
-    // check if search query is empty
-    $query = $request->query('q') ?? $request->query('query');
-    
-    if (!$query || trim($query) === '') {
-        return response()->json([
-            'success' => false,
-            'message' => 'Please enter a search term',
-            'data' => [],
-            'pagination' => [
-                'current_page' => 1,
-                'total_pages' => 0,
-                'total_items' => 0,
-                'per_page' => $request->query('per_page', 20)
-            ]
-        ], 400);
-    }
-    
-    // only search if query has at least 2 characters
-    if (strlen(trim($query)) < 2) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Please enter at least 2 characters',
-            'data' => [],
-            'pagination' => [
-                'current_page' => 1,
-                'total_pages' => 0,
-                'total_items' => 0,
-                'per_page' => $request->query('per_page', 20)
-            ]
-        ], 400);
-    }
-    
-    $categoryId = $request->query('category_id');
-    $serviceId = $request->query('service_id');
-    $minRating = $request->query('min_rating', 0);
-    $maxDistance = $request->query('max_distance', 50);
-    $sortBy = $request->query('sort_by', 'rating');
-    $page = $request->query('page', 1);
-    $perPage = $request->query('per_page', 20);
-    $latitude = $request->query('latitude');
-    $longitude = $request->query('longitude');
-    $verifiedOnly = $request->query('verified_only');
-    $availableNow = $request->query('available_now');
-
-    $providers = ServiceProvider::where('status', 'approved')
-        ->when($query, function ($q) use ($query) {
-            $q->where(function ($subQuery) use ($query) {
-                // name must start with search term (like vs code)
-                $subQuery->where('fullname', 'like', $query . '%')
-                       // bio can contain search term anywhere
-                       ->orWhere('bio', 'like', '%' . $query . '%')
-                       // also search in service titles
-                       ->orWhereHas('services', function ($serviceQuery) use ($query) {
-                           $serviceQuery->where('title', 'like', '%' . $query . '%');
-                       });
-            });
-        })
-        ->when($categoryId, function ($q) use ($categoryId) {
-            $q->where('catagoryID', $categoryId);
-        })
-        ->when($serviceId, function ($q) use ($serviceId) {
-            $q->whereHas('services', function ($sq) use ($serviceId) {
-                $sq->where('serviceID', $serviceId);
-            });
-        })
-        ->when($minRating, function ($q) use ($minRating) {
-            $q->where('rating', '>=', $minRating);
-        })
-        ->when($availableNow, function ($q) {
-            $q->where('is_online', true);
-        });
-
-    // sort
-    switch ($sortBy) {
-        case 'rating':
-            $providers = $providers->orderByDesc('rating');
-            break;
-        case 'distance':
-            // will be calculated after getting results
-            $providers = $providers->orderBy('fullname');
-            break;
-        case 'completed_jobs':
-            $providers = $providers->orderByDesc('completed_jobs');
-            break;
-        case 'success_rate':
-            $providers = $providers->orderByDesc('success_rate');
-            break;
-        default:
-            $providers = $providers->orderByDesc('rating');
-    }
-
-    $providers = $providers->paginate($perPage, ['*'], 'page', $page);
-
-    // calculate distances if coordinates provided
-    if ($latitude && $longitude) {
-        $providers->getCollection()->transform(function ($provider) use ($latitude, $longitude, $maxDistance) {
-            $distance = $this->calculateDistance(
-                $latitude,
-                $longitude,
-                $provider->current_latitude ?? 9.03,
-                $provider->current_longitude ?? 38.74
-            );
-            
-            $provider->distance = $distance;
-            
-            // filter by max distance
-            if ($distance > $maxDistance) {
-                return null;
-            }
-            
-            return $provider;
-        });
+    public function searchProviders(Request $request)
+    {
+        // check if search query is empty
+        $query = $request->query('q') ?? $request->query('query');
         
-        // remove null entries (providers outside max distance)
-        $providers->setCollection(
-            $providers->getCollection()->filter()->values()
-        );
-        
-        // re-sort by distance if requested
-        if ($sortBy === 'distance') {
-            $providers->setCollection(
-                $providers->getCollection()->sortBy('distance')->values()
-            );
+        if (!$query || trim($query) === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a search term',
+                'data' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'total_pages' => 0,
+                    'total_items' => 0,
+                    'per_page' => $request->query('per_page', 20)
+                ]
+            ], 400);
         }
+        
+        // only search if query has at least 2 characters
+        if (strlen(trim($query)) < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter at least 2 characters',
+                'data' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'total_pages' => 0,
+                    'total_items' => 0,
+                    'per_page' => $request->query('per_page', 20)
+                ]
+            ], 400);
+        }
+        
+        $categoryId = $request->query('category_id');
+        $serviceId = $request->query('service_id');
+        $minRating = $request->query('min_rating', 0);
+        $maxDistance = $request->query('max_distance', 50);
+        $sortBy = $request->query('sort_by', 'rating');
+        $page = $request->query('page', 1);
+        $perPage = $request->query('per_page', 20);
+        $latitude = $request->query('latitude');
+        $longitude = $request->query('longitude');
+        $verifiedOnly = $request->query('verified_only');
+        $availableNow = $request->query('available_now');
+
+        $providers = ServiceProvider::where('status', 'approved')
+            ->when($query, function ($q) use ($query) {
+                $q->where(function ($subQuery) use ($query) {
+                    // name must start with search term (like vs code)
+                    $subQuery->where('fullname', 'like', $query . '%')
+                        // bio can contain search term anywhere
+                        ->orWhere('bio', 'like', '%' . $query . '%')
+                        // also search in service titles
+                        ->orWhereHas('services', function ($serviceQuery) use ($query) {
+                            $serviceQuery->where('title', 'like', '%' . $query . '%');
+                        });
+                });
+            })
+            ->when($categoryId, function ($q) use ($categoryId) {
+                $q->where('catagoryID', $categoryId);
+            })
+            ->when($serviceId, function ($q) use ($serviceId) {
+                $q->whereHas('services', function ($sq) use ($serviceId) {
+                    $sq->where('serviceID', $serviceId);
+                });
+            })
+            ->when($minRating, function ($q) use ($minRating) {
+                $q->where('rating', '>=', $minRating);
+            })
+            ->when($availableNow, function ($q) {
+                $q->where('is_online', true);
+            });
+
+        // sort
+        switch ($sortBy) {
+            case 'rating':
+                $providers = $providers->orderByDesc('rating');
+                break;
+            case 'distance':
+                // will be calculated after getting results
+                $providers = $providers->orderBy('fullname');
+                break;
+            case 'completed_jobs':
+                $providers = $providers->orderByDesc('completed_jobs');
+                break;
+            case 'success_rate':
+                $providers = $providers->orderByDesc('success_rate');
+                break;
+            default:
+                $providers = $providers->orderByDesc('rating');
+        }
+
+        $providers = $providers->paginate($perPage, ['*'], 'page', $page);
+
+        // calculate distances if coordinates provided
+        if ($latitude && $longitude) {
+            $providers->getCollection()->transform(function ($provider) use ($latitude, $longitude, $maxDistance) {
+                $distance = $this->calculateDistance(
+                    $latitude,
+                    $longitude,
+                    $provider->current_latitude ?? 9.03,
+                    $provider->current_longitude ?? 38.74
+                );
+                
+                $provider->distance = $distance;
+                
+                // filter by max distance
+                if ($distance > $maxDistance) {
+                    return null;
+                }
+                
+                return $provider;
+            });
+            
+            // remove null entries (providers outside max distance)
+            $providers->setCollection(
+                $providers->getCollection()->filter()->values()
+            );
+            
+            // re-sort by distance if requested
+            if ($sortBy === 'distance') {
+                $providers->setCollection(
+                    $providers->getCollection()->sortBy('distance')->values()
+                );
+            }
+        }
+
+        // load services/categories for the current page of providers
+        $providerIds = $providers->getCollection()->pluck('providerID')->all();
+        $servicesByProvider = Service::whereIn('providerID', $providerIds)
+            ->with('category')
+            ->get()
+            ->groupBy('providerID');
+
+        // transform to match frontend expectations
+        $transformedProviders = $providers->getCollection()->map(function ($provider) use ($servicesByProvider) {
+            $services = $servicesByProvider[$provider->providerID] ?? collect([]);
+            return [
+                'id' => $provider->providerID,
+                'userId' => $provider->providerID,
+                'businessName' => $provider->fullname,
+                'firstName' => explode(' ', $provider->fullname)[0] ?? '',
+                'lastName' => explode(' ', $provider->fullname)[1] ?? '',
+                'profileImage' => $provider->profilePicture,
+                'rating' => round($provider->rating, 1),
+                'reviewCount' => 0, // will be calculated from reviews table
+                'completedJobs' => $provider->completed_jobs ?? 0,
+                'yearsExperience' => 5, // default since not in table
+                'verified' => $provider->status === 'Active',
+                'insured' => true, // default since not in table
+                'isAvailable' => $provider->is_online ?? false,
+                'services' => $this->transformServices($services),
+                'priceRange' => [
+                    'min' => $provider->hourly_rate ?? 500,
+                    'max' => ($provider->hourly_rate ?? 500) * 3,
+                    'currency' => 'ETB'
+                ],
+                'location' => [
+                    'latitude' => $provider->current_latitude ?? 9.03,
+                    'longitude' => $provider->current_longitude ?? 38.74,
+                    'address' => $provider->service_city ?? 'Addis Ababa, Ethiopia'
+                ],
+                'distance' => $provider->distance ?? null,
+                'responseTime' => '1 hour',
+                'availability' => [],
+                'reviews' => [],
+                'about' => $provider->bio ?? 'Professional service provider',
+                'languages' => ['English', 'Amharic'],
+                'specializations' => [],
+                'certifications' => []
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $transformedProviders,
+            'pagination' => [
+                'current_page' => $providers->currentPage(),
+                'total_pages' => $providers->lastPage(),
+                'total_items' => $providers->total(),
+                'per_page' => $providers->perPage()
+            ]
+        ]);
     }
 
-    // load services/categories for the current page of providers
-    $providerIds = $providers->getCollection()->pluck('providerID')->all();
-    $servicesByProvider = Service::whereIn('providerID', $providerIds)
-        ->with('category')
-        ->get()
-        ->groupBy('providerID');
-
-    // transform to match frontend expectations
-    $transformedProviders = $providers->getCollection()->map(function ($provider) use ($servicesByProvider) {
-        $services = $servicesByProvider[$provider->providerID] ?? collect([]);
-        return [
-            'id' => $provider->providerID,
-            'userId' => $provider->providerID,
-            'businessName' => $provider->fullname,
-            'firstName' => explode(' ', $provider->fullname)[0] ?? '',
-            'lastName' => explode(' ', $provider->fullname)[1] ?? '',
-            'profileImage' => $provider->profilePicture,
-            'rating' => round($provider->rating, 1),
-            'reviewCount' => 0, // will be calculated from reviews table
-            'completedJobs' => $provider->completed_jobs ?? 0,
-            'yearsExperience' => 5, // default since not in table
-            'verified' => $provider->status === 'Active',
-            'insured' => true, // default since not in table
-            'isAvailable' => $provider->is_online ?? false,
-            'services' => $this->transformServices($services),
-            'priceRange' => [
-                'min' => $provider->hourly_rate ?? 500,
-                'max' => ($provider->hourly_rate ?? 500) * 3,
-                'currency' => 'ETB'
-            ],
-            'location' => [
-                'latitude' => $provider->current_latitude ?? 9.03,
-                'longitude' => $provider->current_longitude ?? 38.74,
-                'address' => $provider->service_city ?? 'Addis Ababa, Ethiopia'
-            ],
-            'distance' => $provider->distance ?? null,
-            'responseTime' => '1 hour',
-            'availability' => [],
-            'reviews' => [],
-            'about' => $provider->bio ?? 'Professional service provider',
-            'languages' => ['English', 'Amharic'],
-            'specializations' => [],
-            'certifications' => []
-        ];
-    });
-
-    return response()->json([
-        'success' => true,
-        'data' => $transformedProviders,
-        'pagination' => [
-            'current_page' => $providers->currentPage(),
-            'total_pages' => $providers->lastPage(),
-            'total_items' => $providers->total(),
-            'per_page' => $providers->perPage()
-        ]
-    ]);
-}
+    
 
     public function getTopRated(Request $request)
     {
@@ -247,7 +252,8 @@ public function searchProviders(Request $request)
     public function getProviderDetails($id)
     {
         $provider = ServiceProvider::where('providerID', $id)
-            ->where('status', 'Active')
+            ->where('status', 'approved')
+            ->with('category') // eager load category
             ->first();
 
         if (!$provider) {
@@ -261,43 +267,58 @@ public function searchProviders(Request $request)
             ->with('category')
             ->get();
 
+        // group services by category
+        $servicesByCategory = [];
+        foreach ($services as $service) {
+            $categoryId = $service->category->catagoryID ?? 0;
+            $categoryName = $service->category->name ?? 'uncategorized';
+            
+            if (!isset($servicesByCategory[$categoryId])) {
+                $servicesByCategory[$categoryId] = [
+                    'id' => $categoryId,
+                    'name' => $categoryName,
+                    'services' => []
+                ];
+            }
+            
+            $servicesByCategory[$categoryId]['services'][] = [
+                'id' => $service->serviceID,
+                'name' => $service->title,
+                'description' => $service->description,
+                'basePrice' => $service->estimatedPrice,
+                'duration' => 60 // default, adjust if you have this field
+            ];
+        }
+
+        // convert to indexed array
+        $categories = array_values($servicesByCategory);
+
+        // clean provider info - remove repetition
         $transformedProvider = [
             'id' => $provider->providerID,
-            'userId' => $provider->providerID,
             'businessName' => $provider->fullname,
             'firstName' => explode(' ', $provider->fullname)[0] ?? '',
             'lastName' => explode(' ', $provider->fullname)[1] ?? '',
             'profileImage' => $provider->profilePicture,
             'rating' => round($provider->rating, 1),
-            'reviewCount' => 0,
+            'reviewCount' => 0, // calculate from reviews table
             'completedJobs' => $provider->completed_jobs ?? 0,
-            'yearsExperience' => 5,
-            'verified' => $provider->status === 'Active',
+            'yearsExperience' => 5, // calculate from join date
+            'verified' => $provider->status === 'approved',
             'insured' => true,
             'isAvailable' => $provider->is_online ?? false,
-            'services' => $this->transformServices($services),
-            'priceRange' => [
-                'min' => $provider->hourly_rate ?? 500,
-                'max' => ($provider->hourly_rate ?? 500) * 3,
-                'currency' => 'ETB'
-            ],
-            'category' => $provider->category ? [
-                'id' => $provider->category->catagoryID,
-                'name' => $provider->category->name,
-                'description' => $provider->category->description,
-            ] : null,
-            'location' => [
-                'latitude' => $provider->current_latitude ?? 9.03,
-                'longitude' => $provider->current_longitude ?? 38.74,
-                'address' => $provider->service_city ?? 'Addis Ababa, Ethiopia'
-            ],
+            'about' => $provider->bio ?? 'professional service provider',
+            'languages' => ['english', 'amharic'],
             'responseTime' => '1 hour',
-            'availability' => [],
-            'reviews' => [],
-            'about' => $provider->bio ?? 'Professional service provider',
-            'languages' => ['English', 'Amharic'],
-            'specializations' => [],
-            'certifications' => []
+            'location' => [
+                'city' => $provider->service_city ?? 'addis ababa',
+                'address' => $provider->service_city ?? 'addis ababa, ethiopia',
+                'latitude' => $provider->current_latitude ?? 9.03,
+                'longitude' => $provider->current_longitude ?? 38.74
+            ],
+            'categories' => $categories, // services grouped by category
+            'reviews' => [], // load from reviews table
+            'availability' => [] // load from schedule table
         ];
 
         return response()->json([
@@ -305,7 +326,6 @@ public function searchProviders(Request $request)
             'data' => $transformedProvider
         ]);
     }
-
     public function getProviderAvailability($id, Request $request)
     {
         $provider = ServiceProvider::where('providerID', $id)

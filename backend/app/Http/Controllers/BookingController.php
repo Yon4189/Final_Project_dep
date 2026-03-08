@@ -727,6 +727,42 @@ class BookingController extends Controller
         }
     }
 
+        /**
+     * Get pending bookings for the authenticated provider
+     * 
+     * GET /api/provider/bookings/pending
+     */
+    public function pendingBookings(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            
+            if (!$provider) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Provider not authenticated'
+                ], 401);
+            }
 
+            $bookings = Booking::where('providerID', $provider->providerID)
+                ->where('status', 'pending')
+                ->with(['customer', 'service.category'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $bookings
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching pending bookings: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch pending bookings'
+            ], 500);
+        }
+    }
 
 }
