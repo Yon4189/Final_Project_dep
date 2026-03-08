@@ -756,7 +756,7 @@ class BookingController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error fetching pending bookings: ' . $e->getMessage());
+            Log::error('Error fetching pending bookings: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
