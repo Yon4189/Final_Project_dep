@@ -400,6 +400,29 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
+     * Get all services for Admin
+     */
+    public function getAllServices()
+    {
+        try {
+            // Get all services with their categories
+            $services = Service::all();
+            
+            return response()->json([
+                'success' => true,
+                'services' => $services
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Get All Services Admin Error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch services list',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * 10. Update Admin Profile
      */
     public function updateProfile(Request $request)

@@ -213,7 +213,9 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::put('/categories/{id}', [CategoryController::class, 'editCategory']);
     Route::delete('/categories/{id}', [CategoryController::class, 'deleteCategory']);
 
-    
+    // Admin Service Management
+    Route::get('/services', [AdminAuthController::class, 'getAllServices']);
+
     // ========== PAYMENT & WITHDRAWAL ADMIN ROUTES ==========
     Route::get('/payments', [PaymentController::class, 'index']);
     Route::get('/payments/stats', [PaymentController::class, 'getPaymentStats']);
