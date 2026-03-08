@@ -9,6 +9,10 @@ import {
   Dimensions,
   Modal,
   TextInput,
+  Alert,
+  Linking,
+  Platform,
+  Share,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,6 +22,7 @@ import { ProviderCard } from '../../../components/customer/ProviderCard';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ServiceRequestModal } from '../../../components/customer/ServiceRequestModal';
+import { API_BASE_URL } from "@/app/config/api";
 import type { ServiceProvider } from '@/app/types/customer.types';
 
 const { width } = Dimensions.get('window');
@@ -162,7 +167,42 @@ export default function SearchResultsScreen() {
             provider={provider}
             onPress={() => handleProfilePress(provider)}
             onBookPress={() => handleBookPress(provider)}
-          // Don't set showActions - let it default to false to show Book Now
+            onChatPress={() => router.push(`/(customer)/chat/${provider.id}`)}
+            onCallPress={() => {
+              if (provider.phone) {
+                Linking.openURL(`tel:${provider.phone}`);
+              } else {
+                Alert.alert('Error', 'Provider phone number not available');
+              }
+            }}
+            onSharePress={async () => {
+              try {
+                const providerName = provider.businessName || provider.name || "this provider";
+                const shareUrl = `${API_BASE_URL.replace('/api', '')}/provider/${provider.id}`;
+                const message = `Check out ${providerName} on HomeLink!`;
+
+                if (Platform.OS === 'web') {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: `HomeLink - ${providerName}`,
+                      text: message,
+                      url: window.location.href,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(`${message}\n${shareUrl}`);
+                    Alert.alert("Success", "Provider info copied to clipboard!");
+                  }
+                } else {
+                  await Share.share({
+                    title: `HomeLink - ${providerName}`,
+                    message: `${message}\n${shareUrl}`,
+                  });
+                }
+              } catch (error) {
+                console.error('Share error:', error);
+              }
+            }}
+            showActions={true}
           />
         ))}
       </View>

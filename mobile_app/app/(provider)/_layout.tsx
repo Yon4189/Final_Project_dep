@@ -86,7 +86,7 @@ export default function ProviderLayout() {
         options={{
           title: 'Service Requests',
           headerRight: () => (
-            <TouchableOpacity onPress={() => {}} style={{ marginRight: 16 }}>
+            <TouchableOpacity onPress={() => { }} style={{ marginRight: 16 }}>
               <Ionicons name="filter-outline" size={22} color={Colors.text.primary} />
             </TouchableOpacity>
           ),
@@ -147,6 +147,21 @@ export default function ProviderLayout() {
         name="disputes/new"
         options={{
           title: 'File a Dispute',
+        }}
+      />
+
+      {/* Chat */}
+      <Stack.Screen
+        name="chat/index"
+        options={{
+          title: 'Messages',
+        }}
+      />
+
+      <Stack.Screen
+        name="chat/[id]"
+        options={{
+          title: 'Chat',
         }}
       />
 

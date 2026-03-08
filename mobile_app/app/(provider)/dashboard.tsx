@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/Colors';
 import { useProviderStore } from '../store/providerStore';
@@ -21,6 +21,7 @@ import { useProviderQueries } from '../../hooks/useProviderQueries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatTimeAgo } from '../utils/formatters';
+import { API_BASE_URL } from '../config/api';
 import type { ServiceRequest } from '../types/provider.types';
 import type { RequestStatus } from '../types/provider.types';
 const { width } = Dimensions.get('window');
@@ -30,7 +31,7 @@ const STATUS_COLORS: Record<RequestStatus, string> = {
   in_progress: Colors.info,
   completed: Colors.success,
   cancelled: Colors.error,
-   disputed: Colors.warning, // or Colors.error, or a custom color
+  disputed: Colors.warning, // or Colors.error, or a custom color
 };
 const STATUS_ICONS: Record<RequestStatus, keyof typeof Ionicons.glyphMap> = {
   pending: 'time-outline',
@@ -38,7 +39,7 @@ const STATUS_ICONS: Record<RequestStatus, keyof typeof Ionicons.glyphMap> = {
   in_progress: 'construct-outline',
   completed: 'checkmark-done-outline',
   cancelled: 'close-circle-outline',
-    disputed: 'alert-circle-outline', // Add icon for disputed
+  disputed: 'alert-circle-outline', // Add icon for disputed
 };
 
 export default function ProviderDashboard() {
@@ -56,12 +57,13 @@ export default function ProviderDashboard() {
     refetch,
   } = useProviderQueries();
 
-  // 🔥 ADD THIS useEffect HERE - right after all hooks
+  // Debug logging
   useEffect(() => {
     if (profile) {
-      console.log('🔥 Provider profile:', profile);
-      console.log('🔥 fullname:', (profile as any).fullname);
-      console.log('🔥 businessName:', profile.businessName);
+      console.log('🔥 FULL Provider profile:', JSON.stringify(profile, null, 2));
+      console.log('🔥 profilePicture field:', profile.profilePicture);
+      console.log('🔥 profileImage field:', (profile as any).profileImage);
+      console.log('🔥 All keys:', Object.keys(profile));
     } else {
       console.log('🔥 Profile is null');
     }
@@ -80,17 +82,24 @@ export default function ProviderDashboard() {
       end={{ x: 1, y: 1 }}
       style={styles.header}
     >
-      
+
       <View style={styles.headerTop}>
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>Welcome back,</Text>
-         <Text style={styles.profileName}>
-                          {profile?.fullname || profile?.businessName || 'Provider'}
-              </Text>
+          <Text style={styles.profileName}>
+            {profile?.fullname || profile?.businessName || 'Provider'}
+          </Text>
         </View>
-        
+
         <View style={styles.headerActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push('/(provider)/chat/index')}
+          >
+            <Ionicons name="chatbubbles-outline" size={24} color={Colors.surface} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => router.push('/(provider)/notifications')}
           >
@@ -99,13 +108,20 @@ export default function ProviderDashboard() {
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.profileButton}
             onPress={() => router.push('/(provider)/profile')}
           >
-            <Image 
-              source={{ uri: profile?.profileImage || 'https://via.placeholder.com/40' }} 
+            <Image
+              source={{
+                uri: (() => {
+                  const pic = (profile as any)?.profile_picture || profile?.profilePicture || (profile as any)?.profileImage;
+                  if (!pic) return 'https://via.placeholder.com/40';
+                  if (pic.startsWith('http')) return pic;
+                  return `${API_BASE_URL.replace('/api', '')}/${pic}`;
+                })()
+              }}
               style={styles.profileImage}
             />
           </TouchableOpacity>
@@ -115,22 +131,22 @@ export default function ProviderDashboard() {
       {/* Availability Toggle */}
       <View style={styles.availabilityContainer}>
         <View style={styles.availabilityInfo}>
-          <View style={[styles.availabilityDot, { 
-            backgroundColor: profile?.isAvailable ? Colors.success : Colors.error 
+          <View style={[styles.availabilityDot, {
+            backgroundColor: profile?.isAvailable ? Colors.success : Colors.error
           }]} />
           <Text style={styles.availabilityText}>
             {profile?.isAvailable ? 'Available for work' : 'Not available'}
           </Text>
         </View>
-        
+
         <TouchableOpacity
-          style={[styles.availabilityToggle, { 
+          style={[styles.availabilityToggle, {
             backgroundColor: profile?.isAvailable ? Colors.success + '20' : Colors.error + '20',
           }]}
           onPress={toggleAvailability}
         >
-          <Text style={[styles.availabilityToggleText, { 
-            color: profile?.isAvailable ? Colors.success : Colors.error 
+          <Text style={[styles.availabilityToggleText, {
+            color: profile?.isAvailable ? Colors.success : Colors.error
           }]}>
             {profile?.isAvailable ? 'Online' : 'Offline'}
           </Text>
@@ -139,7 +155,7 @@ export default function ProviderDashboard() {
 
       {/* Stats Cards */}
       <View style={styles.statsGrid}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.statCard}
           onPress={() => router.push('/(provider)/earnings/index')}
         >
@@ -147,7 +163,7 @@ export default function ProviderDashboard() {
           <Text style={styles.statLabel}>Today</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.statCard}
           onPress={() => router.push('/(provider)/earnings/index')}
         >
@@ -155,7 +171,7 @@ export default function ProviderDashboard() {
           <Text style={styles.statLabel}>This Week</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.statCard}
           onPress={() => router.push('/(provider)/earnings/index')}
         >
@@ -165,7 +181,7 @@ export default function ProviderDashboard() {
       </View>
 
       {/* Rating Card */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.ratingCard}
         onPress={() => router.push('/(provider)/reviews/index')}
       >
@@ -182,7 +198,7 @@ export default function ProviderDashboard() {
             ))}
           </View>
         </View>
-        
+
         <View style={styles.ratingRight}>
           <Text style={styles.reviewCount}>{profile?.reviewCount || 0} reviews</Text>
           <Ionicons name="chevron-forward" size={20} color={Colors.surface} />
@@ -193,7 +209,7 @@ export default function ProviderDashboard() {
 
   const renderQuickActions = () => (
     <View style={styles.quickActions}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.actionButton}
         onPress={() => router.push('/(provider)/requests/index')}
       >
@@ -201,14 +217,14 @@ export default function ProviderDashboard() {
           <Ionicons name="clipboard-outline" size={24} color={Colors.primary} />
         </View>
         <Text style={styles.actionLabel}>Requests</Text>
-       {pendingRequests?.length > 0 && (
+        {pendingRequests?.length > 0 && (
           <View style={styles.actionBadge}>
             <Text style={styles.actionBadgeText}>{pendingRequests.length}</Text>
           </View>
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.actionButton}
         onPress={() => router.push('/(provider)/schedule')}
       >
@@ -218,7 +234,7 @@ export default function ProviderDashboard() {
         <Text style={styles.actionLabel}>Schedule</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.actionButton}
         onPress={() => router.push('/(provider)/earnings/earnings')}
       >
@@ -229,6 +245,7 @@ export default function ProviderDashboard() {
       </TouchableOpacity>
     </View>
   );
+
   const renderTabs = () => (
     <View style={styles.tabsContainer}>
       {['today', 'pending', 'upcoming'].map((tab) => (
@@ -272,12 +289,12 @@ export default function ProviderDashboard() {
             <Text style={styles.serviceName}>{item.serviceName}</Text>
           </View>
         </View>
-        
+
         <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] + '20' }]}>
-          <Ionicons 
-            name={STATUS_ICONS[item.status]} 
-            size={12} 
-            color={STATUS_COLORS[item.status]} 
+          <Ionicons
+            name={STATUS_ICONS[item.status]}
+            size={12}
+            color={STATUS_COLORS[item.status]}
           />
           <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}>
             {item.status.replace('_', ' ')}
@@ -317,14 +334,14 @@ export default function ProviderDashboard() {
 
       {item.status === 'pending' && (
         <View style={styles.requestActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, styles.acceptButton]}
             onPress={() => handleAcceptRequest(item.id)}
           >
             <Text style={styles.acceptButtonText}>Accept</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.actionButton, styles.rejectButton]}
             onPress={() => handleRejectRequest(item.id)}
           >
@@ -334,7 +351,7 @@ export default function ProviderDashboard() {
       )}
 
       {item.status === 'confirmed' && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.directionsButton}
           onPress={() => router.push(`/(provider)/requests/${item.id}/directions`)}
         >
@@ -351,8 +368,8 @@ export default function ProviderDashboard() {
       'Are you sure you want to accept this request?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Accept', 
+        {
+          text: 'Accept',
           onPress: () => {
             // Accept logic
             router.push(`/(provider)/requests/${id}/schedule`);
@@ -368,8 +385,8 @@ export default function ProviderDashboard() {
       'Please provide a reason for rejection',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Reject', 
+        {
+          text: 'Reject',
           onPress: () => {
             // Show reason input modal
           },
@@ -426,7 +443,7 @@ export default function ProviderDashboard() {
         </View>
 
         {/* Recent Earnings Summary */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.earningsSummary}
           onPress={() => router.push('/(provider)/earnings/index')}
         >
@@ -434,7 +451,7 @@ export default function ProviderDashboard() {
             <Text style={styles.earningsTitle}>Recent Earnings</Text>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
           </View>
-          
+
           <View style={styles.earningsGrid}>
             <View style={styles.earningsItem}>
               <Text style={styles.earningsAmount}>{formatCurrency(earnings?.today || 0)}</Text>
@@ -454,7 +471,7 @@ export default function ProviderDashboard() {
             <Text style={styles.availableBalance}>
               Available for withdrawal: {formatCurrency(earnings?.available || 0)}
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.withdrawButton}
               onPress={() => router.push('/(provider)/earnings/withdraw')}
             >

@@ -20,6 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { api } from '@/app/services/api';
+import { API_BASE_URL } from '@/app/config/api';
 import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -67,7 +68,7 @@ export default function ChatScreen() {
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const appState = useRef(AppState.currentState);
   const isMounted = useRef(true);
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -83,7 +84,7 @@ export default function ChatScreen() {
   useFocusEffect(
     useCallback(() => {
       loadInitialData();
-      
+
       return () => {
         // Cleanup when screen loses focus
         stopPolling();
@@ -94,10 +95,10 @@ export default function ChatScreen() {
 
   useEffect(() => {
     isMounted.current = true;
-    
+
     // Start polling for new messages
     startPolling();
-    
+
     // App state change listener
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
@@ -117,7 +118,7 @@ export default function ChatScreen() {
   const startPolling = () => {
     // Poll for new messages every 3 seconds (faster for better UX)
     if (pollingInterval.current) clearInterval(pollingInterval.current);
-    
+
     pollingInterval.current = setInterval(() => {
       if (conversation?.conversationID && isMounted.current) {
         fetchNewMessages();
@@ -135,20 +136,20 @@ export default function ChatScreen() {
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Load customer info from secure store
       const userDataStr = await SecureStore.getItemAsync('user_data');
       if (userDataStr) {
         const userData = JSON.parse(userDataStr);
         setCustomerId(userData.customerID || userData.id);
       }
-      
+
       // Fetch provider details first (to show info while conversation loads)
       await fetchProviderDetails();
-      
+
       // Then get or create conversation
       await getOrCreateConversation();
-      
+
     } catch (error) {
       console.error('Error loading chat data:', error);
       if (isMounted.current) {
@@ -164,17 +165,20 @@ export default function ChatScreen() {
   const getOrCreateConversation = async () => {
     try {
       // Fix: Use the correct endpoint from your routes
-      const response = await api.post<any>('/chat/providers', {
+      const response = await api.post<any>('/chat/conversations', {
         providerID: parseInt(providerId)
       });
 
       if (response.success) {
         const conversationData = response.data.conversation;
+        const initialMessages = response.data.messages || [];
+
         if (isMounted.current) {
           setConversation(conversationData);
-          
-          // Load messages for this conversation
-          if (conversationData.conversationID) {
+          setMessages([...initialMessages].reverse());
+
+          // Load messages for this conversation if not returned here
+          if (!initialMessages.length && conversationData.conversationID) {
             await fetchMessages(conversationData.conversationID);
           }
         }
@@ -185,9 +189,9 @@ export default function ChatScreen() {
       }
     } catch (error: any) {
       console.error('Error creating conversation:', error);
-      
+
       if (!isMounted.current) return;
-      
+
       // Handle specific error cases
       if (error.response?.status === 403) {
         Alert.alert('Access Denied', 'You do not have permission to chat with this provider');
@@ -210,10 +214,15 @@ export default function ChatScreen() {
             fullname: response.data.fullname || response.data.name || 'Provider',
             businessName: response.data.businessName,
             profileImage: response.data.profileImage || response.data.profilePicture,
-            email: response.data.email,
-            phone: response.data.phone || response.data.phoneNumber,
-            phoneNumber: response.data.phone || response.data.phoneNumber,
           });
+
+          if (response.data.profileImage || response.data.profilePicture) {
+            const pic = response.data.profileImage || response.data.profilePicture;
+            const fullPic = pic.startsWith('http')
+              ? pic
+              : `${API_BASE_URL.replace('/api', '')}/${pic}`;
+            setProvider(prev => prev ? { ...prev, profileImage: fullPic } : null);
+          }
         }
       }
     } catch (error) {
@@ -223,26 +232,28 @@ export default function ChatScreen() {
 
   const fetchMessages = async (conversationId: number, pageNum: number = 1) => {
     try {
-      // Fix: Use correct endpoint
-      const response = await api.get<any>(`/chat/conversations/${conversationId}/messages?page=${pageNum}`);
-      
+      // Fix: The endpoint is /chat/conversations/{id} which returns { conversation, messages }
+      const response = await api.get<any>(`/chat/conversations/${conversationId}?page=${pageNum}`);
+
       if (response.success && response.data?.messages?.data) {
         if (!isMounted.current) return;
-        
+
         const newMessages = response.data.messages.data;
-        
+        // Backend returns DESC (newest first), reverse it for FlatList
+        const reversedNewMessages = [...newMessages].reverse();
+
         if (pageNum === 1) {
-          setMessages(newMessages);
+          setMessages(reversedNewMessages);
         } else {
-          setMessages(prev => [...newMessages, ...prev]);
+          setMessages(prev => [...reversedNewMessages, ...prev]);
         }
-        
+
         setHasMore(response.data.messages.current_page < response.data.messages.last_page);
         setPage(pageNum);
-        
+
         // Mark messages as read
         await markMessagesAsRead(conversationId);
-        
+
         // Scroll to bottom on first load
         if (pageNum === 1 && newMessages.length > 0) {
           setTimeout(() => {
@@ -260,23 +271,24 @@ export default function ChatScreen() {
 
     try {
       // Fix: Use correct endpoint
-      const response = await api.get<any>(`/chat/conversations/${conversation.conversationID}/messages?page=1&limit=20`);
-      
+      const response = await api.get<any>(`/chat/conversations/${conversation.conversationID}?page=1&limit=20`);
+
       if (response.success && response.data?.messages?.data && isMounted.current) {
         const latestMessages = response.data.messages.data;
-        
+        const reversedLatest = [...latestMessages].reverse();
+
         // Check for new messages
         if (latestMessages.length > messages.length) {
           // Find messages that are not in current state
           const existingIds = new Set(messages.map(m => m.id));
-          const newMessages = latestMessages.filter((m: Message) => !existingIds.has(m.id));
-          
+          const newMessages = reversedLatest.filter((m: Message) => !existingIds.has(m.id));
+
           if (newMessages.length > 0) {
             setMessages(prev => [...prev, ...newMessages]);
-            
+
             // Mark new messages as read
             await markMessagesAsRead(conversation.conversationID);
-            
+
             // Scroll to bottom if user is near bottom
             flatListRef.current?.scrollToEnd({ animated: true });
           }
@@ -298,7 +310,7 @@ export default function ChatScreen() {
 
   const refreshMessages = async () => {
     if (!conversation?.conversationID || !isMounted.current) return;
-    
+
     setRefreshing(true);
     await fetchMessages(conversation.conversationID, 1);
     if (isMounted.current) {
@@ -330,15 +342,15 @@ export default function ChatScreen() {
     };
 
     setMessages(prev => [...prev, optimisticMessage]);
-    
+
     // Scroll to bottom
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
 
     try {
-      // Fix: Use correct endpoint from routes
-      const response = await api.post<any>(`/chat/providers/${providerId}/send`, {
+      // Fix: The endpoint is /chat/messages
+      const response = await api.post<any>(`/chat/messages`, {
         conversationID: conversation.conversationID,
         message: messageText,
       });
@@ -361,11 +373,11 @@ export default function ChatScreen() {
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
-      
+
       if (isMounted.current) {
         // Remove optimistic message on error
         setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-        
+
         if (error.response?.status === 403) {
           Alert.alert('Access Denied', 'You do not have permission to send messages in this conversation');
         } else {
@@ -382,7 +394,7 @@ export default function ChatScreen() {
   // NEW: Handle phone call
   const handleCall = () => {
     const phoneNumber = provider?.phone || provider?.phoneNumber;
-    
+
     if (!phoneNumber) {
       Alert.alert('Info', 'Phone number not available for this provider');
       return;
@@ -393,11 +405,11 @@ export default function ChatScreen() {
       `Call ${provider?.businessName || provider?.fullname} at ${phoneNumber}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Call', 
+        {
+          text: 'Call',
           onPress: () => {
-            const url = Platform.OS === 'android' 
-              ? `tel:${phoneNumber}` 
+            const url = Platform.OS === 'android'
+              ? `tel:${phoneNumber}`
               : `telprompt:${phoneNumber}`;
             Linking.openURL(url).catch(() => {
               Alert.alert('Error', 'Could not initiate call');
@@ -412,7 +424,7 @@ export default function ChatScreen() {
   const handleShare = async () => {
     try {
       const providerName = provider?.businessName || provider?.fullname || 'this provider';
-      
+
       const shareContent = {
         title: `Chat with ${providerName}`,
         message: `I'm discussing a service with ${providerName} on HomeLink. Join the conversation!`,
@@ -420,7 +432,7 @@ export default function ChatScreen() {
       };
 
       const result = await Share.share(shareContent);
-      
+
       if (result.action === Share.sharedAction) {
         console.log('Content shared successfully');
       }
@@ -464,7 +476,7 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isCustomer = item.sender_type === 'customer';
-    const showDate = index === 0 || 
+    const showDate = index === 0 ||
       new Date(item.created_at).toDateString() !== new Date(messages[index - 1]?.created_at).toDateString();
 
     return (
@@ -547,8 +559,8 @@ export default function ChatScreen() {
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
       </TouchableOpacity>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={styles.profileContainer}
         onPress={handleViewProfile}
       >
@@ -563,7 +575,7 @@ export default function ChatScreen() {
             </View>
           )}
         </View>
-        
+
         <View style={styles.profileInfo}>
           <Text style={styles.providerName} numberOfLines={1}>
             {provider?.businessName || provider?.fullname || 'Loading...'}
@@ -580,45 +592,45 @@ export default function ChatScreen() {
 
       <View style={styles.headerActions}>
         {/* Phone Call Button - NEW */}
-        <TouchableOpacity 
-          style={styles.headerButton} 
+        <TouchableOpacity
+          style={styles.headerButton}
           onPress={handleCall}
           disabled={!provider?.phone}
         >
-          <Ionicons 
-            name="call-outline" 
-            size={22} 
-            color={provider?.phone ? Colors.primary : Colors.text.secondary} 
+          <Ionicons
+            name="call-outline"
+            size={22}
+            color={provider?.phone ? Colors.primary : Colors.text.secondary}
           />
         </TouchableOpacity>
 
         {/* Share Button - NEW */}
-        <TouchableOpacity 
-          style={styles.headerButton} 
+        <TouchableOpacity
+          style={styles.headerButton}
           onPress={handleShare}
         >
           <Ionicons name="share-outline" size={22} color={Colors.primary} />
         </TouchableOpacity>
 
         {/* More Options Button */}
-       <TouchableOpacity 
-  style={styles.headerButton} 
-  onPress={() => {
-    // Create buttons array properly without null values
-    const buttons = [
-      { text: 'View Provider Profile', onPress: handleViewProfile },
-      ...(conversation?.bookingID ? [{ text: 'View Booking Details', onPress: handleViewBooking }] : []),
-      { text: 'Cancel', style: 'cancel' },
-    ];
-    
-    Alert.alert(
-      'Chat Options',
-      'Choose an option',
-    );
-  }}
->
-  <Ionicons name="ellipsis-vertical" size={20} color={Colors.text.primary} />
-</TouchableOpacity>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => {
+            // Create buttons array properly without null values
+            const buttons = [
+              { text: 'View Provider Profile', onPress: handleViewProfile },
+              ...(conversation?.bookingID ? [{ text: 'View Booking Details', onPress: handleViewBooking }] : []),
+              { text: 'Cancel', style: 'cancel' },
+            ];
+
+            Alert.alert(
+              'Chat Options',
+              'Choose an option',
+            );
+          }}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color={Colors.text.primary} />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -636,7 +648,7 @@ export default function ChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}

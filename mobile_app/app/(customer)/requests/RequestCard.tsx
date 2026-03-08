@@ -11,6 +11,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/app/constants/Colors';
 import type { ServiceRequest } from '@/app/types/customer.types';
+import { API_BASE_URL } from '@/app/config/api';
 
 interface RequestCardProps {
   request: ServiceRequest;
@@ -91,7 +92,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
         router.push(`/(customer)/requests/${request.id}`);
         break;
       case 'message':
-        router.push(`/(customer)/requests/${request.id}`);
+        router.push(`/(customer)/chat/${request.providerId}`);
         break;
       case 'review':
         router.push(`/(customer)/requests/${request.id}`);
@@ -107,13 +108,13 @@ export const RequestCard: React.FC<RequestCardProps> = ({
       case 'pending':
         return (
           <View style={styles.actionButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionButton, styles.cancelButton]}
               onPress={() => handleActionPress('cancel')}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionButton, styles.messageButton]}
               onPress={() => handleActionPress('message')}
             >
@@ -126,14 +127,14 @@ export const RequestCard: React.FC<RequestCardProps> = ({
       case 'confirmed':
         return (
           <View style={styles.actionButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionButton, styles.trackButton]}
               onPress={() => handleActionPress('track')}
             >
               <Ionicons name="location-outline" size={16} color={Colors.surface} />
               <Text style={styles.trackButtonText}>Track</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionButton, styles.messageButton]}
               onPress={() => handleActionPress('message')}
             >
@@ -146,14 +147,14 @@ export const RequestCard: React.FC<RequestCardProps> = ({
       case 'in_progress':
         return (
           <View style={styles.actionButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionButton, styles.trackButton]}
               onPress={() => handleActionPress('track')}
             >
               <Ionicons name="location-outline" size={16} color={Colors.surface} />
               <Text style={styles.trackButtonText}>Track</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionButton, styles.messageButton]}
               onPress={() => handleActionPress('message')}
             >
@@ -165,7 +166,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
 
       case 'completed':
         return request.review ? (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, styles.reviewButton]}
             onPress={() => handleActionPress('view-review')}
           >
@@ -173,7 +174,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
             <Text style={styles.reviewButtonText}>View Review</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, styles.reviewButton]}
             onPress={() => handleActionPress('review')}
           >
@@ -188,7 +189,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.container}
       onPress={handlePress}
       activeOpacity={0.7}
@@ -197,7 +198,13 @@ export const RequestCard: React.FC<RequestCardProps> = ({
       <View style={styles.header}>
         <View style={styles.providerInfo}>
           <Image
-            source={{ uri: request.providerImage || 'https://via.placeholder.com/40' }}
+            source={{
+              uri: request.providerImage
+                ? (request.providerImage.startsWith('http')
+                  ? request.providerImage
+                  : `${API_BASE_URL.replace('/api', '')}/${request.providerImage}`)
+                : 'https://via.placeholder.com/40'
+            }}
             style={styles.providerImage}
           />
           <View>
@@ -205,18 +212,18 @@ export const RequestCard: React.FC<RequestCardProps> = ({
             <Text style={styles.serviceName}>{request.serviceName}</Text>
           </View>
         </View>
-        
+
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}>
-          <Ionicons 
-            name={getStatusIcon(request.status) as keyof typeof Ionicons.glyphMap} 
-            size={14} 
-            color={getStatusColor(request.status)} 
-  />
+          <Ionicons
+            name={getStatusIcon(request.status) as keyof typeof Ionicons.glyphMap}
+            size={14}
+            color={getStatusColor(request.status)}
+          />
         </View>
-          <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
-            {getStatusLabel(request.status)}
-          </Text>
-        </View>
+        <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
+          {getStatusLabel(request.status)}
+        </Text>
+      </View>
       {/* Request Details */}
       <View style={styles.detailsContainer}>
         <View style={styles.detailRow}>

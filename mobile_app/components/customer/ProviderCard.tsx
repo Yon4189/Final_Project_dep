@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import type { ServiceProvider } from '@/app/types/customer.types';
+import { API_BASE_URL } from '@/app/config/api';
 
 interface ProviderCardProps {
   provider: ServiceProvider;
@@ -20,6 +21,9 @@ interface ProviderCardProps {
   showActions?: boolean;
   showServices?: boolean;
   showCategory?: boolean;
+  onChatPress?: () => void;
+  onCallPress?: () => void;
+  onSharePress?: () => void;
 }
 
 export const ProviderCard: React.FC<ProviderCardProps> = ({
@@ -31,6 +35,9 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   showActions = false,
   showServices = true,
   showCategory = true,
+  onChatPress,
+  onCallPress,
+  onSharePress,
 }) => {
   const formatDistance = (distance?: number) => {
     if (!distance) return null;
@@ -62,7 +69,13 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
       <View style={styles.header}>
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: provider.profileImage || 'https://via.placeholder.com/60' }}
+            source={{
+              uri: provider.profileImage
+                ? (provider.profileImage.startsWith('http')
+                  ? provider.profileImage
+                  : `${API_BASE_URL.replace('/api', '')}/${provider.profileImage}`)
+                : 'https://via.placeholder.com/60'
+            }}
             style={styles.image}
           />
           {provider.verified && showBadges && (
@@ -125,11 +138,14 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
 
         {showActions ? (
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={onChatPress}>
               <Ionicons name="chatbubble-outline" size={20} color={Colors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={onCallPress}>
               <Ionicons name="call-outline" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={onSharePress}>
+              <Ionicons name="share-social-outline" size={20} color={Colors.primary} />
             </TouchableOpacity>
           </View>
         ) : (
