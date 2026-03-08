@@ -35,16 +35,9 @@ class ChatController extends Controller
         $user = $request->user();
         $userType = $this->getUserType($user);
 
-        // Only customers can create new conversations
-        if ($userType !== 'customer') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only customers can initiate conversations'
-            ], 403);
-        }
-
         $validator = Validator::make($request->all(), [
-            'providerID' => 'required|exists:service_providers,providerID',
+            'providerID' => 'required_if:user_type,customer|exists:service_providers,providerID',
+            'customerID' => 'required_if:user_type,provider|exists:customers,customerID',
             'bookingID' => 'nullable|exists:bookings,bookingID'
         ]);
 
@@ -55,9 +48,13 @@ class ChatController extends Controller
             ], 422);
         }
 
-        // Customer is initiating
-        $customerID = $user->customerID;
-        $providerID = $request->providerID;
+        if ($userType === 'customer') {
+            $customerID = $user->customerID;
+            $providerID = $request->providerID;
+        } else {
+            $providerID = $user->providerID;
+            $customerID = $request->customerID;
+        }
 
         // Check if conversation exists
         $query = Conversation::where('customerID', $customerID)
@@ -84,7 +81,7 @@ class ChatController extends Controller
         // Get messages with sender info
         $messages = $conversation->messages()
                     ->with('sender')
-                    ->orderBy('created_at', 'asc')
+                    ->orderBy('created_at', 'desc')
                     ->get();
 
         return response()->json([

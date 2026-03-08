@@ -1,5 +1,5 @@
 // app/(customer)/dashboard.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,40 +12,43 @@ import {
   SafeAreaView,
   Platform,
   Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/app/constants/Colors';
-import { useLocation } from '../../hooks/useLocation';
-import { useSearch } from '../../hooks/useSearch';
-import { useTopRatedProviders } from '@/hooks/useCustomerQueries';
-import { ServiceSearch } from '../../components/customer/ServiceSearch';
-import { ProviderCard } from '../../components/customer/ProviderCard';
-import { FilterModal } from '../../components/customer/FilterModal';
-import { ServiceRequestModal } from '../../components/customer/ServiceRequestModal';
-import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { EmptyState } from '../../components/common/EmptyState';
-import { api } from '@/app/services/api';
-import { customerService } from '@/app/services/customer.service';
-import { paymentService } from '@/app/services/payment.service';
-import type { ServiceProvider } from '@/app/types/customer.types';
-import { ActivityIndicator } from 'react-native';
+  Share,
+  Linking,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/app/constants/Colors";
+import { useLocation } from "../../hooks/useLocation";
+import { useSearch } from "../../hooks/useSearch";
+import { useTopRatedProviders } from "@/hooks/useCustomerQueries";
+import { ServiceSearch } from "../../components/customer/ServiceSearch";
+import { ProviderCard } from "../../components/customer/ProviderCard";
+import { FilterModal } from "../../components/customer/FilterModal";
+import { ServiceRequestModal } from "../../components/customer/ServiceRequestModal";
+import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { EmptyState } from "../../components/common/EmptyState";
+import { api } from "@/app/services/api";
+import { API_BASE_URL } from "@/app/config/api";
+import { customerService } from "@/app/services/customer.service";
+import { paymentService } from "@/app/services/payment.service";
+import type { ServiceProvider } from "@/app/types/customer.types";
+import { ActivityIndicator } from "react-native";
 // Import the appropriate map based on platform
 let MapComponent: any;
-if (Platform.OS === 'web') {
+if (Platform.OS === "web") {
   // For web, use the Leaflet mapF
-  MapComponent = require('../../components/Map/index').default;
+  MapComponent = require("../../components/Map/index").default;
 } else {
   // For mobile, use the React Native Maps component
-  MapComponent = require('../../components/Map').default;
+  MapComponent = require("../../components/Map").default;
 }
 
 export default function CustomerDashboard() {
   const router = useRouter();
   const { location, loading: locationLoading } = useLocation();
 
-  console.log('Dashboard - Location:', location);
-  console.log('Dashboard - Location Loading:', locationLoading);
+  console.log("Dashboard - Location:", location);
+  console.log("Dashboard - Location Loading:", locationLoading);
 
   const {
     query,
@@ -58,15 +61,17 @@ export default function CustomerDashboard() {
     refresh: refreshSearch,
   } = useSearch();
 
-  console.log('Dashboard - Search Hook - Query:', query);
-  console.log('Dashboard - Search Hook - Loading:', searchLoading);
-  console.log('Dashboard - Search Hook - Providers:', providers.length);
+  console.log("Dashboard - Search Hook - Query:", query);
+  console.log("Dashboard - Search Hook - Loading:", searchLoading);
+  console.log("Dashboard - Search Hook - Providers:", providers.length);
 
-  const { data: topRatedProviders, isLoading: topRatedLoading } = useTopRatedProviders(5);
+  const { data: topRatedProviders, isLoading: topRatedLoading } =
+    useTopRatedProviders(5);
 
   const [showMapView, setShowMapView] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
+  const [selectedProvider, setSelectedProvider] =
+    useState<ServiceProvider | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -77,32 +82,32 @@ export default function CustomerDashboard() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   // Add these with your other useState declarations
-    const [complaints, setComplaints] = useState<any[]>([]);
-    const [loadingComplaints, setLoadingComplaints] = useState(false);
-    const [pendingComplaints, setPendingComplaints] = useState(0);
+  const [complaints, setComplaints] = useState<any[]>([]);
+  const [loadingComplaints, setLoadingComplaints] = useState(false);
+  const [pendingComplaints, setPendingComplaints] = useState(0);
   // Load user data and service categories on mount
   // Add this with your other functions
-const loadComplaints = async () => {
-  try {
-    setLoadingComplaints(true);
-    const response = await customerService.getMyComplaints();
-    if (response.success && response.data) {
-      const complaintsData = response.data;
-      setComplaints(complaintsData);
-      
-      // Count pending complaints
-      const pending = complaintsData.filter((c: any) => 
-        c.status === 'pending' || c.status === 'under_review'
-      ).length;
-      
-      setPendingComplaints(pending);
+  const loadComplaints = async () => {
+    try {
+      setLoadingComplaints(true);
+      const response = await customerService.getMyComplaints();
+      if (response.success && response.data) {
+        const complaintsData = response.data;
+        setComplaints(complaintsData);
+
+        // Count pending complaints
+        const pending = complaintsData.filter(
+          (c: any) => c.status === "pending" || c.status === "under_review",
+        ).length;
+
+        setPendingComplaints(pending);
+      }
+    } catch (error) {
+      console.error("Error loading complaints:", error);
+    } finally {
+      setLoadingComplaints(false);
     }
-  } catch (error) {
-    console.error('Error loading complaints:', error);
-  } finally {
-    setLoadingComplaints(false);
-  }
-};
+  };
   useEffect(() => {
     loadUserData();
     loadServiceCategories();
@@ -112,7 +117,9 @@ const loadComplaints = async () => {
   // Trigger initial search when location becomes available
   useEffect(() => {
     if (location && !locationLoading) {
-      console.log('Dashboard - Location available, triggering initial search...');
+      console.log(
+        "Dashboard - Location available, triggering initial search...",
+      );
       refreshSearch();
     }
   }, [location, locationLoading, refreshSearch]);
@@ -123,7 +130,7 @@ const loadComplaints = async () => {
 
       // First try to get user data from stored data
       const userData = await api.getUserData();
-      console.log('Stored user data:', userData);
+      console.log("Stored user data:", userData);
 
       if (userData) {
         setUser(userData);
@@ -136,11 +143,11 @@ const loadComplaints = async () => {
             await api.setUserData(profileResponse.data);
           }
         } catch (error) {
-          console.error('Failed to load profile:', error);
+          console.error("Failed to load profile:", error);
         }
       }
     } catch (error) {
-      console.error('Failed to load user data:', error);
+      console.error("Failed to load user data:", error);
     } finally {
       setLoadingUser(false);
     }
@@ -148,12 +155,12 @@ const loadComplaints = async () => {
 
   const loadUnreadNotifications = async () => {
     try {
-      const response = await api.get('/customer/notifications/unread-count');
-      console.log('Notification response:', response);
+      const response = await api.get("/customer/notifications/unread-count");
+      console.log("Notification response:", response);
 
       if (response.success && response.data) {
         // Handle different possible response structures
-        if (typeof response.data === 'object') {
+        if (typeof response.data === "object") {
           const data = response.data as any;
           // Check for count in different possible locations
           if (data.count !== undefined) {
@@ -166,7 +173,7 @@ const loadComplaints = async () => {
         }
       }
     } catch (error) {
-      console.log('Error fetching notifications count:', error);
+      console.log("Error fetching notifications count:", error);
     }
   };
 
@@ -177,15 +184,15 @@ const loadComplaints = async () => {
       if (response.success && response.data) {
         // Transform the data to ensure consistent format
         const transformedCategories = response.data.map((category: any) => ({
-          id: (category.catagoryID ?? category.id ?? '').toString(),
-          name: category.name ?? 'Service',
-          icon: category.icon || '🔧',
-          description: category.description || '',
+          id: (category.catagoryID ?? category.id ?? "").toString(),
+          name: category.name ?? "Service",
+          icon: category.icon || "🔧",
+          description: category.description || "",
         }));
         setServiceCategories(transformedCategories);
       }
     } catch (error) {
-      console.error('Failed to load service categories:', error);
+      console.error("Failed to load service categories:", error);
       // Fallback to empty array if API fails
       setServiceCategories([]);
     } finally {
@@ -195,9 +202,9 @@ const loadComplaints = async () => {
 
   // Generate search suggestions based on query
   useEffect(() => {
-    console.log('Dashboard - Query changed:', query);
-    console.log('Dashboard - Location available:', !!location);
-    console.log('Dashboard - Providers count:', providers.length);
+    console.log("Dashboard - Query changed:", query);
+    console.log("Dashboard - Location available:", !!location);
+    console.log("Dashboard - Providers count:", providers.length);
 
     if (query.length > 1) {
       // Get suggestions from API
@@ -226,23 +233,23 @@ const loadComplaints = async () => {
   }, [query, location, providers.length]);
 
   const handleCategorySelect = (categoryId: string) => {
-    console.log('Dashboard - Category selected:', categoryId);
+    console.log("Dashboard - Category selected:", categoryId);
     setSelectedCategory(categoryId);
 
     // Navigate to search results with category filter
     router.push({
-      pathname: '/(customer)/search/results',
+      pathname: "/(customer)/search/results",
       params: {
         categoryId,
-        sortBy: 'rating',
-        minRating: '0',
-        maxDistance: '50'
-      }
+        sortBy: "rating",
+        minRating: "0",
+        maxDistance: "50",
+      },
     });
   };
 
   const handleViewAllCategories = () => {
-    router.push('/(customer)/categories');
+    router.push("/(customer)/categories");
   };
 
   const handleProviderSelect = (provider: ServiceProvider) => {
@@ -255,19 +262,19 @@ const loadComplaints = async () => {
   };
 
   const handleVoiceSearch = () => {
-    Alert.alert('Voice Search', 'Voice search feature coming soon!');
+    Alert.alert("Voice Search", "Voice search feature coming soon!");
   };
 
   const handleServiceRequest = async (requestData: any) => {
     try {
       // Create service request
       const bookingResponse = await customerService.createBooking({
-        provider_id: selectedProvider?.id || '',
-        service_id: requestData.serviceId || '',
-        scheduled_date: requestData.scheduledDate || '',
-        scheduled_time: requestData.scheduledTime || '',
-        address: requestData.address || '',
-        description: requestData.description || '',
+        provider_id: selectedProvider?.id || "",
+        service_id: requestData.serviceId || "",
+        scheduled_date: requestData.scheduledDate || "",
+        scheduled_time: requestData.scheduledTime || "",
+        address: requestData.address || "",
+        description: requestData.description || "",
         estimated_price: requestData.estimatedPrice || 0,
       });
 
@@ -275,9 +282,9 @@ const loadComplaints = async () => {
         // Initialize payment
         const paymentResponse = await paymentService.initializeChapaPayment({
           amount: requestData.estimatedPrice || 0,
-          email: user?.email || 'customer@example.com',
-          firstName: user?.fullname?.split(' ')[0] || 'Customer',
-          lastName: user?.fullname?.split(' ').slice(1).join(' ') || 'User',
+          email: user?.email || "customer@example.com",
+          firstName: user?.fullname?.split(" ")[0] || "Customer",
+          lastName: user?.fullname?.split(" ").slice(1).join(" ") || "User",
           phoneNumber: user?.phone,
           customerId: user?.customerID,
           bookingId: bookingResponse.data.id,
@@ -291,18 +298,21 @@ const loadComplaints = async () => {
           setSelectedProvider(null);
 
           // Open payment URL in browser/webview
-          if (Platform.OS === 'web') {
-            window.open(paymentResponse.checkoutUrl, '_blank');
+          if (Platform.OS === "web") {
+            window.open(paymentResponse.checkoutUrl, "_blank");
           } else {
             router.push({
-              pathname: '/(customer)/payment',
-              params: { url: paymentResponse.checkoutUrl }
+              pathname: "/(customer)/payment",
+              params: { url: paymentResponse.checkoutUrl },
             });
           }
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to process service request. Please try again.');
+      Alert.alert(
+        "Error",
+        "Failed to process service request. Please try again.",
+      );
     }
   };
 
@@ -316,63 +326,94 @@ const loadComplaints = async () => {
 
   const renderHeader = () => {
     // Get user's first name from fullname
-    let displayName = 'User';
+    let displayName = "User";
     if (user?.fullname) {
-      displayName = user.fullname.split(' ')[0]; // Get first name
+      displayName = user.fullname.split(" ")[0]; // Get first name
     } else if (user?.firstName) {
-      displayName = user.firstName.split(' ')[0];
+      displayName = user.firstName.split(" ")[0];
     }
 
     return (
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>
-            Hello, {loadingUser ? '👋' : displayName}! 👋
+            Hello, {loadingUser ? "👋" : displayName}! 👋
           </Text>
           <Text style={styles.subtitle}>Find trusted service providers</Text>
         </View>
 
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => router.push('/(customer)/notifications')}
+            style={styles.headerButton}
+            onPress={() => router.push("/(customer)/chat/index")}
           >
-            <Ionicons name="notifications-outline" size={24} color={Colors.text.primary} />
+            <Ionicons
+              name="chatbubbles-outline"
+              size={24}
+              color={Colors.text.primary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push("/(customer)/notifications")}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={Colors.text.primary}
+            />
             {unreadNotifications > 0 && (
               <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>{unreadNotifications}</Text>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotifications}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.push("/(customer)/complaints")}
+          >
+            <Ionicons
+              name="alert-circle-outline"
+              size={24}
+              color={Colors.text.primary}
+            />
+            {pendingComplaints > 0 && (
+              <View style={[styles.badge, styles.complaintBadge]}>
+                <Text style={styles.badgeText}>{pendingComplaints}</Text>
               </View>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.profileButton}
-            onPress={() => router.push('/(customer)/profile')}
+            onPress={() => router.push("/(customer)/profile")}
           >
-            {/* Complaints Button */}
-<TouchableOpacity
-  style={styles.headerButton}
-  onPress={() => router.push('/(customer)/complaints')}
->
-  <Ionicons name="alert-circle-outline" size={24} color={Colors.text.primary} />
-  {pendingComplaints > 0 && (
-    <View style={[styles.badge, styles.complaintBadge]}>
-      <Text style={styles.badgeText}>{pendingComplaints}</Text>
-    </View>
-  )}
-</TouchableOpacity>
-            {user?.profilePicture ? (
-              <Image
-                source={{
-                  uri: user.profilePicture.startsWith('http')
-                    ? user.profilePicture
-                    : `http://localhost:8000/${user.profilePicture}`
-                }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Ionicons name="person-circle" size={40} color={Colors.primary} />
-            )}
+            {(() => {
+              const pic = user?.profilePicture || user?.profile_picture;
+              if (pic) {
+                return (
+                  <Image
+                    source={{
+                      uri: pic.startsWith("http")
+                        ? pic
+                        : `${API_BASE_URL.replace("/api", "")}/${pic}`,
+                    }}
+                    style={styles.profileImage}
+                  />
+                );
+              }
+              return (
+                <Ionicons
+                  name="person-circle"
+                  size={40}
+                  color={Colors.primary}
+                />
+              );
+            })()}
           </TouchableOpacity>
         </View>
       </View>
@@ -392,7 +433,10 @@ const loadComplaints = async () => {
             style={styles.categoriesScroll}
           >
             {[1, 2, 3, 4, 5].map((index) => (
-              <View key={index} style={[styles.categoryCard, styles.skeletonCard]} />
+              <View
+                key={index}
+                style={[styles.categoryCard, styles.skeletonCard]}
+              />
             ))}
           </ScrollView>
         </View>
@@ -451,14 +495,14 @@ const loadComplaints = async () => {
     const handleViewAllTopRated = () => {
       // Navigate to search results with top rated filters
       router.push({
-        pathname: '/(customer)/search/results',
+        pathname: "/(customer)/search/results",
         params: {
-          sortBy: 'rating',
-          minRating: '4',
+          sortBy: "rating",
+          minRating: "4",
           // You can add more filters here
           // categoryId: filters.categoryId || '',
           // maxDistance: '50',
-        }
+        },
       });
     };
 
@@ -491,7 +535,10 @@ const loadComplaints = async () => {
               onPress={() => handleProviderPress(provider)}
             >
               <Image
-                source={{ uri: provider.profileImage || 'https://via.placeholder.com/60' }}
+                source={{
+                  uri:
+                    provider.profileImage || "https://via.placeholder.com/60",
+                }}
                 style={styles.topRatedImage}
               />
               <Text style={styles.topRatedName} numberOfLines={1}>
@@ -499,15 +546,18 @@ const loadComplaints = async () => {
               </Text>
               <View style={styles.topRatedRating}>
                 <Ionicons name="star" size={14} color={Colors.warning} />
-                <Text style={styles.topRatedRatingText}>{provider.rating.toFixed(1)}</Text>
+                <Text style={styles.topRatedRatingText}>
+                  {provider.rating.toFixed(1)}
+                </Text>
               </View>
-              <Text style={styles.topRatedReviews}>({provider.reviewCount} reviews)</Text>
+              <Text style={styles.topRatedReviews}>
+                ({provider.reviewCount} reviews)
+              </Text>
               {provider.distance && (
                 <Text style={styles.topRatedDistance}>
                   {provider.distance < 1
                     ? `${Math.round(provider.distance * 1000)}m`
-                    : `${provider.distance.toFixed(1)}km`
-                  }
+                    : `${provider.distance.toFixed(1)}km`}
                 </Text>
               )}
             </TouchableOpacity>
@@ -520,7 +570,10 @@ const loadComplaints = async () => {
   const renderViewToggle = () => (
     <View style={styles.viewToggle}>
       <TouchableOpacity
-        style={[styles.viewToggleButton, !showMapView && styles.viewToggleActive]}
+        style={[
+          styles.viewToggleButton,
+          !showMapView && styles.viewToggleActive,
+        ]}
         onPress={() => setShowMapView(false)}
       >
         <Ionicons
@@ -528,13 +581,21 @@ const loadComplaints = async () => {
           size={20}
           color={!showMapView ? Colors.primary : Colors.text.secondary}
         />
-        <Text style={[styles.viewToggleText, !showMapView && styles.viewToggleTextActive]}>
+        <Text
+          style={[
+            styles.viewToggleText,
+            !showMapView && styles.viewToggleTextActive,
+          ]}
+        >
           List
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.viewToggleButton, showMapView && styles.viewToggleActive]}
+        style={[
+          styles.viewToggleButton,
+          showMapView && styles.viewToggleActive,
+        ]}
         onPress={() => setShowMapView(true)}
       >
         <Ionicons
@@ -542,7 +603,12 @@ const loadComplaints = async () => {
           size={20}
           color={showMapView ? Colors.primary : Colors.text.secondary}
         />
-        <Text style={[styles.viewToggleText, showMapView && styles.viewToggleTextActive]}>
+        <Text
+          style={[
+            styles.viewToggleText,
+            showMapView && styles.viewToggleTextActive,
+          ]}
+        >
           Map
         </Text>
       </TouchableOpacity>
@@ -552,16 +618,17 @@ const loadComplaints = async () => {
   const renderMapView = () => {
     // Convert providers to markers format
     const markers = providers
-      .filter(provider => provider.location) // Filter out providers without location
-      .map(provider => {
+      .filter((provider) => provider.location) // Filter out providers without location
+      .map((provider) => {
         // TypeScript assertion to ensure location exists after filter
         const location = provider.location!;
         return {
-          position: Platform.OS === 'web'
-            ? [location.latitude, location.longitude]
-            : { latitude: location.latitude, longitude: location.longitude },
-          title: provider?.businessName ?? provider?.name ?? 'Service Provider',
-          description: `Rating: ${provider.rating || 0} ⭐ • ${provider.reviewCount || 0} reviews${provider.distance ? ` • ${provider.distance < 1 ? `${Math.round(provider.distance * 1000)}m` : `${provider.distance.toFixed(1)}km`} away` : ''}`,
+          position:
+            Platform.OS === "web"
+              ? [location.latitude, location.longitude]
+              : { latitude: location.latitude, longitude: location.longitude },
+          title: provider?.businessName ?? provider?.name ?? "Service Provider",
+          description: `Rating: ${provider.rating || 0} ⭐ • ${provider.reviewCount || 0} reviews${provider.distance ? ` • ${provider.distance < 1 ? `${Math.round(provider.distance * 1000)}m` : `${provider.distance.toFixed(1)}km`} away` : ""}`,
           rating: provider.rating || 0,
           reviewCount: provider.reviewCount || 0,
           distance: provider.distance,
@@ -571,19 +638,19 @@ const loadComplaints = async () => {
 
     // Prepare center coordinates
     const center = location
-      ? (Platform.OS === 'web'
+      ? Platform.OS === "web"
         ? [location.latitude, location.longitude]
-        : { latitude: location.latitude, longitude: location.longitude })
-      : (Platform.OS === 'web'
+        : { latitude: location.latitude, longitude: location.longitude }
+      : Platform.OS === "web"
         ? [9.03, 38.74]
-        : { latitude: 9.03, longitude: 38.74 });
+        : { latitude: 9.03, longitude: 38.74 };
 
     return (
       <View style={styles.mapContainer}>
         <MapComponent
           center={center}
           markers={markers}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: "100%", width: "100%" }}
           zoom={13}
           showUserLocation={true}
           onMarkerPress={(marker: any) => marker.onPress && marker.onPress()}
@@ -599,7 +666,43 @@ const loadComplaints = async () => {
       renderItem={({ item }) => (
         <ProviderCard
           provider={item}
-          onPress={() => handleProviderSelect(item)}
+          onPress={() => router.push(`/(customer)/provider/${item.id}`)}
+          onBookPress={() => handleProviderSelect(item)}
+          onChatPress={() => router.push(`/(customer)/chat/${item.id}`)}
+          onCallPress={() => {
+            if (item.phone) {
+              Linking.openURL(`tel:${item.phone}`);
+            } else {
+              Alert.alert('Error', 'Provider phone number not available');
+            }
+          }}
+          onSharePress={async () => {
+            try {
+              const providerName = item.businessName || item.name || "this provider";
+              const shareUrl = `${API_BASE_URL.replace('/api', '')}/provider/${item.id}`;
+              const message = `Check out ${providerName} on HomeLink!`;
+
+              if (Platform.OS === 'web') {
+                if (navigator.share) {
+                  await navigator.share({
+                    title: `HomeLink - ${providerName}`,
+                    text: message,
+                    url: window.location.href,
+                  });
+                } else {
+                  await navigator.clipboard.writeText(`${message}\n${shareUrl}`);
+                  Alert.alert("Success", "Provider info copied to clipboard!");
+                }
+              } else {
+                await Share.share({
+                  title: `HomeLink - ${providerName}`,
+                  message: `${message}\n${shareUrl}`,
+                });
+              }
+            } catch (error) {
+              console.error('Share error:', error);
+            }
+          }}
           showDistance={true}
           showBadges={true}
           showActions={true}
@@ -613,9 +716,7 @@ const loadComplaints = async () => {
       }
       onEndReached={loadMore}
       onEndReachedThreshold={0.5}
-      ListFooterComponent={
-        searchLoading ? <LoadingSpinner /> : null
-      }
+      ListFooterComponent={searchLoading ? <LoadingSpinner /> : null}
       ListEmptyComponent={
         !searchLoading && !locationLoading ? (
           <EmptyState
@@ -624,7 +725,7 @@ const loadComplaints = async () => {
             message="Try adjusting your search or filters"
             actionLabel="Clear Filters"
             onAction={() => {
-              setQuery('');
+              setQuery("");
               updateFilters({});
             }}
             variant="default"
@@ -657,48 +758,24 @@ const loadComplaints = async () => {
           onCategorySelect={handleCategorySelect}
           suggestions={suggestions}
           searchResults={providers}
-          categories={serviceCategories.map(c => ({
+          categories={serviceCategories.map((c) => ({
             id: c.id,
             name: c.name,
-            icon: c.icon
+            icon: c.icon,
           }))}
         />
       </View>
 
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {renderCategories()}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {renderTopRated()}
 
         {query || filters.categoryId ? (
           <>
             {renderViewToggle()}
 
-            {showMapView ? (
-              renderMapView()
-            ) : (
-              renderProviderList()
-            )}
+            {showMapView ? renderMapView() : renderProviderList()}
           </>
-        ) : (
-          <View style={styles.popularServices}>
-            <Text style={styles.popularTitle}>Popular Services Near You</Text>
-            <View style={styles.popularGrid}>
-              {serviceCategories.slice(0, 6).map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={styles.popularItem}
-                  onPress={() => handleCategorySelect(category.id)}
-                >
-                  <Text style={styles.popularItemIcon}>{category.icon}</Text>
-                  <Text style={styles.popularItemText}>{category.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
+        ) : null}
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -717,10 +794,14 @@ const loadComplaints = async () => {
           setSelectedProvider(null);
         }}
         provider={selectedProvider}
-        userLocation={location ? {
-          latitude: location.latitude,
-          longitude: location.longitude,
-        } : undefined}
+        userLocation={
+          location
+            ? {
+              latitude: location.latitude,
+              longitude: location.longitude,
+            }
+            : undefined
+        }
       />
     </SafeAreaView>
   );
@@ -732,9 +813,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 10,
@@ -742,7 +823,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.text.primary,
   },
   subtitle: {
@@ -750,42 +831,65 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginTop: 2,
   },
-  complaintBadge: {
-  backgroundColor: Colors.warning,
-},
-
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16, // Adds consistent spacing between all header buttons
+    marginRight: 4, // Prevents elements from sticking too closely to edge on smaller devices
   },
   notificationButton: {
-    position: 'relative',
-    marginRight: 16,
+    position: "relative",
     padding: 4,
   },
+  headerButton: {
+    position: "relative",
+    padding: 4,
+  },
+  badge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: Colors.surface,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  complaintBadge: {
+    backgroundColor: Colors.warning,
+  },
   notificationBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
+    position: "absolute",
+    top: -2,
+    right: -2,
     backgroundColor: Colors.error,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   notificationBadgeText: {
     color: Colors.surface,
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   profileButton: {
     padding: 2,
+    marginLeft: 4,
   },
   profileImage: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    borderWidth: 2,
+    borderColor: Colors.border,
   },
   searchContainer: {
     paddingHorizontal: 20,
@@ -803,33 +907,33 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 12,
   },
   sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text.primary,
     marginLeft: 8,
   },
   seeAllText: {
     fontSize: 14,
     color: Colors.primary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   categoriesScroll: {
     paddingLeft: 20,
     marginBottom: 29,
   },
   categoryCard: {
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: 16,
     width: 70,
   },
@@ -841,8 +945,8 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
     borderWidth: 2,
     borderColor: Colors.border,
@@ -853,7 +957,7 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 12,
     color: Colors.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   topRatedSection: {
     paddingVertical: 16,
@@ -866,34 +970,14 @@ const styles = StyleSheet.create({
   topRatedCard: {
     width: 100,
     marginRight: 12,
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  headerButton: {
-  position: 'relative',
-  marginRight: 16,
-  padding: 4,
-},
-badge: {
-  position: 'absolute',
-  top: 0,
-  right: 0,
-  backgroundColor: Colors.error,
-  borderRadius: 10,
-  minWidth: 18,
-  height: 18,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-badgeText: {
-  color: Colors.surface,
-  fontSize: 10,
-  fontWeight: 'bold',
-},
+
   topRatedImage: {
     width: 60,
     height: 60,
@@ -902,20 +986,20 @@ badgeText: {
   },
   topRatedName: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: Colors.text.primary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 4,
   },
   topRatedRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   topRatedRatingText: {
     marginLeft: 2,
     fontSize: 11,
     color: Colors.text.primary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   topRatedReviews: {
     fontSize: 10,
@@ -925,11 +1009,11 @@ badgeText: {
   topRatedDistance: {
     fontSize: 10,
     color: Colors.primary,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 2,
   },
   viewToggle: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: Colors.surface,
@@ -937,15 +1021,15 @@ badgeText: {
     borderBottomColor: Colors.border,
   },
   viewToggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
     marginRight: 12,
   },
   viewToggleActive: {
-    backgroundColor: Colors.primary + '20',
+    backgroundColor: Colors.primary + "20",
   },
   viewToggleText: {
     marginLeft: 6,
@@ -954,14 +1038,14 @@ badgeText: {
   },
   viewToggleTextActive: {
     color: Colors.primary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   mapContainer: {
     height: 500,
     marginTop: 12,
     marginHorizontal: 20,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   providersList: {
     padding: 20,
@@ -972,41 +1056,41 @@ badgeText: {
   },
   popularTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text.primary,
     marginBottom: 16,
   },
   popularGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginHorizontal: -5,
   },
   popularItem: {
-    width: '33.33%',
+    width: "33.33%",
     padding: 5,
   },
   popularItemText: {
     marginTop: 8,
     fontSize: 12,
     color: Colors.text.secondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   popularItemIcon: {
     fontSize: 24,
-    textAlign: 'center',
+    textAlign: "center",
     color: Colors.primary,
   },
   bottomPadding: {
     height: 80,
   },
   skeletonCard: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     opacity: 0.7,
   },
   initialLoading: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,

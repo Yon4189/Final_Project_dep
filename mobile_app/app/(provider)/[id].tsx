@@ -24,6 +24,7 @@ import {
 import Map from "../../components/Map/index";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { useProviderQueries } from "../../hooks/useProviderQueries";
+import { api } from "@/app/services/api";
 
 const STATUS_COLORS = {
   pending: Colors.warning,
@@ -75,7 +76,7 @@ export default function RequestDetails() {
   // Find the specific request from pendingRequests
   useEffect(() => {
     if (pendingRequests.length > 0 && id) {
-      const found = pendingRequests.find((r) => r.id === id);
+      const found = pendingRequests.find((r) => r.id === (id as string));
       if (found) {
         setRequest(found);
       }
@@ -124,8 +125,31 @@ export default function RequestDetails() {
     }
   };
 
-  const handleMessage = () => {
-    if (request?.customerPhone) {
+  const handleMessage = async () => {
+    if (request?.customerId) {
+      try {
+        // Option 1: Try to get/create conversation via API
+        const response = await api.post<any>('/chat/conversations', {
+          customerID: parseInt(request.customerId),
+          bookingID: parseInt(id as string)
+        });
+
+        if (response.success && response.data.conversation) {
+          router.push(`/(provider)/chat/${response.data.conversation.conversationID}`);
+        } else {
+          // Fallback if API fails but we have customer phone
+          if (request.customerPhone) {
+            Linking.openURL(`sms:${request.customerPhone}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error opening chat:', error);
+        // Fallback to SMS
+        if (request.customerPhone) {
+          Linking.openURL(`sms:${request.customerPhone}`);
+        }
+      }
+    } else if (request?.customerPhone) {
       Linking.openURL(`sms:${request.customerPhone}`);
     }
   };
@@ -452,12 +476,12 @@ export default function RequestDetails() {
           >
             <Map
               center={[mapRegion.latitude, mapRegion.longitude]}
-              userLocation={request ? { 
-                latitude: request.customerLatitude, 
-                longitude: request.customerLongitude 
+              userLocation={request ? {
+                latitude: request.customerLatitude,
+                longitude: request.customerLongitude
               } : null}
               providers={[]}
-              onProviderSelect={() => {}}
+              onProviderSelect={() => { }}
               style={{ height: 150, width: '100%' }}
               markers={[
                 {
@@ -789,7 +813,7 @@ export default function RequestDetails() {
                 style={[
                   styles.modalConfirmButton,
                   (!rescheduleDate || !rescheduleTime) &&
-                    styles.modalButtonDisabled,
+                  styles.modalButtonDisabled,
                 ]}
                 onPress={handleReschedule}
                 disabled={!rescheduleDate || !rescheduleTime}
@@ -823,12 +847,12 @@ export default function RequestDetails() {
         {mapRegion && (
           <Map
             center={[mapRegion.latitude, mapRegion.longitude]}
-            userLocation={request ? { 
-              latitude: request.customerLatitude, 
-              longitude: request.customerLongitude 
+            userLocation={request ? {
+              latitude: request.customerLatitude,
+              longitude: request.customerLongitude
             } : null}
             providers={[]}
-            onProviderSelect={() => {}}
+            onProviderSelect={() => { }}
             style={{ flex: 1, height: '100%', width: '100%' }}
             markers={[
               {

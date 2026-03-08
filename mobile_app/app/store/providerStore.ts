@@ -131,28 +131,31 @@ export const useProviderStore = create<ProviderState & ProviderActions>()(
           }),
         ),
 
-      loadProfile: async () => {
-        try {
-          set({ isLoading: true, error: null });
-          const response = await providerService.getProfile();
-          if (response.success && response.data) {
-            set({
-              profile: response.data as ProviderProfile,
-              isOnline: (response.data as ProviderProfile).isAvailable,
-            });
-          } else {
-            set({ error: response.message });
-          }
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : "Failed to load profile",
-          });
-        } finally {
-          set({ isLoading: false });
-        }
-      },
-
+    loadProfile: async () => {
+  try {
+    set({ isLoading: true, error: null });
+    const response = await providerService.getProfile();
+    console.log('📦 Store received profile:', response); // Add debug log
+    
+    if (response.success && response.data) {
+      console.log('📦 Setting profile in store:', response.data); // Add debug log
+      set({
+        profile: response.data as ProviderProfile,
+        isOnline: (response.data as ProviderProfile).isAvailable,
+      });
+    } else {
+      set({ error: response.message });
+    }
+  } catch (error) {
+    console.error('📦 Error loading profile:', error); // Add debug log
+    set({
+      error:
+        error instanceof Error ? error.message : "Failed to load profile",
+    });
+  } finally {
+    set({ isLoading: false });
+  }
+},
       // Availability Actions
       setOnline: (isOnline) => set({ isOnline }),
 

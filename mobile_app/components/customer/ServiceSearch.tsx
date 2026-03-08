@@ -1,5 +1,5 @@
 // components/customer/ServiceSearch.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,9 @@ import {
   FlatList,
   Modal,
   Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/app/constants/Colors';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/app/constants/Colors";
 
 interface ServiceSearchProps {
   value: string;
@@ -36,7 +36,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   suggestions = [],
   searchResults = [],
   categories = [],
-  placeholder = 'Search for services...',
+  placeholder = "Search for services...",
 }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   };
 
   const handleClear = () => {
-    onChangeText('');
+    onChangeText("");
     inputRef.current?.focus();
   };
 
@@ -69,7 +69,11 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={Colors.text.secondary}
+          />
           <TextInput
             ref={inputRef}
             style={styles.searchInput}
@@ -83,7 +87,11 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
           />
           {value.length > 0 && (
             <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={18} color={Colors.text.secondary} />
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={Colors.text.secondary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -107,28 +115,35 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
             data={categories}
             keyExtractor={(item) => item.id}
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.categoryChip,
-                  selectedCategory === item.id && styles.categoryChipSelected,
-                ]}
-                onPress={() => handleCategoryPress(item.id)}
-              >
-                {item.icon && (
-                  <Text style={styles.categoryIcon}>{item.icon}</Text>
-                )}
-                <Text
+            renderItem={({ item }) => {
+              const isMatched =
+                value.length > 0 &&
+                item.name.toLowerCase().includes(value.toLowerCase());
+              return (
+                <TouchableOpacity
                   style={[
-                    styles.categoryName,
-                    selectedCategory === item.id && styles.categoryNameSelected,
+                    styles.categoryChip,
+                    (selectedCategory === item.id || isMatched) &&
+                      styles.categoryChipSelected,
                   ]}
-                  numberOfLines={1}
+                  onPress={() => handleCategoryPress(item.id)}
                 >
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            )}
+                  {item.icon && (
+                    <Text style={styles.categoryIcon}>{item.icon}</Text>
+                  )}
+                  <Text
+                    style={[
+                      styles.categoryName,
+                      (selectedCategory === item.id || isMatched) &&
+                        styles.categoryNameSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
           />
         </View>
       )}
@@ -145,7 +160,11 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
                 style={styles.suggestionItem}
                 onPress={() => handleSuggestionPress(item)}
               >
-                <Ionicons name="search-outline" size={16} color={Colors.text.secondary} />
+                <Ionicons
+                  name="search-outline"
+                  size={16}
+                  color={Colors.text.secondary}
+                />
                 <Text style={styles.suggestionText}>{item}</Text>
               </TouchableOpacity>
             )}
@@ -161,17 +180,17 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
+    width: "100%",
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   searchInputContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.background,
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -194,8 +213,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -204,18 +223,19 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.border,
   },
   categoriesContainer: {
     marginTop: 12,
+    marginBottom: 24,
     height: 50,
   },
   categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -241,7 +261,7 @@ const styles = StyleSheet.create({
     color: Colors.surface,
   },
   suggestionsContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 60,
     left: 0,
     right: 0,
@@ -253,7 +273,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -266,15 +286,15 @@ const styles = StyleSheet.create({
   suggestionsHeader: {
     padding: 12,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text.secondary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
