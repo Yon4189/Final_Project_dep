@@ -23,7 +23,7 @@ return new class extends Migration
                 $table->timestamp('customer_confirmed_at')->nullable()->after('auto_release_at');
             }
             if (!Schema::hasColumn('bookings', 'pending_balance')) {
-                $table->decimal('pending_balance', 12, 2)->default(0)->after('provider_payout');
+                $table->decimal('pending_balance', 12, 2)->default(0);
             }
         });
     }
