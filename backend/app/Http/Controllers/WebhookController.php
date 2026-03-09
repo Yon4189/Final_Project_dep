@@ -26,59 +26,70 @@ class WebhookController extends Controller
      * Handle Chapa payment webhook
      * This is the most reliable way to get payment confirmation
      */
-    public function handleChapaWebhook(Request $request)
-    {
-        // Log incoming webhook for debugging
-        Log::info('Chapa webhook received', [
-            'payload' => $request->all(),
-            'headers' => $request->header()
-        ]);
+public function handleChapaWebhook(Request $request)
+{
+    // Log everything for debugging
+    Log::info('Webhook received', [
+        'method' => $request->method(),
+        'headers' => $request->headers->all(),
+        'content' => $request->getContent()
+    ]);
 
-        // Verify webhook signature (if configured)
-        $webhookSecret = config('services.chapa.webhook_secret');
-        if ($webhookSecret) {
-            $signature = $request->header('X-Chapa-Signature');
-            if (!$this->verifyWebhookSignature($request->getContent(), $signature, $webhookSecret)) {
-                Log::warning('Invalid webhook signature received');
-                return response()->json(['error' => 'Invalid signature'], 401);
-            }
+    // Get signature from header (may be null)
+    $signature = $request->header('chapa-signature');
+
+    // For testing in local environment, skip verification if no signature
+    if (app()->environment('local') && !$signature) {
+        Log::info('Local test: skipping signature verification');
+    } else {
+        // Verify signature if present
+        if (!$signature) {
+            Log::error('Missing signature header');
+            return response()->json(['error' => 'Missing signature'], 401);
         }
 
-        try {
-            $data = $request->all();
-            $event = $data['event'] ?? null;
-            $payload = $data['data'] ?? [];
-
-            // Handle different event types
-            switch ($event) {
-                case 'charge.success':
-                    return $this->handlePaymentSuccess($payload);
-                
-                case 'charge.failed':
-                    return $this->handlePaymentFailed($payload);
-                
-                case 'transfer.success':
-                    return $this->handleTransferSuccess($payload);
-                
-                case 'transfer.failed':
-                    return $this->handleTransferFailed($payload);
-                
-                default:
-                    Log::info('Unhandled webhook event', ['event' => $event]);
-                    return response()->json(['status' => 'ignored']);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Webhook processing error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'error' => 'Webhook processing failed'
-            ], 500);
+        $payload = $request->getContent();
+        $secret = config('services.chapa.webhook_secret');
+        if (!$this->verifyWebhookSignature($payload, $signature, $secret)) {
+            Log::error('Invalid webhook signature');
+            return response()->json(['error' => 'Invalid signature'], 401);
         }
     }
+
+    // Process the webhook payload
+    $payload = $request->all();
+    $txRef = $payload['trx_ref'] ?? $payload['tx_ref'] ?? null;
+    if (!$txRef) {
+        Log::error('No transaction reference');
+        return response()->json(['error' => 'Missing tx_ref'], 400);
+    }
+
+    // Find payment and update as before
+    $payment = Payment::where('tx_ref', $txRef)->first();
+    if (!$payment) {
+        Log::error('Payment not found', ['tx_ref' => $txRef]);
+        return response()->json(['error' => 'Payment not found'], 404);
+    }
+
+    if (($payload['status'] ?? '') === 'success') {
+        DB::transaction(function () use ($payment) {
+            $payment->status = 'held';
+            $payment->paid_at = now();
+            $payment->save();
+
+            $booking = Booking::find($payment->bookingID);
+            if ($booking) {
+                $booking->payment_status = 'held';
+                $booking->save();
+            }
+        });
+        return response()->json(['success' => true]);
+    }
+
+    return response()->json(['error' => 'Unhandled status'], 400);
+}
+
+
 
     /**
      * Handle successful payment webhook
@@ -331,11 +342,11 @@ class WebhookController extends Controller
     /**
      * Verify webhook signature
      */
-    private function verifyWebhookSignature($payload, $signature, $secret)
-    {
-        $expectedSignature = hash_hmac('sha256', $payload, $secret);
-        return hash_equals($expectedSignature, $signature);
-    }
+private function verifyWebhookSignature($payload, $signature, $secret)
+{
+    $expected = hash_hmac('sha256', $payload, $secret);
+    return hash_equals($expected, $signature);
+}
 
     /**
      * Trigger actions after successful payment

@@ -111,7 +111,8 @@ class PaymentController extends Controller
             'first_name' => $customer->fullname,
             'last_name' => '',
             'tx_ref' => $txRef,
-            'callback_url' => 'https://webhook.site/8160a71a-7c89-4044-96ec-0c60951fcc03',
+            'callback_url' => 'https://webhook.site/#!/view/8160a71a-7c89-4044-96ec-0c60951fcc03/d0f55f1f-2605-41ac-8a0f-e2b7480adaf5/1',
+            // later replace the above url with the link from 'Forwarding' while ruiing ngrok online. if not installed install ngrok and run `ngrok http 8000` and copy the https url and paste it above and add /api/webhook/chapa at the end of the url
             'return_url' => $request->return_url ?? 'https://www.google.com',
             'customization' => [
                 'title' => 'Home Service',  //  Short (max 16 chars)
@@ -122,10 +123,6 @@ class PaymentController extends Controller
         // Call Chapa API
         $chapaResponse = $this->chapaService->initializePayment($paymentData);
         
-        Log::info('Full Chapa Response:', $chapaResponse);
-            return response()->json([
-            'debug_chapa_response' => $chapaResponse
-        ]);
 
         // Check if Chapa responded with error
         if ($chapaResponse['status'] !== 'success') {
@@ -141,7 +138,7 @@ class PaymentController extends Controller
         }
 
         // Update payment with checkout URL from Chapa
-        $payment->status = 'processing';
+        $payment->status = 'pending';
         $payment->checkout_url = $chapaResponse['data']['data']['checkout_url'];  // Adjust based on actual response structure
         $payment->save();
 
@@ -171,82 +168,61 @@ class PaymentController extends Controller
     /**
      * Handle Chapa webhook/callback (tx_ref is the key)
      */
-    public function callback(Request $request, $tx_ref)
+    public function callback(Request $request)
     {
-        Log::info('Chapa webhook received', [
-            'tx_ref' => $tx_ref,
-            'payload' => $request->all()
-        ]);
-
+        // Get the raw payload from Chapa
+        $payload = $request->all();
+        
+        Log::info('Chapa webhook received', ['payload' => $payload]);
+        
+        // Get transaction reference from payload (Chapa sends 'trx_ref')
+        $tx_ref = $payload['trx_ref'] ?? $payload['tx_ref'] ?? null;
+        
+        if (!$tx_ref) {
+            Log::error('No transaction reference in webhook');
+            return response()->json(['success' => false, 'message' => 'No transaction reference'], 400);
+        }
+        
         // Find payment by tx_ref
         $payment = Payment::where('tx_ref', $tx_ref)->first();
+        
         if (!$payment) {
-            Log::error('Payment not found for webhook', ['tx_ref' => $tx_ref]);
+            Log::error('Payment not found', ['tx_ref' => $tx_ref]);
             return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
         }
-
-        // // Verify signature if provided (best practice)
-        // $signature = $request->header('chapa-signature');
-        // if ($signature && !$this->chapaService->verifySignature($request->getContent(), $signature)) {
-        //     Log::error('Chapa signature verification failed', ['tx_ref' => $tx_ref]);
-        //     return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
-        // }
-
-        // Verify with Chapa API
-        $verification = $this->chapaService->verifyPayment($tx_ref);
-        if ($verification['status'] !== 'success') {
-            Log::error('Payment verification failed', ['tx_ref' => $tx_ref]);
-            $payment->status = 'failed';
-            $payment->failure_reason = 'Verification failed';
-            $payment->save();
-            return response()->json(['success' => false, 'message' => 'Verification failed'], 400);
+        
+        // Check if payment was successful
+        $status = $payload['status'] ?? '';
+        
+        if ($status === 'success') {
+            DB::transaction(function () use ($payment, $payload) {
+                // Update payment record
+                $payment->status = 'held';
+                $payment->chapa_tx_id = $payload['ref_id'] ?? null;
+                $payment->paid_at = now();
+                $payment->save();
+                
+                // Update booking record
+                $booking = Booking::find($payment->bookingID);
+                if ($booking) {
+                    $booking->payment_status = 'held';
+                    $booking->save();
+                    
+                    Log::info('Payment confirmed and booking updated', [
+                        'booking_id' => $booking->bookingID,
+                        'payment_id' => $payment->paymentID,
+                        'tx_ref' => $payment->tx_ref
+                    ]);
+                }
+            });
+            
+            return response()->json(['success' => true, 'message' => 'Webhook processed successfully']);
         }
-
-        // Verify amount matches
-        if (abs($verification['data']['amount'] - $payment->amount) > 0.01) {
-            Log::error('Payment amount mismatch', ['tx_ref' => $tx_ref]);
-            $payment->status = 'failed';
-            $payment->failure_reason = 'Amount mismatch';
-            $payment->save();
-            return response()->json(['success' => false, 'message' => 'Amount mismatch'], 400);
-        }
-
-        // Only process if payment is in pending/processing state
-        if (!in_array($payment->status, ['pending', 'processing'])) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment already processed',
-                'data' => ['status' => $payment->status]
-            ]);
-        }
-
-        // Update payment as successful and held in escrow
-        DB::transaction(function () use ($payment, $verification) {
-            $payment->status = 'held';
-            $payment->chapa_tx_id = $verification['data']['id'];
-            $payment->paid_at = now();
-            $payment->held_until = now()->addHours(48); // Auto-release after 48 hours
-            $payment->save();
-
-            // Update booking status and balances
-            $booking = Booking::find($payment->bookingID);
-            if ($booking) {
-                $booking->payment_status = 'releasable';
-                $booking->pending_balance = $payment->provider_amount;
-                $booking->auto_release_at = now()->addHours(48);
-                $booking->status = 'completed'; // or 'paid' if you want a separate status
-                $booking->save();
-                Log::info('Booking marked as paid and releasable', [
-                    'booking_id' => $booking->bookingID,
-                    'tx_ref' => $payment->tx_ref
-                ]);
-            }
-        });
-
-        // Respond with success
-        return response()->json(['success' => true, 'message' => 'Payment processed']);
+        
+        // Handle failed payment
+        Log::warning('Payment not successful', ['status' => $status, 'tx_ref' => $tx_ref]);
+        return response()->json(['success' => false, 'message' => 'Payment not successful'], 400);
     }
-
     /**
      * Verify payment (called from frontend after return)
      */
