@@ -312,7 +312,7 @@ const Services = () => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {currentItems.map((item) => (
-                  <tr key={item.catagoryID || item.serviceID} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={activeTab === 'categories' ? item.catagoryID : item.serviceID} className="hover:bg-slate-50/50 transition-colors">
                     {activeTab === 'categories' ? (
                       <>
                         <td className="px-8 py-5 font-mono text-xs font-bold text-slate-300">#{item.catagoryID}</td>

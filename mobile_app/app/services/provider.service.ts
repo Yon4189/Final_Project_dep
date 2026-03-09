@@ -42,26 +42,36 @@ private async getProviderId(): Promise<string | null> {
 }
   // ==================== Profile Management ====================
 
-  async getProfile(): Promise<ApiResponse<ProviderProfile>> {
-    const response = await api.get<ProviderProfile>(`${this.BASE_PATH}/profile`);
+ async getProfile(): Promise<ApiResponse<ProviderProfile>> {
+  console.log('🔍 Fetching provider profile...'); // Add debug log
+  
+  const response = await api.get<ProviderProfile>(`${this.BASE_PATH}/profile`);
+  
+  console.log('🔍 Profile API response:', response); // Add debug log
+  
+  if (response.success && response.data) {
+    console.log('🔍 Profile data received:', response.data); // Add debug log
     
-    if (response.success && response.data) {
-      await storage.setItem('provider_profile', response.data);
-      
-      // Also store user_data with provider info
-      const userData = {
-        id: (response.data as any).providerID || (response.data as any).id,
-        providerID: (response.data as any).providerID,
-        fullname: (response.data as any).fullname || (response.data as any).businessName,
-        email: (response.data as any).email,
-        phone: (response.data as any).phone,
-      };
-      await storage.setItem('user_data', JSON.stringify(userData));
-    }
+    // Store in provider_profile
+    await storage.setItem('provider_profile', response.data);
     
-    return response;
+    // ALSO store in user_data with the same format as customer
+    const userData = {
+      id: (response.data as any).providerID || (response.data as any).id,
+      providerID: (response.data as any).providerID,
+      fullname: (response.data as any).fullname,
+      businessName: (response.data as any).businessName,
+      email: (response.data as any).email,
+      phone: (response.data as any).phone,
+      profilePicture: (response.data as any).profilePicture,
+    };
+    
+    console.log('🔍 Storing user_data:', userData); // Add debug log
+    await storage.setItem('user_data', JSON.stringify(userData));
   }
-
+  
+  return response;
+}
   async updateProfile(data: Partial<ProviderProfile>): Promise<ApiResponse<ProviderProfile>> {
     const response = await api.put<ProviderProfile>(`${this.BASE_PATH}/profile`, data);
     

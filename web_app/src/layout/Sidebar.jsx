@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 import {
   LayoutDashboard, UserCheck, Users, Wrench, Scale,
   BarChart3, Settings, LogOut, ClipboardList,
@@ -12,8 +13,35 @@ import {
 const Sidebar = ({ width, onResizeStart, isOpen }) => {
   const isMini = width < 160;
 
+  const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+
+  const [stats, setStats] = useState({
+    pending: 0,
+    active: 0,
+    rejected: 0,
+    suspended: 0,
+    customers: 0,
+    providers: 0
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await api.get('/admin/stats');
+        if (response.data.success) {
+          setStats(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching sidebar stats:", error);
+      }
+    };
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
 
   const [isServicesOpen, setIsServicesOpen] = useState(false);
@@ -151,17 +179,37 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isVerificationOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/verification/pending" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/pending' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
-                  Pending Queue
+                <Link to="/verification/pending" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/pending' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  <span>Pending Queue</span>
+                  {stats.pending > 0 && (
+                    <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                      {stats.pending}
+                    </span>
+                  )}
                 </Link>
-                <Link to="/verification/approved" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/approved' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
-                  Approved
+                <Link to="/verification/approved" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/approved' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  <span>Approved</span>
+                  {stats.active > 0 && (
+                    <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                      {stats.active}
+                    </span>
+                  )}
                 </Link>
-                <Link to="/verification/rejected" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/rejected' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
-                  Rejected
+                <Link to="/verification/rejected" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/rejected' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  <span>Rejected</span>
+                  {stats.rejected > 0 && (
+                    <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                      {stats.rejected}
+                    </span>
+                  )}
                 </Link>
-                <Link to="/verification/suspended" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/suspended' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
-                  Suspended
+                <Link to="/verification/suspended" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/suspended' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  <span>Suspended</span>
+                  {stats.suspended > 0 && (
+                    <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                      {stats.suspended}
+                    </span>
+                  )}
                 </Link>
               </div>
             </div>
@@ -194,11 +242,21 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isUsersOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/users/customers" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/customers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
-                  Customers
+                <Link to="/users/customers" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/customers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  <span>Customers</span>
+                  {stats.customers > 0 && (
+                    <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                      {stats.customers}
+                    </span>
+                  )}
                 </Link>
-                <Link to="/users/providers" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/providers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
-                  Providers
+                <Link to="/users/providers" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/providers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  <span>Providers</span>
+                  {(stats.active + stats.suspended) > 0 && (
+                    <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                      {stats.active + stats.suspended}
+                    </span>
+                  )}
                 </Link>
               </div>
             </div>

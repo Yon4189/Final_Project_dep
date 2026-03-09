@@ -158,6 +158,7 @@ class CustomerSearchController extends Controller
                 'businessName' => $provider->fullname,
                 'firstName' => explode(' ', $provider->fullname)[0] ?? '',
                 'lastName' => explode(' ', $provider->fullname)[1] ?? '',
+                'phone' => $provider->phone,
                 'profileImage' => $provider->profilePicture,
                 'rating' => round($provider->rating, 1),
                 'reviewCount' => 0, // will be calculated from reviews table
@@ -219,6 +220,7 @@ class CustomerSearchController extends Controller
                 'businessName' => $provider->fullname,
                 'firstName' => explode(' ', $provider->fullname)[0] ?? '',
                 'lastName' => explode(' ', $provider->fullname)[1] ?? '',
+                'phone' => $provider->phone,
                 'profileImage' => $provider->profilePicture,
                 'rating' => round($provider->rating, 1),
                 'reviewCount' => 0,
@@ -299,6 +301,7 @@ class CustomerSearchController extends Controller
             'businessName' => $provider->fullname,
             'firstName' => explode(' ', $provider->fullname)[0] ?? '',
             'lastName' => explode(' ', $provider->fullname)[1] ?? '',
+            'phone' => $provider->phone,
             'profileImage' => $provider->profilePicture,
             'rating' => round($provider->rating, 1),
             'reviewCount' => 0, // calculate from reviews table
@@ -430,6 +433,7 @@ class CustomerSearchController extends Controller
                 'businessName' => $provider->fullname,
                 'firstName' => explode(' ', $provider->fullname)[0] ?? '',
                 'lastName' => explode(' ', $provider->fullname)[1] ?? '',
+                'phone' => $provider->phone,
                 'profileImage' => $provider->profilePicture,
                 'rating' => round($provider->rating, 1),
                 'reviewCount' => 0,

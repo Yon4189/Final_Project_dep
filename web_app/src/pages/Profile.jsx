@@ -73,7 +73,7 @@ const Profile = () => {
 
         // Update context/session
         const updatedUser = { ...user, profilePicture: newPath };
-        const token = localStorage.getItem('admin_token');
+        const token = sessionStorage.getItem('admin_token');
         login(updatedUser, token);
 
         triggerToast("Profile picture updated!");
@@ -108,7 +108,7 @@ const Profile = () => {
         };
 
         // Update local session so sidebar/header updates
-        const token = localStorage.getItem('admin_token');
+        const token = sessionStorage.getItem('admin_token');
         login(newUserSession, token);
 
         triggerToast("Profile updated successfully!");

@@ -394,6 +394,9 @@ export const useServiceRequestDetails = (id: string) => {
   });
 };
 
+// Alias for backward compatibility and consistency with components
+export const useServiceRequest = useServiceRequestDetails;
+
 export const useCreateServiceRequest = () => {
   const queryClient = useQueryClient();
 
@@ -428,6 +431,9 @@ export const useCancelServiceRequest = () => {
     },
   });
 };
+
+// Alias for backward compatibility and consistency with components
+export const useCancelRequest = useCancelServiceRequest;
 
 export const useRescheduleServiceRequest = () => {
   const queryClient = useQueryClient();

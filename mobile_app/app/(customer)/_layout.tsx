@@ -162,6 +162,14 @@ export default function CustomerLayout() {
       />
 
       <Stack.Screen
+        name="chat/index"
+        options={{
+          title: 'Messages',
+          headerShown: true,
+        }}
+      />
+
+      <Stack.Screen
         name="chat/[id]"
         options={{
           title: 'Chat',

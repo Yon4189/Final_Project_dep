@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('withdrawals');
         Schema::create('withdrawals', function (Blueprint $table) {
             $table->id('withdrawalID');
             $table->unsignedBigInteger('providerID');

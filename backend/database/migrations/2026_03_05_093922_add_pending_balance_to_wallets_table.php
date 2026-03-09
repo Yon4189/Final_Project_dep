@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
 {
     Schema::table('wallets', function (Blueprint $table) {
-        $table->decimal('pending_balance', 12, 2)->default(0)->after('available_balance');
+        if (!Schema::hasColumn('wallets', 'pending_balance')) {
+            $table->decimal('pending_balance', 12, 2)->default(0)->after('available_balance');
+        }
     });
 }
 

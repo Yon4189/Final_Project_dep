@@ -16,6 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useServiceRequest, useCancelRequest } from '../../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { api } from "@/app/services/api";
 import { ReviewModal } from '../../../components/customer/ReviewModal';
 import { ComplaintModal } from '../../../components/customer/ComplaintModal';
 import { format } from 'date-fns';
@@ -92,8 +93,33 @@ export default function RequestDetails() {
     }
   };
 
-  const handleMessageProvider = () => {
-    Alert.alert('Coming Soon', 'Messaging is not available yet.');
+  const handleMessageProvider = async () => {
+    if (request?.providerId) {
+      try {
+        // Option 1: Try to get/create conversation via API
+        const response = await api.post<any>('/chat/conversations', {
+          providerID: parseInt(request.providerId),
+          bookingID: parseInt(id as string)
+        });
+
+        if (response.success && response.data.conversation) {
+          router.push(`/(customer)/chat/${request.providerId}`);
+        } else {
+          // Fallback if API fails but we have provider phone
+          if (request.providerPhone) {
+            Linking.openURL(`sms:${request.providerPhone}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error opening chat:', error);
+        // Fallback to SMS
+        if (request.providerPhone) {
+          Linking.openURL(`sms:${request.providerPhone}`);
+        }
+      }
+    } else if (request?.providerPhone) {
+      Linking.openURL(`sms:${request.providerPhone}`);
+    }
   };
 
   const handleTrackProvider = () => {
@@ -141,11 +167,11 @@ export default function RequestDetails() {
 
       <View style={styles.statusContainer}>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}>
-         <Ionicons 
-  name={getStatusIcon(request.status) as keyof typeof Ionicons.glyphMap} 
-  size={20} 
-  color={getStatusColor(request.status)} 
-/>
+          <Ionicons
+            name={getStatusIcon(request.status) as keyof typeof Ionicons.glyphMap}
+            size={20}
+            color={getStatusColor(request.status)}
+          />
           <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
             {request.status.replace('_', ' ').toUpperCase()}
           </Text>
@@ -246,7 +272,7 @@ export default function RequestDetails() {
           <Text style={styles.priceLabel}>Service Price</Text>
           <Text style={styles.priceValue}>${request.estimatedPrice.toFixed(2)}</Text>
         </View>
-        
+
         {request.paymentStatus === 'paid' ? (
           <View style={styles.paidContainer}>
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
@@ -285,10 +311,10 @@ export default function RequestDetails() {
                     isCompleted && styles.timelineIconCompleted,
                     isCurrent && styles.timelineIconCurrent,
                   ]}>
-                    <Ionicons 
-                      name={step.icon as any} 
-                      size={16} 
-                      color={isCompleted ? Colors.surface : Colors.text.secondary} 
+                    <Ionicons
+                      name={step.icon as any}
+                      size={16}
+                      color={isCompleted ? Colors.surface : Colors.text.secondary}
                     />
                   </View>
                   {index < STATUS_STEPS.length - 1 && (
@@ -341,8 +367,8 @@ export default function RequestDetails() {
         )}
 
         {['pending', 'confirmed'].includes(request.status) && (
-          <TouchableOpacity 
-            style={styles.cancelButton} 
+          <TouchableOpacity
+            style={styles.cancelButton}
             onPress={() => setShowCancelModal(true)}
           >
             <Ionicons name="close-circle" size={20} color={Colors.error} />
@@ -383,20 +409,20 @@ export default function RequestDetails() {
   return (
     <View style={styles.container}>
       {renderHeader()}
-      
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {renderProviderInfo()}
         {renderTabs()}
-        
+
         {selectedTab === 'details' && (
           <>
             {renderServiceDetails()}
             {renderPaymentDetails()}
           </>
         )}
-        
+
         {selectedTab === 'timeline' && renderTimeline()}
-        
+
         {selectedTab === 'messages' && (
           <View style={styles.messagesPlaceholder}>
             <Ionicons name="chatbubbles-outline" size={48} color={Colors.text.secondary} />
@@ -409,9 +435,9 @@ export default function RequestDetails() {
             </TouchableOpacity>
           </View>
         )}
-        
+
         {renderActions()}
-        
+
         <View style={styles.bottomPadding} />
       </ScrollView>
 
@@ -450,13 +476,13 @@ export default function RequestDetails() {
             ))}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalCancelButton}
                 onPress={() => setShowCancelModal(false)}
               >
                 <Text style={styles.modalCancelText}>Go Back</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
                   styles.modalConfirmButton,
                   !cancelReason && styles.modalConfirmButtonDisabled,
@@ -478,8 +504,8 @@ export default function RequestDetails() {
         visible={showReviewModal}
         onClose={() => setShowReviewModal(false)}
         bookingId={id as string}
-        providerName={request.providerName}
-        serviceName={request.serviceName}
+        providerName={request.providerName || ''}
+        serviceName={request.serviceName || ''}
         onSuccess={() => {
           // Refresh request data
         }}
@@ -490,7 +516,7 @@ export default function RequestDetails() {
         visible={showComplaintModal}
         onClose={() => setShowComplaintModal(false)}
         bookingId={id as string}
-        providerName={request.providerName}
+        providerName={request.providerName || ''}
       />
     </View>
   );
