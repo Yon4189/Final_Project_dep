@@ -363,30 +363,30 @@ const Users = () => {
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right">
-                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                      <div className="flex justify-end gap-3 transition-all">
                         {u.status === 'Suspended' ? (
                           <button
                             onClick={() => toggleUserStatus(u.id, u.status)}
-                            className="bg-green-500 hover:bg-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-green-100 transition-all hover:rotate-6 active:scale-95"
+                            className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
                             title="Reactivate User"
                           >
-                            <ShieldCheck size={18} />
+                            <ShieldCheck size={14} /> Reactivate
                           </button>
                         ) : (
                           <button
                             onClick={() => toggleUserStatus(u.id, u.status)}
-                            className="bg-amber-600 hover:bg-amber-700 text-white p-2.5 rounded-xl shadow-lg shadow-amber-100 transition-all hover:-rotate-6 active:scale-95"
+                            className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
                             title="Suspend User"
                           >
-                            <ShieldAlert size={18} />
+                            <ShieldAlert size={14} /> Suspend
                           </button>
                         )}
                         <button
                           onClick={() => deleteUser(u.id, u.name)}
-                          className="bg-red-500 hover:bg-red-600 text-white p-2.5 rounded-xl shadow-lg shadow-red-100 transition-all hover:scale-110 active:scale-90"
+                          className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
                           title="Permanent Delete"
                         >
-                          <UserMinus size={18} />
+                          <UserMinus size={14} /> Delete
                         </button>
                       </div>
                     </td>
@@ -434,3 +434,4 @@ const Users = () => {
     </div>
   );
 };
+export default Users;
