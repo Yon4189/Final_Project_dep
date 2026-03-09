@@ -77,7 +77,7 @@ class AdminAuthController extends Authenticatable
                     'providers'  => ServiceProvider::count(),
                     'customers'  => Customer::count(),
                     'pending'    => ServiceProvider::where('status', 'pending')->count(),
-                    'approved'   => ServiceProvider::where('status', 'approved')->count(),
+                    'active'     => ServiceProvider::where('status', 'Active')->count(),
                     'suspended'  => ServiceProvider::where('status', 'suspended')->count(),
                     'rejected'   => ServiceProvider::where('status', 'rejected')->count(),
                     'categories' => Category::count(),
@@ -101,7 +101,9 @@ class AdminAuthController extends Authenticatable
     public function getAllProviders()
     {
         try {
-            $providers = ServiceProvider::with('category')->get();
+            $providers = ServiceProvider::whereIn('status', ['Active', 'Suspended'])
+                ->with('category')
+                ->get();
             $formatted = $providers->map(function ($provider) {
                 return [
                     'providerID'   => $provider->providerID,
@@ -148,8 +150,20 @@ class AdminAuthController extends Authenticatable
         }
 
         // 3. Update status and reason
-        $provider->status = $request->status;
-        $provider->verification_reason = $request->status === 'approved' ? null : $request->verification_reason;
+        $status = $request->status;
+        if ($status === 'approved') {
+            $provider->status = 'Active';
+            $provider->approved_at = now();
+            $provider->rejected_at = null;
+        } elseif ($status === 'rejected') {
+            $provider->status = 'Rejected';
+            $provider->rejected_at = now();
+            $provider->approved_at = null;
+            $provider->verification_reason = $request->verification_reason;
+        } elseif ($status === 'suspended') {
+            $provider->status = 'Suspended';
+            $provider->verification_reason = $request->verification_reason;
+        }
         $provider->save();
 
         $statusLabel = strtolower($request->status);
@@ -213,7 +227,7 @@ class AdminAuthController extends Authenticatable
     public function pendingProviders()
     {
         $pending = ServiceProvider::where('status', 'pending')
-            ->with('category', 'services')
+            ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($p) => $this->formatProvider($p));
@@ -226,7 +240,7 @@ class AdminAuthController extends Authenticatable
      */
     public function approvedProviders()
     {
-        $approved = ServiceProvider::where('status', 'approved')
+        $approved = ServiceProvider::where('status', 'Active')
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -254,7 +268,7 @@ class AdminAuthController extends Authenticatable
      */
     public function suspendedProviders()
     {
-        $suspended = ServiceProvider::where('status', 'suspended')
+        $suspended = ServiceProvider::where('status', 'Suspended')
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -273,7 +287,7 @@ class AdminAuthController extends Authenticatable
             'id'                  => $provider->providerID,
             'name'                => $provider->fullname,
             'profilePicture'      => $provider->profilePicture,
-            'service_type'        => $provider->category->name ?? 'General',
+            'service_type'        => $provider->category?->name ?? 'General',
             'service_title'       => $service->title ?? null,
             'service_description' => $service->description ?? $provider->bio ?? null,
             'estimated_cost'      => $service->estimatedPrice ?? $service->estimatedCost ?? $provider->estimatedPrice ?? null,
@@ -295,7 +309,7 @@ class AdminAuthController extends Authenticatable
     {
         return response()->json([
             'success' => true,
-            'data' => ServiceProvider::all()
+            'data' => ServiceProvider::whereIn('status', ['Active', 'Suspended'])->get()
         ]);
     }
 
@@ -345,8 +359,12 @@ class AdminAuthController extends Authenticatable
         if (!$customer) {
             return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
         }
-        $customer->status = $customer->status === 'approved' ? 'suspended' : 'approved';
+        
+        // Ensure accurate state toggling for customers (Active <-> Suspended)
+        // Default DB value is 'Active', so we toggle against it case-insensitively
+        $customer->status = strtolower($customer->status) === 'active' ? 'Suspended' : 'Active';
         $customer->save();
+        
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $customer->status]);
     }
 
@@ -359,8 +377,11 @@ class AdminAuthController extends Authenticatable
         if (!$provider) {
             return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
         }
-        $provider->status = $provider->status === 'approved' ? 'suspended' : 'approved';
+        
+        // Ensure accurate state toggling for providers (Active <-> Suspended)
+        $provider->status = strtolower($provider->status) === 'active' ? 'Suspended' : 'Active';
         $provider->save();
+        
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $provider->status]);
     }
 

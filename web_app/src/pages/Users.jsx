@@ -108,17 +108,23 @@ const Users = () => {
       const responseData = apiResponse.data.data || [];
 
       // mapping backend fields with frontend fields
-      const mappedUsers = responseData.map(u => ({
-        id: u.customerID || u.providerID,
-        name: u.fullname,
-        email: u.email,
-        phone: u.phone,
-        type: userType,
-        status: u.status || "Active",
-        location: u.location || u.service_city || "Not Provided",
-        profilePicture: u.profilePicture || null,
-        joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
-      }));
+      const mappedUsers = responseData.map(u => {
+        // Normalize status to Title Case (Active, Suspended, Approved, Rejected)
+        const rawStatus = (u.status || "Active").toLowerCase();
+        let normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+
+        return {
+          id: u.customerID || u.providerID,
+          name: u.fullname,
+          email: u.email,
+          phone: u.phone,
+          type: userType,
+          status: normalizedStatus,
+          location: u.location || u.service_city || "Not Provided",
+          profilePicture: u.profilePicture || null,
+          joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
+        };
+      });
 
       setUsers(mappedUsers);
 
@@ -147,8 +153,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/providers/${id}/status`
-        : `/customers/${id}/status`;
+        ? `/admin/providers/${id}/status`
+        : `/admin/customers/${id}/status`;
 
       // call backend to update status
       await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
@@ -169,8 +175,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/providers/${id}`
-        : `/customers/${id}`;
+        ? `/admin/providers/${id}`
+        : `/admin/customers/${id}`;
 
       // call backend to delete user
       await api.delete(url);

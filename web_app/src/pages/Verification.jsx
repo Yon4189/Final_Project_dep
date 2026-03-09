@@ -323,9 +323,9 @@ const Verification = () => {
 
                     {/* Status badge */}
                     <td className="px-6 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${item.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
-                        item.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                          item.status === 'suspended' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${item.status?.toLowerCase() === 'active' ? 'bg-green-50 text-green-600 border-green-100' :
+                        item.status?.toLowerCase() === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
+                          item.status?.toLowerCase() === 'suspended' ? 'bg-purple-50 text-purple-600 border-purple-100' :
                             'bg-orange-50 text-orange-600 border-orange-100'
                         }`}>
                         {item.status ?? 'Pending'}
@@ -341,7 +341,7 @@ const Verification = () => {
                           </div>
                         ) : (
                           <>
-                            {(item.status === 'pending' || item.status === null || item.status === 'rejected') && (
+                            {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'rejected') && (
                               <button
                                 onClick={() => handleApprove(item.id, item.name)}
                                 className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
@@ -349,7 +349,7 @@ const Verification = () => {
                                 <CheckCircle size={14} /> Approve
                               </button>
                             )}
-                            {(item.status === 'pending' || item.status === null || item.status === 'approved') && (
+                            {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'active') && (
                               <button
                                 onClick={() => openRejectModal(item)}
                                 className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
@@ -357,7 +357,7 @@ const Verification = () => {
                                 <XCircle size={14} /> Reject
                               </button>
                             )}
-                            {item.status === 'approved' && (
+                            {item.status?.toLowerCase() === 'active' && (
                               <button
                                 onClick={() => handleSuspend(item.id, item.name)}
                                 className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
@@ -365,7 +365,7 @@ const Verification = () => {
                                 <AlertCircle size={14} /> Suspend
                               </button>
                             )}
-                            {item.status === 'suspended' && (
+                            {item.status?.toLowerCase() === 'suspended' && (
                               <button
                                 onClick={() => handleApprove(item.id, item.name)}
                                 className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
