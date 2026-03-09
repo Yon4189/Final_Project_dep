@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Search, CheckCircle, XCircle, Loader2, Database,
-  Eye, FileCheck, X, Image as ImageIcon, AlertCircle
+  Eye, FileCheck, X, Image as ImageIcon, AlertCircle,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -23,6 +24,8 @@ const Verification = () => {
   const [filter, setFilter] = useState(getFilterFromPath(location.pathname));
   const [processingId, setProcessingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -35,7 +38,12 @@ const Verification = () => {
 
   useEffect(() => {
     setFilter(getFilterFromPath(location.pathname));
+    setCurrentPage(1);
   }, [location.pathname]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const fetchProviders = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -157,6 +165,14 @@ const Verification = () => {
       title.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
+  // Pagination calculation
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProviders.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProviders.length / itemsPerPage) || 1;
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
@@ -184,9 +200,18 @@ const Verification = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Provider Verification</h1>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest italic">
-            Current Filter: <span className="text-blue-600 font-bold">{filter}</span>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">
+              {filter} Providers
+            </h1>
+            {providers.length > 0 && (
+              <span className="bg-blue-600 text-white text-[12px] px-3 py-1 rounded-full font-black shadow-lg shadow-blue-200 animate-in zoom-in duration-300">
+                {providers.length}
+              </span>
+            )}
+          </div>
+          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest italic mt-1">
+            Verification Management System
           </p>
         </div>
 
@@ -221,24 +246,24 @@ const Verification = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 text-slate-400 text-[9px] uppercase font-black border-b border-slate-100 tracking-tighter">
+              <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black border-b border-slate-100">
                 <tr>
-                  <th className="px-6 py-5">Full Name</th>
-                  <th className="px-6 py-5">Service</th>
-                  <th className="px-6 py-5">Service Description</th>
-                  <th className="px-6 py-5 text-center">Est. Cost</th>
-                  <th className="px-6 py-5 text-center">Verification Files</th>
-                  <th className="px-6 py-5 text-center">Submission</th>
-                  <th className="px-6 py-5">Status</th>
-                  <th className="px-6 py-5 text-right">Action</th>
+                  <th className="px-8 py-5">Provider Full Name</th>
+                  <th className="px-8 py-5">Category</th>
+                  <th className="px-8 py-5">Service</th>
+                  <th className="px-8 py-5">Service Description</th>
+                  <th className="px-8 py-5">Est. Cost</th>
+                  <th className="px-8 py-5">Verification Files</th>
+                  <th className="px-8 py-5">Submission</th>
+                  <th className="px-8 py-5 text-right">Verification Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredProviders.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                {currentItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
 
                     {/* Full Name – profile picture + name */}
-                    <td className="px-6 py-5">
+                    <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
                         {item.profilePicture ? (
                           <img
@@ -381,6 +406,40 @@ const Verification = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Footer */}
+        {!loading && dbStatus === 'connected' && filteredProviders.length > itemsPerPage && (
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+              Entries {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredProviders.length)} of {filteredProviders.length}
+            </span>
+            <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => paginate(currentPage - 1)}
+                className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all text-slate-600"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => paginate(i + 1)}
+                  className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:bg-slate-50'}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => paginate(currentPage + 1)}
+                className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all text-slate-600"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
           </div>
         )}
       </div>

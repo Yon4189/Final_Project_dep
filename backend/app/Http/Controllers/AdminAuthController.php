@@ -78,8 +78,8 @@ class AdminAuthController extends Authenticatable
                     'customers'  => Customer::count(),
                     'pending'    => ServiceProvider::where('status', 'pending')->count(),
                     'active'     => ServiceProvider::where('status', 'Active')->count(),
-                    'suspended'  => ServiceProvider::where('status', 'suspended')->count(),
-                    'rejected'   => ServiceProvider::where('status', 'rejected')->count(),
+                    'suspended'  => ServiceProvider::where('status', 'Suspended')->count(),
+                    'rejected'   => ServiceProvider::where('status', 'Rejected')->count(),
                     'categories' => Category::count(),
                     'services'   => Service::count(),
                     'revenue'    => Transaction::sum('platformFee') ?? 0
