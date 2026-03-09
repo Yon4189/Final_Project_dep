@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import {
   Search, UserMinus, ShieldAlert, ShieldCheck,
   Mail, Phone, Database,
-  CheckCircle, AlertCircle, RefreshCw, Loader2
+  CheckCircle, AlertCircle, RefreshCw, Loader2,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -74,6 +75,8 @@ const Users = () => {
 
   // 2. UI State
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const token = sessionStorage.getItem('admin_token');
@@ -89,7 +92,12 @@ const Users = () => {
   // Update userType when route changes
   useEffect(() => {
     setUserType(getUserTypeFromPath());
+    setCurrentPage(1);
   }, [location.pathname]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // 3. Mock Data (replace with API call)
   // mock data was here. its removed 
@@ -108,17 +116,23 @@ const Users = () => {
       const responseData = apiResponse.data.data || [];
 
       // mapping backend fields with frontend fields
-      const mappedUsers = responseData.map(u => ({
-        id: u.customerID || u.providerID,
-        name: u.fullname,
-        email: u.email,
-        phone: u.phone,
-        type: userType,
-        status: u.status || "Active",
-        location: u.location || u.service_city || "Not Provided",
-        profilePicture: u.profilePicture || null,
-        joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
-      }));
+      const mappedUsers = responseData.map(u => {
+        // Normalize status to Title Case (Active, Suspended, Approved, Rejected)
+        const rawStatus = (u.status || "Active").toLowerCase();
+        let normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+
+        return {
+          id: u.customerID || u.providerID,
+          name: u.fullname,
+          email: u.email,
+          phone: u.phone,
+          type: userType,
+          status: normalizedStatus,
+          location: u.location || u.service_city || "Not Provided",
+          profilePicture: u.profilePicture || null,
+          joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
+        };
+      });
 
       setUsers(mappedUsers);
 
@@ -147,8 +161,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/providers/${id}/status`
-        : `/customers/${id}/status`;
+        ? `/admin/providers/${id}/status`
+        : `/admin/customers/${id}/status`;
 
       // call backend to update status
       await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
@@ -169,8 +183,8 @@ const Users = () => {
 
     try {
       const url = userType === "Provider"
-        ? `/providers/${id}`
-        : `/customers/${id}`;
+        ? `/admin/providers/${id}`
+        : `/admin/customers/${id}`;
 
       // call backend to delete user
       await api.delete(url);
@@ -198,16 +212,31 @@ const Users = () => {
     return matchesType && matchesSearch;
   });
 
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       {/* Header with Database Status */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">
-            {userType} Management
-          </h1>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-tighter">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">
+              {userType} Management
+            </h1>
+            {users.length > 0 && (
+              <span className="bg-blue-600 text-white text-[12px] px-3 py-1 rounded-full font-black shadow-lg shadow-blue-200 animate-in zoom-in duration-300">
+                {users.length}
+              </span>
+            )}
+          </div>
+          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest italic mt-1">
             Manage {userType.toLowerCase()} accounts and permissions.
           </p>
         </div>
@@ -285,56 +314,79 @@ const Users = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                {currentItems.map((u) => (
+                  <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <UserAvatar user={user} />
-                        <div>
-                          <div className="font-bold text-slate-900">{user.name}</div>
+                      <div className="flex items-center gap-4">
+                        <UserAvatar user={u} />
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900 leading-none">{u.name}</span>
+                          <span className="text-[10px] text-slate-400 font-medium mt-1 truncate max-w-[120px] uppercase tracking-tighter italic">
+                            ID: {u.id}
+                          </span>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1 text-xs text-slate-600">
-                          <Mail size={12} /> {user.email}
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <Mail size={12} className="shrink-0" />
+                          <span className="text-xs font-medium truncate max-w-[150px]">{u.email}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-slate-600">
-                          <Phone size={12} /> {user.phone}
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <Phone size={12} className="shrink-0" />
+                          <span className="text-xs font-medium tracking-tighter">{u.phone || 'N/A'}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-sm text-slate-500">{user.location}</td>
-                    <td className="px-8 py-5 text-sm text-slate-500">{user.joined}</td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${user.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                      <div className="flex items-center gap-2">
+                        <div className="bg-slate-100 p-2 rounded-lg">
+                          <Database size={14} className="text-slate-400" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-600 truncate max-w-[150px] italic">
+                          {u.location}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-[0.1em] italic ${u.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' :
+                        u.status === 'Suspended' ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' :
+                          'bg-red-50 text-red-600 border-red-200'
                         }`}>
-                        {user.status}
+                        {u.status}
                       </span>
                     </td>
                     <td className="px-8 py-5">
-                      <div className="flex justify-end gap-3">
-                        {user.status === 'Active' ? (
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                        {u.joined}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                        {u.status === 'Suspended' ? (
                           <button
-                            onClick={() => toggleUserStatus(user.id, user.status)}
-                            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all active:scale-95"
+                            onClick={() => toggleUserStatus(u.id, u.status)}
+                            className="bg-green-500 hover:bg-green-600 text-white p-2.5 rounded-xl shadow-lg shadow-green-100 transition-all hover:rotate-6 active:scale-95"
+                            title="Reactivate User"
                           >
-                            <ShieldAlert size={16} /> Suspend
+                            <ShieldCheck size={18} />
                           </button>
                         ) : (
                           <button
-                            onClick={() => toggleUserStatus(user.id, user.status)}
-                            className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all active:scale-95"
+                            onClick={() => toggleUserStatus(u.id, u.status)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white p-2.5 rounded-xl shadow-lg shadow-amber-100 transition-all hover:-rotate-6 active:scale-95"
+                            title="Suspend User"
                           >
-                            <ShieldCheck size={16} /> Activate
+                            <ShieldAlert size={18} />
                           </button>
                         )}
                         <button
-                          onClick={() => deleteUser(user.id, user.name)}
-                          className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all active:scale-95"
+                          onClick={() => deleteUser(u.id, u.name)}
+                          className="bg-red-500 hover:bg-red-600 text-white p-2.5 rounded-xl shadow-lg shadow-red-100 transition-all hover:scale-110 active:scale-90"
+                          title="Permanent Delete"
                         >
-                          <UserMinus size={16} /> Delete
+                          <UserMinus size={18} />
                         </button>
                       </div>
                     </td>
@@ -344,9 +396,41 @@ const Users = () => {
             </table>
           </div>
         )}
+
+        {/* Pagination Footer */}
+        {!loading && dbStatus === 'connected' && filteredUsers.length > itemsPerPage && (
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+              Entries {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredUsers.length)} of {filteredUsers.length}
+            </span>
+            <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => paginate(currentPage - 1)}
+                className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all text-slate-600"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => paginate(i + 1)}
+                  className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:bg-slate-50'}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => paginate(currentPage + 1)}
+                className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all text-slate-600"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
-export default Users;
