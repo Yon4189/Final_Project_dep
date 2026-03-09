@@ -9,6 +9,7 @@ import {
   Folder, Clock, CheckCircle, XCircle,
   User, Check, X, AlertCircle
 } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const Sidebar = ({ width, onResizeStart, isOpen }) => {
   const isMini = width < 160;
@@ -83,16 +84,23 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
         className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 transition-colors z-30 group-hover/sidebar:w-1.5"
       />
 
-      <div className={`p-8 mb-4 border-b border-slate-800/50 flex items-center ${!isMini ? 'gap-3' : 'justify-center'}`}>
-        <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
-          <Wrench className="text-white" size={20} />
-        </div>
-        {!isMini && (
-          <div className="flex flex-col overflow-hidden whitespace-nowrap">
-            <span className="text-white font-black tracking-tighter text-xl italic leading-none">HB_SFS</span>
-            <span className="text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em] mt-1">Admin Panel</span>
+      <div className="p-5 mb-2 border-b border-slate-800/50 flex flex-col items-center justify-center gap-4">
+        <Link
+          to="/"
+          className="block transform transition-all active:scale-95"
+          title="Go to Dashboard"
+        >
+          <div
+            className="w-20 h-20 rounded-4xl flex items-center justify-center shadow-lg shadow-black/20 shrink-0 transform transition-all hover:scale-105 duration-500 overflow-hidden p-2"
+            style={{ backgroundColor: '#DBDBDB' }}
+          >
+            <img
+              src={logo}
+              alt="HB_SFS Logo"
+              className="w-full h-full object-contain scale-[1.35] transform-gpu"
+            />
           </div>
-        )}
+        </Link>
       </div>
 
       <nav className="flex-1 mt-4">
