@@ -429,6 +429,9 @@ class ApiService {
               
               const sessionError: any = new Error('Session expired. Please login again.');
               sessionError.statusCode = 401;
+
+
+
               sessionError.requiresLogin = true;
               return Promise.reject(sessionError);
             }

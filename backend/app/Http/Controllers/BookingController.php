@@ -765,4 +765,66 @@ class BookingController extends Controller
         }
     }
 
+
+    /**
+     * Provider starts the job
+     * 
+     * POST /api/provider/bookings/{id}/start
+     */
+    public function start(Request $request, $id)
+    {
+        try {
+            $provider = $request->user();
+            
+            if (!$provider) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Provider not authenticated'
+                ], 401);
+            }
+
+            // Find booking that belongs to this provider and is in 'paid' status
+            $booking = Booking::where('bookingID', $id)
+                ->where('providerID', $provider->providerID)
+                ->whereIn('status', ['paid', 'confirmed']) // Can start after payment
+                ->first();
+
+            if (!$booking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking not found or cannot be started'
+                ], 404);
+            }
+
+            // Update booking status
+            $booking->status = 'in_progress';
+            $booking->provider_started_at = now();
+            $booking->save();
+
+            // Log the action
+            Log::info('Provider started job', [
+                'booking_id' => $booking->bookingID,
+                'provider_id' => $provider->providerID
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Job started successfully',
+                'data' => [
+                    'bookingID' => $booking->bookingID,
+                    'status' => $booking->status,
+                    'started_at' => $booking->provider_started_at
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error starting job: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start job'
+            ], 500);
+        }
+    }
+
 }

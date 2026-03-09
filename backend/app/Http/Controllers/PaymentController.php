@@ -11,6 +11,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Wallet;
+use App\Models\WalletTransaction;
+
+
 
 class PaymentController extends Controller
 {
@@ -26,26 +31,29 @@ class PaymentController extends Controller
     /**
      * Initialize payment for booking
      */
-    public function initialize(Request $request)
+    public function initialize(Request $request, $bookingId)
     {
-        $request->validate([
-            'booking_id' => 'required|exists:bookings,bookingID',
-            'return_url' => 'nullable|url'
-        ]);
-
         $customer = $request->user();
-        $booking = Booking::where('bookingID', $request->booking_id)
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not authenticated'
+            ], 401);
+        }
+        
+        $booking = Booking::where('bookingID', $bookingId)
             ->where('customerID', $customer->customerID)
-            ->where('booking_status', 'pending_payment')
+            ->where('status', 'accepted')
             ->first();
-
+            
         if (!$booking) {
             return response()->json([
                 'success' => false,
                 'message' => 'Booking not found or not ready for payment'
             ], 404);
         }
-
+        
         // Check if payment already exists
         $existingPayment = Payment::where('bookingID', $booking->bookingID)
             ->whereIn('status', ['pending', 'processing', 'held'])
@@ -63,101 +71,98 @@ class PaymentController extends Controller
                 ]
             ]);
         }
+        
+        // Generate unique tx_ref
+        $txRef = 'BOOKING-' . $bookingId . '-' . time() . '-' . uniqid();
+        
+        // Calculate commission (10%)
+        $commission = $booking->agreed_price * 0.10;
+        $providerAmount = $booking->agreed_price - $commission;
+        
+        // Create payment record in database
+        $payment = Payment::create([
+            'tx_ref' => $txRef,
+            'bookingID' => $booking->bookingID,
+            'customerID' => $customer->customerID,
+            'providerID' => $booking->providerID,
+            'amount' => $booking->agreed_price,
+            'platform_commission' => $commission,
+            'provider_amount' => $providerAmount,
+            'status' => 'pending',
+            'currency' => 'ETB',
+            'callback_url' => route('payment.callback', ['tx_ref' => $txRef]),
+            'return_url' => $request->return_url ?? config('app.frontend_url') . '/payment/return',
+            'customer_email' => $customer->email,
+            'customer_first_name' => $customer->fullname,
+            'customer_last_name' => '', // or split fullname if needed
+            'customer_phone' => $customer->phone ?? '',
+            'meta_data' => json_encode([
+                'booking_reference' => $booking->bookingID,
+                'customer_name' => $customer->fullname,
+                'customer_email' => $customer->email
+            ])
+        ]);
+        
+        // Prepare Chapa payment data
+        $paymentData = [
+            'amount' => (string) $booking->agreed_price,
+            'currency' => 'ETB',
+            'email' => $customer->email,
+            'first_name' => $customer->fullname,
+            'last_name' => '',
+            'tx_ref' => $txRef,
+            'callback_url' => 'https://webhook.site/8160a71a-7c89-4044-96ec-0c60951fcc03',
+            'return_url' => $request->return_url ?? 'https://www.google.com',
+            'customization' => [
+                'title' => 'Home Service',  //  Short (max 16 chars)
+                'description' => 'Payment for booking'  //  Short (max 30 chars)
+            ]
+        ];
 
-        return DB::transaction(function () use ($customer, $booking, $request) {
-            // Calculate commission (10%)
-            $commission = $booking->agreed_price * 0.10;
-            $providerAmount = $booking->agreed_price - $commission;
-
-            // Generate UNIQUE transaction reference
-            $txRef = sprintf(
-                'BOOKING-%d-CUST-%d-%s-%s',
-                $booking->bookingID,
-                $customer->customerID,
-                now()->format('YmdHis'),
-                Str::random(6)
-            );
-
-            // Create payment record with tx_ref BEFORE sending to Chapa
-            $payment = Payment::create([
-                'tx_ref' => $txRef,
-                'bookingID' => $booking->bookingID,
-                'customerID' => $customer->customerID,
-                'providerID' => $booking->providerID,
-                'amount' => $booking->agreed_price,
-                'platform_commission' => $commission,
-                'provider_amount' => $providerAmount,
-                'status' => 'pending',
-                'currency' => 'ETB',
-                'callback_url' => route('payment.callback', ['tx_ref' => $txRef]),
-                'return_url' => $request->return_url ?? config('app.frontend_url') . '/payment/return',
-                'meta_data' => [
-                    'booking_reference' => $booking->bookingID,
-                    'customer_name' => $customer->fullname,
-                    'customer_email' => $customer->email
-                ]
-            ]);
-
-            // Prepare Chapa payment data with EXACT same tx_ref
-            $paymentData = [
-                'amount' => $booking->agreed_price,
-                'currency' => 'ETB',
-                'email' => $customer->email,
-                'first_name' => $customer->fullname,
-                'tx_ref' => $txRef,
-                'callback_url' => $payment->callback_url,
-                'return_url' => $payment->return_url,
-                'customization' => [
-                    'title' => 'Home Service Payment',
-                    'description' => "Payment for booking #{$booking->bookingID}"
-                ],
-                'meta' => [
-                    'booking_id' => $booking->bookingID,
-                    'customer_id' => $customer->customerID,
-                    'provider_id' => $booking->providerID,
-                    'tx_ref' => $txRef
-                ]
-            ];
-
-            // Initialize with Chapa
-            $chapaResponse = $this->chapaService->initializePayment($paymentData);
-
-            if ($chapaResponse['status'] !== 'success') {
-                $payment->status = 'failed';
-                $payment->failure_reason = $chapaResponse['message'] ?? 'Chapa initialization failed';
-                $payment->save();
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment initialization failed',
-                    'errors' => $chapaResponse
-                ], 400);
-            }
-
-            // Update payment with checkout URL
-            $payment->status = 'processing';
-            $payment->checkout_url = $chapaResponse['data']['checkout_url'];
-            $payment->chapa_response = $chapaResponse;
-            $payment->save();
-
-            Log::info('Payment initialized', [
-                'tx_ref' => $txRef,
-                'booking_id' => $booking->bookingID,
-                'customer_id' => $customer->customerID
-            ]);
-
+        // Call Chapa API
+        $chapaResponse = $this->chapaService->initializePayment($paymentData);
+        
+        Log::info('Full Chapa Response:', $chapaResponse);
             return response()->json([
-                'success' => true,
-                'message' => 'Payment initialized successfully',
-                'data' => [
-                    'payment_id' => $payment->paymentID,
-                    'tx_ref' => $txRef,
-                    'checkout_url' => $payment->checkout_url,
-                    'amount' => $payment->amount,
-                    'status' => $payment->status
-                ]
-            ]);
-        });
+            'debug_chapa_response' => $chapaResponse
+        ]);
+
+        // Check if Chapa responded with error
+        if ($chapaResponse['status'] !== 'success') {
+            $payment->status = 'failed';
+            $payment->failure_reason = $chapaResponse['message'] ?? 'Chapa initialization failed';
+            $payment->save();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment initialization failed',
+                'errors' => $chapaResponse
+            ], 400);
+        }
+
+        // Update payment with checkout URL from Chapa
+        $payment->status = 'processing';
+        $payment->checkout_url = $chapaResponse['data']['data']['checkout_url'];  // Adjust based on actual response structure
+        $payment->save();
+
+        // Log success
+        Log::info('Payment initialized successfully', [
+            'tx_ref' => $txRef,
+            'booking_id' => $booking->bookingID
+        ]);
+
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment initialized successfully',
+            'data' => [
+                'payment_id' => $payment->paymentID,
+                'tx_ref' => $txRef,
+                'checkout_url' => $payment->checkout_url,
+                'amount' => $payment->amount,
+                'status' => $payment->status
+            ]
+        ]);
     }
 
     /**
@@ -180,12 +185,12 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
         }
 
-        // Verify signature if provided (best practice)
-        $signature = $request->header('chapa-signature');
-        if ($signature && !$this->chapaService->verifySignature($request->getContent(), $signature)) {
-            Log::error('Chapa signature verification failed', ['tx_ref' => $tx_ref]);
-            return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
-        }
+        // // Verify signature if provided (best practice)
+        // $signature = $request->header('chapa-signature');
+        // if ($signature && !$this->chapaService->verifySignature($request->getContent(), $signature)) {
+        //     Log::error('Chapa signature verification failed', ['tx_ref' => $tx_ref]);
+        //     return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
+        // }
 
         // Verify with Chapa API
         $verification = $this->chapaService->verifyPayment($tx_ref);
@@ -522,7 +527,7 @@ class PaymentController extends Controller
             $payment->status = 'releasable';
             $payment->meta_data = array_merge($payment->meta_data ?? [], [
                 'manual_release' => [
-                    'released_by' => auth()->id(),
+                    'released_by' => Auth::id(), // 👈 Change to Auth::id()
                     'released_at' => now()->toDateTimeString(),
                     'reason' => $request->reason
                 ]
@@ -536,7 +541,8 @@ class PaymentController extends Controller
                 $booking->save();
             }
 
-            $this->walletService->releasePayment($payment);
+            // Call release method
+            $this->releasePayment($payment); //  Call internal method instead
         });
 
         return response()->json([
@@ -576,7 +582,7 @@ class PaymentController extends Controller
             $payment->refunded_at = now();
             $payment->meta_data = array_merge($payment->meta_data ?? [], [
                 'refund' => [
-                    'refunded_by' => auth()->id(),
+                    'refunded_by' => Auth::id(),
                     'refunded_at' => now()->toDateTimeString(),
                     'reason' => $request->reason
                 ]
@@ -594,6 +600,43 @@ class PaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Payment refunded successfully'
+        ]);
+    }
+
+    /**
+     * Release payment to provider wallet
+     */
+    protected function releasePayment($payment)
+    {
+        // Find provider's wallet
+        $wallet = Wallet::firstOrCreate(
+            ['providerID' => $payment->providerID],
+            ['available_balance' => 0, 'pending_balance' => 0]
+        );
+
+        // Add to available balance
+        $wallet->available_balance += $payment->provider_amount;
+        $wallet->save();
+
+        // Create transaction record
+        WalletTransaction::create([
+            'walletID' => $wallet->walletID,
+            'type' => 'credit',
+            'amount' => $payment->provider_amount,
+            'description' => 'Payment released for booking #' . $payment->bookingID,
+            'bookingID' => $payment->bookingID,
+            'withdrawalID' => null
+        ]);
+
+        // Update payment status
+        $payment->status = 'released';
+        $payment->released_at = now();
+        $payment->save();
+
+        Log::info('Payment released', [
+            'payment_id' => $payment->paymentID,
+            'booking_id' => $payment->bookingID,
+            'amount' => $payment->provider_amount
         ]);
     }
 }

@@ -120,7 +120,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
     
     // ========== PAYMENT ROUTES ==========
-    Route::post('/payment/initialize', [PaymentController::class, 'initialize']);
+    Route::post('/payment/booking/{bookingId}/initialize', [PaymentController::class, 'initialize']);
     Route::get('/payment/verify', [PaymentController::class, 'verify']); // Query param: tx_ref
     Route::get('/payment/history', [PaymentController::class, 'history']);
     Route::get('/payment/{tx_ref}', [PaymentController::class, 'show']);
@@ -274,4 +274,14 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
 
 Route::get('/test', function() {
     return response()->json(['message' => 'API is working']);
+});
+
+Route::get('/test-chapa', function() {
+    $client = new \GuzzleHttp\Client();
+    try {
+        $response = $client->get('https://api.chapa.co/v1/health');
+        return 'Chapa API is reachable: ' . $response->getBody();
+    } catch (\Exception $e) {
+        return 'Cannot reach Chapa: ' . $e->getMessage();
+    }
 });
