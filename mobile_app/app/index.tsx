@@ -107,14 +107,9 @@ export default function LandingScreen() {
       {/* Hero Section */}
       <View style={styles.heroSection}>
         <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64' }}
+          source={require('../assets/images/logo.jpg')} // No double curly braces here
           style={styles.heroImage}
         />
-        <View style={styles.heroOverlay}>
-          <Text style={styles.heroText}>
-            <Text>Quality Service at Your Doorstep</Text>
-          </Text>
-        </View>
       </View>
 
       {/* Services Section */}
@@ -194,6 +189,18 @@ export default function LandingScreen() {
         <AppButton
           title="Sign In"
           onPress={() => router.push('/login')}
+          variant="outline"
+          fullWidth
+          style={styles.ctaButton}
+        />
+      </View>
+       <View style={styles.ctaSection}>
+        <Text style={styles.ctaTitle}>
+          <Text>What do you want to know about us?</Text>
+        </Text>
+        <AppButton
+          title="about us"
+          onPress={() => router.push('./about')}
           variant="outline"
           fullWidth
           style={styles.ctaButton}
