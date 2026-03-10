@@ -183,6 +183,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
 Route::middleware('auth:admin')->prefix('admin')->group(function () {
     // Statistics
     Route::get('/stats', [AdminAuthController::class, 'getStats']);
+    Route::get('/search', [AdminAuthController::class, 'globalSearch']);
     
     // Platform Settings
     Route::post('/settings', [AdminAuthController::class, 'updateSettings']);

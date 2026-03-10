@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import {
   Plus, Edit2, Trash2, X, CheckCircle, Loader2,
   AlertCircle, RefreshCw, Trash, Save,
-  ChevronLeft, ChevronRight, Layers, Wrench, Database
+  ChevronLeft, ChevronRight, Layers, Wrench, Database, Search
 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -34,6 +34,7 @@ const Services = () => {
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
 
   const [formData, setFormData] = useState({ name: '', description: '', status: 'Active' });
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 🚀 HELPER: Extract array from API response (flexible)
   const extractData = (response, expectedKey = null) => {
@@ -120,22 +121,39 @@ const Services = () => {
   useEffect(() => {
     setActiveTab(getActiveTabFromPath());
     setCurrentPage(1);
+    setSearchQuery('');
   }, [location.pathname]);
 
-  // --- PAGINATION LOGIC ---
-  const dataToDisplay = activeTab === 'categories' ? categories : services;
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = dataToDisplay.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(dataToDisplay.length / itemsPerPage) || 1;
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Helper to get category name by ID
   const getCategoryName = (catagoryID) => {
     const cat = categories.find(c => c.catagoryID === catagoryID);
     return cat ? cat.name : 'Unknown';
   };
+
+  // --- FILTERING & PAGINATION LOGIC ---
+  const filteredData = (activeTab === 'categories' ? categories : services).filter(item => {
+    const searchLower = searchQuery.toLowerCase();
+    if (activeTab === 'categories') {
+      return item.name.toLowerCase().includes(searchLower) ||
+        String(item.catagoryID).includes(searchLower);
+    } else {
+      return item.title.toLowerCase().includes(searchLower) ||
+        String(item.serviceID).includes(searchLower) ||
+        getCategoryName(item.catagoryID).toLowerCase().includes(searchLower);
+    }
+  });
+
+  const dataToDisplay = filteredData;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = dataToDisplay.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(dataToDisplay.length / itemsPerPage) || 1;
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Check if a category is in use by services or providers
   const categoryIsInUse = (catagoryID) => {
@@ -259,6 +277,26 @@ const Services = () => {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative w-full md:w-80">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <input
+          type="text"
+          placeholder={`Search ${activeTab === 'categories' ? 'categories' : 'services'} by name or ID...`}
+          className="pl-12 pr-4 py-4 border border-slate-200 rounded-2xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white shadow-sm font-medium transition-all"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {/* Table Section */}
