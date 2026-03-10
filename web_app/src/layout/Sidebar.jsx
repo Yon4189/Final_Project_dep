@@ -238,7 +238,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
                 className={`shrink-0 transition-colors duration-300 ${isUsersActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isUsersActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide">Users</span>}
+              {!isMini && <span className="text-sm font-medium tracking-wide">System Users</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isUsersOpen ? 'rotate-180' : ''}`}>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Search, UserMinus, ShieldAlert, ShieldCheck,
-  Mail, Phone, Database,
+  Mail, Phone, MapPin, Database,
   CheckCircle, AlertCircle, RefreshCw, Loader2,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -205,10 +205,12 @@ const Users = () => {
     // Ensure u.name and u.email are strings before calling toLowerCase()
     const userName = u.name ? String(u.name).toLowerCase() : '';
     const userEmail = u.email ? String(u.email).toLowerCase() : '';
+    const userId = u.id ? String(u.id) : '';
     const searchLower = searchQuery.toLowerCase();
 
     const matchesSearch = userName.includes(searchLower) ||
-      userEmail.includes(searchLower);
+      userEmail.includes(searchLower) ||
+      userId.includes(searchLower);
     return matchesType && matchesSearch;
   });
 
@@ -342,7 +344,7 @@ const Users = () => {
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-2">
                         <div className="bg-slate-100 p-2 rounded-lg">
-                          <Database size={14} className="text-slate-400" />
+                          <MapPin size={14} className="text-slate-400" />
                         </div>
                         <span className="text-xs font-bold text-slate-600 truncate max-w-[150px] italic">
                           {u.location}
@@ -350,16 +352,16 @@ const Users = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                        {u.joined}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
                       <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-[0.1em] italic ${u.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' :
                         u.status === 'Suspended' ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' :
                           'bg-red-50 text-red-600 border-red-200'
                         }`}>
                         {u.status}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                        {u.joined}
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right">

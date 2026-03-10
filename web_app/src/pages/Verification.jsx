@@ -160,9 +160,12 @@ const Verification = () => {
     const name = p.name || '';
     const service = p.service_type || '';
     const title = p.service_title || '';
-    return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      title.toLowerCase().includes(searchQuery.toLowerCase());
+    const providerId = p.id ? String(p.id) : '';
+    const searchLower = searchQuery.toLowerCase();
+    return name.toLowerCase().includes(searchLower) ||
+      service.toLowerCase().includes(searchLower) ||
+      title.toLowerCase().includes(searchLower) ||
+      providerId.includes(searchLower);
   });
 
   // Pagination calculation
@@ -255,6 +258,7 @@ const Verification = () => {
                   <th className="px-8 py-5">Est. Cost</th>
                   <th className="px-8 py-5">Verification Files</th>
                   <th className="px-8 py-5">Submission</th>
+                  <th className="px-8 py-5">Status</th>
                   <th className="px-8 py-5 text-right">Verification Action</th>
                 </tr>
               </thead>
@@ -286,10 +290,14 @@ const Verification = () => {
                       </div>
                     </td>
 
-                    {/* Service – category + title */}
+                    {/* Category */}
                     <td className="px-6 py-5">
                       <p className="text-xs font-black text-slate-700 uppercase tracking-tight">{item.service_type || 'N/A'}</p>
-                      <p className="text-[10px] text-blue-600 font-bold mt-0.5">{item.service_title || '—'}</p>
+                    </td>
+
+                    {/* Service Title */}
+                    <td className="px-6 py-5">
+                      <p className="text-[10px] text-blue-600 font-bold">{item.service_title || '—'}</p>
                     </td>
 
                     {/* Service Description – truncated + modal */}

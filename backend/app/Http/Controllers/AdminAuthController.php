@@ -556,13 +556,41 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
-     * 14. Update Platform Settings
+     * 15. Global Search
      */
-    public function updateSettings(Request $request)
+    public function globalSearch(Request $request)
     {
+        $query = $request->query('query');
+        if (!$query || strlen($query) < 2) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+
+        $results = [
+            'categories' => Category::where('name', 'LIKE', "%{$query}%")
+                ->when(is_numeric($query), function ($q) use ($query) {
+                    $q->orWhere('catagoryID', $query);
+                })
+                ->limit(5)->get(['catagoryID as id', 'name']),
+            'services'   => Service::where('title', 'LIKE', "%{$query}%")
+                ->when(is_numeric($query), function ($q) use ($query) {
+                    $q->orWhere('serviceID', $query);
+                })
+                ->limit(5)->get(['serviceID as id', 'title as name']),
+            'providers'  => ServiceProvider::where('fullname', 'LIKE', "%{$query}%")
+                ->when(is_numeric($query), function ($q) use ($query) {
+                    $q->orWhere('providerID', $query);
+                })
+                ->limit(5)->get(['providerID as id', 'fullname as name', 'status']),
+            'customers'  => Customer::where('fullname', 'LIKE', "%{$query}%")
+                ->when(is_numeric($query), function ($q) use ($query) {
+                    $q->orWhere('customerID', $query);
+                })
+                ->limit(5)->get(['customerID as id', 'fullname as name', 'status']),
+        ];
+
         return response()->json([
             'success' => true,
-            'message' => 'Settings updated successfully'
+            'data' => $results
         ]);
     }
 }
