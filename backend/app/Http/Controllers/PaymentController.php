@@ -56,7 +56,7 @@ class PaymentController extends Controller
         
         // Check if payment already exists
         $existingPayment = Payment::where('bookingID', $booking->bookingID)
-            ->whereIn('status', ['pending', 'processing', 'held'])
+            ->whereIn('status', ['pending'])
             ->first();
 
         if ($existingPayment) {
@@ -249,7 +249,7 @@ class PaymentController extends Controller
                 'status' => $payment->status,
                 'amount' => $payment->amount,
                 'booking_id' => $payment->bookingID,
-                'booking_status' => $payment->booking->booking_status ?? null,
+                'booking_status' => $payment->booking->status ?? null,
                 'held_until' => $payment->held_until,
                 'paid_at' => $payment->paid_at
             ]
@@ -264,7 +264,7 @@ class PaymentController extends Controller
         $customer = $request->user();
         $booking = Booking::where('bookingID', $bookingId)
             ->where('customerID', $customer->customerID)
-            ->where('booking_status', 'waiting_customer_confirmation')
+            ->where('status', 'waiting_customer_confirmation')
             ->first();
 
         if (!$booking) {
@@ -275,7 +275,7 @@ class PaymentController extends Controller
         }
 
         DB::transaction(function () use ($booking) {
-            $payment = Payment::find($booking->paymentID);
+            $payment = Payment::where('bookingID', $booking->bookingID)->first();
             
             if (!$payment || $payment->status !== 'held') {
                 throw new \Exception('Payment not in held state');
@@ -284,7 +284,7 @@ class PaymentController extends Controller
             $payment->status = 'releasable';
             $payment->save();
 
-            $booking->booking_status = 'completed';
+            $booking->status = 'completed';
             $booking->customer_confirmed_at = now();
             $booking->save();
 
@@ -512,7 +512,7 @@ class PaymentController extends Controller
 
             $booking = Booking::find($payment->bookingID);
             if ($booking) {
-                $booking->booking_status = 'completed';
+                $booking->status = 'completed';
                 $booking->customer_confirmed_at = now();
                 $booking->save();
             }
@@ -568,7 +568,7 @@ class PaymentController extends Controller
             // Update booking
             $booking = Booking::find($payment->bookingID);
             if ($booking) {
-                $booking->booking_status = 'cancelled';
+                $booking->status = 'cancelled';
                 $booking->save();
             }
         });

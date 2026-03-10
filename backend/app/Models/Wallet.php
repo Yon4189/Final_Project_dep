@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Wallet extends Model
 {
     use HasFactory;
+    protected $primaryKey = 'walletID';
 
     protected $fillable = [
-        'service_provider_id',
+        'providerID',
         'available_balance',
         'pending_balance',
     ];

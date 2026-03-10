@@ -151,10 +151,28 @@ public function handleChapaWebhook(Request $request)
             if ($payment->bookingID) {
                 $booking = Booking::find($payment->bookingID);
                 if ($booking) {
-                    $booking->booking_status = 'paid';
+                    $booking->status = 'paid';
                     $booking->paymentID = $payment->paymentID;
                     $booking->customer_confirmation_deadline = now()->addHours(48);
+                    $booking->paid_at = now();
                     $booking->save();
+
+                    // Update provider's pending balance
+                    $wallet = Wallet::firstOrCreate(
+                        ['providerID' => $payment->providerID],
+                        ['providerID' => $payment->providerID, 'available_balance' => 0, 'pending_balance' => 0]
+                    );
+
+                    $wallet->pending_balance += $payment->provider_amount;
+                    $wallet->save();
+
+                    WalletTransaction::create([
+                        'walletID' => $wallet->walletID,
+                        'type' => 'pending_credit',
+                        'amount' => $payment->provider_amount,
+                        'description' => 'Payment pending for booking #' . $payment->bookingID,
+                        'bookingID' => $payment->bookingID
+                    ]);
                     
                     Log::info('Booking status updated to paid', [
                         'booking_id' => $booking->bookingID,
@@ -206,7 +224,7 @@ public function handleChapaWebhook(Request $request)
             if ($payment->bookingID) {
                 $booking = Booking::find($payment->bookingID);
                 if ($booking) {
-                    $booking->booking_status = 'payment_failed';
+                    $booking->status = 'payment_failed';
                     $booking->save();
                 }
             }

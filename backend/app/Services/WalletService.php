@@ -13,11 +13,20 @@ class WalletService
     {
         $wallet = Wallet::firstOrCreate(
             ['providerID' => $payment->providerID],
-            ['available_balance' => 0, 'pending_balance' => 0]
+            [
+                'providerID' => $payment->providerID,
+                'available_balance' => 0, 
+                'pending_balance' => 0
+            ]
         );
 
         $wallet->available_balance += $payment->provider_amount;
         $wallet->save();
+
+        // Update payment status to 'released'
+        $payment->status = 'released';
+        $payment->released_at = now();
+        $payment->save();
 
         WalletTransaction::create([
             'walletID' => $wallet->walletID,

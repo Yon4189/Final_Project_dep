@@ -676,7 +676,7 @@ class BookingController extends Controller
 
             $booking = Booking::where('bookingID', $bookingId)
                         ->where('providerID', $provider->providerID)
-                        ->where('status', 'accepted')
+                        ->where('status', 'in_progress')
                         ->first();
 
             if (!$booking) {
@@ -687,8 +687,9 @@ class BookingController extends Controller
                 ], 404);
             }
 
-            $booking->status = 'completed';
+            $booking->status = 'waiting_customer_confirmation';
             $booking->completed_at = now();
+            $booking->auto_release_at = now()->addHours(48);
             $booking->save();
 
             // Increment provider's completed jobs
@@ -711,7 +712,7 @@ class BookingController extends Controller
                 'message' => 'Booking marked as completed',
                 'data' => [
                     'bookingID' => $booking->bookingID,
-                    'status' => 'completed',
+                    'status' => 'waiting_customer_confirmation',
                     'completed_at' => $booking->completed_at
                 ]
             ]);
@@ -786,7 +787,7 @@ class BookingController extends Controller
             // Find booking that belongs to this provider and is in 'paid' status
             $booking = Booking::where('bookingID', $id)
                 ->where('providerID', $provider->providerID)
-                ->whereIn('status', ['paid', 'confirmed']) // Can start after payment
+                ->whereIn('payment_status', ['paid', 'confirmed', 'held']) // Can start after payment
                 ->first();
 
             if (!$booking) {
