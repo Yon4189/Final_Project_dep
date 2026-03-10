@@ -4,6 +4,7 @@ import { Search, Bell, User, Settings, Menu, X, Loader2, Star, ShieldCheck, Laye
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 const Topbar = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
@@ -13,6 +14,9 @@ const Topbar = ({ onToggleSidebar }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef(null);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notificationRef = useRef(null);
 
   const getBackendUrl = (path) => {
     if (!path) return '';
@@ -21,11 +25,14 @@ const Topbar = ({ onToggleSidebar }) => {
     return `${base}/${cleanPath}`;
   };
 
-  // Close search results on click outside
+  // Close search results and notifications on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowResults(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -242,10 +249,23 @@ const Topbar = ({ onToggleSidebar }) => {
         </Link>
 
         {/* Notifications */}
-        <button className="text-slate-400 hover:text-admin-accent relative p-2 hover:bg-slate-50 rounded-full transition-all">
-          <Bell size={20} />
-          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+        <div className="relative" ref={notificationRef}>
+          <button 
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            className={`text-slate-400 hover:text-admin-accent relative p-2 rounded-full transition-all ${isNotificationOpen ? 'bg-slate-100 text-admin-accent' : 'hover:bg-slate-50'}`}
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] text-white font-bold pointer-events-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <NotificationDropdown 
+            isOpen={isNotificationOpen} 
+            onUnreadCountUpdate={setUnreadCount} 
+          />
+        </div>
 
         {/* ✅ CLICKABLE PROFILE AREA (UC-12 Update Profile) */}
         <Link
