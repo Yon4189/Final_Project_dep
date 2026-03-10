@@ -55,7 +55,7 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 //Route::get('/search/providers', [ProviderSearchController::class, 'search']);
 
 // ==================== WEBHOOKS & CALLBACKS (PUBLIC) ====================
-Route::post('/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
+Route::match(['get', 'post'], '/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
 Route::get('/payment/callback/{tx_ref}', [PaymentController::class, 'callback'])->name('payment.callback');
 
 // ==================== PROTECTED CUSTOMER ROUTES ====================
@@ -279,12 +279,12 @@ Route::get('/test', function() {
     return response()->json(['message' => 'API is working']);
 });
 
-Route::get('/test-chapa', function() {
-    $client = new \GuzzleHttp\Client();
-    try {
-        $response = $client->get('https://api.chapa.co/v1/health');
-        return 'Chapa API is reachable: ' . $response->getBody();
-    } catch (\Exception $e) {
-        return 'Cannot reach Chapa: ' . $e->getMessage();
-    }
-});
+// Route::get('/test-chapa', function() {
+//     $client = new \GuzzleHttp\Client();
+//     try {
+//         $response = $client->get('https://api.chapa.co/v1/health');
+//         return 'Chapa API is reachable: ' . $response->getBody();
+//     } catch (\Exception $e) {
+//         return 'Cannot reach Chapa: ' . $e->getMessage();
+//     }
+// });

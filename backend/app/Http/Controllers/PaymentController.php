@@ -111,7 +111,7 @@ class PaymentController extends Controller
             'first_name' => $customer->fullname,
             'last_name' => '',
             'tx_ref' => $txRef,
-            'callback_url' => 'https://webhook.site/#!/view/8160a71a-7c89-4044-96ec-0c60951fcc03/d0f55f1f-2605-41ac-8a0f-e2b7480adaf5/1',
+            'callback_url' => 'https://squiggly-raven-concussant.ngrok-free.dev/api/webhook/chapa',
             // later replace the above url with the link from 'Forwarding' while ruiing ngrok online. if not installed install ngrok and run `ngrok http 8000` and copy the https url and paste it above and add /api/webhook/chapa at the end of the url
             'return_url' => $request->return_url ?? 'https://www.google.com',
             'customization' => [

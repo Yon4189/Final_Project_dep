@@ -79,7 +79,7 @@ public function handleChapaWebhook(Request $request)
 
             $booking = Booking::find($payment->bookingID);
             if ($booking) {
-                $booking->payment_status = 'held';
+                $booking->payment_status = 'paid';
                 $booking->save();
             }
         });
