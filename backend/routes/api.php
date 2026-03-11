@@ -85,12 +85,12 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::get('/bookings/{id}/track', [CustomerController::class, 'trackProvider']);
     
     // Chat
-    Route::prefix('chat')->group(function () {
-        Route::get('/providers/{providerId}', [ChatController::class, 'getConversation']);
-        Route::post('/providers/{providerId}/send', [ChatController::class, 'sendMessage']);
-        Route::get('/conversations', [ChatController::class, 'getConversations']);
-        Route::post('/messages/{messageId}/read', [ChatController::class, 'markAsRead']);
-    });
+    // Route::prefix('chat')->group(function () {
+    //     Route::get('/providers/{providerId}', [ChatController::class, 'getConversation']);
+    //     Route::post('/providers/{providerId}/send', [ChatController::class, 'sendMessage']);
+    //     Route::get('/conversations', [ChatController::class, 'getConversations']);
+    //     Route::post('/messages/{messageId}/read', [ChatController::class, 'markAsRead']);
+    // });
     
     // Reviews
     Route::post('/reviews', [CustomerController::class, 'createReview']);
@@ -158,13 +158,13 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     Route::post('/bookings/{id}/arrive', [BookingController::class, 'arrive']); // Provider arrived
     Route::post('/bookings/{id}/complete', [BookingController::class, 'complete']); // Job done
     
-    // Chat
-    Route::prefix('chat')->group(function () {
-        Route::get('/customers/{customerId}', [ChatController::class, 'getConversation']);
-        Route::post('/customers/{customerId}/send', [ChatController::class, 'sendMessage']);
-        Route::get('/conversations', [ChatController::class, 'getConversations']);
-        Route::post('/messages/{messageId}/read', [ChatController::class, 'markAsRead']);
-    });
+    // // Chat
+    // Route::prefix('chat')->group(function () {
+    //     Route::get('/customers/{customerId}', [ChatController::class, 'getConversation']);
+    //     Route::post('/customers/{customerId}/send', [ChatController::class, 'sendMessage']);
+    //     Route::get('/conversations', [ChatController::class, 'getConversations']);
+    //     Route::post('/messages/{messageId}/read', [ChatController::class, 'markAsRead']);
+    // });
     
     // Requests (old booking requests)
     Route::get('/requests', [ProviderDashboardController::class, 'getRequests']);

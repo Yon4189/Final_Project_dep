@@ -104,7 +104,8 @@ class ChatController extends Controller
 
         $validator = Validator::make($request->all(), [
             'conversationID' => 'required|exists:conversations,conversationID',
-            'message' => 'required|string|max:1000'
+            'message' => 'nullable|string|max:1000',
+            'file' => 'nullable|file|max:10240|mimes:jpeg,png,jpg,gif,pdf,doc,docx,xls,xlsx,txt' // 10MB max
         ]);
 
         if ($validator->fails()) {
@@ -149,14 +150,26 @@ class ChatController extends Controller
                     ]
                 ], 403);
             }
-
+            // Handle file upload if present
+            $fileData = [];
+            if ($request->hasFile('file')) {
+                $fileData = $this->uploadChatFile($request->file('file'));
+            }
+            
             // Create message
-            $message = Message::create([
+            $messageData = [
                 'conversationID' => $conversation->conversationID,
                 'sender_type' => $userType,
                 'sender_id' => $user->getKey(),
-                'message' => $request->message
-            ]);
+                'message' => $request->message ?? ''
+            ];
+
+            // Merge file data if present
+            if (!empty($fileData)) {
+                $messageData = array_merge($messageData, $fileData);
+            }
+
+            $message = Message::create($messageData);
 
             // Update conversation
             $conversation->last_message = $request->message;
@@ -195,7 +208,9 @@ class ChatController extends Controller
                     [
                         'conversationID' => $conversation->conversationID,
                         'sender_name' => $senderName,
-                        'message_preview' => substr($request->message, 0, 50)
+                        'message_preview' => $request->hasFile('file') 
+                            ? '📎 Sent a file: ' . $request->file('file')->getClientOriginalName()
+                            : substr($request->message ?? '', 0, 50)
                     ],
                     $conversation->bookingID
                 );
@@ -364,5 +379,21 @@ class ChatController extends Controller
         }
         
         throw new \Exception('Invalid user type');
+    }
+
+    /**
+     * Upload a file to chat
+     */
+    private function uploadChatFile($file)
+    {
+        $path = $file->store('chat-files/' . date('Y/m/d'), 'public');
+        
+        return [
+            'file_path' => $path,
+            'file_name' => $file->getClientOriginalName(),
+            'file_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
+            'mime_type' => $file->getMimeType()
+        ];
     }
 }

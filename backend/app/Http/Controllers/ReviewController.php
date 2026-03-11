@@ -21,11 +21,15 @@ class ReviewController extends Controller
             'is_anonymous' => 'boolean'
         ]);
 
-        // Find the booking and verify it belongs to the authenticated customer
-        $booking = Booking::where('bookingID', $bookingID)
-            ->where('customerID', auth()->id())
-            ->where('status', 'completed')
-            ->first();
+            $customer = auth()->guard('customer')->user();
+            if (!$customer) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $booking = Booking::where('bookingID', $bookingID)
+                ->where('customerID', $customer->customerID)
+                ->where('status', 'completed')
+                ->first();
 
         if (!$booking) {
             return response()->json([

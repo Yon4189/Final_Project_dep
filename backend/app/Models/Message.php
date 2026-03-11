@@ -17,13 +17,23 @@ class Message extends Model
         'sender_id',
         'message',
         'is_seen',
-        'seen_at'
+        'seen_at',
+        
+        'file_path',
+        'file_name',
+        'file_type',
+        'file_size',
+        'mime_type'
     ];
 
     protected $casts = [
         'is_seen' => 'boolean',
-        'seen_at' => 'datetime'
+        'seen_at' => 'datetime',
+        'file_size' => 'integer'
     ];
+
+    // Add this accessor
+    protected $appends = ['file_url'];
 
     /**
      * Get the conversation this message belongs to
@@ -53,5 +63,29 @@ class Message extends Model
         $this->is_seen = true;
         $this->seen_at = now();
         $this->save();
+    }
+
+    /**
+     * Get file URL
+     */
+    public function getFileUrlAttribute()
+    {
+        return $this->file_path ? asset('storage/' . $this->file_path) : null;
+    }
+
+    /**
+     * Check if message has file
+     */
+    public function hasFile(): bool
+    {
+        return !is_null($this->file_path);
+    }
+
+    /**
+     * Check if message is image
+     */
+    public function isImage(): bool
+    {
+        return $this->hasFile() && str_starts_with($this->mime_type, 'image/');
     }
 }
