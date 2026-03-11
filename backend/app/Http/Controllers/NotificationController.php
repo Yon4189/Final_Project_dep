@@ -211,6 +211,8 @@ class NotificationController extends Controller
             return 'customer';
         } elseif ($user instanceof \App\Models\ServiceProvider) {
             return 'provider';
+        } elseif ($user instanceof \App\Models\Admin) {
+            return 'admin';
         }
         
         throw new \Exception('Invalid user type');
