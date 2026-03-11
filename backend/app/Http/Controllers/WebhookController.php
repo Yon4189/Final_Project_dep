@@ -155,6 +155,7 @@ public function handleChapaWebhook(Request $request)
                     $booking->paymentID = $payment->paymentID;
                     $booking->customer_confirmation_deadline = now()->addHours(48);
                     $booking->paid_at = now();
+                    $booking->platform_commission = $payment->platform_fee;
                     $booking->save();
 
                     // Update provider's pending balance

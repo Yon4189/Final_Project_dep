@@ -48,7 +48,16 @@ class ServiceProvider extends Authenticatable
         'accepted_jobs',
         'approved_at',
         'rejected_at',
-        'rejection_reason'
+        'rejection_reason',
+        'average_rating',        
+        'total_reviews',         
+        'bank_name',             
+        'account_number',        
+        'account_holder_name',   
+        'telebir_number',        
+        'telebir_holder_name',   
+        'preferred_payout_method',
+        'last_withdrawal_at'      
     ];
 
     protected $hidden = [

@@ -12,7 +12,7 @@ class Review extends Model
     protected $primaryKey = 'reviewID'; // primary key
 
     protected $fillable = [
-        'bookingID', 'customerID', 'rating', 'comment', 'createdAt'
+        'providerID','bookingID', 'customerID', 'rating', 'comment', 'createdAt'
     ];
 
     // a review belongs to a booking
