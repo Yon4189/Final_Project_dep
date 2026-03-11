@@ -12,11 +12,24 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
       setIsLoading(true);
     }
     try {
-      const response = await api.get('/admin/notifications');
-      const notifs = response.data.data || response.data || [];
-      const notifsArray = Array.isArray(notifs) ? notifs : [];
+      const response = await api.get('/admin/notifications?filter=unread');
+      const data = response.data.data || response.data;
+      
+      // Handle the paginated response structure if present
+      let notifsArray = [];
+      if (Array.isArray(data)) {
+        notifsArray = data;
+      } else if (data?.notifications?.data) {
+        notifsArray = data.notifications.data;
+      } else if (data?.notifications) {
+        notifsArray = Array.isArray(data.notifications) ? data.notifications : [];
+      }
+      
       setNotifications(notifsArray);
-      onUnreadCountUpdate(notifsArray.length);
+      
+      // Use unread_count from backend if available, otherwise fallback to array length
+      const unreadCount = data?.unread_count !== undefined ? data.unread_count : notifsArray.length;
+      onUnreadCountUpdate(unreadCount);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     } finally {
@@ -93,7 +106,7 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
         ) : notifications.length > 0 ? (
           <div className="flex flex-col">
             {notifications.map((notif) => (
-              <div key={notif.id} className="p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors flex gap-3 items-start group">
+              <div key={notif.notificationID} className="p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors flex gap-3 items-start group">
                 {getIcon(notif.type)}
                 <div className="flex-1">
                   <h4 className="text-sm font-semibold text-slate-800 leading-tight mb-1 group-hover:text-admin-accent transition-colors">{notif.title}</h4>
