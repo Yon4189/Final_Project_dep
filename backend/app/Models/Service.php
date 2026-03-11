@@ -29,4 +29,10 @@ class Service extends Model
     public function bookings() {
         return $this->hasMany(Booking::class, 'serviceID', 'serviceID'); // fk, local key
     }
+
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'serviceID', 'serviceID');
+    }
 }

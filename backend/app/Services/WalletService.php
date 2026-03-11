@@ -6,6 +6,8 @@ use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Payment;
+use App\Models\Booking;
 
 class WalletService
 {
@@ -27,6 +29,15 @@ class WalletService
         $payment->status = 'released';
         $payment->released_at = now();
         $payment->save();
+
+        // Update booking
+            $booking = Booking::find($payment->bookingID);
+            if ($booking) {
+                $booking->payment_status = 'released';
+                $booking->released_at = now();  // ← ADD THIS
+                $booking->save();
+            }
+    
 
         WalletTransaction::create([
             'walletID' => $wallet->walletID,

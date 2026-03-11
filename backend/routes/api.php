@@ -20,6 +20,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AdminWithdrawalController;
+use App\Http\Controllers\ReviewController;
 
 // ==================== PUBLIC ROUTES ====================
 Route::get('/cities', [ServiceCityController::class, 'index']);
@@ -127,8 +128,11 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     
     // Booking Confirmation (triggers payment release)
     Route::post('/bookings/{bookingId}/confirm', [PaymentController::class, 'confirmCompletion']);
+
+    Route::post('/bookings/{bookingID}/review', [ReviewController::class, 'store']);
 });
 
+// Public routes (no authentication required)
 // ==================== PROTECTED PROVIDER ROUTES ====================
 Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // Auth & Profile
@@ -226,6 +230,9 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approve']);
     Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'reject']);
 });
+
+Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);
+
 
 // ==================== CHAT ROUTES (Shared) ====================
 Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {

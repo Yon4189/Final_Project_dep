@@ -46,8 +46,9 @@ class Customer extends Authenticatable
     }
 
     // A customer can have many reviews
-    public function reviews() {
-        return $this->hasMany(Review::class, 'customerID', 'customerID'); // fk, local key
+    public function reviewsWritten()
+    {
+        return $this->hasMany(Review::class, 'customerID', 'customerID');
     }
 
     /**
