@@ -229,6 +229,10 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::get('/withdrawals/stats', [AdminWithdrawalController::class, 'stats']);
     Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approve']);
     Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'reject']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/read', [NotificationController::class, 'markAllAsRead']);
 });
 
 Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);

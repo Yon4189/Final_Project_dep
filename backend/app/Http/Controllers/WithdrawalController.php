@@ -12,6 +12,13 @@ use Illuminate\Support\Facades\Log;
 
 class WithdrawalController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(\App\Services\NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * Create a withdrawal request
      */
@@ -65,6 +72,18 @@ class WithdrawalController extends Controller
                 'platform_fee' => $platformFee,
                 'net_amount' => $netAmount,
             ]);
+
+            // Notify admins about withdrawal request
+            $this->notificationService->toAdmins(
+                \App\Services\NotificationService::TYPE_WITHDRAWAL_REQUEST,
+                'New Withdrawal Request',
+                "Provider {$provider->fullname} has requested a withdrawal of {$withdrawal->amount} ETB.",
+                [
+                    'withdrawal_id' => $withdrawal->withdrawalID,
+                    'provider_name' => $provider->fullname,
+                    'amount' => $withdrawal->amount
+                ]
+            );
 
             return response()->json([
                 'success' => true,

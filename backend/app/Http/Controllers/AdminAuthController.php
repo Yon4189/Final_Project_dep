@@ -18,6 +18,7 @@ use App\Models\Booking;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Notification;
 
 
 class AdminAuthController extends Authenticatable 
@@ -165,6 +166,15 @@ class AdminAuthController extends Authenticatable
             $provider->verification_reason = $request->verification_reason;
         }
         $provider->save();
+
+        // 3.5 Mark registration notifications as seen
+        Notification::where('type', \App\Services\NotificationService::TYPE_NEW_PROVIDER_REGISTRATION)
+            ->where('data->provider_id', $provider->providerID)
+            ->where('is_seen', false)
+            ->update([
+                'is_seen' => true,
+                'seen_at' => now()
+            ]);
 
         $statusLabel = strtolower($request->status);
 

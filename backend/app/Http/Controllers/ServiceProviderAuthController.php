@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\Log;
 
 class ServiceProviderAuthController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(\App\Services\NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * Register a new service provider
      */
@@ -121,6 +128,18 @@ class ServiceProviderAuthController extends Controller
             }
 
             DB::commit();
+
+            // Notify admins about new registration
+            $this->notificationService->toAdmins(
+                \App\Services\NotificationService::TYPE_NEW_PROVIDER_REGISTRATION,
+                'New Provider Registration',
+                "New provider registered: {$provider->fullname}. Pending approval.",
+                [
+                    'provider_id' => $provider->providerID,
+                    'fullname' => $provider->fullname,
+                    'email' => $provider->email
+                ]
+            );
 
             // Don't return token - provider must wait for approval
             return response()->json([

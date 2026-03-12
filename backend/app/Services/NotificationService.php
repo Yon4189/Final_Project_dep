@@ -43,6 +43,34 @@ class NotificationService
     }
 
     /**
+     * Send a notification to an admin
+     */
+    public function toAdmin($adminId, $type, $title, $message, $data = [])
+    {
+        return $this->create([
+            'notifiable_type' => 'admin',
+            'notifiable_id' => $adminId,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'data' => $data
+        ]);
+    }
+
+    /**
+     * Send notification to all admins
+     */
+    public function toAdmins($type, $title, $message, $data = [])
+    {
+        $admins = \App\Models\Admin::all();
+        $notifications = [];
+        foreach ($admins as $admin) {
+            $notifications[] = $this->toAdmin($admin->adminID, $type, $title, $message, $data);
+        }
+        return $notifications;
+    }
+
+    /**
      * Send notification to multiple customers
      */
     public function toCustomers(array $customerIds, $type, $title, $message, $data = [], $bookingId = null)
@@ -105,8 +133,10 @@ class NotificationService
     {
         if ($userType === 'customer') {
             return $this->toCustomer($userId, $type, $title, $message, $data, $bookingId);
-        } else {
+        } elseif ($userType === 'provider') {
             return $this->toProvider($userId, $type, $title, $message, $data, $bookingId);
+        } elseif ($userType === 'admin') {
+            return $this->toAdmin($userId, $type, $title, $message, $data);
         }
     }
 
@@ -125,5 +155,6 @@ class NotificationService
     const TYPE_PROVIDER_APPROVED = 'provider_approved';
     const TYPE_PROVIDER_REJECTED = 'provider_rejected';
     const TYPE_REVIEW_RECEIVED = 'review_received';
-    //const TYPE_NEW_MESSAGE = 'new_message';
+    const TYPE_WITHDRAWAL_REQUEST = 'withdrawal_request';
+    const TYPE_NEW_PROVIDER_REGISTRATION = 'provider_registration';
 }
