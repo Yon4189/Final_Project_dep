@@ -35,7 +35,7 @@ class PaymentService {
    */
   async initializeChapaPayment(params: InitializePaymentParams): Promise<PaymentResponse> {
     try {
-      const response = await api.post<PaymentResponse>(`${this.BASE_PATH}/initialize`, {
+      const response = await api.post<PaymentResponse>(`${this.BASE_PATH}/booking/${params.bookingId}/initialize`, {
         amount: params.amount,
         email: params.email,
         first_name: params.firstName,

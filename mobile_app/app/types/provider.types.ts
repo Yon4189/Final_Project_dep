@@ -68,6 +68,28 @@ export interface ProviderService {
   isActive: boolean;
 }
 
+export type ProviderNotificationType =
+  | "new_request"
+  | "request_accepted"
+  | "request_cancelled"
+  | "payment_received"
+  | "withdrawal"
+  | "review"
+  | "reminder"
+  | "system";
+
+export interface ProviderNotificationPayload {
+  notificationID: string;
+  type: ProviderNotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  is_seen: boolean;
+  created_at: string;
+  updated_at?: string;
+  related_booking_id?: string;
+}
+
 export interface Certification {
   id: string;
   name: string;

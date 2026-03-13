@@ -11,6 +11,7 @@ import type {
   Dispute,
   RequestStatus,
   BankDetails,
+  ProviderNotificationPayload,
 } from '@/app/types/provider.types';
 import type { ApiResponse } from '../types/customer.types';
 
@@ -331,6 +332,23 @@ private async getProviderId(): Promise<string | null> {
 
   async getTodaySchedule(): Promise<ApiResponse<ServiceRequest[]>> {
     return api.get<ServiceRequest[]>(`${this.BASE_PATH}/schedule/today`);
+  }
+
+  async getNotifications(page: number = 1): Promise<ApiResponse<{
+    notifications: {
+      current_page: number;
+      data: ProviderNotificationPayload[];
+      per_page: number;
+      total: number;
+      last_page: number;
+    };
+    unread_count: number;
+  }>> {
+    return api.get(`${this.BASE_PATH}/notifications?page=${page}`);
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<ApiResponse<void>> {
+    return api.post(`${this.BASE_PATH}/notifications/${notificationId}/read`);
   }
 }
 

@@ -40,14 +40,6 @@ export const useSearch = ({
       return;
     }
 
-    // Don't search if query is empty
-    if (!query && !filters.categoryId) {
-      console.log('Search - No query or category, skipping search');
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -115,14 +107,9 @@ export const useSearch = ({
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Only search if we have query or category
-    if (query || filters.categoryId) {
-      searchTimeoutRef.current = setTimeout(() => {
-        performSearch(1, false);
-      }, 500); // Debounce for 500ms
-    } else {
-      setResults([]);
-    }
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(1, false);
+    }, 500); // Debounce for 500ms
 
     return () => {
       if (searchTimeoutRef.current) {
@@ -133,7 +120,7 @@ export const useSearch = ({
 
   // Trigger search when location becomes available
   useEffect(() => {
-    if (!locationLoading && location && autoSearch && (query || filters.categoryId)) {
+    if (!locationLoading && location && autoSearch) {
       console.log('Search - Location available, retrying search...');
       performSearch(1, false);
     }

@@ -136,28 +136,30 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
           </Text>
         </View>
 
-        {showActions ? (
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.actionButton} onPress={onChatPress}>
-              <Ionicons name="chatbubble-outline" size={20} color={Colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={onCallPress}>
-              <Ionicons name="call-outline" size={20} color={Colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={onSharePress}>
-              <Ionicons name="share-social-outline" size={20} color={Colors.primary} />
-            </TouchableOpacity>
-          </View>
-        ) : (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {showActions && (
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.actionButton} onPress={onChatPress}>
+                <Ionicons name="chatbubble-outline" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton} onPress={onCallPress}>
+                <Ionicons name="call-outline" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton} onPress={onSharePress}>
+                <Ionicons name="share-social-outline" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          
           <TouchableOpacity
-            style={styles.bookButton}
+            style={[styles.bookButton, showActions ? { marginLeft: 8 } : {}]}
             onPress={handleBookPress}
             activeOpacity={0.7}
           >
-            <Text style={styles.bookButtonText}>Book Now</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.surface} />
+            <Text style={styles.bookButtonText}>{showActions ? "Book" : "Book Now"}</Text>
+            {!showActions && <Ionicons name="chevron-forward" size={16} color={Colors.surface} />}
           </TouchableOpacity>
-        )}
+        </View>
       </View>
 
       {provider.availableNow && (
@@ -306,13 +308,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
     borderWidth: 1,
     borderColor: Colors.border,
   },

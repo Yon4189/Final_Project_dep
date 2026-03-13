@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/Colors';
 import { useProviderStore } from '../store/providerStore';
 import { useProviderQueries } from '../../hooks/useProviderQueries';
+import { useProviderNotificationCount } from '../../hooks/useProviderNotifications';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatTimeAgo } from '../utils/formatters';
@@ -56,6 +57,8 @@ export default function ProviderDashboard() {
     isLoading,
     refetch,
   } = useProviderQueries();
+  const notificationCountQuery = useProviderNotificationCount();
+  const unreadNotificationCount = notificationCountQuery.data ?? 0;
 
   // Debug logging
   useEffect(() => {
@@ -71,7 +74,7 @@ export default function ProviderDashboard() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetch(), notificationCountQuery.refetch()]);
     setRefreshing(false);
   };
 
@@ -104,9 +107,13 @@ export default function ProviderDashboard() {
             onPress={() => router.push('/(provider)/notifications')}
           >
             <Ionicons name="notifications-outline" size={24} color={Colors.surface} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
+            {unreadNotificationCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity

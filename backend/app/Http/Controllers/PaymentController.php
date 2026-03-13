@@ -44,7 +44,7 @@ class PaymentController extends Controller
         
         $booking = Booking::where('bookingID', $bookingId)
             ->where('customerID', $customer->customerID)
-            ->where('status', 'accepted')
+            ->whereIn('status', ['pending', 'accepted'])
             ->first();
             
         if (!$booking) {
@@ -121,7 +121,21 @@ class PaymentController extends Controller
         ];
 
         // Call Chapa API
-        $chapaResponse = $this->chapaService->initializePayment($paymentData);
+        // Workaround: If keys are still placeholders, provide a mock response for testing navigation
+        $chapaSecretKey = config('services.chapa.secret_key');
+        if ($chapaSecretKey === 'your_chapa_secret_key_here' || empty($chapaSecretKey)) {
+            Log::info('Using mock payment response for placeholder keys', ['tx_ref' => $txRef]);
+            $chapaResponse = [
+                'status' => 'success',
+                'data' => [
+                    'data' => [
+                        'checkout_url' => 'https://mock-payment-url.com/pay/' . $txRef
+                    ]
+                ]
+            ];
+        } else {
+            $chapaResponse = $this->chapaService->initializePayment($paymentData);
+        }
         
 
         // Check if Chapa responded with error

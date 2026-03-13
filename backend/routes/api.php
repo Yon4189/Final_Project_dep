@@ -58,6 +58,16 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 Route::match(['get', 'post'], '/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
 Route::get('/payment/callback/{tx_ref}', [PaymentController::class, 'callback'])->name('payment.callback');
 
+// ==================== PUBLIC SEARCH (Customer Prefix) ====================
+Route::prefix('customer')->group(function () {
+    Route::get('/providers/search', [CustomerSearchController::class, 'searchProviders']);
+    Route::get('/providers/top-rated', [CustomerSearchController::class, 'getTopRated']);
+    Route::get('/providers/{id}', [CustomerSearchController::class, 'getProviderDetails']);
+    Route::get('/providers/{id}/availability', [CustomerSearchController::class, 'getProviderAvailability']);
+    Route::get('/providers/{id}/reviews', [CustomerSearchController::class, 'getProviderReviews']);
+    Route::get('/providers/nearby', [CustomerSearchController::class, 'getNearbyProviders']);
+});
+
 // ==================== PROTECTED CUSTOMER ROUTES ====================
 Route::middleware('auth:customer')->prefix('customer')->group(function () {
     // Profile Management
@@ -66,13 +76,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::post('/profile/image', [CustomerController::class, 'uploadProfileImage']);
     Route::post('/profile/password', [CustomerController::class, 'changePassword']);
     
-    // Provider Search & Discovery
-    Route::get('/providers/search', [CustomerSearchController::class, 'searchProviders']);
-    Route::get('/providers/top-rated', [CustomerSearchController::class, 'getTopRated']);
-    Route::get('/providers/{id}', [CustomerSearchController::class, 'getProviderDetails']);
-    Route::get('/providers/{id}/availability', [CustomerSearchController::class, 'getProviderAvailability']);
-    Route::get('/providers/{id}/reviews', [CustomerSearchController::class, 'getProviderReviews']);
-    Route::get('/providers/nearby', [CustomerSearchController::class, 'getNearbyProviders']);
+    // Other Customer Routes below...
     
     // Bookings (Service Requests)
     Route::get('/bookings', [CustomerController::class, 'getRequests']); // List all
