@@ -75,17 +75,20 @@ class WalletController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
-            Log::error('Wallet dashboard error: ' . $e->getMessage(), [
-                'provider_id' => $request->user()->providerID ?? null,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load wallet data'
-            ], 500);
-        }
+        }  catch (\Exception $e) {
+                Log::error('Wallet dashboard error: ' . $e->getMessage(), [
+                    'provider_id' => $request->user()->providerID ?? null,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to load wallet data',
+                    'error' => $e->getMessage(), // ADD THIS LINE
+                    'file' => $e->getFile(),      // ADD THIS LINE
+                    'line' => $e->getLine()        // ADD THIS LINE
+                ], 500);
+            }
     }
 
     /**
@@ -130,122 +133,148 @@ class WalletController extends Controller
      * Request withdrawal
      * POST /api/provider/withdrawals
      */
-    public function requestWithdrawal(Request $request)
-    {
-        $request->validate([
-            'amount' => 'required|numeric|min:50', // Minimum 50 ETB
-        ]);
+public function requestWithdrawal(Request $request)
+{
+    $request->validate([
+        'amount' => 'required|numeric|min:50', // Minimum 50 ETB
+        'payment_method' => 'required|in:bank,telebir',
+        'bank_name' => 'required_if:payment_method,bank|string|nullable',
+        'account_number' => 'required_if:payment_method,bank|string|nullable',
+        'account_holder_name' => 'required_if:payment_method,bank|string|nullable',
+        'telebir_number' => 'required_if:payment_method,telebir|string|nullable',
+        'telebir_holder_name' => 'required_if:payment_method,telebir|string|nullable'
+    ]);
+    
+    try {
+        $provider = $request->user();
+        $wallet = $provider->wallet;
+        $amount = $request->amount;
         
-        try {
-            $provider = $request->user();
-            $wallet = $provider->wallet;
-            $amount = $request->amount;
+        if (!$wallet) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Wallet not found'
+            ], 404);
+        }
+        
+        if ($wallet->available_balance < $amount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient balance',
+                'data' => [
+                    'available_balance' => (float) $wallet->available_balance,
+                    'requested' => (float) $amount
+                ]
+            ], 422);
+        }
+        
+        // Check if there's already a pending withdrawal
+        $pendingExists = Withdrawal::where('providerID', $provider->providerID)
+            ->where('status', 'pending')
+            ->exists();
             
-            if (!$wallet) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Wallet not found'
-                ], 404);
+        if ($pendingExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You already have a pending withdrawal request. Please wait for it to be processed.'
+            ], 422);
+        }
+        
+        // Declare variable outside the closure
+        $withdrawal = null;
+        
+        DB::transaction(function () use ($wallet, $amount, $provider, $request, &$withdrawal) {
+            // Deduct from available balance
+            $wallet->available_balance -= $amount;
+            $wallet->save();
+            
+            // Base withdrawal data
+            $withdrawalData = [
+                'providerID' => $provider->providerID,
+                'amount' => $amount,
+                'currency' => 'ETB',
+                'status' => 'pending',
+                'payment_method' => $request->payment_method,
+                'platform_fee' => 0,
+                'net_amount' => $amount,
+                'processed_at' => null,
+                'admin_notes' => null
+            ];
+            
+            // Add bank fields if payment method is bank
+            if ($request->payment_method === 'bank') {
+                $withdrawalData['provider_bank_name'] = $request->bank_name;
+                $withdrawalData['provider_account_number'] = $request->account_number;
+                $withdrawalData['provider_account_holder_name'] = $request->account_holder_name;
             }
             
-            if ($wallet->available_balance < $amount) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Insufficient balance',
-                    'data' => [
-                        'available_balance' => (float) $wallet->available_balance,
-                        'requested' => (float) $amount
-                    ]
-                ], 422);
+            // Add telebir fields if payment method is telebir
+            if ($request->payment_method === 'telebir') {
+                $withdrawalData['telebir_number'] = $request->telebir_number;
+                $withdrawalData['telebir_holder_name'] = $request->telebir_holder_name;
             }
             
-            // Check if there's already a pending withdrawal
-            $pendingExists = Withdrawal::where('providerID', $provider->providerID)
-                ->where('status', 'pending')
-                ->exists();
-                
-            if ($pendingExists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You already have a pending withdrawal request. Please wait for it to be processed.'
-                ], 422);
-            }
-            
-            // Declare variable outside the closure
-            $withdrawal = null;
-            
-            DB::transaction(function () use ($wallet, $amount, $provider, &$withdrawal) {
-                // Deduct from available balance
-                $wallet->available_balance -= $amount;
-                $wallet->save();
-                
-                // Create withdrawal record
-                $withdrawal = Withdrawal::create([
-                    'providerID' => $provider->providerID,
-                    'amount' => $amount,
-                    'status' => 'pending',
-                    'processed_at' => null,
-                    'admin_notes' => null
-                ]);
-                
-                if (!$withdrawal) {
-                    throw new \Exception('Failed to create withdrawal record');
-                }
-                
-                // Create transaction record
-                WalletTransaction::create([
-                    'walletID' => $wallet->walletID,
-                    'type' => 'debit',
-                    'amount' => $amount,
-                    'description' => 'Withdrawal request #' . $withdrawal->withdrawalID . ' (pending)',
-                    'bookingID' => null,
-                    'withdrawalID' => $withdrawal->withdrawalID
-                ]);
-            });
+            // Create withdrawal record
+            $withdrawal = Withdrawal::create($withdrawalData);
             
             if (!$withdrawal) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to process withdrawal request'
-                ], 500);
+                throw new \Exception('Failed to create withdrawal record');
             }
             
-            // TODO: Send notification to admin about new withdrawal request
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Withdrawal request submitted successfully',
-                'data' => [
-                    'withdrawal' => [
-                        'withdrawalID' => $withdrawal->withdrawalID,
-                        'amount' => (float) $withdrawal->amount,
-                        'status' => $withdrawal->status,
-                        'created_at' => $withdrawal->created_at
-                    ],
-                    'new_balance' => (float) $wallet->fresh()->available_balance
-                ]
+            // Create transaction record
+            WalletTransaction::create([
+                'walletID' => $wallet->walletID,
+                'type' => 'debit',
+                'amount' => $amount,
+                'description' => 'Withdrawal request #' . $withdrawal->withdrawalID . ' (' . $request->payment_method . ')',
+                'bookingID' => null,
+                'withdrawalID' => $withdrawal->withdrawalID
             ]);
-            
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        });
+        
+        if (!$withdrawal) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            Log::error('Withdrawal request error: ' . $e->getMessage(), [
-                'provider_id' => $request->user()->providerID ?? null,
-                'amount' => $request->amount,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to process withdrawal request: ' . $e->getMessage()
+                'message' => 'Failed to process withdrawal request'
             ], 500);
         }
+        
+        // TODO: Send notification to admin about new withdrawal request
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Withdrawal request submitted successfully',
+            'data' => [
+                'withdrawal' => [
+                    'withdrawalID' => $withdrawal->withdrawalID,
+                    'amount' => (float) $withdrawal->amount,
+                    'status' => $withdrawal->status,
+                    'payment_method' => $withdrawal->payment_method,
+                    'created_at' => $withdrawal->created_at
+                ],
+                'new_balance' => (float) $wallet->fresh()->available_balance
+            ]
+        ]);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        Log::error('Withdrawal request error: ' . $e->getMessage(), [
+            'provider_id' => $request->user()->providerID ?? null,
+            'amount' => $request->amount,
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to process withdrawal request: ' . $e->getMessage()
+        ], 500);
     }
-
+}
     /**
      * Get withdrawal history
      * GET /api/provider/withdrawals

@@ -21,6 +21,9 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AdminWithdrawalController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\DisputeController;
+use App\Http\Controllers\AdminDisputeController;
+
 
 // ==================== PUBLIC ROUTES ====================
 Route::get('/cities', [ServiceCityController::class, 'index']);
@@ -130,6 +133,11 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::post('/bookings/{bookingId}/confirm', [PaymentController::class, 'confirmCompletion']);
 
     Route::post('/bookings/{bookingID}/review', [ReviewController::class, 'store']);
+
+    Route::post('/bookings/{bookingID}/dispute', [DisputeController::class, 'customerRaiseDispute']);
+    Route::get('/disputes', [DisputeController::class, 'getCustomerDisputes']);
+    Route::get('/disputes/{disputeID}', [DisputeController::class, 'show']);
+    Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage']);
 });
 
 // Public routes (no authentication required)
@@ -181,6 +189,12 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'getProviderNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+
+
+    Route::post('/bookings/{bookingID}/dispute', [DisputeController::class, 'providerRaiseDispute']);
+    Route::get('/disputes', [DisputeController::class, 'getProviderDisputes']);
+    Route::get('/disputes/{disputeID}', [DisputeController::class, 'show']);
+    Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage']);
 });
 
 // ==================== ADMIN ROUTES ====================
@@ -233,6 +247,13 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/read', [NotificationController::class, 'markAllAsRead']);
+
+
+    Route::get('/disputes', [AdminDisputeController::class, 'index']);
+    Route::get('/disputes/stats', [AdminDisputeController::class, 'stats']);
+    Route::get('/disputes/{disputeID}', [AdminDisputeController::class, 'show']);
+    Route::put('/disputes/{disputeID}/status', [AdminDisputeController::class, 'updateStatus']);
+    Route::post('/disputes/{disputeID}/notes', [AdminDisputeController::class, 'addPrivateNote']);
 });
 
 Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);

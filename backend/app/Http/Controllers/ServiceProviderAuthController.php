@@ -219,8 +219,7 @@ class ServiceProviderAuthController extends Controller
         }
 
         // Create Sanctum token
-        $token = $provider->createToken('provider-token', ['provider'])->plainTextToken;
-
+        $token = $provider->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
         // Build response data
         $responseData = [
             'providerID' => $provider->providerID,

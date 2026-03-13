@@ -51,8 +51,8 @@ class AdminAuthController extends Authenticatable
         }
 
         // Generate token
-        $token = $admin->createToken('admin-token')->plainTextToken;
-
+        //$token = $admin->createToken('admin-token')->plainTextToken;
+        $token = $admin->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
         // Remove password from response
         unset($admin->password);
 

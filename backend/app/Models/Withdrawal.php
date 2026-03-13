@@ -11,24 +11,26 @@ class Withdrawal extends Model
     protected $primaryKey = 'withdrawalID'; // Change from default 'id'
 
     protected $fillable = [
-        'withdrawalID', // Added
-        'providerID',   // Changed from 'provider_id'
+        'withdrawalID',
+        'providerID',
         'amount',
         'currency',
         'status',
+        'payment_method', // Add this
         'provider_bank_name',
         'provider_account_number',
         'provider_account_holder_name',
+        'telebir_number', // Add this
+        'telebir_holder_name', // Add this
         'chapa_transfer_id',
         'chapa_transfer_status',
         'platform_fee',
         'net_amount',
-        'admin_notes',      // Changed from 'processing_notes'
+        'admin_notes',
         'failure_reason',
         'processed_at',
-        'completed_at'
+        'completed_at',
     ];
-
     protected $casts = [
         'amount' => 'decimal:2',
         'platform_fee' => 'decimal:2',

@@ -104,51 +104,50 @@ class CustomerAuthController extends Controller
     }
 
 
-public function login(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-        'password' => 'required|string',
-    ]);
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
 
-    if ($validator->fails()) {
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Find customer
+        $customer = Customer::where('email', $request->email)->first();
+
+        if (!$customer || !Hash::check($request->password, $customer->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid email or password'
+            ], 401);
+        }
+
+        // Remove password from response
+        unset($customer->password);
+
+        // Create a Sanctum token
+        $token = $customer->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
         return response()->json([
-            'success' => false,
-            'message' => 'Validation errors',
-            'errors' => $validator->errors()
-        ], 422);
-    }
-
-    // Find customer
-    $customer = Customer::where('email', $request->email)->first();
-
-    if (!$customer || !Hash::check($request->password, $customer->password)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid email or password'
-        ], 401);
-    }
-
-    // Remove password from response
-    unset($customer->password);
-
-    // Create a Sanctum token
-    $token = $customer->createToken('customer_token')->plainTextToken;
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Login successful',
-        'data' => [
-            'customerID' => $customer->customerID,
-            'user_type' => 'customer',
-            'token' => $token,
-            'profilePicture' => $customer->profilePicture,
-            'fullname' => $customer->fullname,
-            'email' => $customer->email,
-            'phone' => $customer->phone,
-            'service_city' => $customer->service_city,
-            'location' => $customer->location
-        ]
-    ]);
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => [
+                'customerID' => $customer->customerID,
+                'user_type' => 'customer',
+                'token' => $token,
+                'profilePicture' => $customer->profilePicture,
+                'fullname' => $customer->fullname,
+                'email' => $customer->email,
+                'phone' => $customer->phone,
+                'service_city' => $customer->service_city,
+                'location' => $customer->location
+            ]
+        ]);
     }
 }
