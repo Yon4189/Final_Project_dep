@@ -73,6 +73,33 @@ export default function PaymentScreen() {
     setIsPaying(true);
     setPaymentStatus('processing');
     
+    // Check for mock URL in development
+    if (url.includes('mock-payment-url.com')) {
+      console.log('Mock payment URL detected, simulating success...');
+      
+      // Artificial delay for realism
+      setTimeout(() => {
+        setIsPaying(false);
+        setPaymentStatus('completed');
+        
+        Alert.alert(
+          'Development Mode',
+          'This is a mock payment for testing. Placeholder Chapa keys were detected in the backend.',
+          [
+            {
+              text: 'View Bookings',
+              onPress: () => router.push('/(customer)/bookings'),
+            },
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      }, 1500);
+      return;
+    }
+
     try {
       const result = await WebBrowser.openBrowserAsync(url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,

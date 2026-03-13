@@ -239,15 +239,17 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     setSelectedServiceName(service.serviceName || service.service?.name || 'Service');
     
     // Get price - check multiple possible locations
-    const price = service.customPrice || service.price || service.service?.basePrice || 0;
+    const price = service.price || service.basePrice || service.customPrice || service.service?.basePrice || 0;
     setServicePrice(price);
     
     // Get duration if available
-    if (service.estimatedDuration) {
+    if (service.estimatedDuration && typeof service.estimatedDuration === 'number') {
       setServiceDuration(`${service.estimatedDuration} minutes`);
     } else if (service.service?.estimatedDuration) {
       const duration = service.service.estimatedDuration;
       setServiceDuration(`${duration.min}-${duration.max} ${duration.unit}`);
+    } else if (service.duration) {
+      setServiceDuration(`${service.duration} minutes`);
     }
     
     setShowServicePicker(false);
@@ -368,9 +370,12 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         notes: description,
       });
 
-      console.log('Booking response:', bookingResponse);
+      console.log('Booking response:', JSON.stringify(bookingResponse, null, 2));
 
-      if (bookingResponse && bookingResponse.id) {
+      // Check for ID in various possible locations in the response
+      const bookingId = bookingResponse.id || bookingResponse.bookingID || bookingResponse.data?.id || bookingResponse.data?.bookingID;
+
+      if (bookingResponse && bookingId) {
         // Get user data for payment with fallbacks
         const customerEmail = userData?.email || userData?.emailAddress || 'customer@example.com';
         const customerFullName = userData?.fullname || userData?.name || 'Customer User';
@@ -384,7 +389,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           email: customerEmail,
           firstName: customerFirstName,
           lastName: customerLastName,
-          bookingId: bookingResponse.id,
+          bookingId: bookingId.toString(),
         });
 
         // Initialize payment with Chapa
@@ -395,7 +400,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           lastName: customerLastName,
           phoneNumber: customerPhone,
           customerId: customerId,
-          bookingId: bookingResponse.id,
+          bookingId: bookingId.toString(),
           description: `Payment for ${selectedServiceName} with ${provider.businessName || provider.name}`,
         });
 
@@ -405,22 +410,20 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
         if (checkoutUrl) {
           onClose();
-          setTimeout(() => {
-            if (Platform.OS === 'web') {
-              window.open(checkoutUrl, '_blank');
-            } else {
-              router.push({
-                pathname: '/(customer)/payment',
-                params: {
-                  checkoutUrl: checkoutUrl,
-                  bookingId: bookingResponse.id.toString(),
-                  amount: servicePrice.toString(),
-                  providerId: provider.id.toString(),
-                  serviceId: selectedServiceId,
-                }
-              });
-            }
-          }, 500);
+          if (Platform.OS === 'web') {
+            window.open(checkoutUrl, '_blank');
+          } else {
+            router.push({
+              pathname: '/(customer)/payment',
+              params: {
+                checkoutUrl: checkoutUrl,
+                bookingId: bookingId.toString(),
+                amount: servicePrice.toString(),
+                providerId: provider.id.toString(),
+                serviceId: selectedServiceId,
+              }
+            });
+          }
         } else {
           Alert.alert('Error', 'Failed to initialize payment. No checkout URL received.');
         }
@@ -430,6 +433,21 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     } catch (error: any) {
       console.error('Booking creation error:', error);
       
+      // Extract specific error message if available
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      if (error.response?.data?.errors ) {
+        const errors = error.response.data.errors;
+        const firstKey = Object.keys(errors)[0];
+        if (firstKey && Array.isArray(errors[firstKey]) && errors[firstKey].length > 0) {
+          errorMessage = errors[firstKey][0];
+        }
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       if (error.response?.status === 401) {
         Alert.alert(
           'Session Expired',
@@ -449,14 +467,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           ]
         );
       } else {
-        let errorMessage = 'Failed to create booking. Please try again.';
-        if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        Alert.alert('Error', errorMessage);
+        Alert.alert('Booking Error', errorMessage);
       }
     } finally {
       setLoading(false);
@@ -495,9 +506,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           <View style={styles.serviceList}>
             <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled={true}>
               {providerServices.map((service: ProfessionalService, index: number) => {
-                const serviceId = service.serviceId?.toString() || service.id?.toString() || index.toString();
-                const serviceName = service.serviceName || service.service?.name || 'Service';
-                const servicePrice = service.customPrice || service.price || service.service?.basePrice || 0;
+                const serviceId = service.id?.toString() || service.serviceId?.toString() || index.toString();
+                const serviceName = service.name || service.serviceName || service.service?.name || 'Service';
+                const servicePrice = service.price || service.basePrice || service.customPrice || service.service?.basePrice || 0;
                 
                 // Get duration if available
                 let durationText = '';
@@ -626,28 +637,102 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
             {/* Date Selection - ALWAYS ACTIVE */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Select Date *</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
-                <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                  minimumDate={minDate}
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={selectedDate.toISOString().split('T')[0]}
+                  min={minDate.toISOString().split('T')[0]}
+                  onChange={(e: any) => {
+                    const val = e.target.value;
+                    if (val) {
+                      const [y, m, d] = val.split('-').map(Number);
+                      handleDateChange(null, new Date(y, m - 1, d));
+                    }
+                  }}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#fff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    width: '100%',
+                    outline: 'none',
+                    color: '#111827',
+                    fontFamily: 'inherit'
+                  }}
                 />
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
+                    <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={selectedDate}
+                      mode="date"
+                      display="default"
+                      onChange={handleDateChange}
+                      minimumDate={minDate}
+                    />
+                  )}
+                </>
               )}
             </View>
 
-            {/* Time Selection - ALWAYS ACTIVE (shows slots for the selected date) */}
+            {/* Time Selection - ALWAYS ACTIVE */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Select Time *</Text>
-              {renderTimeSlots()}
+              {Platform.OS === 'web' ? (
+                <input
+                  type="time"
+                  value={`${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`}
+                  onChange={(e: any) => {
+                    const val = e.target.value;
+                    if (val) {
+                      const [h, m] = val.split(':').map(Number);
+                      const t = new Date(selectedDate);
+                      t.setHours(h, m, 0, 0);
+                      setSelectedTime(t);
+                    }
+                  }}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#fff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    width: '100%',
+                    outline: 'none',
+                    color: '#111827',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowTimePicker(true)}
+                  >
+                    <Ionicons name="time-outline" size={20} color={Colors.primary} />
+                    <Text style={styles.dateText}>{formatTime(selectedTime)}</Text>
+                  </TouchableOpacity>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={selectedTime}
+                      mode="time"
+                      display="default"
+                      onChange={(event: any, date?: Date) => {
+                        setShowTimePicker(false);
+                        if (date) setSelectedTime(date);
+                      }}
+                    />
+                  )}
+                </>
+              )}
             </View>
 
             {/* Address - ALWAYS ACTIVE */}

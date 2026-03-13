@@ -242,7 +242,7 @@ class CustomerController extends Authenticatable
             $validator = Validator::make($request->all(), [
                 'providerID' => 'required|exists:service_providers,providerID',
                 'serviceID' => 'required|exists:services,serviceID',
-                'scheduledDate' => 'required|date|after:today',
+                'scheduledDate' => 'required|date|after_or_equal:today',
                 'agreed_price' => 'required|numeric|min:0',
                 'service_address' => 'required|string|max:255',
                 'notes' => 'nullable|string|max:1000'
@@ -250,7 +250,7 @@ class CustomerController extends Authenticatable
                 'providerID.required' => 'please select a provider',
                 'serviceID.required' => 'please select a service',
                 'scheduledDate.required' => 'please select a date for the service',
-                'scheduledDate.after' => 'scheduled date must be in the future',
+                'scheduledDate.after_or_equal' => 'scheduled date must be today or in the future',
                 'agreed_price.required' => 'please enter the agreed price',
                 'agreed_price.min' => 'price cannot be negative',
                 'service_address.required' => 'please enter your address'
@@ -282,18 +282,36 @@ class CustomerController extends Authenticatable
                 ], 400);
             }
 
-            // check if customer already booked THIS EXACT SERVICE with this provider
+            // check if customer already booked THIS EXACT SERVICE for THIS DATE with this provider
             $existingBooking = Booking::where('customerID', $customer->customerID)
+                ->where('serviceID', $service->serviceID)
                 ->where('providerID', $validated['providerID'])
-                ->where('serviceID', $validated['serviceID'])  // check specific service
+                ->whereDate('scheduledDate', $validated['scheduledDate'])
                 ->whereIn('status', ['pending', 'accepted', 'in_progress'])
                 ->first();
-
+    
             if ($existingBooking) {
+                // If it's still pending, let them proceed with the existing one instead of erroring
+                if ($existingBooking->status === 'pending') {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Returning existing pending booking',
+                        'data' => $this->bookingToServiceRequestPayload(
+                            $existingBooking->load(['service.category', 'provider'])
+                        )
+                    ], 200);
+                }
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'you already have an active booking for this service'
+                    'message' => 'you already have an active booking for this service on this date'
                 ], 400);
+            }
+
+            // Merge address into notes if it exists
+            $finalNotes = $validated['notes'] ?? '';
+            if (!empty($validated['service_address'])) {
+                $finalNotes = "Address: " . $validated['service_address'] . "\n" . $finalNotes;
             }
 
             // create booking
@@ -304,8 +322,7 @@ class CustomerController extends Authenticatable
                 'status' => 'pending',
                 'scheduledDate' => $validated['scheduledDate'],
                 'agreed_price' => $validated['agreed_price'],
-                'service_address' => $validated['service_address'],
-                'notes' => $validated['notes'] ?? null,
+                'notes' => trim($finalNotes) ?: null,
                 'expires_at' => now()->addHours(24) // booking expires in 24 hours
             ]);
 

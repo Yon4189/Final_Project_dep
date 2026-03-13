@@ -146,12 +146,15 @@ export interface ProfessionalService {
   id: ID;
   professionalProfileId: ID;
   serviceId: ID;
+  name?: string;
   serviceName?: string;
   customPrice?: number;
   price?: number; // Add this
+  basePrice?: number;
   description?: string;
   isActive: boolean;
   estimatedDuration?: number;
+  duration?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 
