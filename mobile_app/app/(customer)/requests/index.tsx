@@ -139,7 +139,7 @@ export default function MyRequests() {
     if (!requests?.length) return null;
 
     const activeRequests = requests.filter(
-      r => ['pending', 'confirmed', 'in_progress'].includes(r.status)
+      r => ['pending', 'accepted', 'confirmed', 'in_progress'].includes(r.status)
     ).length;
 
     const totalSpent = requests

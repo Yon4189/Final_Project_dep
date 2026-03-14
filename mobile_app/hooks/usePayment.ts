@@ -112,8 +112,7 @@ export function useInitializeChapaPayment(options?: UseMutationOptions<PaymentIn
   return useMutation<PaymentIntent, Error, any>({
     mutationFn: async (data: any) => {
       const response = await paymentService.initializeChapaPayment(data);
-      if (!response.success) throw new Error(response.message);
-      return response.data;
+      return response as unknown as PaymentIntent;
     },
     onSuccess: (data, variables, context, meta) => {
       handleMutationSuccess('Payment initialized successfully');

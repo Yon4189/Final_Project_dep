@@ -14,9 +14,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { usePaymentMethods, useInitializeChapaPayment, useVerifyChapaPayment } from '../../hooks/usePayment';
-import { useCreateBooking } from '../../hooks/useCustomerBookings'; // Fixed import
+import { useBookingDetails } from '../../hooks/useCustomerBookings';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export default function PaymentScreen() {
   const router = useRouter();
@@ -25,20 +26,39 @@ export default function PaymentScreen() {
   // Extract params that might come from ServiceRequestModal
   const checkoutUrl = params.checkoutUrl as string;
   const bookingId = params.bookingId as string;
-  const amount = parseFloat(params.amount as string || '0');
+  const rawAmount = parseFloat(params.amount as string || '0');
+  const amount = Number.isFinite(rawAmount) ? rawAmount : 0;
   
+  const { data: booking, isLoading: bookingLoading } = useBookingDetails(bookingId || '');
+
   const [paymentMethod, setPaymentMethod] = useState<string>('chapa');
   const [isPaying, setIsPaying] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
 
-  // Calculate total with platform fee
-  const platformFee = amount * 0.05;
-  const totalAmount = amount + platformFee;
+  const bookingStatus = (booking?.status ?? '').toLowerCase();
+  const acceptedStatuses = ['accepted', 'in_progress', 'completed'];
+  const hasAccepted = acceptedStatuses.includes(bookingStatus);
+  const paymentAlreadyDone = (booking?.payment?.status ?? '').toLowerCase() === 'paid';
+
+  useEffect(() => {
+    if (paymentAlreadyDone) {
+      setPaymentStatus('completed');
+      setIsPaying(false);
+    }
+  }, [paymentAlreadyDone]);
+
+  const bookingAmount = Number(booking?.agreed_price ?? booking?.payment?.amount ?? 0);
+  const safeBookingAmount = Number.isFinite(bookingAmount) ? bookingAmount : 0;
+  const effectiveAmount = Math.max(amount, safeBookingAmount, 0);
+  const platformFee = effectiveAmount * 0.05;
+  const totalAmount = effectiveAmount + platformFee;
+  const displayPaymentStatus = paymentAlreadyDone ? 'completed' : paymentStatus;
+  const providerName = booking?.provider?.businessName || booking?.provider?.fullname || 'the provider';
+  const serviceTitle = booking?.service?.title || 'your service';
 
   const { data: paymentMethods, isLoading: loadingMethods } = usePaymentMethods();
   const initializeChapaPayment = useInitializeChapaPayment();
   const verifyChapaPayment = useVerifyChapaPayment();
-  const createBooking = useCreateBooking(); // Fixed variable name
 
   useEffect(() => {
     // Handle deep link callback from Chapa
@@ -68,6 +88,10 @@ export default function PaymentScreen() {
       openCheckoutUrl(checkoutUrl);
     }
   }, [checkoutUrl]);
+
+  if (bookingId && bookingLoading) {
+    return <LoadingSpinner fullScreen />;
+  }
 
   const openCheckoutUrl = async (url: string) => {
     setIsPaying(true);
@@ -164,6 +188,42 @@ export default function PaymentScreen() {
   };
 
   const handleChapaPayment = async () => {
+    if (!hasAccepted) {
+      Alert.alert(
+        'Awaiting provider confirmation',
+        `${providerName} still needs to accept your ${serviceTitle} request. You will be notified once the request is approved.`,
+        [
+          {
+            text: 'View Notifications',
+            onPress: () => router.push('/(customer)/notifications'),
+          },
+          {
+            text: 'OK',
+            style: 'default',
+          },
+        ],
+      );
+      return;
+    }
+
+    if (paymentAlreadyDone) {
+      Alert.alert(
+        'Already paid',
+        'This booking already shows a completed payment in your history.',
+        [
+          {
+            text: 'View Bookings',
+            onPress: () => router.push('/(customer)/bookings'),
+          },
+          {
+            text: 'OK',
+            style: 'default',
+          },
+        ],
+      );
+      return;
+    }
+
     if (!paymentMethods) return;
 
     setIsPaying(true);
@@ -206,6 +266,42 @@ export default function PaymentScreen() {
   };
 
   const handleCashPayment = async () => {
+    if (!hasAccepted) {
+      Alert.alert(
+        'Awaiting provider confirmation',
+        `${providerName} still needs to accept your ${serviceTitle} request before paying in cash.`,
+        [
+          {
+            text: 'View Notifications',
+            onPress: () => router.push('/(customer)/notifications'),
+          },
+          {
+            text: 'OK',
+            style: 'default',
+          },
+        ],
+      );
+      return;
+    }
+
+    if (paymentAlreadyDone) {
+      Alert.alert(
+        'Already paid',
+        'This booking already shows a completed payment.',
+        [
+          {
+            text: 'View Bookings',
+            onPress: () => router.push('/(customer)/bookings'),
+          },
+          {
+            text: 'OK',
+            style: 'default',
+          },
+        ],
+      );
+      return;
+    }
+
     try {
       setIsPaying(true);
       setPaymentStatus('completed');
@@ -278,7 +374,7 @@ export default function PaymentScreen() {
       <Text style={styles.summaryTitle}>Payment Summary</Text>
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>Service Fee</Text>
-        <Text style={styles.summaryValue}>ETB {amount.toFixed(2)}</Text>
+        <Text style={styles.summaryValue}>ETB {effectiveAmount.toFixed(2)}</Text>
       </View>
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>Platform Fee (5%)</Text>
@@ -293,21 +389,21 @@ export default function PaymentScreen() {
   );
 
   const renderPaymentStatus = () => {
-    if (paymentStatus === 'completed') {
+    if (displayPaymentStatus === 'completed') {
       return (
         <View style={[styles.statusContainer, styles.statusSuccess]}>
           <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
           <Text style={[styles.statusText, styles.statusSuccessText]}>Payment Successful</Text>
         </View>
       );
-    } else if (paymentStatus === 'failed') {
+    } else if (displayPaymentStatus === 'failed') {
       return (
         <View style={[styles.statusContainer, styles.statusError]}>
           <Ionicons name="close-circle" size={24} color="#ef4444" />
           <Text style={[styles.statusText, styles.statusErrorText]}>Payment Failed</Text>
         </View>
       );
-    } else if (paymentStatus === 'processing') {
+    } else if (displayPaymentStatus === 'processing') {
       return (
         <View style={styles.statusContainer}>
           <ActivityIndicator size="small" color={Colors.primary} />
@@ -317,6 +413,32 @@ export default function PaymentScreen() {
     }
     return null;
   };
+
+  const renderAwaitingAcceptance = () => (
+    <View style={styles.awaitingCard}>
+      <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
+      <View style={styles.awaitingBody}>
+        <Text style={styles.awaitingTitle}>Waiting for provider confirmation</Text>
+        <Text style={styles.awaitingMessage}>
+          {providerName} still needs to accept your {serviceTitle} request. You will receive a notification as soon as the request is approved.
+        </Text>
+        <View style={styles.awaitingActions}>
+          <TouchableOpacity
+            style={styles.awaitingActionButton}
+            onPress={() => router.push('/(customer)/notifications')}
+          >
+            <Text style={styles.awaitingActionText}>View Notifications</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.awaitingActionButtonSecondary}
+            onPress={() => router.push('/(customer)/requests')}
+          >
+            <Text style={styles.awaitingActionTextSecondary}>View My Requests</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -348,29 +470,16 @@ export default function PaymentScreen() {
 
         {/* Payment Actions */}
         <View style={styles.section}>
-          {paymentStatus === 'pending' && (
+          {!hasAccepted ? (
+            renderAwaitingAcceptance()
+          ) : (
             <>
-              {checkoutUrl ? (
-                <TouchableOpacity
-                  style={[styles.payButton, isPaying && styles.payButtonDisabled]}
-                  onPress={() => openCheckoutUrl(checkoutUrl)}
-                  disabled={isPaying}
-                >
-                  {isPaying ? (
-                    <ActivityIndicator size="small" color={Colors.surface} />
-                  ) : (
-                    <>
-                      <Ionicons name="card" size={20} color={Colors.surface} />
-                      <Text style={styles.payButtonText}>Complete Payment</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              ) : (
+              {displayPaymentStatus === 'pending' && (
                 <>
-                  {paymentMethod === 'chapa' ? (
+                  {checkoutUrl ? (
                     <TouchableOpacity
                       style={[styles.payButton, isPaying && styles.payButtonDisabled]}
-                      onPress={handleChapaPayment}
+                      onPress={() => openCheckoutUrl(checkoutUrl)}
                       disabled={isPaying}
                     >
                       {isPaying ? (
@@ -378,64 +487,83 @@ export default function PaymentScreen() {
                       ) : (
                         <>
                           <Ionicons name="card" size={20} color={Colors.surface} />
-                          <Text style={styles.payButtonText}>Pay with Chapa</Text>
+                          <Text style={styles.payButtonText}>Complete Payment</Text>
                         </>
                       )}
                     </TouchableOpacity>
                   ) : (
-                    <TouchableOpacity
-                      style={[styles.payButton, isPaying && styles.payButtonDisabled]}
-                      onPress={handleCashPayment}
-                      disabled={isPaying}
-                    >
-                      {isPaying ? (
-                        <ActivityIndicator size="small" color={Colors.surface} />
+                    <>
+                      {paymentMethod === 'chapa' ? (
+                        <TouchableOpacity
+                          style={[styles.payButton, isPaying && styles.payButtonDisabled]}
+                          onPress={handleChapaPayment}
+                          disabled={isPaying}
+                        >
+                          {isPaying ? (
+                            <ActivityIndicator size="small" color={Colors.surface} />
+                          ) : (
+                            <>
+                              <Ionicons name="card" size={20} color={Colors.surface} />
+                              <Text style={styles.payButtonText}>Pay with Chapa</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
                       ) : (
-                        <>
-                          <Ionicons name="cash" size={20} color={Colors.surface} />
-                          <Text style={styles.payButtonText}>Pay Cash on Service</Text>
-                        </>
+                        <TouchableOpacity
+                          style={[styles.payButton, isPaying && styles.payButtonDisabled]}
+                          onPress={handleCashPayment}
+                          disabled={isPaying}
+                        >
+                          {isPaying ? (
+                            <ActivityIndicator size="small" color={Colors.surface} />
+                          ) : (
+                            <>
+                              <Ionicons name="cash" size={20} color={Colors.surface} />
+                              <Text style={styles.payButtonText}>Pay Cash on Service</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
                       )}
-                    </TouchableOpacity>
+                    </>
                   )}
+                  
+                  <TouchableOpacity
+                    style={[styles.cancelButton, isPaying && styles.cancelButtonDisabled]}
+                    onPress={() => router.back()}
+                    disabled={isPaying}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
                 </>
               )}
-              
-              <TouchableOpacity
-                style={[styles.cancelButton, isPaying && styles.cancelButtonDisabled]}
-                onPress={() => router.back()}
-                disabled={isPaying}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </>
-          )}
 
-          {paymentStatus === 'completed' && (
-            <TouchableOpacity
-              style={styles.doneButton}
-              onPress={() => router.push('/(customer)/bookings')}
-            >
-              <Text style={styles.doneButtonText}>View My Bookings</Text>
-            </TouchableOpacity>
-          )}
+              {displayPaymentStatus === 'completed' && (
+                <TouchableOpacity
+                  style={styles.doneButton}
+                  onPress={() => router.push('/(customer)/bookings')}
+                >
+                  <Text style={styles.doneButtonText}>View My Bookings</Text>
+                </TouchableOpacity>
+              )}
 
-          {paymentStatus === 'failed' && (
-            <>
-              <TouchableOpacity
-                style={[styles.retryButton, isPaying && styles.retryButtonDisabled]}
-                onPress={() => setPaymentStatus('pending')}
-                disabled={isPaying}
-              >
-                <Text style={styles.retryButtonText}>Try Again</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.cancelButton, isPaying && styles.cancelButtonDisabled]}
-                onPress={() => router.back()}
-                disabled={isPaying}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+              {displayPaymentStatus === 'failed' && (
+                <>
+                  <TouchableOpacity
+                    style={[styles.retryButton, isPaying && styles.retryButtonDisabled]}
+                    onPress={() => setPaymentStatus('pending')}
+                    disabled={isPaying}
+                  >
+                    <Text style={styles.retryButtonText}>Try Again</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.cancelButton, isPaying && styles.cancelButtonDisabled]}
+                    onPress={() => router.back()}
+                    disabled={isPaying}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </>
           )}
         </View>
@@ -667,6 +795,59 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: 16,
     color: '#78350f',
+    fontWeight: '600',
+  },
+  awaitingCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  awaitingBody: {
+    flex: 1,
+  },
+  awaitingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  awaitingMessage: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  awaitingActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  awaitingActionButton: {
+    backgroundColor: Colors.primary + '15',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  awaitingActionText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  awaitingActionButtonSecondary: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  awaitingActionTextSecondary: {
+    color: Colors.text.primary,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

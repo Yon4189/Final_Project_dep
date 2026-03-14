@@ -6,6 +6,9 @@ export const Colors = {
   warning: '#FF9500',
   error: '#FF3B30',
   info: '#5AC8FA',
+  purple: '#AF52DE',
+  primaryDark: '#0056B3',
+  skeleton: '#E1E1E1',
   
   background: '#F2F2F7',
   surface: '#FFFFFF',

@@ -396,6 +396,7 @@ export const useServiceRequestDetails = (id: string) => {
 
 // Alias for backward compatibility and consistency with components
 export const useServiceRequest = useServiceRequestDetails;
+export const useMyRequests = useServiceRequests;
 
 export const useCreateServiceRequest = () => {
   const queryClient = useQueryClient();

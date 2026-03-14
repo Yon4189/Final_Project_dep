@@ -14,10 +14,12 @@ import {
   Alert,
   Share,
   Linking,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/app/constants/Colors";
+const { width } = Dimensions.get("window");
 import { useLocation } from "../../hooks/useLocation";
 import { useSearch } from "../../hooks/useSearch";
 import { useTopRatedProviders } from "@/hooks/useCustomerQueries";
@@ -483,6 +485,50 @@ export default function CustomerDashboard() {
     );
   };
 
+  const renderQuickActions = () => (
+    <View style={styles.quickActions}>
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => router.push('/(customer)/requests/index')}
+      >
+        <View style={[styles.actionIcon, { backgroundColor: Colors.primary + '20' }]}>
+          <Ionicons name="clipboard-outline" size={24} color={Colors.primary} />
+        </View>
+        <Text style={styles.actionLabel}>My Bookings</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => router.push('/(customer)/wallet/index')}
+      >
+        <View style={[styles.actionIcon, { backgroundColor: Colors.success + '20' }]}>
+          <Ionicons name="wallet-outline" size={24} color={Colors.success} />
+        </View>
+        <Text style={styles.actionLabel}>Wallet</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => router.push('/(customer)/complaints')}
+      >
+        <View style={[styles.actionIcon, { backgroundColor: Colors.warning + '20' }]}>
+          <Ionicons name="alert-circle-outline" size={24} color={Colors.warning} />
+        </View>
+        <Text style={styles.actionLabel}>Complaints</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => router.push('/(customer)/locations')}
+      >
+        <View style={[styles.actionIcon, { backgroundColor: Colors.info + '20' }]}>
+          <Ionicons name="location-outline" size={24} color={Colors.info} />
+        </View>
+        <Text style={styles.actionLabel}>My City</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderTopRated = () => {
     if (topRatedLoading) {
       return <LoadingSpinner />;
@@ -767,7 +813,36 @@ export default function CustomerDashboard() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {renderQuickActions()}
         {renderTopRated()}
+
+        {/* Booking Journey Steps Card */}
+        {!query && !filters.categoryId && (
+          <View style={styles.journeyCard}>
+            <Text style={styles.journeyTitle}>How the booking journey works</Text>
+            <Text style={styles.journeySubtitle}>Complete the steps below to secure your service smoothly.</Text>
+            <View style={styles.journeySteps}>
+              {[
+                { num: '1', icon: 'search', label: 'Book a service', desc: 'Pick a provider, select time, send the request.' },
+                { num: '2', icon: 'time-outline', label: 'Wait for acceptance', desc: 'Provider accepts or rejects your request. Check Notifications.' },
+                { num: '3', icon: 'card-outline', label: 'Pay after confirmation', desc: 'Tap "Pay Now" in your notification or request details to pay.' },
+              ].map((step, idx) => (
+                <View key={step.num} style={styles.journeyStep}>
+                  <View style={styles.journeyStepLeft}>
+                    <View style={styles.journeyNumBadge}>
+                      <Text style={styles.journeyNum}>{step.num}</Text>
+                    </View>
+                    {idx < 2 && <View style={styles.journeyConnector} />}
+                  </View>
+                  <View style={styles.journeyStepContent}>
+                    <Text style={styles.journeyStepLabel}>{step.label}</Text>
+                    <Text style={styles.journeyStepDesc}>{step.desc}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {query || filters.categoryId ? (
           <>
@@ -1096,5 +1171,101 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
     color: Colors.text.secondary,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  actionButton: {
+    alignItems: 'center',
+    width: (width - 60) / 4,
+  },
+  actionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionLabel: {
+    fontSize: 11,
+    color: Colors.text.primary,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  journeyCard: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: 20,
+    marginTop: 20,
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  journeyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  journeySubtitle: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  journeySteps: {
+    marginTop: 10,
+  },
+  journeyStep: {
+    flexDirection: 'row',
+    marginBottom: 0,
+  },
+  journeyStepLeft: {
+    alignItems: 'center',
+    width: 30,
+    marginRight: 15,
+  },
+  journeyNumBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  journeyNum: {
+    color: Colors.surface,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  journeyConnector: {
+    width: 2,
+    flex: 1,
+    backgroundColor: Colors.primary + '30',
+    marginVertical: 4,
+  },
+  journeyStepContent: {
+    flex: 1,
+    paddingBottom: 25,
+  },
+  journeyStepLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  journeyStepDesc: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+    lineHeight: 18,
   },
 });

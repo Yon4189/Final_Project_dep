@@ -70,8 +70,14 @@ export interface ProviderService {
 
 export type ProviderNotificationType =
   | "new_request"
+  | "booking_request"
   | "request_accepted"
+  | "booking_accepted"
+  | "request_rejected"
+  | "booking_rejected"
   | "request_cancelled"
+  | "booking_cancelled"
+  | "booking_completed"
   | "payment_received"
   | "withdrawal"
   | "review"
@@ -119,6 +125,7 @@ export interface BankDetails {
 // Request Types
 export type RequestStatus =
   | "pending"
+  | "accepted"
   | "confirmed"
   | "in_progress"
   | "completed"

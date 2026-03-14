@@ -11,15 +11,18 @@ use App\Models\Booking;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use App\Services\WalletService;
+use App\Services\NotificationService;
 use Illuminate\Support\Str;
 
 class WebhookController extends Controller
 {
     protected $walletService;
-
-    public function __construct(WalletService $walletService)
+    protected $notificationService;
+ 
+    public function __construct(WalletService $walletService, NotificationService $notificationService)
     {
         $this->walletService = $walletService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -77,10 +80,24 @@ public function handleChapaWebhook(Request $request)
             $payment->paid_at = now();
             $payment->save();
 
-            $booking = Booking::find($payment->bookingID);
+            $booking = Booking::with(['customer', 'service'])->find($payment->bookingID);
             if ($booking) {
                 $booking->payment_status = 'paid';
                 $booking->save();
+
+                // Notify provider about the payment
+                $this->notificationService->toProvider(
+                    $booking->providerID,
+                    'payment_received',
+                    'Payment Received',
+                    'You have received a payment for ' . $booking->service->title,
+                    [
+                        'booking_id' => $booking->bookingID,
+                        'customer_name' => $booking->customer->fullname,
+                        'amount' => $payment->amount
+                    ],
+                    $booking->bookingID
+                );
             }
         });
         return response()->json(['success' => true]);

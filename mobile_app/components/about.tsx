@@ -118,7 +118,7 @@ export default function AboutScreen() {
         <Ionicons name="arrow-back" size={24} color={Colors.surface} />
       </TouchableOpacity>
       <View style={styles.headerContent}>
-        <Text style={styles.headerTitle}>About HomeLink</Text>
+        <Text style={styles.headerTitle}>About Home based service finding solution</Text>
         <Text style={styles.headerSubtitle}>
           Your trusted platform for finding professional service providers
         </Text>

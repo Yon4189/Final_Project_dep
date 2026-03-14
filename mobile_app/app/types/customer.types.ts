@@ -292,6 +292,7 @@ export interface TimeSlot {
 
 export type BookingStatus =
   | 'pending'
+  | 'accepted'
   | 'confirmed'
   | 'in_progress'
   | 'completed'
@@ -758,6 +759,7 @@ export type CustomerEvent =
 
 export const BookingStatuses: Record<BookingStatus, { label: string; color: string; icon: string }> = {
   pending: { label: 'Pending', color: '#F59E0B', icon: 'time-outline' },
+  accepted: { label: 'Accepted', color: '#3B82F6', icon: 'checkmark-circle-outline' },
   confirmed: { label: 'Confirmed', color: '#3B82F6', icon: 'checkmark-circle-outline' },
   in_progress: { label: 'In Progress', color: '#8B5CF6', icon: 'construct-outline' },
   completed: { label: 'Completed', color: '#10B981', icon: 'checkmark-done-outline' },

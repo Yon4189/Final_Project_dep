@@ -14,10 +14,9 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import {Colors} from '../../constants/Colors'; // <-- Update path if needed
-// TODO: Update the import paths below to the correct location of your hooks, for example:
-import { useCreateComplaint } from '@/hooks/useCustomerQueries'; // <-- Update path if needed
-import { useServiceRequests } from '@/hooks/useCustomerQueries'; // <-- Update path if needed
+import { Colors } from '@/app/constants/Colors';
+import { useCreateComplaint, useServiceRequests } from '@/hooks/useCustomerQueries';
+import type { ServiceRequest } from '@/app/types/customer.types';
 // If the file does not exist, create 'useCustomerQueries.ts' in 'mobile_app/hooks' and export the hooks.
 
 interface ComplaintForm {
@@ -48,14 +47,7 @@ const PRIORITIES = [
 
 export default function NewComplaint() {
   const router = useRouter();
-  // Define the type for a service request (adjust fields as needed)
-  interface ServiceRequest {
-    id: string;
-    serviceName: string;
-    providerName: string;
-    scheduledDate: string;
-    // Add other fields if necessary
-  }
+  // Fetch completed service requests
 
   const { data: requests } = useServiceRequests('completed');
   const createComplaint = useCreateComplaint();
