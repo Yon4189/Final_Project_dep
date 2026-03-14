@@ -19,7 +19,7 @@ interface RatingSummaryProps {
     4: number;
     5: number;
   };
-  onFilterByRating?: (rating: number) => void;
+  onFilterByRating?: (rating: number | null) => void;
   activeFilter?: number | null;
   showDistribution?: boolean;
   size?: 'small' | 'medium' | 'large';
@@ -317,11 +317,20 @@ const styles = StyleSheet.create({
   smallRatingValue: {
     fontSize: 32,
   },
+  smallRatingText: {
+    fontSize: 16,
+  },
   mediumRatingValue: {
     fontSize: 48,
   },
+  mediumRatingText: {
+    fontSize: 24,
+  },
   largeRatingValue: {
     fontSize: 64,
+  },
+  largeRatingText: {
+    fontSize: 32,
   },
   starsContainer: {
     flexDirection: 'row',

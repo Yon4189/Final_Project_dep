@@ -21,13 +21,14 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import Map from "../../components/Map/index";
-import { LoadingSpinner } from "../../components/common/LoadingSpinner";
-import { useProviderQueries } from "../../hooks/useProviderQueries";
+import Map from "../../../components/Map/index";
+import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
+import { useProviderQueries, useProviderRequest } from "../../../hooks/useProviderQueries";
 import { api } from "@/app/services/api";
 
 const STATUS_COLORS = {
   pending: Colors.warning,
+  accepted: Colors.primary,
   confirmed: Colors.primary,
   in_progress: Colors.info,
   completed: Colors.success,
@@ -36,6 +37,7 @@ const STATUS_COLORS = {
 
 const STATUS_ICONS = {
   pending: "time-outline",
+  accepted: "checkmark-circle-outline",
   confirmed: "checkmark-circle-outline",
   in_progress: "construct-outline",
   completed: "checkmark-done-outline",
@@ -44,6 +46,7 @@ const STATUS_ICONS = {
 
 const STATUS_STEPS = [
   { key: "pending", label: "Request Received", icon: "mail-outline" },
+  { key: "accepted", label: "Accepted", icon: "checkmark-circle-outline" },
   { key: "confirmed", label: "Confirmed", icon: "checkmark-circle-outline" },
   { key: "in_progress", label: "In Progress", icon: "construct-outline" },
   { key: "completed", label: "Completed", icon: "checkmark-done-outline" },
@@ -63,9 +66,14 @@ export default function RequestDetails() {
   const [request, setRequest] = useState<any>(null);
 
   const {
-    pendingRequests = [],
+    isLoading: isRequestLoading,
+    data: requestData,
+    refetch: refetchRequest,
+  } = useProviderRequest(id as string, { enabled: !!id });
+
+  const {
     isPendingLoading,
-    refetch,
+    refetch: refetchQueries,
     acceptRequest,
     rejectRequest,
     rescheduleRequest,
@@ -73,15 +81,12 @@ export default function RequestDetails() {
     completeService,
   } = useProviderQueries();
 
-  // Find the specific request from pendingRequests
+  // Use the data from useProviderRequest
   useEffect(() => {
-    if (pendingRequests.length > 0 && id) {
-      const found = pendingRequests.find((r) => r.id === (id as string));
-      if (found) {
-        setRequest(found);
-      }
+    if (requestData) {
+      setRequest(requestData);
     }
-  }, [pendingRequests, id]);
+  }, [requestData]);
 
   useEffect(() => {
     if (request?.customerLatitude && request?.customerLongitude) {
@@ -96,7 +101,7 @@ export default function RequestDetails() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetchRequest(), refetchQueries()]);
     setRefreshing(false);
   };
 
@@ -181,9 +186,8 @@ export default function RequestDetails() {
           onPress: async () => {
             try {
               await acceptRequest.mutateAsync(id as string);
-              Alert.alert("Success", "Request accepted successfully");
             } catch (error) {
-              Alert.alert("Error", "Failed to accept request");
+              // Error handled by hook
             }
           },
         },
@@ -204,9 +208,8 @@ export default function RequestDetails() {
       });
       setShowActionModal(false);
       setRejectReason("");
-      Alert.alert("Success", "Request rejected");
     } catch (error) {
-      Alert.alert("Error", "Failed to reject request");
+      // Error handled by hook
     }
   };
 
@@ -622,6 +625,7 @@ export default function RequestDetails() {
     if (!request) return null;
 
     const isPending = request.status === "pending";
+    const isAccepted = request.status === "accepted";
     const isConfirmed = request.status === "confirmed";
     const isInProgress = request.status === "in_progress";
     const isCompleted = request.status === "completed";
@@ -655,7 +659,7 @@ export default function RequestDetails() {
           </>
         )}
 
-        {isConfirmed && (
+        {(isConfirmed || isAccepted) && (
           <View style={styles.confirmedActions}>
             <TouchableOpacity
               style={styles.rescheduleButton}
@@ -664,7 +668,7 @@ export default function RequestDetails() {
               <Ionicons name="calendar" size={20} color={Colors.warning} />
               <Text style={styles.rescheduleButtonText}>Reschedule</Text>
             </TouchableOpacity>
-
+            
             <TouchableOpacity style={styles.startButton} onPress={handleStart}>
               <Ionicons name="play-circle" size={20} color={Colors.surface} />
               <Text style={styles.startButtonText}>Start Service</Text>
@@ -901,7 +905,7 @@ export default function RequestDetails() {
     </Modal>
   );
 
-  if (isPendingLoading && !refreshing && !request) {
+  if ((isRequestLoading || isPendingLoading) && !refreshing && !request) {
     return <LoadingSpinner fullScreen />;
   }
 

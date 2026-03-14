@@ -28,19 +28,21 @@ import type { RequestStatus } from '../types/provider.types';
 const { width } = Dimensions.get('window');
 const STATUS_COLORS: Record<RequestStatus, string> = {
   pending: Colors.warning,
+  accepted: Colors.info,
   confirmed: Colors.primary,
   in_progress: Colors.info,
   completed: Colors.success,
   cancelled: Colors.error,
-  disputed: Colors.warning, // or Colors.error, or a custom color
+  disputed: Colors.warning,
 };
 const STATUS_ICONS: Record<RequestStatus, keyof typeof Ionicons.glyphMap> = {
   pending: 'time-outline',
+  accepted: 'checkmark-circle-outline',
   confirmed: 'checkmark-circle-outline',
   in_progress: 'construct-outline',
   completed: 'checkmark-done-outline',
   cancelled: 'close-circle-outline',
-  disputed: 'alert-circle-outline', // Add icon for disputed
+  disputed: 'alert-circle-outline',
 };
 
 export default function ProviderDashboard() {
@@ -56,6 +58,8 @@ export default function ProviderDashboard() {
     earnings,
     isLoading,
     refetch,
+    acceptRequest,
+    rejectRequest,
   } = useProviderQueries();
   const notificationCountQuery = useProviderNotificationCount();
   const unreadNotificationCount = notificationCountQuery.data ?? 0;
@@ -357,10 +361,10 @@ export default function ProviderDashboard() {
         </View>
       )}
 
-      {item.status === 'confirmed' && (
+      {['accepted', 'confirmed'].includes(item.status) && (
         <TouchableOpacity
           style={styles.directionsButton}
-          onPress={() => router.push(`/(provider)/requests/${item.id}/directions`)}
+          onPress={() => router.push(`/(provider)/requests/${item.id}`)}
         >
           <Ionicons name="navigate" size={20} color={Colors.surface} />
           <Text style={styles.directionsButtonText}>Get Directions</Text>
@@ -369,7 +373,7 @@ export default function ProviderDashboard() {
     </TouchableOpacity>
   );
 
-  const handleAcceptRequest = (id: string) => {
+  const handleAcceptRequest = async (id: string) => {
     Alert.alert(
       'Accept Request',
       'Are you sure you want to accept this request?',
@@ -377,9 +381,13 @@ export default function ProviderDashboard() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Accept',
-          onPress: () => {
-            // Accept logic
-            router.push(`/(provider)/requests/${id}/schedule`);
+          onPress: async () => {
+            try {
+              await acceptRequest.mutateAsync(id);
+              // After success, query invalidation refreshes the list
+            } catch (error) {
+              // Error handled by mutation onError
+            }
           }
         },
       ]
@@ -389,13 +397,17 @@ export default function ProviderDashboard() {
   const handleRejectRequest = (id: string) => {
     Alert.alert(
       'Reject Request',
-      'Please provide a reason for rejection',
+      'Are you sure you want to reject this request?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Reject',
-          onPress: () => {
-            // Show reason input modal
+          onPress: async () => {
+            try {
+              await rejectRequest.mutateAsync({ id, reason: 'Rejected by provider' });
+            } catch (error) {
+              // Error handled by mutation onError
+            }
           },
           style: 'destructive'
         },
@@ -937,3 +949,4 @@ const styles = StyleSheet.create({
     height: 40,
   },
 });
+

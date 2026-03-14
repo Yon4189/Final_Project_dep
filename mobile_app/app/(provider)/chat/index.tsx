@@ -25,7 +25,7 @@ export default function ProviderChatList() {
 
     const fetchConversations = async () => {
         try {
-            const response = await api.get('/chat/conversations');
+            const response = await api.get<any>('/chat/conversations');
             if (response.success) {
                 setConversations(response.data.data || []);
             }

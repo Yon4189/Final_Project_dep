@@ -195,12 +195,14 @@ class ProviderDashboardController extends Controller
     public function getRequests(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-            $status = $request->query('status', 'pending');
-
-            if (!$providerID) {
-                return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+            $provider = $request->user();
+            
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+
+            $providerID = $provider->providerID;
+            $status = $request->query('status', 'pending');
 
             $bookings = Booking::with(['customer', 'service'])
                 ->where('providerID', $providerID)

@@ -100,7 +100,9 @@ class NotificationService
     private function create(array $data)
     {
         try {
+            Log::info('Creating notification', ['data' => $data]);
             $notification = Notification::create($data);
+            Log::info('Notification created', ['id' => $notification->notificationID]);
             
             // Here you would trigger push notification if needed
             $this->sendPushNotification($notification);

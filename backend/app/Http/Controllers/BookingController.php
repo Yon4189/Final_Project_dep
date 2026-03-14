@@ -196,6 +196,10 @@ class BookingController extends Controller
 
             // Create notification for customer
             // Create notification for customer using service
+            Log::info('Triggering toCustomer notification from BookingController@accept', [
+                'customerID' => $booking->customerID,
+                'bookingID' => $booking->bookingID
+            ]);
             $this->notificationService->toCustomer(
                 $booking->customerID,
                 'booking_accepted',
@@ -284,6 +288,10 @@ class BookingController extends Controller
             $booking->save();
 
             // Create notification for customer using service
+            Log::info('Triggering toCustomer notification from BookingController@reject', [
+                'customerID' => $booking->customerID,
+                'bookingID' => $booking->bookingID
+            ]);
             $this->notificationService->toCustomer(
                 $booking->customerID,
                 'booking_rejected',

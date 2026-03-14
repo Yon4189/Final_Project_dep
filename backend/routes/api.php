@@ -121,6 +121,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'getCustomerNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::get('/notifications/settings', [CustomerController::class, 'getNotificationSettings']);
     Route::put('/notifications/settings', [CustomerController::class, 'updateNotificationSettings']);
     
@@ -193,6 +194,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'getProviderNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
 
     Route::post('/bookings/{bookingID}/dispute', [DisputeController::class, 'providerRaiseDispute']);

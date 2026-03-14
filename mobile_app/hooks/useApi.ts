@@ -187,13 +187,34 @@ export function usePaginatedApi<T, P = any>(
   const [total, setTotal] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { execute: fetchData, loading, error, status } = useApi(
-    async (params?: P & { page: number; perPage: number }) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const fetchData = useCallback(async (params?: P & { page: number; perPage: number }) => {
+    setLoading(true);
+    setStatus('loading');
+    setError(null);
+    try {
       const response = await apiFunction(params);
-      return response;
-    },
-    apiOptions
-  );
+      if (response.success && response.data) {
+        setStatus('success');
+        apiOptions.onSuccess?.(response.data);
+        return response;
+      } else {
+        throw new Error(response.message || 'Operation failed');
+      }
+    } catch (err) {
+      const errorObj = err instanceof Error ? err : new Error('An error occurred');
+      setError(errorObj);
+      setStatus('error');
+      apiOptions.onError?.(errorObj);
+      return null;
+    } finally {
+      setLoading(false);
+      apiOptions.onSettled?.();
+    }
+  }, [apiFunction, apiOptions]);
 
   const loadMore = useCallback(async (params?: P) => {
     if (!hasMore || loading) return;
@@ -201,8 +222,8 @@ export function usePaginatedApi<T, P = any>(
     const nextPage = page + 1;
     const result = await fetchData({ ...params, page: nextPage, perPage: itemsPerPage } as P & { page: number; perPage: number });
 
-    if (result?.data) {
-      setItems(prev => [...prev, ...result.data]);
+    if (result && result.data) {
+      setItems(prev => [...prev, ...result.data!]);
       setPage(nextPage);
       setHasMore(result.data.length === itemsPerPage);
       setTotal(result.meta?.total || 0);
@@ -213,7 +234,7 @@ export function usePaginatedApi<T, P = any>(
     setRefreshing(true);
     const result = await fetchData({ ...params, page: 1, perPage: itemsPerPage } as P & { page: number; perPage: number });
 
-    if (result?.data) {
+    if (result && result.data) {
       setItems(result.data);
       setPage(1);
       setHasMore(result.data.length === itemsPerPage);
@@ -249,7 +270,7 @@ export function useMutation<T = any, P = any>(
   mutationFn: (params: P) => Promise<{ data?: T; success: boolean; message?: string }>,
   options: UseApiOptions<T> = {}
 ) {
-  return useApi<T, P>(mutationFn, options);
+  return useApi<T, P>(mutationFn as any, options);
 }
 
 // Query Hook

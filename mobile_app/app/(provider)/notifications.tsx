@@ -19,12 +19,12 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatTimeAgo, formatCurrency } from '../utils/formatters';
 import { providerService } from '@/app/services/provider.service';
-import type { ProviderNotificationPayload } from '@/app/types/provider.types';
+import type { ProviderNotificationPayload, ProviderNotificationType } from '@/app/types/provider.types';
 
 // Types for provider notifications
 interface ProviderNotification {
   id: string;
-  type: 'new_request' | 'request_accepted' | 'request_cancelled' | 'payment_received' | 'withdrawal' | 'review' | 'reminder' | 'system';
+  type: ProviderNotificationType;
   title: string;
   message: string;
   timestamp: string;
@@ -159,10 +159,16 @@ export default function ProviderNotifications() {
     // Navigate based on notification type
     switch (notification.type) {
       case 'new_request':
+      case 'booking_request':
       case 'request_accepted':
+      case 'booking_accepted':
       case 'request_cancelled':
+      case 'booking_cancelled':
+      case 'booking_completed':
       case 'reminder':
-        if (notification.data?.requestId) {
+        if (notification.relatedBookingId) {
+          router.push(`/(provider)/requests/${notification.relatedBookingId}`);
+        } else if (notification.data?.requestId) {
           router.push(`/(provider)/requests/${notification.data.requestId}`);
         } else {
           router.push('/(provider)/requests');
@@ -190,11 +196,16 @@ export default function ProviderNotifications() {
     
     switch (type) {
       case 'new_request':
+      case 'booking_request':
         return <Ionicons name="alert-circle" size={iconSize} color={iconColor} />;
       case 'request_accepted':
+      case 'booking_accepted':
         return <Ionicons name="checkmark-circle" size={iconSize} color={iconColor} />;
       case 'request_cancelled':
+      case 'booking_cancelled':
         return <Ionicons name="close-circle" size={iconSize} color={Colors.error} />;
+      case 'booking_completed':
+        return <Ionicons name="briefcase" size={iconSize} color={iconColor} />;
       case 'payment_received':
         return <Ionicons name="wallet" size={iconSize} color={iconColor} />;
       case 'withdrawal':
