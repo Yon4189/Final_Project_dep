@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Dispute;
 use App\Models\DisputeMessage;
 use App\Models\Booking;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +13,12 @@ use Illuminate\Support\Facades\Validator;
 
 class DisputeController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
     /**
      * Get authenticated user from any guard
      */
@@ -109,6 +116,24 @@ class DisputeController extends Controller
             // Update booking status
             $booking->status = 'disputed';
             $booking->save();
+
+            // Notify admins
+            $this->notificationService->toAdmins(
+                'dispute',
+                'New Dispute Raised',
+                "Customer {$customer->first_name} has raised a dispute for booking #{$bookingID}",
+                ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID]
+            );
+
+            // Notify provider
+            $this->notificationService->toProvider(
+                $booking->providerID,
+                'dispute',
+                'A Dispute has been raised against you',
+                "A customer has raised a dispute regarding booking #{$bookingID}. Please review and respond in the app.",
+                ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID],
+                $bookingID
+            );
 
             DB::commit();
 
@@ -216,6 +241,24 @@ class DisputeController extends Controller
             // Update booking status
             $booking->status = 'disputed';
             $booking->save();
+
+            // Notify admins
+            $this->notificationService->toAdmins(
+                'dispute',
+                'New Dispute Raised by Provider',
+                "Provider {$provider->business_name} has raised a dispute for booking #{$bookingID}",
+                ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID]
+            );
+
+            // Notify customer
+            $this->notificationService->toCustomer(
+                $booking->customerID,
+                'dispute',
+                'A Dispute has been raised against you',
+                "The service provider has raised a dispute regarding booking #{$bookingID}. Please review and respond in the app.",
+                ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID],
+                $bookingID
+            );
 
             DB::commit();
 
