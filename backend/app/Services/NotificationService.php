@@ -159,4 +159,5 @@ class NotificationService
     const TYPE_REVIEW_RECEIVED = 'review_received';
     const TYPE_WITHDRAWAL_REQUEST = 'withdrawal_request';
     const TYPE_NEW_PROVIDER_REGISTRATION = 'provider_registration';
+    const TYPE_DISPUTE_RAISED = 'dispute';
 }

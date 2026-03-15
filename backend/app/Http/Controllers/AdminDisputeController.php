@@ -7,6 +7,7 @@ use App\Models\DisputeMessage;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Wallet;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +15,12 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminDisputeController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
     /**
      * Get all disputes (admin view)
      */
@@ -178,6 +185,34 @@ class AdminDisputeController extends Controller
             
             $dispute->save();
 
+            // Notify parties involved about status change
+            $statusMessage = "Dispute #{$disputeID} status updated to: " . str_replace('_', ' ', $request->status);
+            if ($request->status === 'resolved') {
+                $statusMessage = "Dispute #{$disputeID} has been resolved. Resolution: " . str_replace('_', ' ', $request->resolution_type);
+            }
+
+            // Notify raised_by
+            $this->notificationService->toUser(
+                $dispute->raised_by_type,
+                $dispute->raised_by_id,
+                'dispute',
+                'Dispute Status Updated',
+                $statusMessage,
+                ['disputeID' => $disputeID],
+                $dispute->bookingID
+            );
+
+            // Notify against
+            $this->notificationService->toUser(
+                $dispute->against_type,
+                $dispute->against_id,
+                'dispute',
+                'Dispute Status Updated',
+                $statusMessage,
+                ['disputeID' => $disputeID],
+                $dispute->bookingID
+            );
+
             // Add system message about status change
             DisputeMessage::create([
                 'disputeID' => $disputeID,
@@ -323,5 +358,79 @@ class AdminDisputeController extends Controller
             'booking_id' => $dispute->bookingID,
             'amount' => $amount
         ]);
+    }
+
+    /**
+     * Delete a dispute message
+     */
+    public function deleteMessage($messageID)
+    {
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $message = DisputeMessage::find($messageID);
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        try {
+            $message->delete();
+            return response()->json(['success' => true, 'message' => 'Message deleted successfully']);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete dispute message: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to delete message'], 500);
+        }
+    }
+
+    /**
+     * Admin adds a public message to the dispute
+     */
+    public function addMessage(Request $request, $disputeID)
+    {
+        $validator = Validator::make($request->all(), [
+            'message' => 'required|string',
+            'is_admin_only' => 'boolean'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $dispute = Dispute::find($disputeID);
+        if (!$dispute) {
+            return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
+        }
+
+        try {
+            $message = DisputeMessage::create([
+                'disputeID' => $disputeID,
+                'sender_id' => $admin->adminID,
+                'sender_type' => 'admin',
+                'message' => $request->message,
+                'is_admin_only' => $request->is_admin_only ?? false
+            ]);
+
+            // If it's the first admin message and status is pending, move to under_review
+            if ($dispute->status === 'pending') {
+                $dispute->status = 'under_review';
+                $dispute->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Message sent successfully',
+                'data' => $message->load('sender')
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send dispute message: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to send message'], 500);
+        }
     }
 }

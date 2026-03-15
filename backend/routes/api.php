@@ -268,6 +268,8 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::get('/disputes/{disputeID}', [AdminDisputeController::class, 'show']);
     Route::put('/disputes/{disputeID}/status', [AdminDisputeController::class, 'updateStatus']);
     Route::post('/disputes/{disputeID}/notes', [AdminDisputeController::class, 'addPrivateNote']);
+    Route::post('/disputes/{disputeID}/messages', [AdminDisputeController::class, 'addMessage']);
+    Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
 });
 
 Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);
