@@ -337,33 +337,44 @@ export default function CustomerDashboard() {
 
     return (
       <View style={styles.header}>
-        <View>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => router.push("/")}
+        >
+          <Ionicons
+            name="home"
+            size={22}
+            color={Colors.primary}
+          />
+        </TouchableOpacity>
+
+        <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.greeting}>
-            Hello, {loadingUser ? "👋" : displayName}! 👋
+            Hello, {loadingUser ? "👋" : displayName}!
           </Text>
           <Text style={styles.subtitle}>Find trusted service providers</Text>
         </View>
 
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={styles.headerButton}
+            style={styles.iconButton}
             onPress={() => router.push("/(customer)/chat/index")}
           >
             <Ionicons
-              name="chatbubbles-outline"
-              size={24}
-              color={Colors.text.primary}
+              name="chatbubbles"
+              size={22}
+              color={Colors.primary}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.notificationButton}
+            style={styles.iconButton}
             onPress={() => router.push("/(customer)/notifications")}
           >
             <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={Colors.text.primary}
+              name="notifications"
+              size={22}
+              color={Colors.primary}
             />
             {unreadNotifications > 0 && (
               <View style={styles.notificationBadge}>
@@ -375,13 +386,13 @@ export default function CustomerDashboard() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.headerButton}
+            style={styles.iconButton}
             onPress={() => router.push("/(customer)/complaints")}
           >
             <Ionicons
-              name="alert-circle-outline"
-              size={24}
-              color={Colors.text.primary}
+              name="alert-circle"
+              size={22}
+              color={Colors.primary}
             />
             {pendingComplaints > 0 && (
               <View style={[styles.badge, styles.complaintBadge]}>
@@ -411,7 +422,7 @@ export default function CustomerDashboard() {
               return (
                 <Ionicons
                   name="person-circle"
-                  size={40}
+                  size={44}
                   color={Colors.primary}
                 />
               );
@@ -889,28 +900,40 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 15,
     backgroundColor: Colors.surface,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   greeting: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: Colors.text.primary,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: Colors.text.secondary,
     marginTop: 2,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16, // Adds consistent spacing between all header buttons
-    marginRight: 4, // Prevents elements from sticking too closely to edge on smaller devices
+    gap: 8,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary + '15',
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
   },
   notificationButton: {
     position: "relative",

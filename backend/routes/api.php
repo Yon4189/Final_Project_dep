@@ -84,9 +84,17 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     
     // Bookings (Service Requests)
     Route::get('/bookings', [CustomerController::class, 'getRequests']); // List all
+    Route::get('/requests', [CustomerController::class, 'getRequests']); // Alias for mobile app
+    
     Route::post('/bookings', [CustomerController::class, 'createBooking']); // Create new
+    Route::post('/requests', [CustomerController::class, 'createBooking']); // Alias for mobile app
+    
     Route::get('/bookings/{id}', [CustomerController::class, 'getRequestDetails']);
+    Route::get('/requests/{id}', [CustomerController::class, 'getRequestDetails']); // Alias for mobile app
+    
     Route::post('/bookings/{id}/cancel', [CustomerController::class, 'cancelRequest']);
+    Route::post('/requests/{id}/cancel', [CustomerController::class, 'cancelRequest']); // Alias for mobile app
+    
     Route::post('/bookings/{id}/reschedule', [CustomerController::class, 'rescheduleRequest']);
     Route::get('/bookings/{id}/status', [CustomerController::class, 'getRequestStatus']);
     Route::get('/bookings/{id}/track', [CustomerController::class, 'trackProvider']);
