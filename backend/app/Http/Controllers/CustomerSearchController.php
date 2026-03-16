@@ -46,6 +46,9 @@ class CustomerSearchController extends Controller
             ->when($categoryId, function ($q) use ($categoryId) {
                 $q->where('catagoryID', $categoryId);
             })
+            ->when($request->query('city'), function ($q, $city) {
+                $q->where('service_city', $city);
+            }) // filter by city if provided. accept this change if conflict occurs
             ->when($serviceId, function ($q) use ($serviceId) {
                 $q->whereHas('services', function ($sq) use ($serviceId) {
                     $sq->where('serviceID', $serviceId);
@@ -59,19 +62,26 @@ class CustomerSearchController extends Controller
             });
 
         // sort
+        // this switch is updated. accept this change if conflict occurs
         switch ($sortBy) {
-            case 'rating':
+            case 'rating_high':
                 $providers = $providers->orderByDesc('rating');
                 break;
-            case 'distance':
-                // will be calculated after getting results
-                $providers = $providers->orderBy('fullname');
+            case 'rating_low':
+                $providers = $providers->orderBy('rating');
+                break;
+            case 'price_high':
+                $providers = $providers->orderByDesc('estimatedPrice');
+                break;
+            case 'price_low':
+                $providers = $providers->orderBy('estimatedPrice');
+                break;
+            case 'nearest':  // Changed from 'distance' to 'nearest'
+                // handled after calculation - don't order here
+                $providers = $providers->orderBy('fullname'); // temporary
                 break;
             case 'completed_jobs':
                 $providers = $providers->orderByDesc('completed_jobs');
-                break;
-            case 'success_rate':
-                $providers = $providers->orderByDesc('success_rate');
                 break;
             default:
                 $providers = $providers->orderByDesc('rating');
