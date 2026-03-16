@@ -19,7 +19,6 @@ class Booking extends Model
         'status',
         'scheduledDate',
         'agreed_price',
-        'service_address',
         'service_latitude',
         'service_longitude',
         'notes',

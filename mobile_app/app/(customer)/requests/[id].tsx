@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 
 const STATUS_COLORS = {
   pending: Colors.warning,
+  accepted: Colors.info,
   confirmed: Colors.info,
   in_progress: Colors.primary,
   completed: Colors.success,
@@ -32,6 +33,7 @@ const STATUS_COLORS = {
 
 const STATUS_ICONS = {
   pending: 'time-outline',
+  accepted: 'checkmark-circle-outline',
   confirmed: 'checkmark-circle-outline',
   in_progress: 'construct-outline',
   completed: 'checkmark-done-outline',
@@ -41,6 +43,7 @@ const STATUS_ICONS = {
 
 const STATUS_STEPS = [
   { key: 'pending', label: 'Request Sent', icon: 'send-outline' },
+  { key: 'accepted', label: 'Accepted', icon: 'checkmark-circle-outline' },
   { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle-outline' },
   { key: 'in_progress', label: 'In Progress', icon: 'construct-outline' },
   { key: 'completed', label: 'Completed', icon: 'checkmark-done-outline' },
@@ -142,7 +145,15 @@ export default function RequestDetails() {
   };
 
   const handlePayNow = () => {
-    Alert.alert('Info', 'Payment is handled during request creation.');
+    router.push({
+      pathname: '/(customer)/payment',
+      params: {
+        bookingId: id as string,
+        amount: request.estimatedPrice?.toString(),
+        providerId: request.providerId,
+        serviceName: request.serviceName,
+      },
+    });
   };
 
   const handleReportIssue = () => {
@@ -278,14 +289,24 @@ export default function RequestDetails() {
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
             <Text style={styles.paidText}>Payment Completed</Text>
           </View>
-        ) : request.status === 'completed' ? (
+        ) : (['accepted', 'confirmed'].includes(request.status as string)) ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
-            <Text style={styles.payButtonText}>Pay Now</Text>
+            <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
+            <Text style={styles.payButtonText}>Pay Now — ETB {request.estimatedPrice?.toFixed(2)}</Text>
+          </TouchableOpacity>
+        ) : request.status === 'completed' && (request.paymentStatus as string) !== 'paid' ? (
+          <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
+            <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
+            <Text style={styles.payButtonText}>Pay Now — ETB {request.estimatedPrice?.toFixed(2)}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.pendingPayment}>
             <Ionicons name="time-outline" size={20} color={Colors.warning} />
-            <Text style={styles.pendingPaymentText}>Payment pending after service completion</Text>
+            <Text style={styles.pendingPaymentText}>
+              {request.status === 'pending'
+                ? 'Waiting for provider to accept your request'
+                : 'Payment pending after service completion'}
+            </Text>
           </View>
         )}
       </View>
@@ -504,8 +525,8 @@ export default function RequestDetails() {
         visible={showReviewModal}
         onClose={() => setShowReviewModal(false)}
         bookingId={id as string}
-        providerName={request.providerName || ''}
-        serviceName={request.serviceName || ''}
+        providerName={request.providerName || 'Provider'}
+        serviceName={request.serviceName || 'Service'}
         onSuccess={() => {
           // Refresh request data
         }}
@@ -516,7 +537,7 @@ export default function RequestDetails() {
         visible={showComplaintModal}
         onClose={() => setShowComplaintModal(false)}
         bookingId={id as string}
-        providerName={request.providerName || ''}
+        providerName={request.providerName || 'Provider'}
       />
     </View>
   );

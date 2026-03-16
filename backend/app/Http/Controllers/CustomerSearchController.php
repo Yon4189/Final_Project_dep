@@ -169,8 +169,8 @@ class CustomerSearchController extends Controller
                 'isAvailable' => $provider->is_online ?? false,
                 'services' => $this->transformServices($services),
                 'priceRange' => [
-                    'min' => $provider->hourly_rate ?? 500,
-                    'max' => ($provider->hourly_rate ?? 500) * 3,
+                    'min' => $provider->hourly_rate ?? $services->min('estimatedPrice') ?? 500,
+                    'max' => $provider->hourly_rate ?? $services->max('estimatedPrice') ?? 1500,
                     'currency' => 'ETB'
                 ],
                 'location' => [
@@ -254,7 +254,7 @@ class CustomerSearchController extends Controller
     public function getProviderDetails($id)
     {
         $provider = ServiceProvider::where('providerID', $id)
-            ->where('status', 'approved')
+            ->where('status', 'Active')
             ->with('category') // eager load category
             ->first();
 
@@ -307,7 +307,7 @@ class CustomerSearchController extends Controller
             'reviewCount' => 0, // calculate from reviews table
             'completedJobs' => $provider->completed_jobs ?? 0,
             'yearsExperience' => 5, // calculate from join date
-            'verified' => $provider->status === 'approved',
+            'verified' => $provider->status === 'Active',
             'insured' => true,
             'isAvailable' => $provider->is_online ?? false,
             'about' => $provider->bio ?? 'professional service provider',
@@ -319,6 +319,7 @@ class CustomerSearchController extends Controller
                 'latitude' => $provider->current_latitude ?? 9.03,
                 'longitude' => $provider->current_longitude ?? 38.74
             ],
+            'services' => $this->transformServices($services), // add flat services array
             'categories' => $categories, // services grouped by category
             'reviews' => [], // load from reviews table
             'availability' => [] // load from schedule table
@@ -498,15 +499,33 @@ class CustomerSearchController extends Controller
         }
 
         return collect($services)->map(function ($service) {
+            $price = $service->estimatedCost ?? $service->estimatedPrice ?? 1000;
             return [
-                // Frontend expects `id` to be the service identifier used when creating requests
-                'id' => $service->serviceID,
-                'professionalProfileId' => $service->providerID,
-                'serviceId' => $service->serviceID,
+                // IDs
+                'id' => (string)$service->serviceID,
+                'serviceId' => (string)$service->serviceID,
+                'professionalProfileId' => (string)$service->providerID,
+                
+                // Flat fields for simple consumption
                 'name' => $service->title ?? 'Service',
+                'serviceName' => $service->title ?? 'Service',
                 'description' => $service->description ?? '',
-                // Use whatever exists in your schema (estimatedCost migration vs estimatedPrice model fillable)
-                'basePrice' => $service->estimatedCost ?? $service->estimatedPrice ?? 1000,
+                'price' => $price,
+                'basePrice' => $price,
+                'customPrice' => $price,
+                
+                // Nested object for standard frontend DTOs
+                'service' => [
+                    'id' => (string)$service->serviceID,
+                    'name' => $service->title ?? 'Service',
+                    'basePrice' => $price,
+                    'estimatedDuration' => [
+                        'min' => 30,
+                        'max' => 90,
+                        'unit' => 'minutes'
+                    ]
+                ],
+                
                 'categoryId' => $service->catagoryID,
                 'categoryName' => $service->category ? $service->category->name : 'General',
                 'duration' => 60,

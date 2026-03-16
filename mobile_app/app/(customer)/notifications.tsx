@@ -1,5 +1,5 @@
 // app/(customer)/notifications.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,283 +13,290 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/app/constants/Colors';
+import { Colors } from '../constants/Colors';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
-import { formatTimeAgo } from '@/app/utils/formatters';
+import { formatTimeAgo } from '../utils/formatters';
+import { customerService } from '@/app/services/customer.service';
+import { api } from '@/app/services/api';
 
-// Types for notifications
-interface Notification {
+interface CustomerNotification {
   id: string;
-  type: 'request_update' | 'provider_response' | 'payment' | 'reminder' | 'promo' | 'review';
+  type: string;
   title: string;
   message: string;
   timestamp: string;
   read: boolean;
-  data?: {
-    requestId?: string;
-    providerId?: string;
-    bookingId?: string;
-    amount?: number;
-  };
-  image?: string;
+  data?: Record<string, any>;
+  relatedBookingId?: string;
 }
 
-// Mock notifications data (replace with API data)
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'request_update',
-    title: 'Service Request Accepted',
-    message: 'John from ABC Plumbing has accepted your service request for leak repair.',
-    timestamp: new Date(Date.now() - 30 * 60000).toISOString(), // 30 minutes ago
-    read: false,
-    data: { requestId: 'req123', providerId: 'prov1' },
-    image: 'https://via.placeholder.com/40',
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: 'Payment Successful',
-    message: 'Your payment of ETB 1,500 for plumbing service has been processed successfully.',
-    timestamp: new Date(Date.now() - 2 * 60 * 60000).toISOString(), // 2 hours ago
-    read: false,
-    data: { bookingId: 'book456', amount: 1500 },
-  },
-  {
-    id: '3',
-    type: 'provider_response',
-    title: 'Provider Responded',
-    message: 'Sarah from CleanPro has sent you a message about your cleaning appointment.',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60000).toISOString(), // 1 day ago
-    read: true,
-    data: { requestId: 'req789', providerId: 'prov2' },
-    image: 'https://via.placeholder.com/40',
-  },
-  {
-    id: '4',
-    type: 'reminder',
-    title: 'Upcoming Service Reminder',
-    message: 'Your electrical installation is scheduled for tomorrow at 2:00 PM.',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60000).toISOString(), // 1 day ago
-    read: true,
-    data: { bookingId: 'book101' },
-  },
-  {
-    id: '5',
-    type: 'review',
-    title: 'How was your service?',
-    message: 'Please rate your experience with Mike\'s Plumbing. Your feedback helps others!',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60000).toISOString(), // 2 days ago
-    read: true,
-    data: { bookingId: 'book202', providerId: 'prov3' },
-  },
-  {
-    id: '6',
-    type: 'promo',
-    title: 'Special Offer!',
-    message: 'Get 20% off on your next cleaning service. Offer valid until end of month.',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60000).toISOString(), // 3 days ago
-    read: true,
-  },
-];
+const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  booking_request:   'send-outline',
+  booking_accepted:  'checkmark-circle-outline',
+  booking_rejected:  'close-circle-outline',
+  booking_cancelled: 'close-circle-outline',
+  booking_completed: 'checkmark-done-outline',
+  payment_received:  'cash-outline',
+  payment_failed:    'alert-circle-outline',
+  review:            'star-outline',
+  reminder:          'time-outline',
+  system:            'information-circle-outline',
+  new_request:       'send-outline',
+};
 
-export default function Notifications() {
+const NOTIFICATION_COLORS: Record<string, string> = {
+  booking_accepted:  Colors.success,
+  booking_rejected:  Colors.error,
+  booking_cancelled: Colors.error,
+  booking_completed: Colors.success,
+  payment_received:  Colors.success,
+  payment_failed:    Colors.error,
+  booking_request:   Colors.primary,
+  reminder:          Colors.warning,
+  system:            Colors.info,
+};
+
+const normalizeNotification = (n: any): CustomerNotification => ({
+  id: n.notificationID?.toString() ?? String(n.id ?? Math.random()),
+  type: n.type ?? n.notification_type ?? 'system',
+  title: n.title,
+  message: n.message,
+  timestamp: n.created_at,
+  read: Boolean(n.is_seen ?? n.read),
+  data: n.data ?? {},
+  relatedBookingId: n.related_booking_id?.toString(),
+});
+
+export default function CustomerNotifications() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
-  const [loading, setLoading] = useState(false);
+  const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Filter notifications based on selected filter
-  const filteredNotifications = filter === 'all' 
-    ? notifications 
-    : notifications.filter(n => !n.read);
-
-  // Count unread notifications
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await api.get<any>('/customer/notifications');
+      if (response.success) {
+        const raw = response.data?.notifications?.data
+          || response.data?.data
+          || response.data
+          || [];
+        const arr = Array.isArray(raw) ? raw : [];
+        setNotifications(arr.map(normalizeNotification));
+        setUnreadCount(response.data?.unread_count ?? 0);
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      setLoading(false);
       setRefreshing(false);
-    }, 1000);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      console.log('📖 Marking notification as read:', notificationId);
+      await api.post<any>(`/customer/notifications/${notificationId}/read`);
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('❌ Failed to mark as read:', error);
+    }
   };
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(n => 
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
+  const markAllAsRead = async () => {
+    try {
+      console.log('📖 Marking all notifications as read');
+      await api.post<any>('/customer/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('❌ Failed to mark all as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    );
-    Alert.alert('Success', 'All notifications marked as read');
-  };
+  const handleNotificationPress = (notification: CustomerNotification) => {
+    if (!notification.read) markAsRead(notification.id);
 
-  const handleNotificationPress = (notification: Notification) => {
-    // Mark as read
-    markAsRead(notification.id);
+    const bookingId = notification.relatedBookingId
+      || notification.data?.booking_id
+      || notification.data?.bookingId;
 
-    // Navigate based on notification type
     switch (notification.type) {
-      case 'request_update':
-      case 'provider_response':
-        if (notification.data?.requestId) {
-          router.push(`/(customer)/requests/${notification.data.requestId}`);
-        } else {
-          router.push('/(customer)/requests');
+      case 'booking_accepted':
+      case 'booking_confirmed':
+        // Navigate to request details, where Pay Now button will be visible
+        if (bookingId) {
+          router.push(`/(customer)/requests/${bookingId}`);
         }
         break;
-      case 'payment':
-        if (notification.data?.bookingId) {
-          router.push(`/(customer)/requests/${notification.data.bookingId}`);
-        } else {
-          router.push('/(customer)/bookings');
+      case 'booking_rejected':
+        if (bookingId) {
+          router.push(`/(customer)/requests/${bookingId}`);
         }
         break;
-      case 'reminder':
-        if (notification.data?.bookingId) {
-          router.push(`/(customer)/requests/${notification.data.bookingId}`);
-        } else {
-          router.push('/(customer)/bookings');
+      case 'booking_completed':
+        if (bookingId) {
+          router.push(`/(customer)/requests/${bookingId}`);
         }
         break;
-      case 'review':
-        router.push('/(customer)/requests');
-        break;
-      case 'promo':
-        // Stay on notifications page or go to promotions
+      case 'payment_received':
+        if (bookingId) {
+          router.push(`/(customer)/requests/${bookingId}`);
+        }
         break;
       default:
-        // Stay on current page
-        break;
+        if (bookingId) {
+          router.push(`/(customer)/requests/${bookingId}`);
+        }
     }
   };
 
-  const getNotificationIcon = (type: string, read: boolean) => {
-    const iconColor = read ? Colors.text.secondary : Colors.primary;
-    
-    switch (type) {
-      case 'request_update':
-        return <Ionicons name="refresh-circle" size={24} color={iconColor} />;
-      case 'provider_response':
-        return <Ionicons name="chatbubble" size={24} color={iconColor} />;
-      case 'payment':
-        return <Ionicons name="wallet" size={24} color={iconColor} />;
-      case 'reminder':
-        return <Ionicons name="alarm" size={24} color={iconColor} />;
-      case 'review':
-        return <Ionicons name="star" size={24} color={iconColor} />;
-      case 'promo':
-        return <Ionicons name="pricetag" size={24} color={iconColor} />;
-      default:
-        return <Ionicons name="notifications" size={24} color={iconColor} />;
+  const handlePayNow = (notification: CustomerNotification) => {
+    const bookingId = notification.relatedBookingId
+      || notification.data?.booking_id
+      || notification.data?.bookingId;
+    const amount = notification.data?.amount;
+    if (bookingId) {
+      router.push({
+        pathname: '/(customer)/payment',
+        params: {
+          bookingId,
+          amount: amount?.toString(),
+          serviceName: notification.data?.service_name,
+        },
+      });
     }
   };
 
-  const renderNotificationItem = ({ item }: { item: Notification }) => (
-    <TouchableOpacity 
-      style={[styles.notificationCard, !item.read && styles.unreadCard]}
-      onPress={() => handleNotificationPress(item)}
-      activeOpacity={0.7}
-    >
-      {/* Icon */}
-      <View style={[styles.iconContainer, !item.read && styles.unreadIconContainer]}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.notificationImage} />
-        ) : (
-          getNotificationIcon(item.type, item.read)
-        )}
-      </View>
+  const renderNotification = ({ item }: { item: CustomerNotification }) => {
+    const isAccepted = item.type === 'booking_accepted' || item.type === 'booking_confirmed';
+    const iconName = NOTIFICATION_ICONS[item.type] ?? 'notifications-outline';
+    const iconColor = NOTIFICATION_COLORS[item.type] ?? Colors.primary;
+    const bookingId = item.relatedBookingId
+      || item.data?.booking_id
+      || item.data?.bookingId;
 
-      {/* Content */}
-      <View style={styles.contentContainer}>
-        <View style={styles.notificationHeader}>
-          <Text style={[styles.notificationTitle, !item.read && styles.unreadText]}>
-            {item.title}
-          </Text>
-          {!item.read && <View style={styles.unreadDot} />}
+    return (
+      <TouchableOpacity
+        style={[styles.notificationItem, !item.read && styles.unreadItem]}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.75}
+      >
+        {/* Icon */}
+        <View style={[styles.iconContainer, { backgroundColor: iconColor + '18' }]}>
+          <Ionicons name={iconName} size={22} color={iconColor} />
         </View>
-        
-        <Text style={styles.notificationMessage} numberOfLines={2}>
-          {item.message}
-        </Text>
-        
-        <Text style={styles.notificationTime}>
-          {formatTimeAgo(item.timestamp)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+
+        {/* Content */}
+        <View style={styles.content}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, !item.read && styles.unreadTitle]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={styles.time}>{formatTimeAgo(item.timestamp)}</Text>
+          </View>
+          <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
+          {item.type === 'booking_rejected' && item.data?.reason && (
+            <View style={styles.reasonContainer}>
+              <Text style={styles.reasonLabel}>Reason:</Text>
+              <Text style={styles.reasonText}>{item.data.reason}</Text>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          {isAccepted && bookingId && (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.payNowButton}
+                onPress={() => handlePayNow(item)}
+              >
+                <Ionicons name="card-outline" size={14} color={Colors.surface} />
+                <Text style={styles.payNowText}> Pay Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.viewRequestButton}
+                onPress={() => router.push(`/(customer)/requests/${bookingId}`)}
+              >
+                <Text style={styles.viewRequestText}>View Request</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {(item.type === 'booking_rejected' || item.type === 'booking_cancelled') && bookingId && (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.viewRequestButton}
+                onPress={() => router.push(`/(customer)/requests/${bookingId}`)}
+              >
+                <Text style={styles.viewRequestText}>View Details</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Unread dot */}
+        {!item.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View style={styles.headerTop}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Notifications</Text>
+      {unreadCount > 0 && (
+        <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
+          <Text style={styles.markAllText}>Mark all read</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
-            <Text style={styles.markAllText}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Filter tabs */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterTab, filter === 'all' && styles.activeFilterTab]}
-          onPress={() => setFilter('all')}
-        >
-          <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
-            All
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterTab, filter === 'unread' && styles.activeFilterTab]}
-          onPress={() => setFilter('unread')}
-        >
-          <Text style={[styles.filterText, filter === 'unread' && styles.activeFilterText]}>
-            Unread ({unreadCount})
-          </Text>
-        </TouchableOpacity>
-      </View>
+      )}
+      {unreadCount === 0 && <View style={{ width: 80 }} />}
     </View>
   );
 
-  if (loading) {
-    return <LoadingSpinner fullScreen />;
-  }
+  if (loading) return <LoadingSpinner fullScreen />;
 
   return (
     <SafeAreaView style={styles.container}>
       {renderHeader()}
-
+      {unreadCount > 0 && (
+        <View style={styles.unreadBanner}>
+          <Ionicons name="mail-unread-outline" size={16} color={Colors.primary} />
+          <Text style={styles.unreadBannerText}> {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</Text>
+        </View>
+      )}
       <FlatList
-        data={filteredNotifications}
-        renderItem={renderNotificationItem}
+        data={notifications}
+        renderItem={renderNotification}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
         }
         ListEmptyComponent={
           <EmptyState
-            icon="notifications-outline"
+            icon="notifications-off-outline"
             title="No notifications"
-            message={filter === 'unread' 
-              ? "You don't have any unread notifications" 
-              : "You don't have any notifications yet"}
+            message="You'll be notified when providers respond to your requests"
           />
         }
-        ListFooterComponent={<View style={styles.bottomPadding} />}
+        contentContainerStyle={notifications.length === 0 ? { flex: 1 } : undefined}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
@@ -302,128 +309,161 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    //paddingTop: Platform.OS === 'android' ? 40 : 10,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    padding: 4,
-  },
+  backButton: { padding: 4 },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.text.primary,
   },
   markAllButton: {
-    padding: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   markAllText: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.primary,
     fontWeight: '500',
   },
-  filterContainer: {
+  unreadBanner: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  filterTab: {
-    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: Colors.primary + '12',
     paddingHorizontal: 16,
-    marginRight: 12,
-    borderRadius: 20,
-    backgroundColor: Colors.background,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  activeFilterTab: {
-    backgroundColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
+  unreadBannerText: {
+    fontSize: 13,
+    color: Colors.primary,
     fontWeight: '500',
   },
-  activeFilterText: {
-    color: Colors.surface,
-  },
-  listContainer: {
-    padding: 20,
-    flexGrow: 1,
-  },
-  notificationCard: {
+  notificationItem: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    marginHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    position: 'relative',
   },
-  unreadCard: {
-    backgroundColor: Colors.primary + '05',
-    borderColor: Colors.primary + '30',
+  unreadItem: {
+    backgroundColor: Colors.primary + '06',
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.background,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    flexShrink: 0,
   },
-  unreadIconContainer: {
-    backgroundColor: Colors.primary + '20',
-  },
-  notificationImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  contentContainer: {
+  content: {
     flex: 1,
   },
-  notificationHeader: {
+  titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'flex-start',
+    marginBottom: 3,
   },
-  notificationTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: Colors.text.primary,
-    flex: 1,
-  },
-  unreadText: {
+  title: {
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.text.primary,
+    flex: 1,
+    marginRight: 8,
+  },
+  unreadTitle: {
+    fontWeight: '700',
+  },
+  time: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+    flexShrink: 0,
+  },
+  message: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+    lineHeight: 18,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 8,
+  },
+  payNowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  payNowText: {
+    color: Colors.surface,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  viewRequestButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  viewRequestText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '500',
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: Colors.primary,
-    marginLeft: 8,
+    position: 'absolute',
+    top: 14,
+    right: 14,
   },
-  notificationMessage: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-    lineHeight: 18,
-    marginBottom: 8,
+  reasonContainer: {
+    backgroundColor: Colors.error + '10',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.error,
   },
-  notificationTime: {
+  reasonLabel: {
     fontSize: 11,
-    color: Colors.text.secondary,
+    fontWeight: '700',
+    color: Colors.error,
+    marginBottom: 2,
+    textTransform: 'uppercase',
   },
-  bottomPadding: {
-    height: 40,
+  reasonText: {
+    fontSize: 12,
+    color: Colors.text.primary,
+    fontStyle: 'italic',
   },
 });

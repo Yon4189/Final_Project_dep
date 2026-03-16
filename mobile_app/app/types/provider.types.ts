@@ -68,6 +68,34 @@ export interface ProviderService {
   isActive: boolean;
 }
 
+export type ProviderNotificationType =
+  | "new_request"
+  | "booking_request"
+  | "request_accepted"
+  | "booking_accepted"
+  | "request_rejected"
+  | "booking_rejected"
+  | "request_cancelled"
+  | "booking_cancelled"
+  | "booking_completed"
+  | "payment_received"
+  | "withdrawal"
+  | "review"
+  | "reminder"
+  | "system";
+
+export interface ProviderNotificationPayload {
+  notificationID: string;
+  type: ProviderNotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  is_seen: boolean;
+  created_at: string;
+  updated_at?: string;
+  related_booking_id?: string;
+}
+
 export interface Certification {
   id: string;
   name: string;
@@ -97,6 +125,7 @@ export interface BankDetails {
 // Request Types
 export type RequestStatus =
   | "pending"
+  | "accepted"
   | "confirmed"
   | "in_progress"
   | "completed"

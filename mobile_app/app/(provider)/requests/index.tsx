@@ -16,10 +16,11 @@ import {
 } from "react-native";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import { useProviderQueries } from "../../../hooks/useProviderQueries";
+import { useProviderQueries, useProviderRequests } from "../../../hooks/useProviderQueries";
 import { Colors } from "../../constants/Colors";
 import type { ServiceRequest } from "../../types/provider.types";
 import { formatCurrency, formatTimeAgo } from "../../utils/formatters";
+import { ScheduleModal } from "../components/ScheduleModal";
 
 type FilterType =
   | "all"
@@ -64,19 +65,20 @@ export default function ProviderRequests() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(
-    null,
-  );
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
-  const [rescheduleDate, setRescheduleDate] = useState("");
-  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [actionModalConfig, setActionModalConfig] = useState<{
+    type: "reject" | "reschedule";
+    request: ServiceRequest;
+  } | null>(null);
+  const [isActionModalLoading, setIsActionModalLoading] = useState(false);
 
-  // Fixed: Use useProviderQueries correctly
+  // Use useProviderRequests which fetches all statuses from the API
   const {
-    pendingRequests = [],
-    isPendingLoading,
-    refetch = async () => {},
+    data: allRequests = [],
+    isLoading: isPendingLoading,
+    refetch,
+  } = useProviderRequests(activeFilter === 'all' ? undefined : activeFilter as any);
+
+  const {
     acceptRequest = { mutateAsync: async () => {}, isPending: false },
     rejectRequest = { mutateAsync: async () => {}, isPending: false },
     rescheduleRequest = { mutateAsync: async () => {}, isPending: false },
@@ -84,10 +86,7 @@ export default function ProviderRequests() {
     completeService = { mutateAsync: async () => {}, isPending: false },
   } = useProviderQueries();
 
-  // Note: useProviderQueries only returns pendingRequests
-  // If you need all requests, you'll need to modify useProviderQueries.ts
-  // For now, we'll use pendingRequests as our data source
-  const requests = pendingRequests;
+  const requests = allRequests;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -129,18 +128,20 @@ export default function ProviderRequests() {
     return STATUS_ICONS[status as keyof typeof STATUS_ICONS] || "help-outline";
   };
 
-  const handleRequestAction = (request: ServiceRequest, action: string) => {
-    setSelectedRequest(request);
+  const openActionModal = (request: ServiceRequest, type: "reject" | "reschedule") => {
+    setActionModalConfig({ request, type });
+  };
 
+  const handleRequestAction = (request: ServiceRequest, action: string) => {
     switch (action) {
       case "accept":
         handleAccept(request);
         break;
       case "reject":
-        setShowActionModal(true);
+        openActionModal(request, "reject");
         break;
       case "reschedule":
-        setShowActionModal(true);
+        openActionModal(request, "reschedule");
         break;
       case "start":
         handleStart(request);
@@ -175,39 +176,40 @@ export default function ProviderRequests() {
     );
   };
 
-  const handleReject = async () => {
-    if (!selectedRequest || !rejectReason.trim()) return;
-
-    try {
-      await rejectRequest.mutateAsync({
-        id: selectedRequest.id,
-        reason: rejectReason,
-      });
-      setShowActionModal(false);
-      setRejectReason("");
-      Alert.alert("Success", "Request rejected");
-    } catch (error) {
-      Alert.alert("Error", "Failed to reject request");
-    }
+  const closeActionModal = () => {
+    setIsActionModalLoading(false);
+    setActionModalConfig(null);
   };
 
-  const handleReschedule = async () => {
-    if (!selectedRequest || !rescheduleDate || !rescheduleTime) return;
+  const handleActionModalConfirm = async (
+    date: string,
+    time: string,
+    reason?: string,
+  ) => {
+    if (!actionModalConfig) return;
+
+    setIsActionModalLoading(true);
 
     try {
-      await rescheduleRequest.mutateAsync({
-        id: selectedRequest.id,
-        data: {
-          scheduledDate: rescheduleDate,
-          scheduledTime: rescheduleTime,
-        },
-      });
-      setShowActionModal(false);
-      setRescheduleDate("");
-      setRescheduleTime("");
-      Alert.alert("Success", "Request rescheduled");
+      if (actionModalConfig.type === "reject") {
+        await rejectRequest.mutateAsync({
+          id: actionModalConfig.request.id,
+          reason: reason?.trim() || "Rejected by provider",
+        });
+      } else {
+        await rescheduleRequest.mutateAsync({
+          id: actionModalConfig.request.id,
+          data: {
+            scheduledDate: date,
+            scheduledTime: time,
+          },
+        });
+      }
+      closeActionModal();
     } catch (error) {
-      Alert.alert("Error", "Failed to reschedule request");
+      // mutations already handle errors
+    } finally {
+      setIsActionModalLoading(false);
     }
   };
 
@@ -478,124 +480,6 @@ export default function ProviderRequests() {
     </TouchableOpacity>
   );
 
-  const renderActionModal = () => (
-    <Modal
-      visible={showActionModal}
-      animationType="slide"
-      transparent
-      onRequestClose={() => setShowActionModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {selectedRequest?.status === "pending"
-                ? "Reject Request"
-                : "Reschedule Request"}
-            </Text>
-            <TouchableOpacity onPress={() => setShowActionModal(false)}>
-              <Ionicons name="close" size={24} color={Colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {selectedRequest?.status === "pending" ? (
-            // Reject Form
-            <View style={styles.modalBody}>
-              <Text style={styles.modalLabel}>Reason for rejection</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Please provide a reason..."
-                placeholderTextColor={Colors.text.secondary}
-                value={rejectReason}
-                onChangeText={setRejectReason}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={() => {
-                    setShowActionModal(false);
-                    setRejectReason("");
-                  }}
-                >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.modalConfirmButton,
-                    !rejectReason.trim() && styles.modalButtonDisabled,
-                  ]}
-                  onPress={handleReject}
-                  disabled={!rejectReason.trim()}
-                >
-                  <Text style={styles.modalConfirmText}>Reject Request</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            // Reschedule Form
-            <View style={styles.modalBody}>
-              <Text style={styles.modalLabel}>New Date</Text>
-              <TouchableOpacity style={styles.modalPicker}>
-                <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color={Colors.primary}
-                />
-                <Text style={styles.modalPickerText}>
-                  {rescheduleDate || "Select date"}
-                </Text>
-              </TouchableOpacity>
-
-              <Text style={styles.modalLabel}>New Time</Text>
-              <TouchableOpacity style={styles.modalPicker}>
-                <Ionicons
-                  name="time-outline"
-                  size={20}
-                  color={Colors.primary}
-                />
-                <Text style={styles.modalPickerText}>
-                  {rescheduleTime || "Select time"}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={() => {
-                    setShowActionModal(false);
-                    setRescheduleDate("");
-                    setRescheduleTime("");
-                  }}
-                >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.modalConfirmButton,
-                    (!rescheduleDate || !rescheduleTime) &&
-                      styles.modalButtonDisabled,
-                  ]}
-                  onPress={handleReschedule}
-                  disabled={!rescheduleDate || !rescheduleTime}
-                >
-                  <Text style={styles.modalConfirmText}>
-                    Confirm Reschedule
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
-
   const renderFilterModal = () => (
     <Modal
       visible={showFilterModal}
@@ -688,7 +572,15 @@ export default function ProviderRequests() {
         ListFooterComponent={<View style={styles.bottomPadding} />}
       />
 
-      {renderActionModal()}
+      <ScheduleModal
+        visible={Boolean(actionModalConfig)}
+        type={actionModalConfig?.type ?? "reschedule"}
+        request={actionModalConfig?.request ?? null}
+        isLoading={isActionModalLoading}
+        onClose={closeActionModal}
+        onConfirm={handleActionModalConfirm}
+      />
+
       {renderFilterModal()}
     </View>
   );
@@ -1059,3 +951,5 @@ const styles = StyleSheet.create({
     height: 40,
   },
 });
+
+

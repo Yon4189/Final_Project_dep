@@ -64,6 +64,16 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 Route::match(['get', 'post'], '/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
 Route::get('/payment/callback/{tx_ref}', [PaymentController::class, 'callback'])->name('payment.callback');
 
+// ==================== PUBLIC SEARCH (Customer Prefix) ====================
+Route::prefix('customer')->group(function () {
+    Route::get('/providers/search', [CustomerSearchController::class, 'searchProviders']);
+    Route::get('/providers/top-rated', [CustomerSearchController::class, 'getTopRated']);
+    Route::get('/providers/{id}', [CustomerSearchController::class, 'getProviderDetails']);
+    Route::get('/providers/{id}/availability', [CustomerSearchController::class, 'getProviderAvailability']);
+    Route::get('/providers/{id}/reviews', [CustomerSearchController::class, 'getProviderReviews']);
+    Route::get('/providers/nearby', [CustomerSearchController::class, 'getNearbyProviders']);
+});
+
 // ==================== PROTECTED CUSTOMER ROUTES ====================
 Route::middleware('auth:customer')->prefix('customer')->group(function () {
     // Profile Management
@@ -72,19 +82,21 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::post('/profile/image', [CustomerController::class, 'uploadProfileImage']);
     Route::post('/profile/password', [CustomerController::class, 'changePassword']);
     
-    // Provider Search & Discovery
-    Route::get('/providers/search', [CustomerSearchController::class, 'searchProviders']);
-    Route::get('/providers/top-rated', [CustomerSearchController::class, 'getTopRated']);
-    Route::get('/providers/{id}', [CustomerSearchController::class, 'getProviderDetails']);
-    Route::get('/providers/{id}/availability', [CustomerSearchController::class, 'getProviderAvailability']);
-    Route::get('/providers/{id}/reviews', [CustomerSearchController::class, 'getProviderReviews']);
-    Route::get('/providers/nearby', [CustomerSearchController::class, 'getNearbyProviders']);
+    // Other Customer Routes below...
     
     // Bookings (Service Requests)
     Route::get('/bookings', [CustomerController::class, 'getRequests']); // List all
+    Route::get('/requests', [CustomerController::class, 'getRequests']); // Alias for mobile app
+    
     Route::post('/bookings', [CustomerController::class, 'createBooking']); // Create new
+    Route::post('/requests', [CustomerController::class, 'createBooking']); // Alias for mobile app
+    
     Route::get('/bookings/{id}', [CustomerController::class, 'getRequestDetails']);
+    Route::get('/requests/{id}', [CustomerController::class, 'getRequestDetails']); // Alias for mobile app
+    
     Route::post('/bookings/{id}/cancel', [CustomerController::class, 'cancelRequest']);
+    Route::post('/requests/{id}/cancel', [CustomerController::class, 'cancelRequest']); // Alias for mobile app
+    
     Route::post('/bookings/{id}/reschedule', [CustomerController::class, 'rescheduleRequest']);
     Route::get('/bookings/{id}/status', [CustomerController::class, 'getRequestStatus']);
     Route::get('/bookings/{id}/track', [CustomerController::class, 'trackProvider']);
@@ -119,6 +131,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'getCustomerNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::get('/notifications/settings', [CustomerController::class, 'getNotificationSettings']);
     Route::put('/notifications/settings', [CustomerController::class, 'updateNotificationSettings']);
     
@@ -203,6 +216,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'getProviderNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
 
     Route::post('/bookings/{bookingID}/dispute', [DisputeController::class, 'providerRaiseDispute']);
@@ -271,6 +285,8 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::get('/disputes/{disputeID}', [AdminDisputeController::class, 'show']);
     Route::put('/disputes/{disputeID}/status', [AdminDisputeController::class, 'updateStatus']);
     Route::post('/disputes/{disputeID}/notes', [AdminDisputeController::class, 'addPrivateNote']);
+    Route::post('/disputes/{disputeID}/messages', [AdminDisputeController::class, 'addMessage']);
+    Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
 });
 
 Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);

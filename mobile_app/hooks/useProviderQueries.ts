@@ -43,7 +43,7 @@ const handleSuccess = (message?: string) => {
 
 // ==================== Profile Hooks ====================
 
-export function useProviderProfile(options?: UseQueryOptions<ProviderProfile>) {
+export function useProviderProfile(options?: Omit<UseQueryOptions<ProviderProfile, Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<ProviderProfile, Error>({
     queryKey: providerKeys.profile(),
     queryFn: async () => {
@@ -114,7 +114,7 @@ export function useUploadProfileImage(options?: UseMutationOptions<{ url: string
 
 // ==================== Service Request Hooks ====================
 
-export function useProviderRequests(status?: RequestStatus, options?: UseQueryOptions<ServiceRequest[]>) {
+export function useProviderRequests(status?: RequestStatus, options?: Omit<UseQueryOptions<ServiceRequest[], Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<ServiceRequest[], Error>({
     queryKey: [...providerKeys.requests(), status],
     queryFn: async () => {
@@ -126,7 +126,7 @@ export function useProviderRequests(status?: RequestStatus, options?: UseQueryOp
   });
 }
 
-export function useProviderRequest(id: string, options?: UseQueryOptions<ServiceRequest>) {
+export function useProviderRequest(id: string, options?: Omit<UseQueryOptions<ServiceRequest, Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<ServiceRequest, Error>({
     queryKey: providerKeys.request(id),
     queryFn: async () => {
@@ -144,13 +144,18 @@ export function useAcceptRequest(options?: UseMutationOptions<ServiceRequest, Er
 
   return useMutation<ServiceRequest, Error, string>({
     mutationFn: async (id: string) => {
+      console.log('🚀 Accepting request:', id);
       const response = await providerService.acceptRequest(id);
+      console.log('✅ Accept response:', response);
       if (!response.success) throw new Error(response.message);
       return response.data as ServiceRequest;
     },
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: providerKeys.requests() });
+      queryClient.invalidateQueries({ queryKey: providerKeys.pendingRequests() });
       queryClient.invalidateQueries({ queryKey: providerKeys.request(variables) });
+      queryClient.invalidateQueries({ queryKey: providerKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: providerKeys.todaySchedule() });
       handleSuccess('Request accepted successfully');
     },
     onError: (error, variables, context) => {
@@ -164,13 +169,17 @@ export function useRejectRequest(options?: UseMutationOptions<ServiceRequest, Er
 
   return useMutation<ServiceRequest, Error, { id: string; reason: string }>({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      console.log('🚀 Rejecting request:', id, 'reason:', reason);
       const response = await providerService.rejectRequest(id, reason);
+      console.log('✅ Reject response:', response);
       if (!response.success) throw new Error(response.message);
       return response.data as ServiceRequest;
     },
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: providerKeys.requests() });
+      queryClient.invalidateQueries({ queryKey: providerKeys.pendingRequests() });
       queryClient.invalidateQueries({ queryKey: providerKeys.request(variables.id) });
+      queryClient.invalidateQueries({ queryKey: providerKeys.stats() });
       handleSuccess('Request rejected');
     },
     onError: (error, variables, context) => {
@@ -242,7 +251,7 @@ export function useCompleteService(options?: UseMutationOptions<ServiceRequest, 
   });
 }
 
-export function useGetDirections(id: string, options?: UseQueryOptions<any>) {
+export function useGetDirections(id: string, options?: Omit<UseQueryOptions<any, Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<any, Error>({
     queryKey: [...providerKeys.request(id), 'directions'],
     queryFn: async () => {
@@ -257,7 +266,7 @@ export function useGetDirections(id: string, options?: UseQueryOptions<any>) {
 
 // ==================== Dashboard Stats Hooks ====================
 
-export function useDashboardStats(options?: UseQueryOptions<any>) {
+export function useDashboardStats(options?: Omit<UseQueryOptions<any, Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<any, Error>({
     queryKey: providerKeys.stats(),
     queryFn: async () => {
@@ -269,7 +278,7 @@ export function useDashboardStats(options?: UseQueryOptions<any>) {
   });
 }
 
-export function useTodaySchedule(options?: UseQueryOptions<ServiceRequest[]>) {
+export function useTodaySchedule(options?: Omit<UseQueryOptions<ServiceRequest[], Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<ServiceRequest[], Error>({
     queryKey: providerKeys.todaySchedule(),
     queryFn: async () => {
@@ -281,7 +290,7 @@ export function useTodaySchedule(options?: UseQueryOptions<ServiceRequest[]>) {
   });
 }
 
-export function usePendingRequests(options?: UseQueryOptions<ServiceRequest[]>) {
+export function usePendingRequests(options?: Omit<UseQueryOptions<ServiceRequest[], Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<ServiceRequest[], Error>({
     queryKey: providerKeys.pendingRequests(),
     queryFn: async () => {
@@ -295,7 +304,7 @@ export function usePendingRequests(options?: UseQueryOptions<ServiceRequest[]>) 
 
 // ==================== Review Hooks ====================
 
-export function useProviderReviews(page: number = 1, options?: UseQueryOptions<any>) {
+export function useProviderReviews(page: number = 1, options?: Omit<UseQueryOptions<any, Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<any, Error>({
     queryKey: [...providerKeys.reviews(), page],
     queryFn: async () => {
@@ -328,7 +337,7 @@ export function useRespondToReview(options?: UseMutationOptions<CustomerReview, 
 
 // ==================== Dispute Hooks ====================
 
-export function useProviderDisputes(options?: UseQueryOptions<Dispute[]>) {
+export function useProviderDisputes(options?: Omit<UseQueryOptions<Dispute[], Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<Dispute[], Error>({
     queryKey: providerKeys.disputes(),
     queryFn: async () => {
@@ -340,7 +349,7 @@ export function useProviderDisputes(options?: UseQueryOptions<Dispute[]>) {
   });
 }
 
-export function useProviderDispute(id: string, options?: UseQueryOptions<Dispute>) {
+export function useProviderDispute(id: string, options?: Omit<UseQueryOptions<Dispute, Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<Dispute, Error>({
     queryKey: providerKeys.dispute(id),
     queryFn: async () => {
@@ -393,7 +402,7 @@ export function useAddDisputeEvidence(options?: UseMutationOptions<Dispute, Erro
 
 // ==================== Services Management Hooks ====================
 
-export function useProviderServices(options?: UseQueryOptions<any[]>) {
+export function useProviderServices(options?: Omit<UseQueryOptions<any[], Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<any[], Error>({
     queryKey: providerKeys.services(),
     queryFn: async () => {

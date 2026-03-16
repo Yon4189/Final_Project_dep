@@ -1,5 +1,5 @@
 // app/(customer)/about.tsx
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,57 +11,18 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { api } from './services/api';
 import { Colors } from '@/app/constants/Colors';
-
 export default function AboutScreen() {
   const router = useRouter();
-  const [stats, setStats] = useState([
-    { value: '...', label: 'Verified Providers', icon: 'people-outline' },
-    { value: '...', label: 'Happy Customers', icon: 'happy-outline' },
-    { value: '...', label: 'Service Categories', icon: 'grid-outline' },
+
+  const stats = [
+    { value: '500+', label: 'Verified Providers', icon: 'people-outline' },
+    { value: '10k+', label: 'Happy Customers', icon: 'happy-outline' },
+    { value: '15+', label: 'Service Categories', icon: 'grid-outline' },
     { value: '24/7', label: 'Customer Support', icon: 'headset-outline' },
-  ]);
-
-  const updateStatValue = (label: string, value: string) => {
-    setStats(prev =>
-      prev.map(stat => (stat.label === label ? { ...stat, value } : stat))
-    );
-  };
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadStats = async () => {
-      try {
-        const response = await api.get<{ providers: number; customers: number }>('/public/stats');
-        if (isMounted && response.success && response.data) {
-          const { providers, customers } = response.data;
-          updateStatValue('Verified Providers', `${providers}+`);
-          updateStatValue('Happy Customers', `${customers}+`);
-        }
-      } catch (error) {
-        console.error('Failed to load stats for about page', error);
-      }
-
-      try {
-        const response = await api.get<any[]>('/categories');
-        if (isMounted && response.success && response.data) {
-          updateStatValue('Service Categories', `${response.data.length}+`);
-        }
-      } catch (error) {
-        console.error('Failed to load categories count', error);
-      }
-    };
-
-    loadStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  ];
 
   const features = [
     {
@@ -157,7 +118,7 @@ export default function AboutScreen() {
         <Ionicons name="arrow-back" size={24} color={Colors.surface} />
       </TouchableOpacity>
       <View style={styles.headerContent}>
-        <Text style={styles.headerTitle}>About Home Based Service Finding Solution</Text>
+        <Text style={styles.headerTitle}>About Home based service finding solution</Text>
         <Text style={styles.headerSubtitle}>
           Your trusted platform for finding professional service providers
         </Text>
@@ -184,9 +145,9 @@ export default function AboutScreen() {
       <Text style={styles.sectionTitle}>Our Mission</Text>
       <View style={styles.missionCard}>
         <Text style={styles.missionText}>
-          Home Based Service Finding Solution was founded with a simple mission: to connect Ethiopian households with trusted, 
-          verified, and professional service providers. We believe that finding reliable help for 
-          your home shouldn't be a hassle. Whether you need a plumber, electrician, cleaner, or 
+          HomeLink was founded with a simple mission: to connect Ethiopian households with trusted,
+          verified, and professional service providers. We believe that finding reliable help for
+          your home shouldn't be a hassle. Whether you need a plumber, electrician, cleaner, or
           any other service, HomeLink makes it easy, safe, and convenient.
         </Text>
         <View style={styles.missionHighlight}>
@@ -263,7 +224,7 @@ export default function AboutScreen() {
           </View>
           <View style={styles.contactInfo}>
             <Text style={styles.contactLabel}>Email</Text>
-            <Text style={styles.contactValue}>yositilahun21@gmail.com</Text>
+            <Text style={styles.contactValue}>support@homelink.com</Text>
           </View>
           <Ionicons name="open-outline" size={20} color={Colors.text.secondary} />
         </TouchableOpacity>
@@ -277,7 +238,7 @@ export default function AboutScreen() {
           </View>
           <View style={styles.contactInfo}>
             <Text style={styles.contactLabel}>Phone</Text>
-            <Text style={styles.contactValue}>+251 905217674</Text>
+            <Text style={styles.contactValue}>+251 91 122 3344</Text>
           </View>
           <Ionicons name="open-outline" size={20} color={Colors.text.secondary} />
         </TouchableOpacity>

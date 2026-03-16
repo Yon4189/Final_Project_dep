@@ -100,7 +100,9 @@ class NotificationService
     private function create(array $data)
     {
         try {
+            Log::info('Creating notification', ['data' => $data]);
             $notification = Notification::create($data);
+            Log::info('Notification created', ['id' => $notification->notificationID]);
             
             // Here you would trigger push notification if needed
             $this->sendPushNotification($notification);
@@ -157,4 +159,5 @@ class NotificationService
     const TYPE_REVIEW_RECEIVED = 'review_received';
     const TYPE_WITHDRAWAL_REQUEST = 'withdrawal_request';
     const TYPE_NEW_PROVIDER_REGISTRATION = 'provider_registration';
+    const TYPE_DISPUTE_RAISED = 'dispute';
 }

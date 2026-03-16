@@ -21,6 +21,7 @@ interface RequestCardProps {
 
 const STATUS_COLORS = {
   pending: Colors.warning,
+  accepted: Colors.info,
   confirmed: Colors.info,
   in_progress: Colors.primary,
   completed: Colors.success,
@@ -30,6 +31,7 @@ const STATUS_COLORS = {
 
 const STATUS_ICONS = {
   pending: 'time-outline',
+  accepted: 'checkmark-circle-outline',
   confirmed: 'checkmark-circle-outline',
   in_progress: 'construct-outline',
   completed: 'checkmark-done-outline',
@@ -39,6 +41,7 @@ const STATUS_ICONS = {
 
 const STATUS_LABELS = {
   pending: 'Pending',
+  accepted: 'Accepted',
   confirmed: 'Confirmed',
   in_progress: 'In Progress',
   completed: 'Completed',
@@ -124,16 +127,28 @@ export const RequestCard: React.FC<RequestCardProps> = ({
           </View>
         );
 
+      case 'accepted':
       case 'confirmed':
         return (
           <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.trackButton]}
-              onPress={() => handleActionPress('track')}
-            >
-              <Ionicons name="location-outline" size={16} color={Colors.surface} />
-              <Text style={styles.trackButtonText}>Track</Text>
-            </TouchableOpacity>
+            {request.status === 'accepted' && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.trackButton, { backgroundColor: Colors.success }]}
+                onPress={() => handleActionPress('pay')}
+              >
+                <Ionicons name="card-outline" size={16} color={Colors.surface} />
+                <Text style={styles.trackButtonText}>Pay Now</Text>
+              </TouchableOpacity>
+            )}
+            {request.status === 'confirmed' && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.trackButton]}
+                onPress={() => handleActionPress('track')}
+              >
+                <Ionicons name="location-outline" size={16} color={Colors.surface} />
+                <Text style={styles.trackButtonText}>Track</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.actionButton, styles.messageButton]}
               onPress={() => handleActionPress('message')}

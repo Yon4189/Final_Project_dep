@@ -1,5 +1,5 @@
 // app/(provider)/notifications.tsx
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,15 +15,16 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
-import { useProviderQueries } from '../../hooks/useProviderQueries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
-import { formatTimeAgo } from '../utils/formatters';
+import { formatTimeAgo, formatCurrency } from '../utils/formatters';
+import { providerService } from '@/app/services/provider.service';
+import type { ProviderNotificationPayload, ProviderNotificationType } from '@/app/types/provider.types';
 
 // Types for provider notifications
 interface ProviderNotification {
   id: string;
-  type: 'new_request' | 'request_accepted' | 'request_cancelled' | 'payment_received' | 'withdrawal' | 'review' | 'reminder' | 'system';
+  type: ProviderNotificationType;
   title: string;
   message: string;
   timestamp: string;
@@ -36,83 +37,83 @@ interface ProviderNotification {
     transactionId?: string;
   };
   image?: string;
+  relatedBookingId?: string;
 }
 
-// Mock notifications data (replace with API data)
-const MOCK_NOTIFICATIONS: ProviderNotification[] = [
-  {
-    id: '1',
-    type: 'new_request',
-    title: 'New Service Request',
-    message: 'John Doe requested a plumbing service at your location.',
-    timestamp: new Date(Date.now() - 15 * 60000).toISOString(), // 15 minutes ago
-    read: false,
-    data: { requestId: 'req123', customerName: 'John Doe' },
-  },
-  {
-    id: '2',
-    type: 'payment_received',
-    title: 'Payment Received',
-    message: 'You received ETB 1,500 for plumbing service from Jane Smith.',
-    timestamp: new Date(Date.now() - 2 * 60 * 60000).toISOString(), // 2 hours ago
-    read: false,
-    data: { amount: 1500, customerName: 'Jane Smith', transactionId: 'txn456' },
-  },
-  {
-    id: '3',
-    type: 'review',
-    title: 'New 5-Star Review',
-    message: 'Mike Johnson left you a 5-star review for electrical work.',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60000).toISOString(), // 1 day ago
-    read: true,
-    data: { customerName: 'Mike Johnson', requestId: 'req789' },
-  },
-  {
-    id: '4',
-    type: 'withdrawal',
-    title: 'Withdrawal Processed',
-    message: 'Your withdrawal of ETB 2,000 has been processed successfully.',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60000).toISOString(), // 2 days ago
-    read: true,
-    data: { amount: 2000 },
-  },
-  {
-    id: '5',
-    type: 'reminder',
-    title: 'Upcoming Service Reminder',
-    message: 'You have a plumbing service scheduled tomorrow at 10:00 AM.',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60000).toISOString(), // 3 days ago
-    read: true,
-    data: { requestId: 'req456', customerName: 'Sarah Williams' },
-  },
-  {
-    id: '6',
-    type: 'request_cancelled',
-    title: 'Request Cancelled',
-    message: 'A service request has been cancelled by the customer.',
-    timestamp: new Date(Date.now() - 4 * 24 * 60 * 60000).toISOString(), // 4 days ago
-    read: true,
-    data: { requestId: 'req101' },
-  },
-  {
-    id: '7',
-    type: 'system',
-    title: 'Profile Verification',
-    message: 'Your profile has been verified successfully. You can now receive more requests.',
-    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60000).toISOString(), // 7 days ago
-    read: true,
-  },
-];
+type ProviderNotificationRaw = ProviderNotificationPayload & { related_booking_id?: string };
+
+const normalizeNotification = (notification: ProviderNotificationRaw): ProviderNotification => ({
+  id: notification.notificationID?.toString() ?? `${notification.type}-${notification.created_at}`,
+  type: notification.type,
+  title: notification.title,
+  message: notification.message,
+  timestamp: notification.created_at,
+  read: Boolean(notification.is_seen),
+  data: notification.data,
+  image: notification.data?.image,
+  relatedBookingId: notification.related_booking_id,
+});
 
 export default function ProviderNotifications() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [notifications, setNotifications] = useState<ProviderNotification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<ProviderNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
-  // Use provider queries to fetch real notifications when API is ready
-  // const { notifications: apiNotifications, isLoading, refetch } = useProviderQueries();
+  const normalizedNotifications = useCallback(
+    (items: ProviderNotificationRaw[]) => items.map(normalizeNotification),
+    []
+  );
+
+  const fetchNotifications = useCallback(
+    async ({ page = 1, showSpinner = true }: { page?: number; showSpinner?: boolean } = {}) => {
+      if (showSpinner) {
+        setLoading(true);
+      }
+
+      try {
+        const response = await providerService.getNotifications(page);
+
+        if (response.success && response.data) {
+          const payload = response.data.notifications;
+          const normalized = Array.isArray(payload?.data)
+            ? normalizedNotifications(payload.data)
+            : [];
+
+          setNotifications(prev =>
+            page === 1 ? normalized : [...prev, ...normalized]
+          );
+          setPage(payload?.current_page ?? page);
+          setHasMore((payload?.last_page ?? page) > (payload?.current_page ?? page));
+        }
+      } catch (error) {
+        console.error('Failed to load provider notifications', error);
+      } finally {
+        if (showSpinner) {
+          setLoading(false);
+        }
+        setRefreshing(false);
+      }
+    },
+    [normalizedNotifications]
+  );
+
+  useEffect(() => {
+    fetchNotifications({ page: 1 });
+  }, [fetchNotifications]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchNotifications({ page: 1, showSpinner: false });
+  };
+
+  const handleLoadMore = () => {
+    if (loading || refreshing || !hasMore) return;
+    fetchNotifications({ page: page + 1, showSpinner: false });
+  };
 
   // Filter notifications based on selected filter
   const filteredNotifications = filter === 'all' 
@@ -122,40 +123,52 @@ export default function ProviderNotifications() {
   // Count unread notifications
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
-
-  const markAsRead = (notificationId: string) => {
+  const markAsRead = async (notificationId: string) => {
     setNotifications(prev => 
       prev.map(n => 
         n.id === notificationId ? { ...n, read: true } : n
       )
     );
+
+    try {
+      await providerService.markNotificationAsRead(notificationId);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    );
-    Alert.alert('Success', 'All notifications marked as read');
+  const markAllAsRead = async () => {
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    
+    try {
+      await Promise.all(unreadIds.map(id => providerService.markNotificationAsRead(id)));
+      Alert.alert('Success', 'All notifications marked as read');
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      Alert.alert('Error', 'Unable to mark all notifications as read.');
+    }
   };
 
   const handleNotificationPress = (notification: ProviderNotification) => {
     // Mark as read
-    markAsRead(notification.id);
+    void markAsRead(notification.id);
 
     // Navigate based on notification type
     switch (notification.type) {
       case 'new_request':
+      case 'booking_request':
       case 'request_accepted':
+      case 'booking_accepted':
       case 'request_cancelled':
+      case 'booking_cancelled':
+      case 'booking_completed':
       case 'reminder':
-        if (notification.data?.requestId) {
+        if (notification.relatedBookingId) {
+          router.push(`/(provider)/requests/${notification.relatedBookingId}`);
+        } else if (notification.data?.requestId) {
           router.push(`/(provider)/requests/${notification.data.requestId}`);
         } else {
           router.push('/(provider)/requests');
@@ -183,11 +196,16 @@ export default function ProviderNotifications() {
     
     switch (type) {
       case 'new_request':
+      case 'booking_request':
         return <Ionicons name="alert-circle" size={iconSize} color={iconColor} />;
       case 'request_accepted':
+      case 'booking_accepted':
         return <Ionicons name="checkmark-circle" size={iconSize} color={iconColor} />;
       case 'request_cancelled':
+      case 'booking_cancelled':
         return <Ionicons name="close-circle" size={iconSize} color={Colors.error} />;
+      case 'booking_completed':
+        return <Ionicons name="briefcase" size={iconSize} color={iconColor} />;
       case 'payment_received':
         return <Ionicons name="wallet" size={iconSize} color={iconColor} />;
       case 'withdrawal':
@@ -308,13 +326,13 @@ export default function ProviderNotifications() {
         }
         ListFooterComponent={<View style={styles.bottomPadding} />}
         showsVerticalScrollIndicator={false}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
       />
     </SafeAreaView>
   );
 }
 
-// Import formatCurrency if not already imported
-import { formatCurrency } from '../utils/formatters';
 
 const styles = StyleSheet.create({
   container: {

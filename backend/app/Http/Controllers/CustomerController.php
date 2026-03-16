@@ -7,8 +7,7 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\ServiceProvider;
 use App\Models\Review;
-use App\Models\Complaint;
-use App\Models\UserLocation;
+use App\Models\Dispute;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -39,6 +38,10 @@ class CustomerController extends Authenticatable
         $scheduledDate = $booking->scheduledDate
             ? $booking->scheduledDate->toDateString()
             : null;
+            
+        $scheduledTime = $booking->scheduledDate
+            ? $booking->scheduledDate->format('H:i')
+            : '09:00';
 
         $estimatedPrice = null;
         if ($service) {
@@ -60,23 +63,23 @@ class CustomerController extends Authenticatable
             'categoryName' => $service?->category?->name ?? '',
             'status' => $booking->status,
             'scheduledDate' => $scheduledDate ?? now()->toDateString(),
-            'scheduledTime' => '09:00',
-            'address' => $service?->provider?->service_city ?? ($provider?->service_city ?? ''),
+            'scheduledTime' => $scheduledTime,
+            'address' => $booking->service_address ?? ($service?->provider?->service_city ?? ($provider?->service_city ?? '')),
             'locationId' => null,
-            'description' => null,
-            'specialInstructions' => null,
-            'estimatedPrice' => $estimatedPrice ?? 0,
-            'finalPrice' => null,
-            'paymentStatus' => 'pending',
+            'description' => $booking->notes,
+            'specialInstructions' => $booking->notes,
+            'estimatedPrice' => (float) ($booking->agreed_price ?? ($estimatedPrice ?? 0)),
+            'finalPrice' => (float) ($booking->agreed_price ?? 0),
+            'paymentStatus' => $booking->payment_status ?? 'pending',
             'paymentDetails' => null,
             'createdAt' => optional($booking->created_at)->toISOString(),
             'updatedAt' => optional($booking->updated_at)->toISOString(),
             'confirmedAt' => optional($booking->accepted_at)->toISOString(),
             'startedAt' => optional($booking->provider_started_at)->toISOString(),
             'completedAt' => optional($booking->completed_at)->toISOString(),
-            'cancelledAt' => null,
-            'cancellationReason' => null,
-            'review' => null,
+            'cancelledAt' => optional($booking->cancelled_at)->toISOString(),
+            'cancellationReason' => $booking->cancellation_reason,
+            'review' => $booking->relationLoaded('review') ? $booking->review : null,
             'providerPhone' => $provider?->phone,
         ];
     }
@@ -206,7 +209,7 @@ class CustomerController extends Authenticatable
         ]);
     }
 
-    public function getRequests()
+    public function getRequests(Request $request)
     {
         $customer = $this->resolveCustomer();
         if (!$customer) {
@@ -216,10 +219,14 @@ class CustomerController extends Authenticatable
             ], 404);
         }
 
-        $bookings = Booking::where('customerID', $customer->customerID)
-            ->with(['service.category', 'provider'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = Booking::where('customerID', $customer->customerID)
+            ->with(['service.category', 'provider', 'review']);
+
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        $bookings = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'success' => true,
@@ -244,7 +251,7 @@ class CustomerController extends Authenticatable
             $validator = Validator::make($request->all(), [
                 'providerID' => 'required|exists:service_providers,providerID',
                 'serviceID' => 'required|exists:services,serviceID',
-                'scheduledDate' => 'required|date|after:today',
+                'scheduledDate' => 'required|date|after_or_equal:today',
                 'agreed_price' => 'required|numeric|min:0',
                 
                 // New location fields
@@ -262,7 +269,7 @@ class CustomerController extends Authenticatable
                 'providerID.required' => 'please select a provider',
                 'serviceID.required' => 'please select a service',
                 'scheduledDate.required' => 'please select a date for the service',
-                'scheduledDate.after' => 'scheduled date must be in the future',
+                'scheduledDate.after_or_equal' => 'scheduled date must be today or in the future',
                 'agreed_price.required' => 'please enter the agreed price',
                 'agreed_price.min' => 'price cannot be negative',
                 
@@ -294,52 +301,39 @@ class CustomerController extends Authenticatable
                 ], 400);
             }
 
-            // check if customer already booked THIS EXACT SERVICE with this provider
+            // check if customer already booked THIS EXACT SERVICE for THIS DATE with this provider
             $existingBooking = Booking::where('customerID', $customer->customerID)
+                ->where('serviceID', $service->serviceID)
                 ->where('providerID', $validated['providerID'])
-                ->where('serviceID', $validated['serviceID'])
+                ->whereDate('scheduledDate', $validated['scheduledDate'])
                 ->whereIn('status', ['pending', 'accepted', 'in_progress'])
                 ->first();
-
+    
             if ($existingBooking) {
+                // If it's still pending, let them proceed with the existing one instead of erroring
+                if ($existingBooking->status === 'pending') {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Returning existing pending booking',
+                        'data' => $this->bookingToServiceRequestPayload(
+                            $existingBooking->load(['service.category', 'provider'])
+                        )
+                    ], 200);
+                }
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'you already have an active booking for this service'
+                    'message' => 'you already have an active booking for this service on this date'
                 ], 400);
             }
 
-            // Process location data based on source
-            if ($validated['location_source'] === 'saved') {
-                $address = CustomerAddress::find($validated['saved_address_id']);
-                if (!$address) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'saved address not found'
-                    ], 404);
-                }
-                
-                $locationData = [
-                    'service_address' => $address->full_address,
-                    'address_text' => $address->full_address,
-                    'service_latitude' => $address->latitude,
-                    'service_longitude' => $address->longitude,
-                    'place_id' => $address->place_id,
-                    'location_source' => 'saved',
-                    'saved_address_id' => $address->addressID
-                ];
-            } else {
-                $locationData = [
-                    'service_address' => $validated['full_address'] ?? $validated['service_address'],
-                    'address_text' => $validated['full_address'] ?? $validated['service_address'],
-                    'service_latitude' => $validated['latitude'] ?? null,
-                    'service_longitude' => $validated['longitude'] ?? null,
-                    'place_id' => $validated['place_id'] ?? null,
-                    'location_source' => $validated['location_source'],
-                    'saved_address_id' => null
-                ];
+            // Merge address into notes if it exists
+            $finalNotes = $validated['notes'] ?? '';
+            if (!empty($validated['service_address'])) {
+                $finalNotes = "Address: " . $validated['service_address'] . "\n" . $finalNotes;
             }
 
-            // create booking with location data
+            // create booking
             $booking = Booking::create([
                 'customerID' => $customer->customerID,
                 'serviceID' => $service->serviceID,
@@ -347,17 +341,8 @@ class CustomerController extends Authenticatable
                 'status' => 'pending',
                 'scheduledDate' => $validated['scheduledDate'],
                 'agreed_price' => $validated['agreed_price'],
-                'notes' => $validated['notes'] ?? null,
-                'expires_at' => now()->addHours(24),
-                
-                // Location fields (using your exact column names)
-                'service_address' => $locationData['service_address'],
-                'address_text' => $locationData['address_text'],
-                'service_latitude' => $locationData['service_latitude'],
-                'service_longitude' => $locationData['service_longitude'],
-                'place_id' => $locationData['place_id'],
-                'location_source' => $locationData['location_source'],
-                'saved_address_id' => $locationData['saved_address_id']
+                'notes' => trim($finalNotes) ?: null,
+                'expires_at' => now()->addHours(24) // booking expires in 24 hours
             ]);
 
             // log the booking creation
@@ -744,28 +729,38 @@ class CustomerController extends Authenticatable
             'data' => $reviews->items()
         ]);
     }
-/*
     public function createComplaint(Request $request)
     {
         $customer = Auth::guard('customer')->user();
         
         $validated = $request->validate([
-            'provider_id' => 'required|exists:providers,id',
-            'booking_id' => 'required|exists:bookings,id',
+            'provider_id' => 'required|exists:service_providers,providerID',
+            'booking_id' => 'required|exists:bookings,bookingID',
             'type' => 'required|in:service_quality,behavior,payment,other',
             'description' => 'required|string|max:2000',
-            'priority' => 'sometimes|in:low,medium,high',
+            'priority' => 'sometimes|in:low,medium,high,urgent',
             'attachments' => 'sometimes|array'
         ]);
 
-        $complaint = Complaint::create([
-            'customer_id' => $customer->id,
-            ...$validated,
+        $booking = Booking::find($request->booking_id);
+
+        $complaint = Dispute::create([
+            'bookingID' => $request->booking_id,
+            'raised_by_id' => $customer->customerID,
+            'raised_by_type' => 'customer',
+            'against_id' => $booking->providerID,
+            'against_type' => 'provider',
+            'title' => $request->type . ' - ' . substr($request->description, 0, 30) . '...',
+            'description' => $request->description,
+            'category' => $request->type,
+            'priority' => $request->priority ?? 'medium',
+            'attachments' => $request->attachments,
             'status' => 'pending'
         ]);
 
         return response()->json([
             'success' => true,
+            'message' => 'Dispute raised successfully',
             'data' => $complaint
         ]);
     }
@@ -773,8 +768,9 @@ class CustomerController extends Authenticatable
     public function getComplaints()
     {
         $customer = Auth::guard('customer')->user();
-        $complaints = Complaint::where('customer_id', $customer->id)
-            ->with(['provider'])
+        $complaints = Dispute::where('raised_by_type', 'customer')
+            ->where('raised_by_id', $customer->customerID)
+            ->with(['booking.provider'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
@@ -787,14 +783,15 @@ class CustomerController extends Authenticatable
     public function getComplaintDetails($id)
     {
         $customer = Auth::guard('customer')->user();
-        $complaint = Complaint::where('customer_id', $customer->id)
-            ->with(['provider'])
+        $complaint = Dispute::where('raised_by_type', 'customer')
+            ->where('raised_by_id', $customer->customerID)
+            ->with(['booking.provider'])
             ->find($id);
 
         if (!$complaint) {
             return response()->json([
                 'success' => false,
-                'message' => 'Complaint not found'
+                'message' => 'Dispute not found'
             ], 404);
         }
 
@@ -806,11 +803,21 @@ class CustomerController extends Authenticatable
 
     public function getLocations()
     {
+        // UserLocation model is deprecated. Location is now stored directly in customers table.
+        // Returning a simulated array for compatibility with old frontend versions.
         $customer = Auth::guard('customer')->user();
-        $locations = UserLocation::where('customer_id', $customer->id)
-            ->orderBy('is_primary', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        
+        $locations = [];
+        if ($customer->location) {
+            $locations[] = [
+                'id' => 1,
+                'name' => 'Current Location',
+                'address' => $customer->location,
+                'latitude' => $customer->service_latitude,
+                'longitude' => $customer->service_longitude,
+                'is_primary' => true
+            ];
+        }
 
         return response()->json([
             'success' => true,
@@ -820,103 +827,50 @@ class CustomerController extends Authenticatable
 
     public function addLocation(Request $request)
     {
+        // Redirecting to update main profile location
         $customer = Auth::guard('customer')->user();
         
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
             'address' => 'required|string|max:500',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
-            'is_primary' => 'sometimes|boolean'
         ]);
 
-        $location = UserLocation::create([
-            'customer_id' => $customer->id,
-            ...$validated
+        $customer->update([
+            'location' => $request->address,
+            'service_latitude' => $request->latitude,
+            'service_longitude' => $request->longitude,
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $location
+            'message' => 'Location updated on profile',
+            'data' => [
+                'id' => 1,
+                'address' => $customer->location,
+                'is_primary' => true
+            ]
         ]);
     }
 
     public function updateLocation($id, Request $request)
     {
-        $customer = Auth::guard('customer')->user();
-        $location = UserLocation::where('customer_id', $customer->id)
-            ->where('id', $id)
-            ->first();
-
-        if (!$location) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Location not found'
-            ], 404);
-        }
-
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:100',
-            'address' => 'sometimes|string|max:500',
-            'latitude' => 'sometimes|numeric',
-            'longitude' => 'sometimes|numeric'
-        ]);
-
-        $location->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'data' => $location
-        ]);
+        return $this->addLocation($request);
     }
 
     public function deleteLocation($id)
     {
-        $customer = Auth::guard('customer')->user();
-        $location = UserLocation::where('customer_id', $customer->id)
-            ->where('id', $id)
-            ->first();
-
-        if (!$location) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Location not found'
-            ], 404);
-        }
-
-        $location->delete();
-
         return response()->json([
-            'success' => true,
-            'message' => 'Location deleted successfully'
-        ]);
+            'success' => false,
+            'message' => 'Deleting the primary profile location is not allowed via this endpoint.'
+        ], 400);
     }
 
     public function setPrimaryLocation($id)
     {
-        $customer = Auth::guard('customer')->user();
-        
-        // Remove primary status from all locations
-        UserLocation::where('customer_id', $customer->id)
-            ->update(['is_primary' => false]);
-
-        // Set new primary location
-        $location = UserLocation::where('customer_id', $customer->id)
-            ->where('id', $id)
-            ->first();
-
-        if (!$location) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Location not found'
-            ], 404);
-        }
-
-        $location->update(['is_primary' => true]);
-
         return response()->json([
             'success' => true,
-            'data' => $location
+            'message' => 'Location is already primary'
         ]);
     }
 
@@ -961,7 +915,6 @@ class CustomerController extends Authenticatable
             'data' => $validated
         ]);
     }
-*/
     private function generateRequestTimeline($booking)
     {
         $timeline = [];

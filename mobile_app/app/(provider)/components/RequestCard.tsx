@@ -27,6 +27,7 @@ interface RequestCardProps {
 
 const STATUS_COLORS = {
   pending: Colors.warning,
+  accepted: Colors.primary,
   confirmed: Colors.primary,
   in_progress: Colors.info,
   completed: Colors.success,
@@ -35,6 +36,7 @@ const STATUS_COLORS = {
 
 const STATUS_ICONS = {
   pending: 'time-outline',
+  accepted: 'checkmark-circle-outline',
   confirmed: 'checkmark-circle-outline',
   in_progress: 'construct-outline',
   completed: 'checkmark-done-outline',
@@ -43,6 +45,7 @@ const STATUS_ICONS = {
 
 const STATUS_LABELS = {
   pending: 'Pending',
+  accepted: 'Accepted',
   confirmed: 'Confirmed',
   in_progress: 'In Progress',
   completed: 'Completed',

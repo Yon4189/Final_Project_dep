@@ -93,6 +93,13 @@ export default function ProviderLayout() {
         }}
       />
 
+      <Stack.Screen
+        name="requests/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+
       {/* Earnings */}
       <Stack.Screen
         name="earnings/index"

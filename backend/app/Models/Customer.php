@@ -41,19 +41,20 @@ class Customer extends Authenticatable
     // Relationships
 
     // A customer can have many bookings
-    public function bookings() {
-        return $this->hasMany(Booking::class, 'customerID', 'customerID'); // fk, local key
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class , 'customerID', 'customerID'); // fk, local key
     }
 
     // A customer can have many reviews
     public function reviewsWritten()
     {
-        return $this->hasMany(Review::class, 'customerID', 'customerID');
+        return $this->hasMany(Review::class , 'customerID', 'customerID');
     }
 
     /**
- * Add funds to wallet (for refunds)
- */
+     * Add funds to wallet (for refunds)
+     */
     public function addToWallet($amount): void
     {
         $this->walletBalance = ($this->walletBalance ?? 0) + $amount;
@@ -70,22 +71,22 @@ class Customer extends Authenticatable
 
 
     /**
- * Get the city that the customer belongs to
- */
+     * Get the city that the customer belongs to
+     */
     public function serviceCity()
     {
-        return $this->belongsTo(ServiceCity::class, 'service_city', 'name');
-        // 'service_city' is the column in customers table
-        // 'name' is the column in service_cities table
+        return $this->belongsTo(ServiceCity::class , 'service_city', 'name');
+    // 'service_city' is the column in customers table
+    // 'name' is the column in service_cities table
     }
 
-    /**
+/**
  * Get all saved locations for this customer
  */
-public function locations()
-{
-    return $this->hasMany(UserLocation::class, 'customer_id', 'customerID');
-}
+// public function locations()
+// {
+//     return $this->hasMany(UserLocation::class, 'customer_id', 'customerID');
+// }
 
 
 /**

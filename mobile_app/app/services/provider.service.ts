@@ -11,67 +11,74 @@ import type {
   Dispute,
   RequestStatus,
   BankDetails,
+  ProviderNotificationPayload,
 } from '@/app/types/provider.types';
-import type { ApiResponse } from '../types/customer.types';
+import { ApiResponse } from '../types/customer.types';
+
+/**
+ * Normalizes a service request from the backend to ensure it has an 'id' property.
+ * Backend models often use 'bookingID' while the frontend expects 'id'.
+ */
+const normalizeServiceRequest = (data: any): ServiceRequest => {
+  if (!data) return data;
+  return {
+    ...data,
+    id: data.id?.toString() || data.bookingID?.toString() || data.id,
+  };
+};
 
 class ProviderService {
   private readonly BASE_PATH = '/provider';
 
   // Helper method to get provider ID from storage
- // Helper method to get provider ID from storage
-private async getProviderId(): Promise<string | null> {
-  try {
-    const userData = await storage.getItem('user_data');
-    if (userData && typeof userData === 'string') {
-      const parsed = JSON.parse(userData);
-      return parsed.providerID || parsed.id || null;
+  private async getProviderId(): Promise<string | null> {
+    try {
+      const userData = await storage.getItem('user_data');
+      if (userData && typeof userData === 'string') {
+        const parsed = JSON.parse(userData);
+        return parsed.providerID || parsed.id || null;
+      }
+      
+      // Also try to get from provider profile in storage
+      const profileData = await storage.getItem('provider_profile');
+      if (profileData && typeof profileData === 'string') {
+        const parsed = JSON.parse(profileData);
+        return parsed.providerID || parsed.id || null;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting provider ID:', error);
+      return null;
     }
-    
-    // Also try to get from provider profile in storage
-    const profileData = await storage.getItem('provider_profile');
-    if (profileData && typeof profileData === 'string') {
-      const parsed = JSON.parse(profileData);
-      return parsed.providerID || parsed.id || null;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error getting provider ID:', error);
-    return null;
   }
-}
+
   // ==================== Profile Management ====================
 
- async getProfile(): Promise<ApiResponse<ProviderProfile>> {
-  console.log('🔍 Fetching provider profile...'); // Add debug log
-  
-  const response = await api.get<ProviderProfile>(`${this.BASE_PATH}/profile`);
-  
-  console.log('🔍 Profile API response:', response); // Add debug log
-  
-  if (response.success && response.data) {
-    console.log('🔍 Profile data received:', response.data); // Add debug log
+  async getProfile(): Promise<ApiResponse<ProviderProfile>> {
+    const response = await api.get<ProviderProfile>(`${this.BASE_PATH}/profile`);
     
-    // Store in provider_profile
-    await storage.setItem('provider_profile', response.data);
+    if (response.success && response.data) {
+      // Store in provider_profile
+      await storage.setItem('provider_profile', response.data);
+      
+      // ALSO store in user_data with the same format as customer
+      const userData = {
+        id: (response.data as any).providerID || (response.data as any).id,
+        providerID: (response.data as any).providerID,
+        fullname: (response.data as any).fullname,
+        businessName: (response.data as any).businessName,
+        email: (response.data as any).email,
+        phone: (response.data as any).phone,
+        profilePicture: (response.data as any).profilePicture,
+      };
+      
+      await storage.setItem('user_data', JSON.stringify(userData));
+    }
     
-    // ALSO store in user_data with the same format as customer
-    const userData = {
-      id: (response.data as any).providerID || (response.data as any).id,
-      providerID: (response.data as any).providerID,
-      fullname: (response.data as any).fullname,
-      businessName: (response.data as any).businessName,
-      email: (response.data as any).email,
-      phone: (response.data as any).phone,
-      profilePicture: (response.data as any).profilePicture,
-    };
-    
-    console.log('🔍 Storing user_data:', userData); // Add debug log
-    await storage.setItem('user_data', JSON.stringify(userData));
+    return response;
   }
-  
-  return response;
-}
+
   async updateProfile(data: Partial<ProviderProfile>): Promise<ApiResponse<ProviderProfile>> {
     const response = await api.put<ProviderProfile>(`${this.BASE_PATH}/profile`, data);
     
@@ -107,20 +114,34 @@ private async getProviderId(): Promise<string | null> {
       ? `${this.BASE_PATH}/requests?status=${status}` 
       : `${this.BASE_PATH}/requests`;
     
-    return api.get<ServiceRequest[]>(url);
+    const response = await api.get<ServiceRequest[]>(url);
+    if (response.success && Array.isArray(response.data)) {
+      response.data = response.data.map(normalizeServiceRequest);
+    }
+    return response;
   }
 
   async getRequestDetails(id: string): Promise<ApiResponse<ServiceRequest>> {
-    return api.get<ServiceRequest>(`${this.BASE_PATH}/requests/${id}`);
+    const response = await api.get<ServiceRequest>(`${this.BASE_PATH}/requests/${id}`);
+    if (response.success && response.data) {
+      response.data = normalizeServiceRequest(response.data);
+    }
+    return response;
   }
 
   async acceptRequest(id: string): Promise<ApiResponse<ServiceRequest>> {
-    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/requests/${id}/accept`);
+    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/bookings/${id}/accept`);
+    if (response.success && response.data) {
+      response.data = normalizeServiceRequest(response.data);
+    }
     return response;
   }
 
   async rejectRequest(id: string, reason: string): Promise<ApiResponse<ServiceRequest>> {
-    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/requests/${id}/reject`, { reason });
+    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/bookings/${id}/reject`, { reason });
+    if (response.success && response.data) {
+      response.data = normalizeServiceRequest(response.data);
+    }
     return response;
   }
 
@@ -130,16 +151,25 @@ private async getProviderId(): Promise<string | null> {
     reason?: string;
   }): Promise<ApiResponse<ServiceRequest>> {
     const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/requests/${id}/reschedule`, data);
+    if (response.success && response.data) {
+      response.data = normalizeServiceRequest(response.data);
+    }
     return response;
   }
 
   async startService(id: string): Promise<ApiResponse<ServiceRequest>> {
-    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/requests/${id}/start`);
+    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/bookings/${id}/start`);
+    if (response.success && response.data) {
+      response.data = normalizeServiceRequest(response.data);
+    }
     return response;
   }
 
   async completeService(id: string): Promise<ApiResponse<ServiceRequest>> {
-    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/requests/${id}/complete`);
+    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/bookings/${id}/complete`);
+    if (response.success && response.data) {
+      response.data = normalizeServiceRequest(response.data);
+    }
     return response;
   }
 
@@ -246,22 +276,22 @@ private async getProviderId(): Promise<string | null> {
 
   // ==================== Services Management ====================
 
-  async getMyServices(): Promise<ApiResponse<ProviderService[]>> {
-    return api.get<ProviderService[]>(`${this.BASE_PATH}/services`);
+  async getMyServices(): Promise<ApiResponse<any[]>> {
+    return api.get<any[]>(`${this.BASE_PATH}/services`);
   }
 
-  async addService(data: Omit<ProviderService, 'id'>): Promise<ApiResponse<ProviderService>> {
-    const response = await api.post<ProviderService>(`${this.BASE_PATH}/services`, data);
+  async addService(data: Omit<any, 'id'>): Promise<ApiResponse<any>> {
+    const response = await api.post<any>(`${this.BASE_PATH}/services`, data);
     return response;
   }
 
-  async updateService(id: string, data: Partial<ProviderService>): Promise<ApiResponse<ProviderService>> {
-    const response = await api.put<ProviderService>(`${this.BASE_PATH}/services/${id}`, data);
+  async updateService(id: string, data: Partial<any>): Promise<ApiResponse<any>> {
+    const response = await api.put<any>(`${this.BASE_PATH}/services/${id}`, data);
     return response;
   }
 
-  async toggleServiceStatus(id: string, isActive: boolean): Promise<ApiResponse<ProviderService>> {
-    const response = await api.patch<ProviderService>(`${this.BASE_PATH}/services/${id}/toggle`, { isActive });
+  async toggleServiceStatus(id: string, isActive: boolean): Promise<ApiResponse<any>> {
+    const response = await api.patch<any>(`${this.BASE_PATH}/services/${id}/toggle`, { isActive });
     return response;
   }
 
@@ -330,7 +360,28 @@ private async getProviderId(): Promise<string | null> {
   }
 
   async getTodaySchedule(): Promise<ApiResponse<ServiceRequest[]>> {
-    return api.get<ServiceRequest[]>(`${this.BASE_PATH}/schedule/today`);
+    const response = await api.get<ServiceRequest[]>(`${this.BASE_PATH}/schedule/today`);
+    if (response.success && Array.isArray(response.data)) {
+      response.data = response.data.map(normalizeServiceRequest);
+    }
+    return response;
+  }
+
+  async getNotifications(page: number = 1): Promise<ApiResponse<{
+    notifications: {
+      current_page: number;
+      data: ProviderNotificationPayload[];
+      per_page: number;
+      total: number;
+      last_page: number;
+    };
+    unread_count: number;
+  }>> {
+    return api.get(`${this.BASE_PATH}/notifications?page=${page}`);
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<ApiResponse<void>> {
+    return api.post(`${this.BASE_PATH}/notifications/${notificationId}/read`);
   }
 }
 

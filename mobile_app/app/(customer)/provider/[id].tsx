@@ -47,8 +47,9 @@ export default function ProviderProfileScreen() {
   const { data: similarProviders, isLoading: similarLoading } =
     useTopRatedProviders(5);
 
-  const handleServiceSelect = (serviceName: string) => {
-    setSelectedService(serviceName);
+  const handleServiceSelect = (service: any) => {
+    const serviceIdentifier = service?.id?.toString() || service?.serviceId?.toString() || service?.service?.name || "Service";
+    setSelectedService(serviceIdentifier);
     setShowRequestModal(true);
   };
 
@@ -64,9 +65,13 @@ export default function ProviderProfileScreen() {
     return `${distance.toFixed(1)}km away`;
   };
 
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return "ETB 0";
-    return `ETB ${amount.toFixed(2)}`;
+  const formatCurrency = (amount?: number | string) => {
+    const numericAmount =
+      typeof amount === "number" ? amount : parseFloat(amount ?? "0");
+
+    if (Number.isNaN(numericAmount)) return "ETB 0";
+
+    return `ETB ${numericAmount.toFixed(2)}`;
   };
 
   // Get primary service category from first service
@@ -156,13 +161,11 @@ export default function ProviderProfileScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.servicesScroll}
         >
-          {providerData.services.map((service, index: number) => (
+          {providerData.services.map((service: any, index: number) => (
             <TouchableOpacity
-              key={service?.id || index}
+              key={service?.id || service?.serviceId || index}
               style={styles.serviceCard}
-              onPress={() =>
-                handleServiceSelect(service?.service?.name || "Service")
-              }
+              onPress={() => handleServiceSelect(service)}
             >
               <View style={styles.serviceIconContainer}>
                 <MaterialCommunityIcons
@@ -172,15 +175,15 @@ export default function ProviderProfileScreen() {
                 />
               </View>
               <Text style={styles.serviceName} numberOfLines={1}>
-                {service?.service?.name || "Service"}
+                {service?.name || service?.serviceName || service?.service?.name || "Service"}
               </Text>
               <Text style={styles.servicePrice}>
                 {formatCurrency(
-                  service?.customPrice ?? service?.service?.basePrice ?? 0,
+                  service?.price ?? service?.basePrice ?? service?.customPrice ?? service?.service?.basePrice ?? 0,
                 )}
               </Text>
               <Text style={styles.serviceDuration} numberOfLines={2}>
-                {service?.description || "Professional service"}
+                {service?.description || service?.service?.description || "Professional service"}
               </Text>
               <View style={styles.bookButton}>
                 <Text style={styles.bookButtonText}>Book Now</Text>

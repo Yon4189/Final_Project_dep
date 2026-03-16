@@ -35,7 +35,7 @@ class PaymentService {
    */
   async initializeChapaPayment(params: InitializePaymentParams): Promise<PaymentResponse> {
     try {
-      const response = await api.post<PaymentResponse>(`${this.BASE_PATH}/initialize`, {
+      const response = await api.post<PaymentResponse>(`${this.BASE_PATH}/booking/${params.bookingId}/initialize`, {
         amount: params.amount,
         email: params.email,
         first_name: params.firstName,
@@ -126,6 +126,76 @@ class PaymentService {
       console.error('Failed to get payment history:', error);
       throw new Error(error.message || 'Failed to get payment history');
     }
+  }
+
+  /**
+   * Additional methods for wallet and transactions
+   */
+  async getPaymentMethods(): Promise<any> {
+    const response = await api.get<any>(`${this.BASE_PATH}/methods`);
+    return response.success ? response.data : [];
+  }
+
+  async getWalletBalance(): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/wallet/balance`);
+  }
+
+  async getTransactionHistory(page: number = 1): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/transactions?page=${page}`);
+  }
+
+  async getWalletTransactions(page: number = 1, type?: string): Promise<any> {
+    let url = `${this.BASE_PATH}/wallet/transactions?page=${page}`;
+    if (type && type !== 'all') url += `&type=${type}`;
+    return api.get<any>(url);
+  }
+
+  async verifyChapaPayment(txRef: string): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/verify/${txRef}`);
+  }
+
+  async initiateMobileMoneyPayment(data: any): Promise<any> {
+    return api.post<any>(`${this.BASE_PATH}/mobile-money/initiate`, data);
+  }
+
+  async verifyMobileMoneyPayment(transactionId: string): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/mobile-money/verify/${transactionId}`);
+  }
+
+  async payForBooking(bookingId: string, paymentMethodId: string): Promise<any> {
+    return api.post<any>(`${this.BASE_PATH}/booking/${bookingId}/pay`, { paymentMethodId });
+  }
+
+  async getBookingPaymentStatus(bookingId: string): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/booking/${bookingId}/status`);
+  }
+
+  async requestWithdrawal(data: any): Promise<any> {
+    return api.post<any>(`${this.BASE_PATH}/wallet/withdraw`, data);
+  }
+
+  async getWithdrawalHistory(): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/wallet/withdrawals`);
+  }
+
+  async requestRefund(bookingId: string, reason: string): Promise<any> {
+    return api.post<any>(`${this.BASE_PATH}/booking/${bookingId}/refund`, { reason });
+  }
+
+  async getRefundStatus(refundId: string): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/refunds/${refundId}`);
+  }
+
+  async handlePaymentCallback(url: string): Promise<any> {
+    return api.post<any>(`${this.BASE_PATH}/callback`, { url });
+  }
+
+  async generateReceipt(transactionId: string): Promise<any> {
+    return api.post<any>(`${this.BASE_PATH}/receipts/${transactionId}`);
+  }
+
+  async downloadReceipt(transactionId: string): Promise<any> {
+    return api.get<any>(`${this.BASE_PATH}/receipts/${transactionId}/download`);
   }
 
   /**

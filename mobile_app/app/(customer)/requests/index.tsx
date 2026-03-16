@@ -31,7 +31,7 @@ export default function MyRequests() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const { data: requests, isLoading, refetch } = useServiceRequests(
     activeFilter === 'all' ? undefined : activeFilter
   );
@@ -44,7 +44,7 @@ export default function MyRequests() {
 
   const getFilteredCounts = () => {
     if (!requests) return {};
-    
+
     return {
       all: requests.length,
       pending: requests.filter(r => r.status === 'pending').length,
@@ -139,7 +139,7 @@ export default function MyRequests() {
     if (!requests?.length) return null;
 
     const activeRequests = requests.filter(
-      r => ['pending', 'confirmed', 'in_progress'].includes(r.status)
+      r => ['pending', 'accepted', 'confirmed', 'in_progress'].includes(r.status)
     ).length;
 
     const totalSpent = requests
@@ -180,7 +180,7 @@ export default function MyRequests() {
     <View style={styles.container}>
       {renderHeader()}
       {renderSummary()}
-      
+
       <FlatList
         data={requests}
         renderItem={renderRequest}

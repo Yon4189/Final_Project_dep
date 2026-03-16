@@ -2,9 +2,9 @@
 /**
  * Format currency to ETB
  */
-export const formatCurrency = (amount: number | undefined | null): string => {
-  if (amount === undefined || amount === null) return 'ETB 0';
-  return `ETB ${amount.toFixed(2)}`;
+export const formatCurrency = (amount: number | undefined | null, currency: string = 'ETB'): string => {
+  if (amount === undefined || amount === null) return `${currency} 0`;
+  return `${currency} ${amount.toFixed(2)}`;
 };
 
 /**
@@ -75,6 +75,8 @@ export const formatTimeAgo = (timestamp: string | Date): string => {
     return `${diffYear} ${diffYear === 1 ? 'year' : 'years'} ago`;
   }
 };
+
+export const formatRelativeTime = formatTimeAgo;
 
 /**
  * Format distance
