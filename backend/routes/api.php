@@ -23,6 +23,8 @@ use App\Http\Controllers\AdminWithdrawalController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\AdminDisputeController;
+use App\Http\Controllers\AddressController;
+use App\Http\Controllers\ProviderTrackingController;
 
 
 // ==================== PUBLIC ROUTES ====================
@@ -138,6 +140,18 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::get('/disputes', [DisputeController::class, 'getCustomerDisputes']);
     Route::get('/disputes/{disputeID}', [DisputeController::class, 'show']);
     Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage']);
+
+
+    // Address Book Routes
+Route::prefix('addresses')->group(function () {
+    Route::get('/', [AddressController::class, 'index']);
+    Route::post('/', [AddressController::class, 'store']);
+    Route::get('/{addressID}', [AddressController::class, 'show']);
+    Route::put('/{addressID}', [AddressController::class, 'update']);
+    Route::delete('/{addressID}', [AddressController::class, 'destroy']);
+    Route::patch('/{addressID}/default', [AddressController::class, 'setDefault']);
+});
+Route::get('/bookings/{bookingID}/track', [ProviderTrackingController::class, 'getProviderLocation']);
 });
 
 // Public routes (no authentication required)
@@ -195,6 +209,9 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     Route::get('/disputes', [DisputeController::class, 'getProviderDisputes']);
     Route::get('/disputes/{disputeID}', [DisputeController::class, 'show']);
     Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage']);
+
+    Route::post('/tracking/update', [ProviderTrackingController::class, 'updateLocation']);
+    Route::get('/tracking/booking/{bookingID}', [ProviderTrackingController::class, 'getBookingRoute']);
 });
 
 // ==================== ADMIN ROUTES ====================

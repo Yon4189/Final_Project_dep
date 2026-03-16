@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Validator; 
 use Illuminate\Support\Facades\Log;
+use App\Models\CustomerAddress;
+use App\Models\ProviderTracking;
 
 class CustomerController extends Authenticatable
 {
@@ -244,7 +246,17 @@ class CustomerController extends Authenticatable
                 'serviceID' => 'required|exists:services,serviceID',
                 'scheduledDate' => 'required|date|after:today',
                 'agreed_price' => 'required|numeric|min:0',
-                'service_address' => 'required|string|max:255',
+                
+                // New location fields
+                'location_source' => 'required|in:gps,saved,new',
+                'saved_address_id' => 'required_if:location_source,saved|exists:customer_addresses,addressID',
+                'full_address' => 'required_if:location_source,new|string|max:255',
+                'latitude' => 'required_if:location_source,gps,new|numeric',
+                'longitude' => 'required_if:location_source,gps,new|numeric',
+                'place_id' => 'nullable|string',
+                
+                // Keep old field for backward compatibility? Or remove?
+                'service_address' => 'sometimes|string|max:255',
                 'notes' => 'nullable|string|max:1000'
             ], [
                 'providerID.required' => 'please select a provider',
@@ -253,16 +265,16 @@ class CustomerController extends Authenticatable
                 'scheduledDate.after' => 'scheduled date must be in the future',
                 'agreed_price.required' => 'please enter the agreed price',
                 'agreed_price.min' => 'price cannot be negative',
-                'service_address.required' => 'please enter your address'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'please fill all required fields',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
+                
+                // New error messages
+                'location_source.required' => 'please select how to provide your location',
+                'location_source.in' => 'invalid location source',
+                'saved_address_id.required_if' => 'please select a saved address',
+                'saved_address_id.exists' => 'selected address not found',
+                'full_address.required_if' => 'please enter your address',
+                'latitude.required_if' => 'location coordinates are required',
+                'longitude.required_if' => 'location coordinates are required'
+            ], );
 
             $validated = $validator->validated();
 
@@ -285,7 +297,7 @@ class CustomerController extends Authenticatable
             // check if customer already booked THIS EXACT SERVICE with this provider
             $existingBooking = Booking::where('customerID', $customer->customerID)
                 ->where('providerID', $validated['providerID'])
-                ->where('serviceID', $validated['serviceID'])  // check specific service
+                ->where('serviceID', $validated['serviceID'])
                 ->whereIn('status', ['pending', 'accepted', 'in_progress'])
                 ->first();
 
@@ -296,7 +308,38 @@ class CustomerController extends Authenticatable
                 ], 400);
             }
 
-            // create booking
+            // Process location data based on source
+            if ($validated['location_source'] === 'saved') {
+                $address = CustomerAddress::find($validated['saved_address_id']);
+                if (!$address) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'saved address not found'
+                    ], 404);
+                }
+                
+                $locationData = [
+                    'service_address' => $address->full_address,
+                    'address_text' => $address->full_address,
+                    'service_latitude' => $address->latitude,
+                    'service_longitude' => $address->longitude,
+                    'place_id' => $address->place_id,
+                    'location_source' => 'saved',
+                    'saved_address_id' => $address->addressID
+                ];
+            } else {
+                $locationData = [
+                    'service_address' => $validated['full_address'] ?? $validated['service_address'],
+                    'address_text' => $validated['full_address'] ?? $validated['service_address'],
+                    'service_latitude' => $validated['latitude'] ?? null,
+                    'service_longitude' => $validated['longitude'] ?? null,
+                    'place_id' => $validated['place_id'] ?? null,
+                    'location_source' => $validated['location_source'],
+                    'saved_address_id' => null
+                ];
+            }
+
+            // create booking with location data
             $booking = Booking::create([
                 'customerID' => $customer->customerID,
                 'serviceID' => $service->serviceID,
@@ -304,16 +347,25 @@ class CustomerController extends Authenticatable
                 'status' => 'pending',
                 'scheduledDate' => $validated['scheduledDate'],
                 'agreed_price' => $validated['agreed_price'],
-                'service_address' => $validated['service_address'],
                 'notes' => $validated['notes'] ?? null,
-                'expires_at' => now()->addHours(24) // booking expires in 24 hours
+                'expires_at' => now()->addHours(24),
+                
+                // Location fields (using your exact column names)
+                'service_address' => $locationData['service_address'],
+                'address_text' => $locationData['address_text'],
+                'service_latitude' => $locationData['service_latitude'],
+                'service_longitude' => $locationData['service_longitude'],
+                'place_id' => $locationData['place_id'],
+                'location_source' => $locationData['location_source'],
+                'saved_address_id' => $locationData['saved_address_id']
             ]);
 
             // log the booking creation
             Log::info('booking created successfully', [
                 'booking_id' => $booking->bookingID,
                 'customer_id' => $customer->customerID,
-                'provider_id' => $validated['providerID']
+                'provider_id' => $validated['providerID'],
+                'location_source' => $locationData['location_source']
             ]);
 
             return response()->json([
@@ -323,7 +375,6 @@ class CustomerController extends Authenticatable
                     $booking->load(['service.category', 'provider'])
                 )
             ], 201);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -488,7 +539,7 @@ class CustomerController extends Authenticatable
 
         $booking = Booking::where('customerID', $customer->customerID)
             ->where('bookingID', $id)
-            ->where('status', 'in_progress')
+            ->whereIn('status', ['in_progress', 'started', 'accepted'])
             ->with('provider')
             ->first();
 
@@ -499,15 +550,98 @@ class CustomerController extends Authenticatable
             ], 404);
         }
 
-        // For demo purposes, return provider's last known location
-        // In production, this would integrate with real-time tracking
+        // Get provider's latest location from tracking table
+        $latestTracking = ProviderTracking::where('bookingID', $id)
+            ->where('providerID', $booking->providerID)
+            ->latest('tracked_at')
+            ->first();
+
+        // Initialize ETA array
+        $eta = [
+            'distance_km' => null,
+            'minutes' => null,
+            'arrival_time' => null,
+            'display_text' => 'Calculating...'
+        ];
+
+        // Calculate distance and ETA if we have provider location
+        if ($latestTracking && $booking->service_latitude && $booking->service_longitude) {
+            $distance = $this->calculateDistance(
+                $latestTracking->latitude,
+                $latestTracking->longitude,
+                $booking->service_latitude,
+                $booking->service_longitude
+            );
+            
+            $eta['distance_km'] = round($distance, 1);
+            
+            // Calculate ETA based on speed
+            if ($distance > 0) {
+                $speed = $latestTracking->speed ?? 30; // Default 30 km/h
+                if ($speed > 0) {
+                    $minutes = round(($distance / $speed) * 60);
+                    $eta['minutes'] = $minutes;
+                    $eta['arrival_time'] = now()->addMinutes($minutes)->format('g:i A');
+                    
+                    // Friendly display text
+                    if ($minutes < 1) {
+                        $eta['display_text'] = 'Arriving now';
+                    } elseif ($minutes == 1) {
+                        $eta['display_text'] = 'Arriving in 1 minute';
+                    } else {
+                        $eta['display_text'] = "Arriving in {$minutes} minutes";
+                    }
+                }
+            } else {
+                $eta['display_text'] = 'Provider has arrived';
+            }
+        }
+
+        // Get last 10 locations for path history
+        $history = ProviderTracking::where('bookingID', $id)
+            ->where('providerID', $booking->providerID)
+            ->orderBy('tracked_at', 'asc')
+            ->limit(10)
+            ->get(['latitude', 'longitude', 'tracked_at']);
+
         return response()->json([
             'success' => true,
             'data' => [
-                'latitude' => $booking->service_latitude ?? 9.03,
-                'longitude' => $booking->service_longitude ?? 38.74
+                'provider' => $latestTracking ? [
+                    'latitude' => $latestTracking->latitude,
+                    'longitude' => $latestTracking->longitude,
+                    'last_update' => $latestTracking->tracked_at,
+                    'is_moving' => ($latestTracking->speed ?? 0) > 2
+                ] : null,
+                'destination' => [
+                    'address' => $booking->address_text ?? $booking->service_address
+                ],
+                'eta' => $eta,
+                'history' => $history,
+                'booking_status' => $booking->status
             ]
         ]);
+    }
+
+    /**
+     * Calculate distance between two coordinates in kilometers
+     */
+    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
+    {
+        if (!$lat1 || !$lon1 || !$lat2 || !$lon2) return null;
+        
+        $earthRadius = 6371; // km
+        
+        $latDelta = deg2rad($lat2 - $lat1);
+        $lonDelta = deg2rad($lon2 - $lon1);
+        
+        $a = sin($latDelta/2) * sin($latDelta/2) +
+            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+            sin($lonDelta/2) * sin($lonDelta/2);
+        
+        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+        
+        return round($earthRadius * $c, 2);
     }
 
     public function createReview(Request $request)

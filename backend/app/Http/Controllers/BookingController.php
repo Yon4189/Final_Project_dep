@@ -828,4 +828,45 @@ class BookingController extends Controller
         }
     }
 
+        public function arrive($id)
+    {
+        $provider = auth()->guard('provider')->user();
+        
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $booking = Booking::where('bookingID', $id)
+            ->where('providerID', $provider->providerID)
+            ->whereIn('status', ['accepted', 'in_progress', 'started'])
+            ->first();
+            
+        if (!$booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking not found or not active'
+            ], 404);
+        }
+        
+        $booking->status = 'arrived';
+        $booking->provider_arrived_at = now();
+        $booking->save();
+        
+        // Notify customer that provider has arrived
+        $notification = new \App\Models\Notification();
+        $notification->notifiable_type = 'customer';
+        $notification->notifiable_id = $booking->customerID;
+        $notification->type = 'provider_arrived';
+        $notification->title = '📍 Provider has arrived';
+        $notification->message = 'Your service provider has arrived at your location.';
+        $notification->data = json_encode(['booking_id' => $booking->bookingID]);
+        $notification->related_booking_id = $booking->bookingID;
+        $notification->save();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Arrival confirmed'
+        ]);
+    }
+
 }
