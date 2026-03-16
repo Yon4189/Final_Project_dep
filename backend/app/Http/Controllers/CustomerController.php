@@ -327,6 +327,39 @@ class CustomerController extends Authenticatable
                 ], 400);
             }
 
+            // Process location data based on source
+            if ($validated['location_source'] === 'saved') {
+                $address = CustomerAddress::find($validated['saved_address_id']);
+                if (!$address) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'saved address not found'
+                    ], 404);
+                }
+                
+                $locationData = [
+                    'service_address' => $address->full_address,
+                    'address_text' => $address->full_address,
+                    'service_latitude' => $address->latitude,
+                    'service_longitude' => $address->longitude,
+                    'place_id' => $address->place_id,
+                    'location_source' => 'saved',
+                    'saved_address_id' => $address->addressID
+                ];
+            } else {
+                $locationData = [
+                    'service_address' => $validated['full_address'] ?? $validated['service_address'],
+                    'address_text' => $validated['full_address'] ?? $validated['service_address'],
+                    'service_latitude' => $validated['latitude'] ?? null,
+                    'service_longitude' => $validated['longitude'] ?? null,
+                    'place_id' => $validated['place_id'] ?? null,
+                    'location_source' => $validated['location_source'],
+                    'saved_address_id' => null
+                ];
+            }
+
+            // create booking with location data
+
             // Merge address into notes if it exists
             $finalNotes = $validated['notes'] ?? '';
             if (!empty($validated['service_address'])) {
@@ -334,6 +367,7 @@ class CustomerController extends Authenticatable
             }
 
             // create booking
+
             $booking = Booking::create([
                 'customerID' => $customer->customerID,
                 'serviceID' => $service->serviceID,
@@ -341,8 +375,17 @@ class CustomerController extends Authenticatable
                 'status' => 'pending',
                 'scheduledDate' => $validated['scheduledDate'],
                 'agreed_price' => $validated['agreed_price'],
-                'notes' => trim($finalNotes) ?: null,
-                'expires_at' => now()->addHours(24) // booking expires in 24 hours
+                'notes' => $validated['notes'] ?? null,
+                'expires_at' => now()->addHours(24),
+                
+                // Location fields (using your exact column names)
+                'service_address' => $locationData['service_address'],
+                'address_text' => $locationData['address_text'],
+                'service_latitude' => $locationData['service_latitude'],
+                'service_longitude' => $locationData['service_longitude'],
+                'place_id' => $locationData['place_id'],
+                'location_source' => $locationData['location_source'],
+                'saved_address_id' => $locationData['saved_address_id']
             ]);
 
             // log the booking creation
