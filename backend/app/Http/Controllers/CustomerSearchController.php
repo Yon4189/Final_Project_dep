@@ -16,37 +16,7 @@ class CustomerSearchController extends Controller
 {
     public function searchProviders(Request $request)
     {
-        // check if search query is empty
-        $query = $request->query('q') ?? $request->query('query');
-        
-        if (!$query || trim($query) === '') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please enter a search term',
-                'data' => [],
-                'pagination' => [
-                    'current_page' => 1,
-                    'total_pages' => 0,
-                    'total_items' => 0,
-                    'per_page' => $request->query('per_page', 20)
-                ]
-            ], 400);
-        }
-        
-        // only search if query has at least 2 characters
-        if (strlen(trim($query)) < 2) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please enter at least 2 characters',
-                'data' => [],
-                'pagination' => [
-                    'current_page' => 1,
-                    'total_pages' => 0,
-                    'total_items' => 0,
-                    'per_page' => $request->query('per_page', 20)
-                ]
-            ], 400);
-        }
+        $query = $request->query('q') ?? $request->query('query', '');
         
         $categoryId = $request->query('category_id');
         $serviceId = $request->query('service_id');
@@ -60,7 +30,7 @@ class CustomerSearchController extends Controller
         $verifiedOnly = $request->query('verified_only');
         $availableNow = $request->query('available_now');
 
-        $providers = ServiceProvider::where('status', 'approved')
+        $providers = ServiceProvider::where('status', 'Active')
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($subQuery) use ($query) {
                     // name must start with search term (like vs code)
