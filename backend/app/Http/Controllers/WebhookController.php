@@ -475,4 +475,30 @@ private function verifyWebhookSignature($payload, $signature, $secret)
             ]);
         }
     }
+
+    public function handleTransferWebhook(Request $request)
+    {
+        $payload = $request->all();
+        Log::info('Chapa transfer webhook received', $payload);
+
+        // Chapa webhook payload structure may vary; adjust according to their docs
+        $transferId = $payload['data']['transfer_id'] ?? $payload['transfer_id'] ?? null;
+        $status = $payload['data']['status'] ?? $payload['status'] ?? null;
+
+        if ($transferId && $status) {
+            $withdrawal = Withdrawal::where('chapa_transfer_id', $transferId)->first();
+            if ($withdrawal) {
+                $withdrawal->chapa_transfer_status = $status;
+                if ($status === 'success') {
+                    $withdrawal->completed_at = now();
+                } elseif ($status === 'failed') {
+                    // Optionally handle failure (e.g., refund wallet)
+                }
+                $withdrawal->save();
+                Log::info('Withdrawal status updated via webhook', ['withdrawal_id' => $withdrawal->withdrawalID, 'status' => $status]);
+            }
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
 }

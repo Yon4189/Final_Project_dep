@@ -275,6 +275,8 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approve']);
     Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'reject']);
 
+    Route::get('/banks', [PaymentController::class, 'getBanks']);
+
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/read', [NotificationController::class, 'markAllAsRead']);
@@ -287,6 +289,8 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::post('/disputes/{disputeID}/notes', [AdminDisputeController::class, 'addPrivateNote']);
     Route::post('/disputes/{disputeID}/messages', [AdminDisputeController::class, 'addMessage']);
     Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
+
+    Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approveWithdrawal']);
 });
 
 Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);
@@ -336,13 +340,16 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approveWithdrawal']);
     Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'rejectWithdrawal']);
     Route::get('/withdrawals/stats', [AdminWithdrawalController::class, 'stats']);
-    Route::get('/withdrawals', [AdminWithdrawalController::class, 'index']); // Optional: list all with filters
+    Route::get('/withdrawals', [AdminWithdrawalController::class, 'index']); 
 });
 
 
 Route::get('/test', function() {
     return response()->json(['message' => 'API is working']);
 });
+Route::post('/webhook/chapa/transfer', [WebhookController::class, 'handleTransferWebhook']);
+Route::get('/getcodes', [PaymentController::class, 'debugBankCodes']);
+
 
 // Route::get('/test-chapa', function() {
 //     $client = new \GuzzleHttp\Client();

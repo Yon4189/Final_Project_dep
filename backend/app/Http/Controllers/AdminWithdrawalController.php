@@ -10,6 +10,9 @@ use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\PaymentController; 
+use App\Http\Controllers\Client;
+use Aoo\Http\Controllers\RequestException;
 
 class AdminWithdrawalController extends Controller
 {
@@ -46,72 +49,8 @@ class AdminWithdrawalController extends Controller
      * 
      * POST /api/admin/withdrawals/{id}/approve
      */
-    public function approveWithdrawal($id)
-    {
-        DB::beginTransaction();
-        
-        try {
-            $withdrawal = Withdrawal::where('withdrawalID', $id)
-                ->where('status', 'pending')
-                ->first();
-            
-            if (!$withdrawal) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Withdrawal not found or already processed'
-                ], 404);
-            }
-            
-            // Update withdrawal status
-            $withdrawal->status = 'approved';
-            $withdrawal->processed_at = now();
-            $withdrawal->save();
-            
-            // Get provider's wallet
-            $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
-            
-            if (!$wallet) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Provider wallet not found'
-                ], 404);
-            }
-            
-            // Create wallet transaction record
-            WalletTransaction::create([
-                'walletID' => $wallet->walletID,
-                'type' => 'withdrawal',
-                'amount' => $withdrawal->amount,
-                'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' approved',
-                'bookingID' => null,
-                'withdrawalID' => $withdrawal->withdrawalID
-            ]);
-            
-            DB::commit();
-            
-            // TODO: Send email notification to provider
-            // Mail::to($withdrawal->provider->email)->send(new WithdrawalApproved($withdrawal));
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Withdrawal approved successfully',
-                'data' => $withdrawal
-            ], 200);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Approve withdrawal failed: ' . $e->getMessage(), [
-                'withdrawal_id' => $id,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to approve withdrawal: ' . $e->getMessage()
-            ], 500);
-        }
-    }
+
+
 
     /**
      * Reject a withdrawal with reason
@@ -289,6 +228,79 @@ class AdminWithdrawalController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve withdrawals'
+            ], 500);
+        }
+    }
+
+    public function approveWithdrawal($id)
+    {
+        DB::beginTransaction();
+        
+        try {
+            $withdrawal = Withdrawal::where('withdrawalID', $id)
+                ->where('status', 'pending')
+                ->first();
+            
+            if (!$withdrawal) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Withdrawal not found or already processed'
+                ], 404);
+            }
+
+            // Initialize Chapa transfer
+            $paymentController = app(PaymentController::class);
+            $transferResult = $paymentController->initiateTransfer($withdrawal);
+            
+            if (!$transferResult) {
+                DB::rollBack();
+                Log::error('Chapa transfer initiation failed', ['withdrawal_id' => $id]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to initiate transfer with Chapa'
+                ], 500);
+            }
+
+            // Update withdrawal with Chapa details
+            $withdrawal->status = 'approved';
+            $withdrawal->processed_at = now();
+            $withdrawal->chapa_transfer_id = $transferResult['data']['transfer_id'] ?? null;
+            $withdrawal->chapa_transfer_status = 'pending';
+            $withdrawal->save();
+            
+            // Get provider's wallet (optional)
+            $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
+            
+            if ($wallet) {
+                // Create wallet transaction record
+                WalletTransaction::create([
+                    'walletID' => $wallet->walletID,
+                    'type' => 'withdrawal',
+                    'amount' => $withdrawal->amount,
+                    'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' approved',
+                    'bookingID' => null,
+                    'withdrawalID' => $withdrawal->withdrawalID
+                ]);
+            }
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Withdrawal approved and transfer initiated successfully',
+                'data' => $withdrawal
+            ], 200);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Approve withdrawal failed: ' . $e->getMessage(), [
+                'withdrawal_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to approve withdrawal: ' . $e->getMessage()
             ], 500);
         }
     }
