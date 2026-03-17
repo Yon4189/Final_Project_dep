@@ -118,12 +118,12 @@ class ApiService {
         storage.getItem(REFRESH_TOKEN_KEY),
         storage.getItem(USER_TYPE_KEY)
       ]);
-      
+
       this.providerToken = providerToken;
       this.customerToken = customerToken;
       this.refreshToken = refreshToken;
       this.userType = userTypeStr as 'provider' | 'customer' | null;
-      
+
       console.log('Tokens loaded:', {
         hasProviderToken: !!this.providerToken,
         hasCustomerToken: !!this.customerToken,
@@ -148,7 +148,7 @@ class ApiService {
     try {
       await storage.setItem(PROVIDER_TOKEN_KEY, token);
       await storage.setItem(USER_TYPE_KEY, 'provider');
-      
+
       await storage.removeItem(CUSTOMER_TOKEN_KEY);
 
       if (refreshToken) {
@@ -172,7 +172,7 @@ class ApiService {
     try {
       await storage.setItem(CUSTOMER_TOKEN_KEY, token);
       await storage.setItem(USER_TYPE_KEY, 'customer');
-      
+
       await storage.removeItem(PROVIDER_TOKEN_KEY);
 
       if (refreshToken) {
@@ -257,12 +257,12 @@ class ApiService {
     }
 
     try {
-      const endpoint = this.userType === 'provider' 
-        ? '/auth/provider/refresh' 
+      const endpoint = this.userType === 'provider'
+        ? '/auth/provider/refresh'
         : '/auth/customer/refresh';
-      
+
       console.log('Attempting to refresh token at:', endpoint);
-      
+
       const response = await axios.post(`${API_BASE_URL}${endpoint}`, {
         refresh_token: this.refreshToken,
       });
@@ -395,7 +395,7 @@ class ApiService {
         // Handle 401 Unauthorized
         if (status === 401 && originalConfig && !originalConfig._retry) {
           console.log('Handling 401 error, token refresh needed');
-          
+
           if (this.isRefreshing) {
             console.log('Token refresh in progress, queueing request');
             // If refreshing, queue the request
@@ -426,7 +426,7 @@ class ApiService {
               this.processQueue(new Error('Refresh failed'));
               await this.removeToken();
               await this.removeUserData();
-              
+
               const sessionError: any = new Error('Session expired. Please login again.');
               sessionError.statusCode = 401;
 
@@ -440,7 +440,7 @@ class ApiService {
             this.processQueue(refreshError as Error);
             await this.removeToken();
             await this.removeUserData();
-            
+
             const sessionError: any = new Error('Session expired. Please login again.');
             sessionError.statusCode = 401;
             sessionError.requiresLogin = true;
@@ -540,9 +540,9 @@ class ApiService {
 
   private shouldRetry(error: any): boolean {
     // Retry on network errors or server errors (5xx)
-    return !error.response || 
-           (error.response?.status >= 500 && error.response?.status <= 599) ||
-           error.isNetworkError;
+    return !error.response ||
+      (error.response?.status >= 500 && error.response?.status <= 599) ||
+      error.isNetworkError;
   }
 
   // Public API methods
@@ -608,5 +608,5 @@ class ApiService {
 }
 
 export const api = new ApiService();
-export const setupApi = () => {};
+export const setupApi = () => { };
 export default api;
