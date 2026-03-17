@@ -102,7 +102,7 @@ class AdminAuthController extends Authenticatable
     public function getAllProviders()
     {
         try {
-            $providers = ServiceProvider::whereIn('status', ['Active', 'Suspended'])
+            $providers = ServiceProvider::whereIn('status', ['approved', 'suspended'])
                 ->with('category')
                 ->get();
             $formatted = $providers->map(function ($provider) {
@@ -153,7 +153,7 @@ class AdminAuthController extends Authenticatable
         // 3. Update status and reason
         $status = $request->status;
         if ($status === 'approved') {
-            $provider->status = 'Active';
+            $provider->status = 'approved';
             $provider->approved_at = now();
             $provider->rejected_at = null;
         } elseif ($status === 'rejected') {
@@ -250,7 +250,7 @@ class AdminAuthController extends Authenticatable
      */
     public function approvedProviders()
     {
-        $approved = ServiceProvider::where('status', 'Active')
+        $approved = ServiceProvider::where('status', 'approved')
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
