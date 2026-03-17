@@ -18,6 +18,8 @@ class Kernel extends ConsoleKernel
         // Auto-release bookings every hour
         $schedule->command('bookings:auto-release')->hourly();
         // You can add more scheduled tasks here
+        // Run every 5 minutes to mark stale users offline
+        $schedule->command('users:clean-offline')->everyFiveMinutes();
     }
 
     /**

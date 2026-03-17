@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\OnlineStatusController;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
 
 class ServiceProviderAuthController extends Controller
 {
@@ -168,81 +171,52 @@ class ServiceProviderAuthController extends Controller
     /**
      * Login for service providers
      */
-    public function login(Request $request)
-    {
-        // Validate input
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+public function login(Request $request)
+{
+    $credentials = $request->validate([
+        'email' => 'required|email',
+        'password' => 'required'
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Find provider by email
-        $provider = ServiceProvider::where('email', $request->email)->first();
-
-        // Check if provider exists and password is correct
-        if (!$provider || !Hash::check($request->password, $provider->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid email or password'
-            ], 401);
-        }
-
-        // Check if provider is approved
-        /*if ($provider->status !== 'approved') {
-            $message = $provider->status === 'pending' 
-                ? 'Your account is pending admin approval' 
-                : 'Your account has been rejected. Please contact support.';
-            
-            return response()->json([
-                'success' => false,
-                'message' => $message,
-                'status' => $provider->status
-            ], 403);
-        } */  
-            /* provider can login even if not approved, 
-            but they won't show up in search results until approved. 
-             *This allows them to update/finish their profile and services while waiting for approval.
-            */
-        // Update location if provided
-        if ($request->has('current_latitude') && $request->has('current_longitude')) {
-            $provider->current_latitude = $request->current_latitude;
-            $provider->current_longitude = $request->current_longitude;
-            $provider->save();
-        }
-
-        // Create Sanctum token
-        $token = $provider->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
-        // Build response data
-        $responseData = [
-            'providerID' => $provider->providerID,
-            'fullname' => $provider->fullname,
-            'email' => $provider->email,
-            'phone' => $provider->phone,
-            'profilePicture' => $provider->profilePicture,
-            'service_city' => $provider->service_city,
-            'bio' => $provider->bio,
-            'rating' => $provider->rating,
-            'completed_jobs' => $provider->completed_jobs,
-            'success_rate' => $provider->success_rate,
-            'status' => $provider->status,
-            'token' => $token,
-        ];
-
+    // Find provider manually instead of using attempt()
+    $provider = ServiceProvider::where('email', $credentials['email'])->first();
+    
+    if (!$provider || !Hash::check($credentials['password'], $provider->password)) {
         return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'data' => $responseData
-        ]);
+            'success' => false,
+            'message' => 'Invalid credentials'
+        ], 401);
     }
 
+    // Check if provider is approved
+    if ($provider->status !== 'approved') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Your account is not approved yet'
+        ], 403);
+    }
+    
+    $token = $provider->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
+    
+    Cache::put("provider_online_{$provider->providerID}", true, now()->addMinutes(2));
+    
+    ServiceProvider::where('providerID', $provider->providerID)
+        ->update([
+            'is_online' => true,
+            'last_seen_at' => now()
+        ]);
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'data' => [
+            'user' => $provider,
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => config('sanctum.expiration', 1440)
+        ]
+    ]);
+}
     /**
      * Logout provider (revoke token)
      */

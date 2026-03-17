@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens; 
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
 
 
 class CustomerAuthController extends Controller
@@ -129,11 +131,20 @@ class CustomerAuthController extends Controller
             ], 401);
         }
 
+        // ✅ SET ONLINE STATUS - ADD THESE LINES
+        Cache::put("customer_online_{$customer->customerID}", true, now()->addMinutes(2));
+        Customer::where('customerID', $customer->customerID)
+            ->update([
+                'is_online' => true,
+                'last_seen_at' => now()
+            ]);
+
         // Remove password from response
         unset($customer->password);
-
+        
         // Create a Sanctum token
         $token = $customer->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
+        
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
@@ -146,8 +157,25 @@ class CustomerAuthController extends Controller
                 'email' => $customer->email,
                 'phone' => $customer->phone,
                 'service_city' => $customer->service_city,
-                'location' => $customer->location
+                'location' => $customer->location,
+                // ✅ OPTIONAL: Include online status in response
+                'is_online' => true
             ]
         ]);
     }
+    public function logout(Request $request)
+{
+    $customer = auth()->guard('customer')->user();
+    
+    if ($customer) {
+        $customer->token()->revoke(); // If using Passport
+        // or if using Sanctum:
+        $request->user()->currentAccessToken()->delete();
+    }
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Logged out successfully'
+    ]);
+}
 }

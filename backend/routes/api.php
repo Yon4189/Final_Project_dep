@@ -25,6 +25,9 @@ use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\AdminDisputeController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\ProviderTrackingController;
+use App\Http\Controllers\OnlineStatusController;
+
+
 
 
 // ==================== PUBLIC ROUTES ====================
@@ -349,6 +352,20 @@ Route::get('/test', function() {
 });
 Route::post('/webhook/chapa/transfer', [WebhookController::class, 'handleTransferWebhook']);
 Route::get('/getcodes', [PaymentController::class, 'debugBankCodes']);
+
+
+// Provider heartbeat route
+Route::middleware('auth:provider')->prefix('provider')->group(function () {
+    Route::post('/heartbeat', [OnlineStatusController::class, 'providerHeartbeat']);
+    // Override logout to use our new method
+    Route::post('/logout', [OnlineStatusController::class, 'providerLogout']);
+});
+
+// Customer heartbeat route
+Route::middleware('auth:customer')->prefix('customer')->group(function () {
+    Route::post('/heartbeat', [OnlineStatusController::class, 'customerHeartbeat']);
+    Route::post('/logout', [OnlineStatusController::class, 'customerLogout']);
+});
 
 
 // Route::get('/test-chapa', function() {
