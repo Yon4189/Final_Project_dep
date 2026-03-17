@@ -433,6 +433,11 @@ class ApiService {
 
 
               sessionError.requiresLogin = true;
+
+
+
+
+
               return Promise.reject(sessionError);
             }
           } catch (refreshError) {

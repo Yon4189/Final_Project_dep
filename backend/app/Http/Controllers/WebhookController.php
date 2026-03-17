@@ -475,4 +475,36 @@ private function verifyWebhookSignature($payload, $signature, $secret)
             ]);
         }
     }
+
+    public function handleTransferWebhook(Request $request)
+    {
+        $payload = $request->all();
+        Log::info('Chapa transfer webhook received', $payload);
+        
+        // Get the transfer reference - adjust based on actual payload
+        $reference = $payload['reference'] ?? $payload['data']['reference'] ?? null;
+        $status = $payload['status'] ?? $payload['data']['status'] ?? null;
+        
+        if ($reference && $status) {
+            // Find withdrawal by chapa_transfer_id
+            $withdrawal = Withdrawal::where('chapa_transfer_id', $reference)->first();
+            
+            if ($withdrawal) {
+                $withdrawal->chapa_transfer_status = $status;
+                if ($status === 'success') {
+                    $withdrawal->completed_at = now();
+                }
+                $withdrawal->save();
+                
+                Log::info('Withdrawal updated via webhook', [
+                    'withdrawal_id' => $withdrawal->withdrawalID,
+                    'status' => $status
+                ]);
+            } else {
+                Log::warning('Withdrawal not found for reference', ['reference' => $reference]);
+            }
+        }
+        
+        return response()->json(['status' => 'ok']);
+    }
 }

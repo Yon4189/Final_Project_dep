@@ -14,6 +14,11 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+
+
 
 
 
@@ -629,4 +634,254 @@ class PaymentController extends Controller
             'amount' => $payment->provider_amount
         ]);
     }
+
+    /**
+ * Get list of banks from Chapa
+ */
+public function getBanks()
+{
+    $client = new Client();
+    try {
+        $response = $client->get('https://api.chapa.co/v1/banks', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . config('services.chapa.secret_key'),
+                'Accept' => 'application/json',
+            ]
+        ]);
+
+        $data = json_decode($response->getBody(), true);
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    } catch (RequestException $e) {
+        Log::error('Chapa banks error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch banks from Chapa'
+        ], 500);
+    }
+}
+
+/**
+ * Initialize transfer to provider
+ */
+public function initiateTransfer($withdrawal)
+{
+    Log::info('initiateTransfer CALLED', ['withdrawal_id' => $withdrawal->withdrawalID]);
+    $accountName = preg_replace('/[^\x20-\x7E]/', '', $withdrawal->provider_account_holder_name ?? 'User');
+    $accountName = trim($accountName);
+
+    // Ensure at least 3 characters
+    if (strlen($accountName) < 3) {
+        $accountName = 'User'; // Fallback
+}
+    // Validate required fields based on payment method
+if ($withdrawal->payment_method === 'bank') {
+    if (!$withdrawal->provider_account_number) {
+        Log::error('Missing account number for bank transfer', ['withdrawal_id' => $withdrawal->withdrawalID]);
+        return null;
+    }
+    if (!$withdrawal->provider_bank_name) {
+        Log::error('Missing bank name', ['withdrawal_id' => $withdrawal->withdrawalID]);
+        return null;
+    }
+    if (!$withdrawal->provider_account_holder_name) {
+        Log::error('Missing account holder name', ['withdrawal_id' => $withdrawal->withdrawalID]);
+        return null;
+    }
+    
+    // Check if it's CBEBirr (mobile money)
+    $bankName = $withdrawal->provider_bank_name;
+    if ($bankName === 'Commercial Bank of Ethiopia' || $bankName === 'CBEBirr') {
+        // CBEBirr uses phone number, not bank account
+        $payload['phone_number'] = $withdrawal->provider_account_number; // Treat account_number as phone
+        $payload['account_name'] = $accountName;
+        $payload['bank_code'] = $this->getBankCode($bankName);
+        Log::info('CBEBirr transfer detected', [
+            'phone' => $withdrawal->provider_account_number,
+            'bank_code' => $payload['bank_code']
+        ]);
+    } else {
+        // Regular bank transfer
+        $payload['account_name'] = $accountName;
+        $payload['account_number'] = $withdrawal->provider_account_number;
+        $payload['bank_code'] = $this->getBankCode($bankName);
+    }
+    
+} elseif ($withdrawal->payment_method === 'telebir') {
+    if (!$withdrawal->telebir_number) {
+        Log::error('Missing telebir number', ['withdrawal_id' => $withdrawal->withdrawalID]);
+        return null;
+    }
+    
+    // Telebir transfer
+    $payload['phone_number'] = $withdrawal->telebir_number;
+    $payload['account_name'] = $withdrawal->telebir_holder_name ?? 'User';
+    // No bank_code for telebir
+}
+
+    $client = new Client([
+        'verify' => app()->environment('local') ? false : true,
+    ]);
+    
+    $reference = 'TXF_' . uniqid() . '_' . time();
+
+    // Clean the account name - remove non-English characters
+    $accountName = preg_replace('/[^\x20-\x7E]/', '', $withdrawal->provider_account_holder_name ?? 'User');
+    $accountName = trim($accountName);
+    
+    // Ensure at least 3 characters
+    if (strlen($accountName) < 3) {
+        $accountName = 'User'; // Fallback
+    }
+
+    $payload = [
+        'amount' => (float) $withdrawal->amount,
+        'currency' => $withdrawal->currency ?? 'ETB',
+        'reference' => $reference,
+    ];
+
+    // Bank transfer
+    if ($withdrawal->payment_method === 'bank') {
+        $payload['account_name'] = $accountName;
+        $payload['account_number'] = $withdrawal->provider_account_number;
+        $payload['bank_code'] = $this->getBankCode($withdrawal->provider_bank_name);
+    }
+    // Telebir transfer
+    elseif ($withdrawal->payment_method === 'telebir') {
+        $payload['phone_number'] = $withdrawal->telebir_number;
+        // Telebir might need account_name as well
+        $payload['account_name'] = $accountName;
+    }
+
+    Log::info('Chapa transfer payload', $payload);
+
+    try {
+        $response = $client->post('https://api.chapa.co/v1/transfers', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . config('services.chapa.secret_key'),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ],
+            'json' => $payload
+        ]);
+
+        $responseData = json_decode($response->getBody(), true);
+        Log::info('Chapa transfer response', $responseData);
+
+        if ($response->getStatusCode() === 200) {
+            $withdrawal->chapa_transfer_id = $responseData['data']['transfer_id'] ?? null;
+            $withdrawal->chapa_transfer_status = 'pending';
+            $withdrawal->save();
+            return $responseData;
+        }
+
+        Log::error('Chapa transfer failed', ['status' => $response->getStatusCode()]);
+        return null;
+
+    } catch (RequestException $e) {
+        Log::error('Chapa transfer exception: ' . $e->getMessage());
+        if ($e->hasResponse()) {
+            $errorBody = $e->getResponse()->getBody()->getContents();
+            Log::error('Chapa error response body: ' . $errorBody);
+            
+            $errorJson = json_decode($errorBody, true);
+            if ($errorJson) {
+                Log::error('Chapa error details', $errorJson);
+            }
+        }
+        return null;
+    }
+
+    if ($response->getStatusCode() === 200) {
+    $responseData = json_decode($response->getBody(), true);
+    
+    // The transfer ID is directly in 'data' as a string, not an array
+    $withdrawal->chapa_transfer_id = $responseData['data'] ?? null;  // Changed this line
+    $withdrawal->chapa_transfer_status = 'pending';
+    $withdrawal->save();
+    
+    Log::info('Chapa transfer saved', [
+        'withdrawal_id' => $withdrawal->withdrawalID,
+        'chapa_transfer_id' => $withdrawal->chapa_transfer_id
+    ]);
+    
+    return $responseData;
+}
+
+if ($response->getStatusCode() === 200) {
+    $responseData = json_decode($response->getBody(), true);
+    
+    // The transfer ID is directly in 'data' as a string, not an array
+    $withdrawal->chapa_transfer_id = $responseData['data'] ?? null;
+    $withdrawal->chapa_transfer_status = 'pending';
+    $withdrawal->save();
+    
+    Log::info('Chapa transfer saved', [
+        'withdrawal_id' => $withdrawal->withdrawalID,
+        'chapa_transfer_id' => $withdrawal->chapa_transfer_id,
+        'response' => $responseData
+    ]);
+    
+    return $responseData;
+}
+if ($response->getStatusCode() === 200) {
+    $responseData = json_decode($response->getBody(), true);
+    
+    // Save the transfer ID (it's a string in 'data')
+    $withdrawal->chapa_transfer_id = $responseData['data'] ?? null;
+    $withdrawal->chapa_transfer_status = 'pending';
+    $withdrawal->save();
+    
+    Log::info('Chapa transfer saved', [
+        'withdrawal_id' => $withdrawal->withdrawalID,
+        'chapa_transfer_id' => $withdrawal->chapa_transfer_id
+    ]);
+    
+    return $responseData;
+}
+}
+
+/**
+ * Helper to get bank code from bank name
+ */
+private function getBankCode($bankName)
+{
+    $banks = [
+        'Wegagen Bank' => 472,
+        'Enat Bank' => 1,
+        'Commercial Bank of Ethiopia' => 128,
+        'CBEBirr' => 128,
+        'telebirr' => 855,
+        'M-Pesa' => 266,
+        'Ahadu Bank' => 207,
+        'Berhan Bank' => 571,
+        'YaYaWallet' => 867,
+    ];
+    
+    // For banks not in the list, log and return null
+    if (!isset($banks[$bankName])) {
+        Log::warning('Bank code not found', ['bank_name' => $bankName]);
+        return null;
+    }
+    
+    $code = $banks[$bankName];
+    Log::info('Bank code mapping', ['bank_name' => $bankName, 'code' => $code]);
+    return $code;
+}
+
+public function debugBankCodes()
+{
+    $client = new Client(['verify' => false]);
+    $response = $client->get('https://api.chapa.co/v1/banks', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . config('services.chapa.secret_key')
+        ]
+    ]);
+    
+    $data = json_decode($response->getBody(), true);
+    Log::info('Chapa banks list:', $data);
+    return $data;
+}
 }
