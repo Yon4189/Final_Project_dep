@@ -826,6 +826,21 @@ if ($response->getStatusCode() === 200) {
     
     return $responseData;
 }
+if ($response->getStatusCode() === 200) {
+    $responseData = json_decode($response->getBody(), true);
+    
+    // Save the transfer ID (it's a string in 'data')
+    $withdrawal->chapa_transfer_id = $responseData['data'] ?? null;
+    $withdrawal->chapa_transfer_status = 'pending';
+    $withdrawal->save();
+    
+    Log::info('Chapa transfer saved', [
+        'withdrawal_id' => $withdrawal->withdrawalID,
+        'chapa_transfer_id' => $withdrawal->chapa_transfer_id
+    ]);
+    
+    return $responseData;
+}
 }
 
 /**

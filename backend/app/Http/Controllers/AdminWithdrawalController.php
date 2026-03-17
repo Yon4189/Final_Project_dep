@@ -232,76 +232,85 @@ class AdminWithdrawalController extends Controller
         }
     }
 
-    public function approveWithdrawal($id)
-    {
-        DB::beginTransaction();
+public function approveWithdrawal($id)
+{
+    DB::beginTransaction();
+    
+    try {
+        $withdrawal = Withdrawal::where('withdrawalID', $id)
+            ->where('status', 'pending')
+            ->first();
         
-        try {
-            $withdrawal = Withdrawal::where('withdrawalID', $id)
-                ->where('status', 'pending')
-                ->first();
-            
-            if (!$withdrawal) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Withdrawal not found or already processed'
-                ], 404);
-            }
-
-            // Initialize Chapa transfer
-            $paymentController = app(PaymentController::class);
-            $transferResult = $paymentController->initiateTransfer($withdrawal);
-            
-            if (!$transferResult) {
-                DB::rollBack();
-                Log::error('Chapa transfer initiation failed', ['withdrawal_id' => $id]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to initiate transfer with Chapa'
-                ], 500);
-            }
-
-            // Update withdrawal with Chapa details
-            $withdrawal->status = 'approved';
-            $withdrawal->processed_at = now();
-            $withdrawal->chapa_transfer_id = $transferResult['data']['transfer_id'] ?? null;
-            $withdrawal->chapa_transfer_status = 'pending';
-            $withdrawal->save();
-            
-            // Get provider's wallet (optional)
-            $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
-            
-            if ($wallet) {
-                // Create wallet transaction record
-                WalletTransaction::create([
-                    'walletID' => $wallet->walletID,
-                    'type' => 'withdrawal',
-                    'amount' => $withdrawal->amount,
-                    'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' approved',
-                    'bookingID' => null,
-                    'withdrawalID' => $withdrawal->withdrawalID
-                ]);
-            }
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Withdrawal approved and transfer initiated successfully',
-                'data' => $withdrawal
-            ], 200);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Approve withdrawal failed: ' . $e->getMessage(), [
-                'withdrawal_id' => $id,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
+        if (!$withdrawal) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to approve withdrawal: ' . $e->getMessage()
+                'message' => 'Withdrawal not found or already processed'
+            ], 404);
+        }
+
+        // Initialize Chapa transfer
+        $paymentController = app(PaymentController::class);
+        $transferResult = $paymentController->initiateTransfer($withdrawal);
+        
+        if (!$transferResult) {
+            DB::rollBack();
+            Log::error('Chapa transfer initiation failed', ['withdrawal_id' => $id]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to initiate transfer with Chapa'
             ], 500);
         }
+
+        // Update withdrawal with Chapa details
+        $withdrawal->status = 'approved';
+        $withdrawal->processed_at = now();
+        
+        // Handle the response format from Chapa
+        // The transfer ID is directly in 'data' as a string
+        $withdrawal->chapa_transfer_id = $transferResult['data'] ?? null;
+        $withdrawal->chapa_transfer_status = 'pending';
+        $withdrawal->save();
+        
+        // Log the saved transfer ID for debugging
+        Log::info('Chapa transfer ID saved', [
+            'withdrawal_id' => $withdrawal->withdrawalID,
+            'chapa_transfer_id' => $withdrawal->chapa_transfer_id
+        ]);
+        
+        // Get provider's wallet (optional)
+        $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
+        
+        if ($wallet) {
+            // Create wallet transaction record
+            WalletTransaction::create([
+                'walletID' => $wallet->walletID,
+                'type' => 'withdrawal',
+                'amount' => $withdrawal->amount,
+                'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' approved',
+                'bookingID' => null,
+                'withdrawalID' => $withdrawal->withdrawalID
+            ]);
+        }
+        
+        DB::commit();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Withdrawal approved and transfer initiated successfully',
+            'data' => $withdrawal
+        ], 200);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Approve withdrawal failed: ' . $e->getMessage(), [
+            'withdrawal_id' => $id,
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to approve withdrawal: ' . $e->getMessage()
+        ], 500);
     }
+}
 }

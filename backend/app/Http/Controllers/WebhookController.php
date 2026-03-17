@@ -480,25 +480,31 @@ private function verifyWebhookSignature($payload, $signature, $secret)
     {
         $payload = $request->all();
         Log::info('Chapa transfer webhook received', $payload);
-
-        // Chapa webhook payload structure may vary; adjust according to their docs
-        $transferId = $payload['data']['transfer_id'] ?? $payload['transfer_id'] ?? null;
-        $status = $payload['data']['status'] ?? $payload['status'] ?? null;
-
-        if ($transferId && $status) {
-            $withdrawal = Withdrawal::where('chapa_transfer_id', $transferId)->first();
+        
+        // Get the transfer reference - adjust based on actual payload
+        $reference = $payload['reference'] ?? $payload['data']['reference'] ?? null;
+        $status = $payload['status'] ?? $payload['data']['status'] ?? null;
+        
+        if ($reference && $status) {
+            // Find withdrawal by chapa_transfer_id
+            $withdrawal = Withdrawal::where('chapa_transfer_id', $reference)->first();
+            
             if ($withdrawal) {
                 $withdrawal->chapa_transfer_status = $status;
                 if ($status === 'success') {
                     $withdrawal->completed_at = now();
-                } elseif ($status === 'failed') {
-                    // Optionally handle failure (e.g., refund wallet)
                 }
                 $withdrawal->save();
-                Log::info('Withdrawal status updated via webhook', ['withdrawal_id' => $withdrawal->withdrawalID, 'status' => $status]);
+                
+                Log::info('Withdrawal updated via webhook', [
+                    'withdrawal_id' => $withdrawal->withdrawalID,
+                    'status' => $status
+                ]);
+            } else {
+                Log::warning('Withdrawal not found for reference', ['reference' => $reference]);
             }
         }
-
+        
         return response()->json(['status' => 'ok']);
     }
 }
