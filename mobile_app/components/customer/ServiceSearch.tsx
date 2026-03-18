@@ -88,8 +88,8 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
           {value.length > 0 && (
             <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
               <Ionicons
-                name="close-circle"
-                size={18}
+                name="close-outline"
+                size={20}
                 color={Colors.text.secondary}
               />
             </TouchableOpacity>

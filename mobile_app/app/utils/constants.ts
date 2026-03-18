@@ -10,7 +10,7 @@ export const APP = {
   NAME: 'HomeLink',
   VERSION: '1.0.0',
   BUNDLE_ID: 'com.homelink.app',
-  DEEPLINK_PREFIX: 'homelink://',
+  DEEPLINK_PREFIX: 'mobileapp://',
   API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://api.homelink.com/v1',
   WEBSITE_URL: 'https://homelink.com',
   SUPPORT_EMAIL: 'support@homelink.com',
@@ -45,22 +45,22 @@ export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   REFRESH_TOKEN: 'refresh_token',
   USER: 'user',
-  
+
   // Settings
   THEME: 'theme',
   LANGUAGE: 'language',
   NOTIFICATIONS: 'notifications',
-  
+
   // Data
   FAVORITES: 'favorites',
   RECENT_SEARCHES: 'recent_searches',
   SEARCH_HISTORY: 'search_history',
   LAST_LOCATION: 'last_location',
-  
+
   // Cache
   SERVICE_CATEGORIES: 'service_categories',
   PAYMENT_METHODS: 'payment_methods',
-  
+
   // Onboarding
   ONBOARDING_COMPLETED: 'onboarding_completed',
   TERMS_ACCEPTED: 'terms_accepted',
@@ -216,7 +216,7 @@ export const PAYMENT = {
       name: 'US Dollar',
     },
   } as Record<Currency, { code: Currency; symbol: string; name: string }>,
-  
+
   METHODS: {
     CHAPA: {
       id: 'chapa',
@@ -243,7 +243,7 @@ export const PAYMENT = {
       fee: 0,
     },
   },
-  
+
   MIN_AMOUNT: 10,
   MAX_AMOUNT: 100000,
   WITHDRAWAL_FEE: 5,
@@ -278,7 +278,7 @@ export const TIME = {
   HOURS_IN_DAY: 24,
   DAYS_IN_WEEK: 7,
   MONTHS_IN_YEAR: 12,
-  
+
   BOOKING: {
     MIN_DURATION: 30, // minutes
     MAX_DURATION: 8 * 60, // 8 hours
@@ -286,7 +286,7 @@ export const TIME = {
     MAX_ADVANCE_BOOKING: 90, // days
     CANCELLATION_DEADLINE: 24, // hours
   },
-  
+
   RESPONSE: {
     QUICK: '15 min',
     AVERAGE: '30 min',

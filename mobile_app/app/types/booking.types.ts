@@ -56,6 +56,11 @@ export interface CreateBookingDTO {
   service_address?: string;
   service_latitude?: number;
   service_longitude?: number;
+  full_address?: string;
+  saved_address_id?: number;
+  location_source?: 'gps' | 'saved' | 'new';
+  latitude?: number;
+  longitude?: number;
   notes?: string;
 }
 

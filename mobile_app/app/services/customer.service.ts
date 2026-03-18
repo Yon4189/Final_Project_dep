@@ -380,13 +380,16 @@ class CustomerService {
   // ==================== Bookings ====================
 
   async createBooking(data: {
-    provider_id: string;
-    service_id: string;
-    scheduled_date: string;
-    scheduled_time: string;
-    address: string;
-    description?: string;
-    estimated_price?: number;
+    providerID: string;
+    serviceID: string;
+    scheduledDate: string;
+    agreed_price: number;
+    location_source: 'gps' | 'saved' | 'new';
+    latitude?: number;
+    longitude?: number;
+    full_address?: string;
+    saved_address_id?: string;
+    notes?: string;
   }): Promise<ApiResponse<any>> {
     const response = await api.post<any>(`${this.BASE_PATH}/requests`, data);
     
@@ -558,8 +561,8 @@ class CustomerService {
     return response;
   }
 
-  async getUnreadCount(): Promise<ApiResponse<{ count: number }>> {
-    return api.get<{ count: number }>(`${this.BASE_PATH}/notifications/unread-count`);
+  async getUnreadCount(): Promise<ApiResponse<{ unread_count: number }>> {
+    return api.get<{ unread_count: number }>(`${this.BASE_PATH}/notifications/unread-count`);
   }
 
   // ==================== Dashboard ====================

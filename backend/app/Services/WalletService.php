@@ -8,11 +8,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Payment;
 use App\Models\Booking;
+use App\Models\Transaction;
+use App\Services\NotificationService;
 
 class WalletService
 {
     public function releasePayment($payment)
     {
+        // Check if already released
+        if ($payment->status === 'released') {
+            return null;
+        }
+
         $wallet = Wallet::firstOrCreate(
             ['providerID' => $payment->providerID],
             [
@@ -22,31 +29,128 @@ class WalletService
             ]
         );
 
-        $wallet->available_balance += $payment->provider_amount;
-        $wallet->save();
+        DB::transaction(function () use ($wallet, $payment) {
+            // Deduct from pending balance
+            $wallet->pending_balance = max(0, $wallet->pending_balance - $payment->provider_amount);
+            $wallet->available_balance += $payment->provider_amount;
+            $wallet->save();
 
-        // Update payment status to 'released'
-        $payment->status = 'released';
-        $payment->released_at = now();
-        $payment->save();
+            // Update payment status to 'released'
+            $payment->status = 'released';
+            $payment->released_at = now();
+            $payment->save();
 
-        // Update booking
+            // Update booking
             $booking = Booking::find($payment->bookingID);
             if ($booking) {
                 $booking->payment_status = 'released';
-                $booking->released_at = now();  // ← ADD THIS
+                $booking->released_at = now();
                 $booking->save();
             }
-    
 
-        WalletTransaction::create([
-            'walletID' => $wallet->walletID,
-            'type' => 'credit',
-            'amount' => $payment->provider_amount,
-            'description' => 'Payment released for booking #' . $payment->bookingID,
-            'bookingID' => $payment->bookingID
-        ]);
+            WalletTransaction::create([
+                'walletID' => $wallet->walletID,
+                'type' => 'credit',
+                'amount' => $payment->provider_amount,
+                'description' => 'Payment released for booking #' . $payment->bookingID,
+                'bookingID' => $payment->bookingID
+            ]);
+        });
 
         return $wallet;
+    }
+
+    /**
+     * Handle successful payment (moves to escrow/held status)
+     */
+    public function handlePaymentSuccess(Payment $payment, $chapaResponse = null)
+    {
+        // Don't process if already handled
+        if (in_array($payment->status, ['held', 'paid', 'releasable', 'released'])) {
+            Log::info('Payment already processed', ['tx_ref' => $payment->tx_ref, 'status' => $payment->status]);
+            return false;
+        }
+
+        return DB::transaction(function () use ($payment, $chapaResponse) {
+            // 1. Update Payment
+            $payment->status = 'held';
+            $payment->paid_at = now();
+            if ($chapaResponse) {
+                $payment->chapa_response = $chapaResponse;
+                $payment->chapa_tx_id = $chapaResponse['data']['data']['reference'] ?? $chapaResponse['ref_id'] ?? $payment->chapa_tx_id;
+            }
+            $payment->save();
+
+            // 2. Update Booking
+            $booking = Booking::with(['customer', 'service', 'provider'])->find($payment->bookingID);
+            if ($booking) {
+                $booking->payment_status = 'held';
+                $booking->paid_at = now();
+                // If it was accepted, it stays accepted or moves to paid status if you use that
+                // Many parts of the app expect 'accepted' or 'in_progress', but 'paid' might be a new intermediate
+                // For now, keep its current status to avoid breaking flow, just update payment_status
+                $booking->save();
+
+                // 3. Create Transaction (for provider dashboard earnings)
+                Transaction::firstOrCreate(
+                    ['bookingID' => $booking->bookingID],
+                    [
+                        'bookingID' => $booking->bookingID,
+                        'netAmount' => $payment->provider_amount,
+                        'platformFee' => $payment->platform_commission,
+                        'releaseDate' => now()->addHours(48), // Default escrow period
+                    ]
+                );
+
+                // 4. Update Wallet pending balance
+                $wallet = Wallet::firstOrCreate(
+                    ['providerID' => $payment->providerID],
+                    ['available_balance' => 0, 'pending_balance' => 0]
+                );
+                $wallet->pending_balance += $payment->provider_amount;
+                $wallet->save();
+
+                // 5. Create WalletTransaction record
+                WalletTransaction::create([
+                    'walletID' => $wallet->walletID,
+                    'type' => 'pending_credit',
+                    'amount' => $payment->provider_amount,
+                    'description' => 'Payment held for booking #' . $booking->bookingID,
+                    'bookingID' => $booking->bookingID
+                ]);
+
+                // 6. Send Notifications
+                $notificationService = app(NotificationService::class);
+                
+                // Notify Customer
+                $notificationService->toCustomer(
+                    $booking->customerID,
+                    'payment_success',
+                    'Payment Successful',
+                    'Your payment for ' . ($booking->service->title ?? 'service') . ' has been received.',
+                    ['booking_id' => $booking->bookingID],
+                    $booking->bookingID
+                );
+
+                // Notify Provider
+                $notificationService->toProvider(
+                    $booking->providerID,
+                    'payment_received',
+                    'Payment Received',
+                    'You have received a payment for ' . ($booking->service->title ?? 'service') . '. Funds are held in escrow.',
+                    [
+                        'booking_id' => $booking->bookingID,
+                        'customer_name' => $booking->customer->fullname ?? 'Customer',
+                        'amount' => $payment->amount
+                    ],
+                    $booking->bookingID
+                );
+                
+                Log::info('Payment success processed for booking: ' . $booking->bookingID);
+                return true;
+            }
+
+            return false;
+        });
     }
 }
