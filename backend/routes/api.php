@@ -66,6 +66,7 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 // ==================== WEBHOOKS & CALLBACKS (PUBLIC) ====================
 Route::match(['get', 'post'], '/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
 Route::get('/payment/callback/{tx_ref}', [PaymentController::class, 'callback'])->name('payment.callback');
+Route::get('/payment/return', [App\Http\Controllers\PaymentController::class, 'handleReturn'])->name('payment.return');
 
 // ==================== PUBLIC SEARCH (Customer Prefix) ====================
 Route::prefix('customer')->group(function () {
@@ -133,8 +134,9 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'getCustomerNotifications']);
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::get('/notifications/settings', [CustomerController::class, 'getNotificationSettings']);
     Route::put('/notifications/settings', [CustomerController::class, 'updateNotificationSettings']);
     
@@ -142,6 +144,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
     
     // ========== PAYMENT ROUTES ==========
+    Route::get('/payment/methods', [PaymentController::class, 'methods']);
     Route::post('/payment/booking/{bookingId}/initialize', [PaymentController::class, 'initialize']);
     Route::get('/payment/verify', [PaymentController::class, 'verify']); // Query param: tx_ref
     Route::get('/payment/history', [PaymentController::class, 'history']);

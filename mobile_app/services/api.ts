@@ -3,8 +3,9 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform, Alert } from 'react-native';
 import Constants from 'expo-constants';
-import { API_BASE_URL, refreshApiBaseUrl,  getNetworkState } from '../config/api';
-import * as Network from 'expo-network'; // Add this import
+import { API_BASE_URL, refreshApiBaseUrl, getNetworkState } from '../config/api';
+import * as Network from 'expo-network';
+
 console.log('Initial API_BASE_URL:', API_BASE_URL);
 
 // Token key
@@ -25,6 +26,21 @@ const storage = {
         return SecureStore.deleteItemAsync(key);
     },
 };
+
+// Custom error class for validation errors
+export class ValidationError extends Error {
+    public validationErrors: Record<string, string[]>;
+    public status: number;
+    public data: any;
+
+    constructor(message: string, validationErrors: Record<string, string[]>, status: number, data: any) {
+        super(message);
+        this.name = 'ValidationError';
+        this.validationErrors = validationErrors;
+        this.status = status;
+        this.data = data;
+    }
+}
 
 class ApiService {
     private api: AxiosInstance;
@@ -50,40 +66,89 @@ class ApiService {
             if (token && config.headers) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
+
+            // Log request data for debugging (optional, remove in production)
+            if (config.data) {
+                console.log(`📤 ${config.method?.toUpperCase()} ${config.url}:`,
+                    typeof config.data === 'string' ? JSON.parse(config.data) : config.data);
+            }
+
             return config;
         });
 
-        // Add response interceptor for handling network errors
+        // Add response interceptor for handling errors
         this.api.interceptors.response.use(
-            (response) => response,
+            (response) => {
+                // Log success response for debugging
+                console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url}:`,
+                    response.status);
+                return response;
+            },
             async (error) => {
+                // Log the full error for debugging
+                console.error('❌ API Error:', {
+                    status: error.response?.status,
+                    statusText: error.response?.statusText,
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    data: error.response?.data,
+                    requestData: error.config?.data ?
+                        (typeof error.config.data === 'string' ?
+                            JSON.parse(error.config.data) : error.config.data) : null
+                });
+
+                // Handle validation errors (422)
+                if (error.response?.status === 422) {
+                    const responseData = error.response.data;
+
+                    // Log validation errors in a readable format
+                    if (responseData.errors) {
+                        console.error('📋 VALIDATION ERRORS:');
+                        Object.keys(responseData.errors).forEach(field => {
+                            console.error(`   ${field}: ${responseData.errors[field].join(', ')}`);
+                        });
+                    }
+
+                    // Create a custom validation error
+                    const validationError = new ValidationError(
+                        responseData.message || 'Validation failed',
+                        responseData.errors || {},
+                        error.response.status,
+                        responseData
+                    );
+
+                    return Promise.reject(validationError);
+                }
+
                 // Check if it's a network error
                 if (this.isNetworkError(error)) {
-                    console.log('Network error detected, attempting to refresh base URL...');
-                    
+                    console.log('🌐 Network error detected, attempting to refresh base URL...');
+
                     // Prevent multiple simultaneous refresh attempts
                     if (!this.refreshInProgress) {
                         this.refreshInProgress = true;
                         try {
                             const newBaseUrl = await refreshApiBaseUrl();
                             if (newBaseUrl !== this.currentBaseURL) {
-                                console.log(`Updating API base URL to ${newBaseUrl}`);
+                                console.log(`🔄 Updating API base URL to ${newBaseUrl}`);
                                 this.currentBaseURL = newBaseUrl;
                                 this.api.defaults.baseURL = newBaseUrl;
                             }
-                            
+
                             // Retry the original request with new baseURL
                             if (error.config) {
                                 error.config.baseURL = this.currentBaseURL;
+                                console.log('🔄 Retrying request with new base URL...');
                                 return this.api.request(error.config);
                             }
                         } catch (refreshError) {
-                            console.warn('Failed to refresh base URL:', refreshError);
+                            console.warn('⚠️ Failed to refresh base URL:', refreshError);
                         } finally {
                             this.refreshInProgress = false;
                         }
                     }
                 }
+
                 return Promise.reject(error);
             }
         );
@@ -97,15 +162,15 @@ class ApiService {
     private async initializeConnection() {
         try {
             const networkState = await getNetworkState();
-            console.log('Network state:', networkState);
-            
+            console.log('📡 Network state:', networkState);
+
             if (!networkState.isConnected) {
-                console.warn('Device is not connected to any network');
+                console.warn('⚠️ Device is not connected to any network');
             } else {
                 await this.refreshBaseUrl();
             }
         } catch (error) {
-            console.warn('Failed to initialize connection:', error);
+            console.warn('⚠️ Failed to initialize connection:', error);
         }
     }
 
@@ -114,27 +179,32 @@ class ApiService {
         try {
             const newBaseUrl = await refreshApiBaseUrl();
             if (newBaseUrl !== this.currentBaseURL) {
-                console.log(`Updating API base URL from ${this.currentBaseURL} to ${newBaseUrl}`);
+                console.log(`🔄 Updating API base URL from ${this.currentBaseURL} to ${newBaseUrl}`);
                 this.currentBaseURL = newBaseUrl;
                 this.api.defaults.baseURL = newBaseUrl;
             }
         } catch (error) {
-            console.warn('Failed to refresh base URL:', error);
+            console.warn('⚠️ Failed to refresh base URL:', error);
         }
     }
 
     private async loadToken() {
         this.token = await storage.getItem(TOKEN_KEY);
+        if (this.token) {
+            console.log('🔑 Token loaded');
+        }
     }
 
     public async setToken(token: string) {
         this.token = token;
         await storage.setItem(TOKEN_KEY, token);
+        console.log('🔑 Token set');
     }
 
     public async removeToken() {
         this.token = null;
         await storage.removeItem(TOKEN_KEY);
+        console.log('🔑 Token removed');
     }
 
     // Method to manually refresh the connection
@@ -144,13 +214,14 @@ class ApiService {
 
     // Helper method to check if it's a network error
     private isNetworkError(error: any): boolean {
-        return !error.response && 
-               (error.code === 'ECONNABORTED' || 
+        return !error.response &&
+            (error.code === 'ECONNABORTED' ||
                 error.message?.includes('Network Error') ||
                 error.code === 'ERR_NETWORK' ||
                 error.message?.includes('timeout') ||
                 error.message?.includes('Failed to fetch') ||
-                error.message?.includes('Network request failed'));
+                error.message?.includes('Network request failed') ||
+                error.message?.includes('Could not connect'));
     }
 
     // Generic request method with retry logic
@@ -166,7 +237,7 @@ class ApiService {
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 let response: AxiosResponse<T>;
-                
+
                 switch (method) {
                     case 'get':
                         response = await this.api.get(url, config);
@@ -181,15 +252,21 @@ class ApiService {
                         response = await this.api.delete(url, config);
                         break;
                 }
-                
+
                 return response.data;
             } catch (error) {
                 lastError = error;
-                
+
+                // Don't retry validation errors (422)
+                if ((error as any)?.response?.status === 422) {
+                    console.log('⛔ Validation error, not retrying');
+                    throw error;
+                }
+
                 // If it's a network error and we haven't exceeded retries
                 if (this.isNetworkError(error) && attempt < maxRetries) {
-                    console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), refreshing base URL and retrying...`);
-                    
+                    console.log(`🔄 Request failed (attempt ${attempt + 1}/${maxRetries + 1}), refreshing base URL and retrying...`);
+
                     // Refresh base URL before retry
                     if (!this.refreshInProgress) {
                         this.refreshInProgress = true;
@@ -199,7 +276,7 @@ class ApiService {
                             this.refreshInProgress = false;
                         }
                     }
-                    
+
                     // Wait a bit before retrying (exponential backoff)
                     await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
                 } else {
@@ -249,14 +326,14 @@ class ApiService {
                 Network.getIpAddressAsync(),
                 Network.getNetworkStateAsync()
             ]);
-            
+
             return {
                 isConnected: networkState.isConnected || false,
                 ipAddress: ipAddress !== '0.0.0.0' ? ipAddress : undefined,
                 networkType: networkState.type
             };
         } catch (error) {
-            console.warn('Failed to get network status:', error);
+            console.warn('⚠️ Failed to get network status:', error);
             return { isConnected: false };
         }
     }

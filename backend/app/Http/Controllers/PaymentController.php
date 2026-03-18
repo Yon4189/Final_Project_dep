@@ -34,6 +34,34 @@ class PaymentController extends Controller
     }
 
     /**
+     * Get available payment methods
+     */
+    public function methods()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                [
+                    'id' => 'chapa',
+                    'type' => 'chapa',
+                    'name' => 'Chapa (Card/Mobile Money)',
+                    'description' => 'Pay securely with Chapa',
+                    'icon' => 'card-outline',
+                    'enabled' => true
+                ],
+                [
+                    'id' => 'cash',
+                    'type' => 'cash',
+                    'name' => 'Cash on Service',
+                    'description' => 'Pay the provider directly after service',
+                    'icon' => 'cash-outline',
+                    'enabled' => true
+                ]
+            ]
+        ]);
+    }
+
+    /**
      * Initialize payment for booking
      */
     public function initialize(Request $request, $bookingId)
@@ -59,22 +87,26 @@ class PaymentController extends Controller
             ], 404);
         }
         
-        // Check if payment already exists
         $existingPayment = Payment::where('bookingID', $booking->bookingID)
             ->whereIn('status', ['pending'])
             ->first();
 
         if ($existingPayment) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment already initialized',
-                'data' => [
-                    'payment_id' => $existingPayment->paymentID,
-                    'tx_ref' => $existingPayment->tx_ref,
-                    'checkout_url' => $existingPayment->checkout_url,
-                    'status' => $existingPayment->status
-                ]
-            ]);
+            if ($existingPayment->checkout_url) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment already initialized',
+                    'data' => [
+                        'payment_id' => $existingPayment->paymentID,
+                        'tx_ref' => $existingPayment->tx_ref,
+                        'checkout_url' => $existingPayment->checkout_url,
+                        'status' => $existingPayment->status
+                    ]
+                ]);
+            } else {
+                // If it's a corrupted initialization without a checkout URL, clean it up
+                $existingPayment->delete();
+            }
         }
         
         // Generate unique tx_ref
@@ -108,17 +140,35 @@ class PaymentController extends Controller
             ])
         ]);
         
+        $appRedirect = $request->return_url ?? 'mobileapp://payment';
+        
+        // Use the current request's host for the return URL (works for local IP or ngrok)
+        $baseUrl = $request->getSchemeAndHttpHost();
+        $backendReturnUrl = $baseUrl . '/api/payment/return?app_redirect=' . urlencode($appRedirect);
+        
+        $ngrokDomain = env('APP_TUNNEL_URL', 'https://squiggly-raven-concussant.ngrok-free.dev');
+        
         // Prepare Chapa payment data
+        $amount = (float) $booking->agreed_price;
+        $isTest = config('services.chapa.environment') === 'test' || env('CHAPA_ENVIRONMENT') === 'test';
+        
+        if ($isTest && $amount > 100000) {
+            $amount = 100.00; // Cap to a small amount for testing
+            Log::info('Capping test payment amount to avoid Chapa limits', [
+                'original_amount' => $booking->agreed_price,
+                'capped_amount' => $amount
+            ]);
+        }
+
         $paymentData = [
-            'amount' => (string) $booking->agreed_price,
+            'amount' => (string) $amount,
             'currency' => 'ETB',
             'email' => $customer->email,
-            'first_name' => $customer->fullname,
+            'first_name' => $customer->fullname ?? 'Customer',
             'last_name' => '',
             'tx_ref' => $txRef,
-            'callback_url' => 'https://squiggly-raven-concussant.ngrok-free.dev/api/webhook/chapa',
-            // later replace the above url with the link from 'Forwarding' while ruiing ngrok online. if not installed install ngrok and run `ngrok http 8000` and copy the https url and paste it above and add /api/webhook/chapa at the end of the url
-            'return_url' => $request->return_url ?? 'https://www.google.com',
+            'callback_url' => $ngrokDomain . '/api/webhook/chapa',
+            'return_url' => $backendReturnUrl,
             'customization' => [
                 'title' => 'Home Service',  //  Short (max 16 chars)
                 'description' => 'Payment for booking'  //  Short (max 30 chars)
@@ -215,24 +265,12 @@ class PaymentController extends Controller
         
         if ($status === 'success') {
             DB::transaction(function () use ($payment, $payload) {
-                // Update payment record
-                $payment->status = 'held';
-                $payment->chapa_tx_id = $payload['ref_id'] ?? null;
-                $payment->paid_at = now();
-                $payment->save();
+                $this->walletService->handlePaymentSuccess($payment, $payload);
                 
-                // Update booking record
-                $booking = Booking::find($payment->bookingID);
-                if ($booking) {
-                    $booking->payment_status = 'held';
-                    $booking->save();
-                    
-                    Log::info('Payment confirmed and booking updated', [
-                        'booking_id' => $booking->bookingID,
-                        'payment_id' => $payment->paymentID,
-                        'tx_ref' => $payment->tx_ref
-                    ]);
-                }
+                Log::info('Payment processed via callback', [
+                    'payment_id' => $payment->paymentID,
+                    'tx_ref' => $payment->tx_ref
+                ]);
             });
             
             return response()->json(['success' => true, 'message' => 'Webhook processed successfully']);
@@ -242,6 +280,119 @@ class PaymentController extends Controller
         Log::warning('Payment not successful', ['status' => $status, 'tx_ref' => $tx_ref]);
         return response()->json(['success' => false, 'message' => 'Payment not successful'], 400);
     }
+
+    /**
+     * Handle return from Chapa page
+     * Redirects browser to the mobile app deep link
+     */
+    public function handleReturn(Request $request)
+    {
+        // Chapa brings us here, optionally with ?tx_ref=XXXX&status=success
+        $appRedirect = $request->query('app_redirect', 'mobileapp://payment');
+        $txRef = $request->query('tx_ref', '');
+        $status = $request->query('status', '');
+        
+        $redirectUrl = urldecode($appRedirect);
+        if ($txRef) {
+            // If status is not success in query, check database to see if webhook already processed it
+            if ($status !== 'success') {
+                $payment = Payment::where('tx_ref', $txRef)->first();
+                if ($payment && in_array($payment->status, ['held', 'paid', 'releasable', 'released'])) {
+                    $status = 'success';
+                }
+            }
+
+            $separator = str_contains($redirectUrl, '?') ? '&' : '?';
+            $redirectUrl .= "{$separator}tx_ref={$txRef}&status={$status}";
+        }
+
+        // Return a simple HTML page that auto-redirects to the app
+        // This is often more reliable than a 302 redirect for deep links
+        return response("
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>Payment Successful</title>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <meta http-equiv='refresh' content='0;url={$redirectUrl}'>
+                    <style>
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+                            display: flex; 
+                            flex-direction: column; 
+                            align-items: center; 
+                            justify-content: center; 
+                            height: 100vh; 
+                            margin: 0; 
+                            background: #f8fafc; 
+                            color: #1e293b;
+                        }
+                        .card { 
+                            background: white; 
+                            padding: 2.5rem; 
+                            border-radius: 16px; 
+                            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); 
+                            text-align: center; 
+                            max-width: 90%;
+                            width: 350px;
+                        }
+                        .success-icon {
+                            color: #22c55e;
+                            font-size: 48px;
+                            margin-bottom: 16px;
+                        }
+                        h2 { margin: 0 0 8px 0; color: #0f172a; }
+                        p { color: #64748b; margin-bottom: 24px; font-size: 15px; }
+                        .btn { 
+                            display: inline-block; 
+                            background: #2563eb; 
+                            color: white; 
+                            padding: 12px 24px; 
+                            text-decoration: none; 
+                            border-radius: 8px; 
+                            font-weight: 600;
+                            transition: background 0.2s;
+                        }
+                        .btn:active { background: #1d4ed8; }
+                        .loader { 
+                            border: 3px solid #f1f5f9; 
+                            border-top: 3px solid #3b82f6; 
+                            border-radius: 50%; 
+                            width: 24px; 
+                            height: 24px; 
+                            animation: spin 1s linear infinite; 
+                            margin: 16px auto; 
+                        }
+                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    </style>
+                </head>
+                <body>
+                    <div class='card'>
+                        <div class='success-icon'>✓</div>
+                        <h2>Payment Successful!</h2>
+                        <p>You're being redirected back to the app.</p>
+                        <div class='loader'></div>
+                        <a href='{$redirectUrl}' class='btn'>Back to App</a>
+                    </div>
+                    <script>
+                        // Immediate redirect attempt
+                        window.location.href = '{$redirectUrl}';
+                        
+                        // Fallback after a short delay
+                        setTimeout(function() {
+                            window.location.href = '{$redirectUrl}';
+                        }, 500);
+
+                        // Ensure it closes if it's in an in-app browser context that supports it
+                        if (window.opener) {
+                            window.close();
+                        }
+                    </script>
+                </body>
+            </html>
+        ");
+    }
+
     /**
      * Verify payment (called from frontend after return)
      */
@@ -259,9 +410,24 @@ class PaymentController extends Controller
                 'message' => 'Payment not found'
             ], 404);
         }
+        
+        // Fallback: If status is still pending (e.g. webhook failed or was delayed), verify directly with Chapa
+        if ($payment->status === 'pending') {
+            $chapaResponse = $this->chapaService->verifyPayment($payment->tx_ref);
+            
+            if ($chapaResponse['status'] === 'success' && isset($chapaResponse['data']['status']) && $chapaResponse['data']['status'] === 'success') {
+                $this->walletService->handlePaymentSuccess($payment, $chapaResponse['data']);
+                
+                // Refresh payment after update
+                $payment->refresh();
+            }
+        }
+        
+        $isSuccess = in_array($payment->status, ['held', 'paid', 'releasable', 'released']);
 
         return response()->json([
-            'success' => true,
+            'success' => $isSuccess, // Return true if payment is successful
+            'message' => $isSuccess ? 'Payment verified successfully' : 'Payment is still pending or failed',
             'data' => [
                 'payment_id' => $payment->paymentID,
                 'tx_ref' => $payment->tx_ref,
@@ -270,7 +436,8 @@ class PaymentController extends Controller
                 'booking_id' => $payment->bookingID,
                 'booking_status' => $payment->booking->status ?? null,
                 'held_until' => $payment->held_until,
-                'paid_at' => $payment->paid_at
+                'paid_at' => $payment->paid_at,
+                'is_successful' => $isSuccess
             ]
         ]);
     }

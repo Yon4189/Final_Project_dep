@@ -271,44 +271,36 @@ export default function CustomerDashboard() {
     try {
       // Create service request
       const bookingResponse = await customerService.createBooking({
-        provider_id: selectedProvider?.id || "",
-        service_id: requestData.serviceId || "",
-        scheduled_date: requestData.scheduledDate || "",
-        scheduled_time: requestData.scheduledTime || "",
-        address: requestData.address || "",
-        description: requestData.description || "",
-        estimated_price: requestData.estimatedPrice || 0,
+        providerID: selectedProvider?.id || "",
+        serviceID: requestData.serviceId || "",
+        scheduledDate: requestData.scheduledDate || "",
+        agreed_price: requestData.estimatedPrice || 0,
+        location_source: 'gps', // Default to GPS for current flow
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        full_address: requestData.address || "",
+        notes: requestData.description || "",
       });
 
       if (bookingResponse.success) {
-        // Initialize payment
-        const paymentResponse = await paymentService.initializeChapaPayment({
-          amount: requestData.estimatedPrice || 0,
-          email: user?.email || "customer@example.com",
-          firstName: user?.fullname?.split(" ")[0] || "Customer",
-          lastName: user?.fullname?.split(" ").slice(1).join(" ") || "User",
-          phoneNumber: user?.phone,
-          customerId: user?.customerID,
-          bookingId: bookingResponse.data.id,
-          paymentMethod: requestData.paymentMethod,
-          description: `Payment for ${requestData.serviceName}`,
-        });
+        // Close modal
+        setShowRequestModal(false);
+        setSelectedProvider(null);
 
-        if (paymentResponse.checkoutUrl) {
-          // Close modal and redirect to payment
-          setShowRequestModal(false);
-          setSelectedProvider(null);
-
-          // Open payment URL in browser/webview
-          if (Platform.OS === "web") {
-            window.open(paymentResponse.checkoutUrl, "_blank");
-          } else {
-            router.push({
-              pathname: "/(customer)/payment",
-              params: { url: paymentResponse.checkoutUrl },
-            });
-          }
-        }
+        // Show success message
+        Alert.alert(
+          "Request Sent",
+          "Your service request has been sent successfully. You will be notified once the provider accepts your request. After acceptance, you can proceed to payment.",
+          [
+            {
+              text: "View My Bookings",
+              onPress: () => router.push("/(customer)/bookings"),
+            },
+            {
+              text: "OK",
+            },
+          ]
+        );
       }
     } catch (error) {
       Alert.alert(
@@ -337,18 +329,7 @@ export default function CustomerDashboard() {
 
     return (
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => router.push("/")}
-        >
-          <Ionicons
-            name="home"
-            size={22}
-            color={Colors.primary}
-          />
-        </TouchableOpacity>
-
-        <View style={{ flex: 1, marginLeft: 12 }}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>
             Hello, {loadingUser ? "👋" : displayName}!
           </Text>
@@ -361,8 +342,8 @@ export default function CustomerDashboard() {
             onPress={() => router.push("/(customer)/chat/index")}
           >
             <Ionicons
-              name="chatbubbles"
-              size={22}
+              name="chatbubble-ellipses-outline"
+              size={24}
               color={Colors.primary}
             />
           </TouchableOpacity>
@@ -372,8 +353,8 @@ export default function CustomerDashboard() {
             onPress={() => router.push("/(customer)/notifications")}
           >
             <Ionicons
-              name="notifications"
-              size={22}
+              name="notifications-outline"
+              size={24}
               color={Colors.primary}
             />
             {unreadNotifications > 0 && (
@@ -381,22 +362,6 @@ export default function CustomerDashboard() {
                 <Text style={styles.notificationBadgeText}>
                   {unreadNotifications}
                 </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/(customer)/complaints")}
-          >
-            <Ionicons
-              name="alert-circle"
-              size={22}
-              color={Colors.primary}
-            />
-            {pendingComplaints > 0 && (
-              <View style={[styles.badge, styles.complaintBadge]}>
-                <Text style={styles.badgeText}>{pendingComplaints}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -420,11 +385,13 @@ export default function CustomerDashboard() {
                 );
               }
               return (
-                <Ionicons
-                  name="person-circle"
-                  size={44}
-                  color={Colors.primary}
-                />
+                <View style={styles.profilePlaceholder}>
+                  <Ionicons
+                    name="person-outline"
+                    size={24}
+                    color={Colors.primary}
+                  />
+                </View>
               );
             })()}
           </TouchableOpacity>
@@ -497,46 +464,49 @@ export default function CustomerDashboard() {
   };
 
   const renderQuickActions = () => (
-    <View style={styles.quickActions}>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => router.push('/(customer)/requests/index')}
-      >
-        <View style={[styles.actionIcon, { backgroundColor: Colors.primary + '20' }]}>
-          <Ionicons name="clipboard-outline" size={24} color={Colors.primary} />
-        </View>
-        <Text style={styles.actionLabel}>My Bookings</Text>
-      </TouchableOpacity>
+    <View style={styles.quickActionsContainer}>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <View style={styles.quickActionsGrid}>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => router.push('/(customer)/bookings')}
+        >
+          <View style={[styles.actionIconContainer, { backgroundColor: Colors.primary + '10' }]}>
+            <Ionicons name="calendar-outline" size={26} color={Colors.primary} />
+          </View>
+          <Text style={styles.actionCardLabel}>Bookings</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => router.push('/(customer)/wallet/index')}
-      >
-        <View style={[styles.actionIcon, { backgroundColor: Colors.success + '20' }]}>
-          <Ionicons name="wallet-outline" size={24} color={Colors.success} />
-        </View>
-        <Text style={styles.actionLabel}>Wallet</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => router.push('/(customer)/wallet/index')}
+        >
+          <View style={[styles.actionIconContainer, { backgroundColor: Colors.success + '10' }]}>
+            <Ionicons name="card-outline" size={26} color={Colors.success} />
+          </View>
+          <Text style={styles.actionCardLabel}>Wallet</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => router.push('/(customer)/complaints')}
-      >
-        <View style={[styles.actionIcon, { backgroundColor: Colors.warning + '20' }]}>
-          <Ionicons name="alert-circle-outline" size={24} color={Colors.warning} />
-        </View>
-        <Text style={styles.actionLabel}>Complaints</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => router.push('/(customer)/chat/index')}
+        >
+          <View style={[styles.actionIconContainer, { backgroundColor: Colors.info + '10' }]}>
+            <Ionicons name="chatbubble-ellipses-outline" size={26} color={Colors.info} />
+          </View>
+          <Text style={styles.actionCardLabel}>Messages</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => router.push('/(customer)/locations')}
-      >
-        <View style={[styles.actionIcon, { backgroundColor: Colors.info + '20' }]}>
-          <Ionicons name="location-outline" size={24} color={Colors.info} />
-        </View>
-        <Text style={styles.actionLabel}>My City</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => router.push('/(customer)/complaints')}
+        >
+          <View style={[styles.actionIconContainer, { backgroundColor: Colors.warning + '10' }]}>
+            <Ionicons name="shield-outline" size={26} color={Colors.warning} />
+          </View>
+          <Text style={styles.actionCardLabel}>Support</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -634,7 +604,7 @@ export default function CustomerDashboard() {
         onPress={() => setShowMapView(false)}
       >
         <Ionicons
-          name="list"
+          name="list-outline"
           size={20}
           color={!showMapView ? Colors.primary : Colors.text.secondary}
         />
@@ -656,7 +626,7 @@ export default function CustomerDashboard() {
         onPress={() => setShowMapView(true)}
       >
         <Ionicons
-          name="map"
+          name="map-outline"
           size={20}
           color={showMapView ? Colors.primary : Colors.text.secondary}
         />
@@ -716,81 +686,7 @@ export default function CustomerDashboard() {
     );
   };
 
-  const renderProviderList = () => (
-    <FlatList
-      data={providers}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <ProviderCard
-          provider={item}
-          onPress={() => router.push(`/(customer)/provider/${item.id}`)}
-          onBookPress={() => handleProviderSelect(item)}
-          onChatPress={() => router.push(`/(customer)/chat/${item.id}`)}
-          onCallPress={() => {
-            if (item.phone) {
-              Linking.openURL(`tel:${item.phone}`);
-            } else {
-              Alert.alert('Error', 'Provider phone number not available');
-            }
-          }}
-          onSharePress={async () => {
-            try {
-              const providerName = item.businessName || item.name || "this provider";
-              const shareUrl = `${API_BASE_URL.replace('/api', '')}/provider/${item.id}`;
-              const message = `Check out ${providerName} on HomeLink!`;
-
-              if (Platform.OS === 'web') {
-                if (navigator.share) {
-                  await navigator.share({
-                    title: `HomeLink - ${providerName}`,
-                    text: message,
-                    url: window.location.href,
-                  });
-                } else {
-                  await navigator.clipboard.writeText(`${message}\n${shareUrl}`);
-                  Alert.alert("Success", "Provider info copied to clipboard!");
-                }
-              } else {
-                await Share.share({
-                  title: `HomeLink - ${providerName}`,
-                  message: `${message}\n${shareUrl}`,
-                });
-              }
-            } catch (error) {
-              console.error('Share error:', error);
-            }
-          }}
-          showDistance={true}
-          showBadges={true}
-          showActions={true}
-          showServices={true}
-          showCategory={true}
-        />
-      )}
-      contentContainerStyle={styles.providersList}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      onEndReached={loadMore}
-      onEndReachedThreshold={0.5}
-      ListFooterComponent={searchLoading ? <LoadingSpinner /> : null}
-      ListEmptyComponent={
-        !searchLoading && !locationLoading ? (
-          <EmptyState
-            icon="search-outline"
-            title="No providers found"
-            message="Try adjusting your search or filters"
-            actionLabel="Clear Filters"
-            onAction={() => {
-              setQuery("");
-              updateFilters({});
-            }}
-            variant="default"
-          />
-        ) : null
-      }
-    />
-  );
+  // renderProviderList has been integrated into the main return to avoid nested VirtualizedLists
 
   if (locationLoading && !providers.length) {
     return (
@@ -823,48 +719,130 @@ export default function CustomerDashboard() {
         />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderQuickActions()}
-        {renderTopRated()}
-
-        {/* Booking Journey Steps Card */}
-        {!query && !filters.categoryId && (
-          <View style={styles.journeyCard}>
-            <Text style={styles.journeyTitle}>How the booking journey works</Text>
-            <Text style={styles.journeySubtitle}>Complete the steps below to secure your service smoothly.</Text>
-            <View style={styles.journeySteps}>
-              {[
-                { num: '1', icon: 'search', label: 'Book a service', desc: 'Pick a provider, select time, send the request.' },
-                { num: '2', icon: 'time-outline', label: 'Wait for acceptance', desc: 'Provider accepts or rejects your request. Check Notifications.' },
-                { num: '3', icon: 'card-outline', label: 'Pay after confirmation', desc: 'Tap "Pay Now" in your notification or request details to pay.' },
-              ].map((step, idx) => (
-                <View key={step.num} style={styles.journeyStep}>
-                  <View style={styles.journeyStepLeft}>
-                    <View style={styles.journeyNumBadge}>
-                      <Text style={styles.journeyNum}>{step.num}</Text>
-                    </View>
-                    {idx < 2 && <View style={styles.journeyConnector} />}
-                  </View>
-                  <View style={styles.journeyStepContent}>
-                    <Text style={styles.journeyStepLabel}>{step.label}</Text>
-                    <Text style={styles.journeyStepDesc}>{step.desc}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {query || filters.categoryId ? (
-          <>
+      <View style={styles.mainContent}>
+        {showMapView && (query || filters.categoryId) ? (
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {renderQuickActions()}
+            {renderTopRated()}
             {renderViewToggle()}
+            {renderMapView()}
+            <View style={styles.bottomPadding} />
+          </ScrollView>
+        ) : (
+          <FlatList
+            data={providers}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <ProviderCard
+                provider={item}
+                onPress={() => router.push(`/(customer)/provider/${item.id}`)}
+                onBookPress={() => handleProviderSelect(item)}
+                onChatPress={() => router.push(`/(customer)/chat/${item.id}`)}
+                onCallPress={() => {
+                  if (item.phone) {
+                    Linking.openURL(`tel:${item.phone}`);
+                  } else {
+                    Alert.alert('Error', 'Provider phone number not available');
+                  }
+                }}
+                onSharePress={async () => {
+                  try {
+                    const providerName = item.businessName || item.name || "this provider";
+                    const shareUrl = `${API_BASE_URL.replace('/api', '')}/provider/${item.id}`;
+                    const message = `Check out ${providerName} on HomeLink!`;
 
-            {showMapView ? renderMapView() : renderProviderList()}
-          </>
-        ) : null}
-
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+                    if (Platform.OS === 'web') {
+                      if (navigator.share) {
+                        await navigator.share({
+                          title: `HomeLink - ${providerName}`,
+                          text: message,
+                          url: window.location.href,
+                        });
+                      } else {
+                        await navigator.clipboard.writeText(`${message}\n${shareUrl}`);
+                        Alert.alert("Success", "Provider info copied to clipboard!");
+                      }
+                    } else {
+                      await Share.share({
+                        title: `HomeLink - ${providerName}`,
+                        message: `${message}\n${shareUrl}`,
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Share error:', error);
+                  }
+                }}
+                showDistance={true}
+                showBadges={true}
+                showActions={true}
+                showServices={true}
+                showCategory={true}
+              />
+            )}
+            ListHeaderComponent={
+              <>
+                {renderQuickActions()}
+                {renderTopRated()}
+                {!query && !filters.categoryId && (
+                  <View style={styles.journeyCard}>
+                    <Text style={styles.journeyTitle}>How the booking journey works</Text>
+                    <Text style={styles.journeySubtitle}>Complete the steps below to secure your service smoothly.</Text>
+                    <View style={styles.journeySteps}>
+                      {[
+                        { num: '1', icon: 'search', label: 'Book a service', desc: 'Pick a provider, select time, send the request.' },
+                        { num: '2', icon: 'time-outline', label: 'Wait for acceptance', desc: 'Provider accepts or rejects your request. Check Notifications.' },
+                        { num: '3', icon: 'card-outline', label: 'Pay after confirmation', desc: 'Tap "Pay Now" in your notification or request details to pay.' },
+                      ].map((step, idx) => (
+                        <View key={step.num} style={styles.journeyStep}>
+                          <View style={styles.journeyStepLeft}>
+                            <View style={styles.journeyNumBadge}>
+                              <Text style={styles.journeyNum}>{step.num}</Text>
+                            </View>
+                            {idx < 2 && <View style={styles.journeyConnector} />}
+                          </View>
+                          <View style={styles.journeyStepContent}>
+                            <Text style={styles.journeyStepLabel}>{step.label}</Text>
+                            <Text style={styles.journeyStepDesc}>{step.desc}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+                {(query || filters.categoryId) && renderViewToggle()}
+              </>
+            }
+            ListEmptyComponent={
+              !searchLoading && !locationLoading ? (
+                <EmptyState
+                  icon="search-outline"
+                  title="No providers found"
+                  message="Try adjusting your search or filters"
+                  actionLabel="Clear Filters"
+                  onAction={() => {
+                    setQuery("");
+                    updateFilters({});
+                  }}
+                  variant="default"
+                />
+              ) : null
+            }
+            ListFooterComponent={searchLoading ? <LoadingSpinner /> : <View style={styles.bottomPadding} />}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            contentContainerStyle={styles.providersList}
+          />
+        )}
+      </View>
 
       <FilterModal
         visible={showFilterModal}
@@ -897,6 +875,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  mainContent: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
@@ -995,6 +976,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    zIndex: 10,
   },
   content: {
     flex: 1,
@@ -1195,30 +1177,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text.secondary,
   },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  actionButton: {
-    alignItems: 'center',
-    width: (width - 60) / 4,
-  },
-  actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  profilePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  quickActionsContainer: {
+    marginHorizontal: 20,
+    marginTop: 24,
     marginBottom: 8,
   },
-  actionLabel: {
-    fontSize: 11,
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 12,
+  },
+  actionCard: {
+    width: (width - 52) / 2, // 2 columns with gap
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  actionCardLabel: {
+    fontSize: 14,
     color: Colors.text.primary,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: '600',
   },
   journeyCard: {
     backgroundColor: Colors.surface,

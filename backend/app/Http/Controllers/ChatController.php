@@ -142,14 +142,9 @@ class ChatController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have access to this conversation',
-                    'debug' => [
-                        'user_type' => $userType,
-                        'user_id' => $userType === 'customer' ? $user->customerID : $user->providerID,
-                        'conversation_customer' => $conversation->customerID,
-                        'conversation_provider' => $conversation->providerID
-                    ]
                 ], 403);
             }
+
             // Handle file upload if present
             $fileData = [];
             if ($request->hasFile('file')) {
@@ -171,11 +166,10 @@ class ChatController extends Controller
 
             $message = Message::create($messageData);
 
-            // Update conversation
+            // Update conversation last message & unread counts
             $conversation->last_message = $request->message;
             $conversation->last_message_at = now();
 
-            // Increment unread count for receiver
             if ($userType === 'customer') {
                 $conversation->provider_unread_count++;
                 $receiverId = $conversation->providerID;
@@ -188,48 +182,8 @@ class ChatController extends Controller
 
             $conversation->save();
 
+            // Commit BEFORE any post-processing so a failure below never creates a 500
             DB::commit();
-
-            // Load sender info
-            $message->load('sender');
-
-            // Send notification
-            $senderName = $userType === 'customer' 
-                ? $user->fullname 
-                : $user->fullname;
-
-            try {
-                $this->notificationService->toUser(
-                    $receiverType,
-                    $receiverId,
-                    'new_message',
-                    'New Message',
-                    $senderName . ' sent you a message',
-                    [
-                        'conversationID' => $conversation->conversationID,
-                        'sender_name' => $senderName,
-                        'message_preview' => $request->hasFile('file') 
-                            ? '📎 Sent a file: ' . $request->file('file')->getClientOriginalName()
-                            : substr($request->message ?? '', 0, 50)
-                    ],
-                    $conversation->bookingID
-                );
-            } catch (\Exception $e) {
-                // Log but don't fail if notification fails
-                Log::warning('Failed to send notification for message: ' . $e->getMessage());
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Message sent',
-                'data' => [
-                    'message' => $message,
-                    'conversation' => [
-                        'id' => $conversation->conversationID,
-                        'unread_count' => $conversation->getUnreadCountFor($userType)
-                    ]
-                ]
-            ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -240,6 +194,50 @@ class ChatController extends Controller
                 'message' => 'Failed to send message: ' . $e->getMessage()
             ], 500);
         }
+
+        // -----------------------------------------------------------
+        // Post-commit: load sender info and send notification.
+        // Any failure here must NOT return 500 — the message is saved.
+        // -----------------------------------------------------------
+        try {
+            $message->refresh();
+        } catch (\Exception $e) {
+            Log::warning('Failed to refresh message after save: ' . $e->getMessage());
+        }
+
+        $senderName = $user->fullname ?? 'User';
+
+        try {
+            $this->notificationService->toUser(
+                $receiverType,
+                $receiverId,
+                'new_message',
+                'New Message',
+                $senderName . ' sent you a message',
+                [
+                    'conversationID' => $conversation->conversationID,
+                    'sender_name' => $senderName,
+                    'message_preview' => $request->hasFile('file') 
+                        ? '📎 Sent a file: ' . $request->file('file')->getClientOriginalName()
+                        : substr($request->message ?? '', 0, 50)
+                ],
+                $conversation->bookingID
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to send notification for message: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Message sent',
+            'data' => [
+                'message' => $message,
+                'conversation' => [
+                    'id' => $conversation->conversationID,
+                    'unread_count' => $conversation->getUnreadCountFor($userType)
+                ]
+            ]
+        ]);
     }
 
     /**

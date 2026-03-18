@@ -389,6 +389,7 @@ export interface ServiceRequest {
   cancellationReason?: string;
 
   // Relations
+  customer?: User;
   review?: Review;
 }
 
@@ -551,7 +552,7 @@ export interface SearchFilters {
   };
   verifiedOnly?: boolean;
   availableNow?: boolean;
-  sortBy: 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews';
+  sortBy?: 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews';
   page?: number;
   perPage?: number;
 }

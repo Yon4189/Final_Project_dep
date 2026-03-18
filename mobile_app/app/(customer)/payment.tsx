@@ -18,17 +18,16 @@ import { useBookingDetails } from '../../hooks/useCustomerBookings';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-
 export default function PaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
+
   // Extract params that might come from ServiceRequestModal
-  const checkoutUrl = params.checkoutUrl as string;
+  const checkoutUrl = (params.checkoutUrl || params.url) as string;
   const bookingId = params.bookingId as string;
   const rawAmount = parseFloat(params.amount as string || '0');
   const amount = Number.isFinite(rawAmount) ? rawAmount : 0;
-  
+
   const { data: booking, isLoading: bookingLoading } = useBookingDetails(bookingId || '');
 
   const [paymentMethod, setPaymentMethod] = useState<string>('chapa');
@@ -38,7 +37,8 @@ export default function PaymentScreen() {
   const bookingStatus = (booking?.status ?? '').toLowerCase();
   const acceptedStatuses = ['accepted', 'in_progress', 'completed'];
   const hasAccepted = acceptedStatuses.includes(bookingStatus);
-  const paymentAlreadyDone = (booking?.payment?.status ?? '').toLowerCase() === 'paid';
+  const paymentStatusFromDB = (booking?.payment?.status ?? '').toLowerCase();
+  const paymentAlreadyDone = ['paid', 'held', 'releasable', 'released'].includes(paymentStatusFromDB);
 
   useEffect(() => {
     if (paymentAlreadyDone) {
@@ -63,7 +63,9 @@ export default function PaymentScreen() {
   useEffect(() => {
     // Handle deep link callback from Chapa
     const handleDeepLink = (event: { url: string }) => {
-      if (event.url.includes('homelink://payment/callback')) {
+      // Improved check to handle various formats like exp:// and --/ path
+      if (event.url.includes('payment') && (event.url.includes('tx_ref=') || event.url.includes('txRef'))) {
+        console.log('Deep link received:', event.url);
         handlePaymentCallback(event.url);
       }
     };
@@ -75,11 +77,19 @@ export default function PaymentScreen() {
   useEffect(() => {
     // Check if there's a callback URL in the initial URL
     Linking.parseInitialURLAsync().then(url => {
-      if (url && url.path?.includes('payment/callback')) {
+      if (url && url.path?.includes('payment') && url.queryParams?.tx_ref) {
         handlePaymentCallback(url.toString());
       }
     });
   }, []);
+
+  // Check params directly in case Expo Router passes them as props after redirect
+  useEffect(() => {
+    if (params.tx_ref && params.status === 'success' && paymentStatus !== 'completed') {
+      const simulatedUrl = `mobileapp://payment?tx_ref=${params.tx_ref}&status=${params.status}`;
+      handlePaymentCallback(simulatedUrl);
+    }
+  }, [params.tx_ref, params.status, paymentStatus]);
 
   // If we have a checkoutUrl directly, open it
   useEffect(() => {
@@ -93,19 +103,19 @@ export default function PaymentScreen() {
     return <LoadingSpinner fullScreen />;
   }
 
-  const openCheckoutUrl = async (url: string) => {
+  const openCheckoutUrl = async (url: string, txRef?: string) => {
     setIsPaying(true);
     setPaymentStatus('processing');
-    
+
     // Check for mock URL in development
     if (url.includes('mock-payment-url.com')) {
       console.log('Mock payment URL detected, simulating success...');
-      
+
       // Artificial delay for realism
       setTimeout(() => {
         setIsPaying(false);
         setPaymentStatus('completed');
-        
+
         Alert.alert(
           'Development Mode',
           'This is a mock payment for testing. Placeholder Chapa keys were detected in the backend.',
@@ -125,35 +135,69 @@ export default function PaymentScreen() {
     }
 
     try {
-      const result = await WebBrowser.openBrowserAsync(url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-        controlsColor: Colors.primary,
-      });
+      const returnUrl = Linking.createURL('payment');
+      const schemePrefix = returnUrl.split('?')[0].split('--')[0]; // Handle exp://.../--/ format
 
-      if (result.type === 'cancel') {
+      console.log('Opening AuthSession with url:', url, 'and expecting redirect to:', returnUrl);
+      const result = await WebBrowser.openAuthSessionAsync(url, returnUrl);
+
+      // If AuthSession succeeded, it returns the redirect URL
+      if (result.type === 'success' && result.url) {
+        console.log('AuthSession success, result url:', result.url);
+        handlePaymentCallback(result.url);
+        return;
+      }
+
+      // If session was dismissed but we have a txRef, try verification anyway
+      // (This handles cases where the browser might close without passing the URL back correctly)
+      if (txRef) {
+        console.log('Browser session finished, verifying payment status for txRef:', txRef);
+        try {
+          const verification = await verifyChapaPayment.mutateAsync(txRef);
+          if (verification.status === 'success' && verification.is_successful) {
+            setPaymentStatus('completed');
+            Alert.alert(
+              'Payment Successful!',
+              'Your payment has been processed successfully.',
+              [
+                { text: 'View Bookings', onPress: () => router.push('/(customer)/bookings') },
+                { text: 'OK', onPress: () => router.back() },
+              ]
+            );
+            return;
+          }
+        } catch (vErr) {
+          console.error('Fallback verification failed:', vErr);
+        }
+      }
+
+      if (result.type === 'cancel' || result.type === 'dismiss') {
         setPaymentStatus('pending');
-        setIsPaying(false);
       }
     } catch (error) {
       console.error('Error opening browser:', error);
       setPaymentStatus('failed');
-      setIsPaying(false);
       Alert.alert('Error', 'Failed to open payment page. Please try again.');
+    } finally {
+      if (paymentStatus === 'processing') {
+        setIsPaying(false);
+      }
     }
   };
 
   const handlePaymentCallback = async (url: string) => {
     try {
       setIsPaying(true);
-      const parsedUrl = new URL(url);
-      const params = new URLSearchParams(parsedUrl.search);
-      const txRef = params.get('tx_ref');
-      const status = params.get('status');
+      console.log('Processing payment callback URL:', url);
+      
+      const { queryParams } = Linking.parse(url);
+      const txRef = queryParams?.tx_ref as string || queryParams?.txRef as string;
+      const status = queryParams?.status as string;
 
       if (status === 'success' && txRef) {
         // Verify payment with backend
         const verification = await verifyChapaPayment.mutateAsync(txRef);
-        
+
         if (verification.status === 'success') {
           setPaymentStatus('completed');
           Alert.alert(
@@ -224,7 +268,16 @@ export default function PaymentScreen() {
       return;
     }
 
-    if (!paymentMethods) return;
+    if (!paymentMethods || paymentMethods.length === 0) {
+      console.warn('Payment methods not loaded or empty');
+      if (!loadingMethods) {
+        Alert.alert('Error', 'Payment methods could not be loaded. Please check your connection.');
+      }
+      return;
+    }
+
+    console.log('Initiating Chapa payment for booking:', bookingId);
+    console.log('Total amount:', totalAmount);
 
     setIsPaying(true);
     setPaymentStatus('processing');
@@ -232,36 +285,42 @@ export default function PaymentScreen() {
     try {
       const chapaMethod = paymentMethods.find(m => m.id === 'chapa');
       if (!chapaMethod) {
-        throw new Error('Chapa payment method not available');
+        throw new Error('Chapa payment method not available in the list');
       }
 
       const paymentData = {
         amount: totalAmount,
         currency: 'ETB',
-        email: 'customer@example.com', // This should come from user profile
-        firstName: 'Customer',
-        lastName: 'User',
+        email: booking?.customer?.email || 'customer@example.com',
+        firstName: (booking?.customer?.fullname || 'Customer').split(' ')[0],
+        lastName: (booking?.customer?.fullname || 'User').split(' ').slice(1).join(' ') || 'User',
         title: 'Service Booking Payment',
-        description: `Payment for service booking`,
-        bookingId: bookingId || `${Date.now()}`,
+        description: `Payment for booking #${bookingId}`,
+        bookingId: bookingId,
+        return_url: Linking.createURL('payment'),
         metadata: {
           providerId: params.providerId,
           serviceId: params.serviceId,
         },
       };
 
+      console.log('Sending payment data to backend:', paymentData);
       const paymentIntent = await initializeChapaPayment.mutateAsync(paymentData);
+      console.log('Payment intent received:', paymentIntent);
 
-      if (paymentIntent.checkoutUrl) {
-        await openCheckoutUrl(paymentIntent.checkoutUrl);
+      if (paymentIntent.checkout_url) {
+        console.log('Opening checkout URL:', paymentIntent.checkout_url);
+        await openCheckoutUrl(paymentIntent.checkout_url, paymentIntent.tx_ref);
       } else {
-        throw new Error('Failed to initialize payment');
+        throw new Error('Server did not return a checkout URL');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chapa payment error:', error);
       setPaymentStatus('failed');
       setIsPaying(false);
-      Alert.alert('Payment Error', 'Failed to initiate payment. Please try again.');
+
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to initiate payment.';
+      Alert.alert('Payment Error', `${errorMessage}. Please try again.`);
     }
   };
 
@@ -305,7 +364,7 @@ export default function PaymentScreen() {
     try {
       setIsPaying(true);
       setPaymentStatus('completed');
-      
+
       // Create booking for cash payment
       if (bookingId) {
         // Booking already created, just confirm
@@ -526,7 +585,7 @@ export default function PaymentScreen() {
                       )}
                     </>
                   )}
-                  
+
                   <TouchableOpacity
                     style={[styles.cancelButton, isPaying && styles.cancelButtonDisabled]}
                     onPress={() => router.back()}

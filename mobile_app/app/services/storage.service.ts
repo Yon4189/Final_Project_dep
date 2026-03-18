@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 class StorageService {
-  private readonly PREFIX = '@HomeService:';
+  private readonly PREFIX = 'HomeService_';
 
   /**
    * Set item in storage

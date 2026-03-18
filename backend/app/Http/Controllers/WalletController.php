@@ -360,13 +360,41 @@ public function requestWithdrawal(Request $request)
             }
             
             $transactions = $wallet->transactions()
-                ->with(['booking', 'withdrawal'])
+                ->with(['booking.customer', 'booking.service', 'withdrawal'])
                 ->latest()
                 ->paginate(20);
             
+            // Map the transactions to match the mobile app's Transaction interface
+            $formattedTransactions = collect($transactions->items())->map(function($t) {
+                // Determine transaction type for the frontend
+                $type = 'payment'; // default
+                if ($t->withdrawalID) $type = 'withdrawal';
+                if ($t->type === 'refund') $type = 'refund';
+                
+                return [
+                    'id' => (string)$t->id,
+                    'transactionId' => (string)($t->withdrawalID ? 'WDR-' . $t->withdrawalID : 'TXN-' . $t->id),
+                    'bookingId' => (string)$t->bookingID,
+                    'customerName' => $t->booking->customer->fullname ?? $t->booking->customer->name ?? 'N/A',
+                    'serviceName' => $t->booking->service->title ?? ($t->withdrawalID ? 'Withdrawal' : 'N/A'),
+                    'amount' => (float)$t->amount,
+                    'fee' => (float)($t->booking->platform_commission ?? 0),
+                    'netAmount' => (float)$t->amount,
+                    'status' => $t->withdrawalID ? ($t->withdrawal->status ?? 'pending') : 'completed',
+                    'TransactionType' => $type,
+                    'paymentMethod' => $t->withdrawalID ? ($t->withdrawal->payment_method ?? 'bank') : 'chapa',
+                    'createdAt' => $t->created_at->toIso8601String(),
+                ];
+            });
+
             return response()->json([
                 'success' => true,
-                'data' => $transactions
+                'data' => [
+                    'transactions' => $formattedTransactions,
+                    'total' => $transactions->total(),
+                    'hasMore' => $transactions->hasMorePages(),
+                    'currentPage' => $transactions->currentPage(),
+                ]
             ]);
             
         } catch (\Exception $e) {

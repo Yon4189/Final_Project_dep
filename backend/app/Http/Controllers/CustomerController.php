@@ -34,6 +34,7 @@ class CustomerController extends Authenticatable
     {
         $service = $booking->relationLoaded('service') ? $booking->service : null;
         $provider = $booking->relationLoaded('provider') ? $booking->provider : null;
+        $customer = $booking->relationLoaded('customer') ? $booking->customer : null;
 
         $scheduledDate = $booking->scheduledDate
             ? $booking->scheduledDate->toDateString()
@@ -80,6 +81,7 @@ class CustomerController extends Authenticatable
             'cancelledAt' => optional($booking->cancelled_at)->toISOString(),
             'cancellationReason' => $booking->cancellation_reason,
             'review' => $booking->relationLoaded('review') ? $booking->review : null,
+            'customer' => $customer,
             'providerPhone' => $provider?->phone,
         ];
     }
@@ -220,7 +222,7 @@ class CustomerController extends Authenticatable
         }
 
         $query = Booking::where('customerID', $customer->customerID)
-            ->with(['service.category', 'provider', 'review']);
+            ->with(['service.category', 'provider', 'review', 'customer']);
 
         if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
@@ -437,7 +439,7 @@ class CustomerController extends Authenticatable
         }
 
         $booking = Booking::where('customerID', $customer->customerID)
-            ->with(['service.category', 'provider'])
+            ->with(['service.category', 'provider', 'customer', 'review'])
             ->where('bookingID', $id)
             ->first();
 

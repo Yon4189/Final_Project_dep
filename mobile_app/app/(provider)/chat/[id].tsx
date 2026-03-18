@@ -1,3 +1,4 @@
+// app/(provider)/chat/[id].tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     View,
@@ -13,7 +14,6 @@ import {
     ActivityIndicator,
     AppState,
     Linking,
-    Share,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 interface Message {
     id: string;
+    messageID?: number;
     message: string;
     sender_type: 'customer' | 'provider';
     sender_id: number;
@@ -55,7 +56,7 @@ interface CustomerInfo {
 
 export default function ProviderChatScreen() {
     const router = useRouter();
-    const { id: conversationId } = useLocalSearchParams<{ id: string }>();
+    const { id: conversationIdParam } = useLocalSearchParams<{ id: string }>();
     const flatListRef = useRef<FlatList>(null);
     const pollingInterval = useRef<NodeJS.Timeout | null>(null);
     const appState = useRef(AppState.currentState);
@@ -71,10 +72,43 @@ export default function ProviderChatScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
+    const [invalidId, setInvalidId] = useState(false);
 
-    // Load data when screen comes into focus
+    // Validate conversation ID
+    const conversationId = useRef<number | null>(null);
+    useEffect(() => {
+        const parsed = parseInt(conversationIdParam || '');
+        if (isNaN(parsed) || parsed <= 0) {
+            setInvalidId(true);
+            setIsLoading(false);
+        } else {
+            conversationId.current = parsed;
+            setInvalidId(false);
+        }
+    }, [conversationIdParam]);
+
+    const normalizeMessage = (m: any): Message => {
+        const rawId = m.id ?? m.messageID;
+        const id = rawId ? `msg_${rawId}` : `temp_${Date.now()}_${Math.random()}`;
+        return {
+            ...m,
+            id,
+            status: m.status ?? 'sent',
+        };
+    };
+
+    // Debug duplicates
+    useEffect(() => {
+        const ids = messages.map(m => m.id);
+        const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+        if (duplicates.length > 0) {
+            console.warn('Duplicate message IDs:', [...new Set(duplicates)]);
+        }
+    }, [messages]);
+
     useFocusEffect(
         useCallback(() => {
+            if (invalidId || !conversationId.current) return;
             isMounted.current = true;
             loadInitialData();
 
@@ -82,10 +116,11 @@ export default function ProviderChatScreen() {
                 stopPolling();
                 isMounted.current = false;
             };
-        }, [conversationId])
+        }, [conversationId.current, invalidId])
     );
 
     useEffect(() => {
+        if (invalidId || !conversationId.current) return;
         startPolling();
 
         const subscription = AppState.addEventListener('change', nextAppState => {
@@ -99,12 +134,12 @@ export default function ProviderChatScreen() {
             stopPolling();
             subscription.remove();
         };
-    }, [conversation?.conversationID]);
+    }, [conversation?.conversationID, invalidId]);
 
     const startPolling = () => {
         if (pollingInterval.current) clearInterval(pollingInterval.current);
         pollingInterval.current = setInterval(() => {
-            if (conversationId && isMounted.current) {
+            if (conversationId.current && isMounted.current) {
                 fetchNewMessages();
             }
         }, 3000);
@@ -118,17 +153,16 @@ export default function ProviderChatScreen() {
     };
 
     const loadInitialData = async () => {
+        if (!conversationId.current) return;
         try {
             setIsLoading(true);
 
-            // Load provider info
             const userDataStr = await SecureStore.getItemAsync('user_data');
             if (userDataStr) {
                 const userData = JSON.parse(userDataStr);
                 setProviderId(userData.providerID || userData.id);
             }
 
-            // Fetch conversation and messages
             await fetchConversationDetails();
 
         } catch (error) {
@@ -137,30 +171,22 @@ export default function ProviderChatScreen() {
                 Alert.alert('Error', 'Failed to load chat. Please try again.');
             }
         } finally {
-            if (isMounted.current) {
-                setIsLoading(false);
-            }
+            if (isMounted.current) setIsLoading(false);
         }
     };
 
     const fetchConversationDetails = async () => {
-        if (!conversationId) return;
-
+        if (!conversationId.current) return;
         try {
-            const response = await api.get<any>(`/chat/conversations/${conversationId}`);
+            const response = await api.get<any>(`/chat/conversations/${conversationId.current}`);
             if (response.success && response.data) {
                 const convData = response.data.conversation;
-                const msgs = response.data.messages?.data || [];
+                const msgs = (response.data.messages?.data || []).map(normalizeMessage);
 
                 if (isMounted.current) {
                     setConversation(convData);
                     setMessages([...msgs].reverse());
 
-                    // Set customer info from the 'other_party' or 'customer' relationship
-                    // In ChatController@getConversations we added 'other_party', 
-                    // let's see what getMessages returns.
-                    // In ChatController.php, getMessages (Route /conversations/{id}) returns data: { conversation, messages }
-                    // Let's assume conversation has customer loaded.
                     if (convData.customer) {
                         setCustomer(convData.customer);
                     }
@@ -168,10 +194,8 @@ export default function ProviderChatScreen() {
                     setHasMore(response.data.messages?.current_page < response.data.messages?.last_page);
                     setPage(1);
 
-                    // Mark as read
-                    await markMessagesAsRead(parseInt(conversationId));
+                    await markMessagesAsRead(conversationId.current);
 
-                    // Scroll to bottom
                     setTimeout(() => {
                         flatListRef.current?.scrollToEnd({ animated: false });
                     }, 200);
@@ -183,20 +207,23 @@ export default function ProviderChatScreen() {
     };
 
     const fetchMessages = async (pageNum: number = 1) => {
-        if (!conversationId) return;
-
+        if (!conversationId.current) return;
         try {
-            const response = await api.get<any>(`/chat/conversations/${conversationId}?page=${pageNum}`);
+            const response = await api.get<any>(`/chat/conversations/${conversationId.current}?page=${pageNum}`);
             if (response.success && response.data?.messages?.data) {
                 if (!isMounted.current) return;
 
-                const newMessages = response.data.messages.data;
+                const newMessages = response.data.messages.data.map(normalizeMessage);
                 const reversedNewMessages = [...newMessages].reverse();
 
                 if (pageNum === 1) {
                     setMessages(reversedNewMessages);
                 } else {
-                    setMessages(prev => [...reversedNewMessages, ...prev]);
+                    setMessages(prev => {
+                        const existingIds = new Set(prev.map(m => m.id));
+                        const uniqueNew = reversedNewMessages.filter(m => !existingIds.has(m.id));
+                        return [...uniqueNew, ...prev];
+                    });
                 }
 
                 setHasMore(response.data.messages.current_page < response.data.messages.last_page);
@@ -208,23 +235,24 @@ export default function ProviderChatScreen() {
     };
 
     const fetchNewMessages = async () => {
-        if (!conversationId || !isMounted.current) return;
-
+        if (!conversationId.current || !isMounted.current) return;
         try {
-            const response = await api.get<any>(`/chat/conversations/${conversationId}?page=1&limit=20`);
+            const response = await api.get<any>(`/chat/conversations/${conversationId.current}?page=1`);
             if (response.success && response.data?.messages?.data && isMounted.current) {
-                const latestMessages = response.data.messages.data;
+                const latestMessages = response.data.messages.data.map(normalizeMessage);
                 const reversedLatest = [...latestMessages].reverse();
 
-                if (latestMessages.length > 0) {
-                    const existingIds = new Set(messages.map(m => m.id));
-                    const newMsgs = reversedLatest.filter((m: Message) => !existingIds.has(m.id));
+                let addedCount = 0;
+                setMessages(prev => {
+                    const existingIds = new Set(prev.map(m => m.id));
+                    const trulyNew = reversedLatest.filter(m => !existingIds.has(m.id));
+                    addedCount = trulyNew.length;
+                    return trulyNew.length > 0 ? [...prev, ...trulyNew] : prev;
+                });
 
-                    if (newMsgs.length > 0) {
-                        setMessages(prev => [...prev, ...newMsgs]);
-                        await markMessagesAsRead(parseInt(conversationId));
-                        flatListRef.current?.scrollToEnd({ animated: true });
-                    }
+                if (addedCount > 0) {
+                    if (conversationId.current) await markMessagesAsRead(conversationId.current);
+                    flatListRef.current?.scrollToEnd({ animated: true });
                 }
             }
         } catch (error) {
@@ -241,27 +269,28 @@ export default function ProviderChatScreen() {
     };
 
     const refreshMessages = async () => {
-        if (!conversationId) return;
+        if (!conversationId.current) return;
         setRefreshing(true);
         await fetchMessages(1);
         if (isMounted.current) setRefreshing(false);
     };
 
     const loadMoreMessages = () => {
-        if (hasMore && !isLoading && conversationId && isMounted.current) {
+        if (hasMore && !isLoading && conversationId.current && isMounted.current) {
             fetchMessages(page + 1);
         }
     };
 
     const handleSend = async () => {
-        if (!inputText.trim() || isSending || !conversationId || !isMounted.current) return;
+        if (!inputText.trim() || isSending || !conversationId.current || !isMounted.current) return;
 
         const messageText = inputText.trim();
         setInputText('');
         setIsSending(true);
 
+        const tempId = `temp_${Date.now()}_${Math.random()}`;
         const optimisticMessage: Message = {
-            id: `temp_${Date.now()}`,
+            id: tempId,
             message: messageText,
             sender_type: 'provider',
             sender_id: providerId || 0,
@@ -274,28 +303,26 @@ export default function ProviderChatScreen() {
 
         try {
             const response = await api.post<any>(`/chat/messages`, {
-                conversationID: parseInt(conversationId),
+                conversationID: conversationId.current,
                 message: messageText,
             });
 
             if (response.success && response.data?.message && isMounted.current) {
+                const realMessage = normalizeMessage(response.data.message);
+                realMessage.status = 'sent';
                 setMessages(prev =>
-                    prev.map(msg =>
-                        msg.id === optimisticMessage.id
-                            ? { ...response.data.message, status: 'sent' }
-                            : msg
-                    )
+                    prev.map(msg => (msg.id === tempId ? realMessage : msg))
                 );
             } else {
                 if (isMounted.current) {
-                    setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+                    setMessages(prev => prev.filter(msg => msg.id !== tempId));
                     Alert.alert('Error', 'Failed to send message');
                 }
             }
         } catch (error) {
             console.error('Error sending message:', error);
             if (isMounted.current) {
-                setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+                setMessages(prev => prev.filter(msg => msg.id !== tempId));
                 Alert.alert('Error', 'Failed to send message. Please check connection.');
             }
         } finally {
@@ -397,6 +424,38 @@ export default function ProviderChatScreen() {
         </View>
     );
 
+    if (invalidId) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Invalid Conversation</Text>
+                </View>
+                <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle-outline" size={64} color={Colors.text.secondary} />
+                    <Text style={styles.errorText}>This conversation does not exist.</Text>
+                    <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
+                        <Text style={styles.errorButtonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
+
+    if (isLoading && !refreshing) {
+        return (
+            <View style={styles.container}>
+                {renderHeader()}
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <Text style={styles.loadingText}>Loading conversation...</Text>
+                </View>
+            </View>
+        );
+    }
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -409,7 +468,7 @@ export default function ProviderChatScreen() {
                 ref={flatListRef}
                 data={messages}
                 renderItem={renderMessage}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.messagesList}
                 onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
                 onRefresh={refreshMessages}
@@ -464,6 +523,12 @@ const styles = StyleSheet.create({
     backButton: {
         padding: 8,
     },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.text.primary,
+        marginLeft: 16,
+    },
     profileContainer: {
         flex: 1,
         flexDirection: 'row',
@@ -495,6 +560,41 @@ const styles = StyleSheet.create({
     },
     headerButton: {
         padding: 8,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 14,
+        color: Colors.text.secondary,
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 40,
+    },
+    errorText: {
+        marginTop: 20,
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.text.primary,
+        textAlign: 'center',
+    },
+    errorButton: {
+        marginTop: 24,
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    errorButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 16,
     },
     messagesList: {
         paddingHorizontal: 16,

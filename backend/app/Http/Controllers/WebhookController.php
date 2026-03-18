@@ -75,31 +75,7 @@ public function handleChapaWebhook(Request $request)
     }
 
     if (($payload['status'] ?? '') === 'success') {
-        DB::transaction(function () use ($payment) {
-            $payment->status = 'held';
-            $payment->paid_at = now();
-            $payment->save();
-
-            $booking = Booking::with(['customer', 'service'])->find($payment->bookingID);
-            if ($booking) {
-                $booking->payment_status = 'paid';
-                $booking->save();
-
-                // Notify provider about the payment
-                $this->notificationService->toProvider(
-                    $booking->providerID,
-                    'payment_received',
-                    'Payment Received',
-                    'You have received a payment for ' . $booking->service->title,
-                    [
-                        'booking_id' => $booking->bookingID,
-                        'customer_name' => $booking->customer->fullname,
-                        'amount' => $payment->amount
-                    ],
-                    $booking->bookingID
-                );
-            }
-        });
+        $this->walletService->handlePaymentSuccess($payment, $payload);
         return response()->json(['success' => true]);
     }
 
@@ -108,109 +84,6 @@ public function handleChapaWebhook(Request $request)
 
 
 
-    /**
-     * Handle successful payment webhook
-     */
-    private function handlePaymentSuccess($data)
-    {
-        $txRef = $data['tx_ref'] ?? null;
-        $chapaTxId = $data['id'] ?? null;
-        $amount = $data['amount'] ?? 0;
-        $currency = $data['currency'] ?? 'ETB';
-
-        if (!$txRef) {
-            Log::error('Payment success webhook missing tx_ref', $data);
-            return response()->json(['error' => 'Missing transaction reference'], 400);
-        }
-
-        // Find payment by tx_ref
-        $payment = Payment::where('tx_ref', $txRef)->first();
-        
-        if (!$payment) {
-            Log::warning('Payment not found for webhook', ['tx_ref' => $txRef]);
-            return response()->json(['error' => 'Payment not found'], 404);
-        }
-
-        // Verify amount matches
-        if (abs($amount - $payment->amount) > 0.01) {
-            Log::error('Payment amount mismatch in webhook', [
-                'tx_ref' => $txRef,
-                'expected' => $payment->amount,
-                'received' => $amount
-            ]);
-            $payment->status = 'failed';
-            $payment->failure_reason = 'Amount mismatch in webhook';
-            $payment->save();
-            return response()->json(['error' => 'Amount mismatch'], 400);
-        }
-
-        // Only process if payment is in pending/processing state
-        if (!in_array($payment->status, ['pending', 'processing'])) {
-            Log::info('Payment already processed', [
-                'tx_ref' => $txRef,
-                'status' => $payment->status
-            ]);
-            return response()->json(['status' => 'already_processed']);
-        }
-
-        // Use database transaction to ensure data consistency
-        DB::transaction(function () use ($payment, $chapaTxId, $data) {
-            // Update payment status to held (in escrow)
-            $payment->status = 'held';
-            $payment->chapa_tx_id = $chapaTxId;
-            $payment->payment_method = $data['payment_method'] ?? 'chapa';
-            $payment->chapa_response = $data;
-            $payment->paid_at = now();
-            $payment->held_until = now()->addHours(48); // Auto-release after 48 hours
-            $payment->save();
-
-            // Update booking status if linked
-            if ($payment->bookingID) {
-                $booking = Booking::find($payment->bookingID);
-                if ($booking) {
-                    $booking->status = 'paid';
-                    $booking->paymentID = $payment->paymentID;
-                    $booking->customer_confirmation_deadline = now()->addHours(48);
-                    $booking->paid_at = now();
-                    $booking->platform_commission = $payment->platform_fee;
-                    $booking->save();
-
-                    // Update provider's pending balance
-                    $wallet = Wallet::firstOrCreate(
-                        ['providerID' => $payment->providerID],
-                        ['providerID' => $payment->providerID, 'available_balance' => 0, 'pending_balance' => 0]
-                    );
-
-                    $wallet->pending_balance += $payment->provider_amount;
-                    $wallet->save();
-
-                    WalletTransaction::create([
-                        'walletID' => $wallet->walletID,
-                        'type' => 'pending_credit',
-                        'amount' => $payment->provider_amount,
-                        'description' => 'Payment pending for booking #' . $payment->bookingID,
-                        'bookingID' => $payment->bookingID
-                    ]);
-                    
-                    Log::info('Booking status updated to paid', [
-                        'booking_id' => $booking->bookingID,
-                        'payment_id' => $payment->paymentID
-                    ]);
-                }
-            }
-
-            // Trigger any additional business logic
-            $this->triggerPaymentSuccessActions($payment);
-        });
-
-        Log::info('Payment success processed via webhook', [
-            'payment_id' => $payment->paymentID,
-            'tx_ref' => $txRef,
-            'amount' => $payment->amount
-        ]);
-
-        return response()->json(['status' => 'success']);
-    }
 
     /**
      * Handle failed payment webhook
@@ -248,7 +121,7 @@ public function handleChapaWebhook(Request $request)
             }
 
             // Trigger failure notifications
-            $this->triggerPaymentFailureActions($payment);
+            // $this->triggerPaymentFailureActions($payment); // Removed as per instruction
         });
 
         Log::info('Payment failure processed via webhook', [
@@ -384,55 +257,6 @@ private function verifyWebhookSignature($payload, $signature, $secret)
     return hash_equals($expected, $signature);
 }
 
-    /**
-     * Trigger actions after successful payment
-     */
-    private function triggerPaymentSuccessActions(Payment $payment)
-    {
-        try {
-            // Send confirmation notification to customer
-            // This would typically be done via NotificationService
-            Log::info('Payment success actions triggered', [
-                'payment_id' => $payment->paymentID,
-                'customer_id' => $payment->customerID
-            ]);
-
-            // Notify provider about new paid booking
-            if ($payment->bookingID) {
-                // TODO: Implement provider notification via NotificationService
-                Log::info('Provider notification would be sent', [
-                    'provider_id' => $payment->providerID,
-                    'booking_id' => $payment->bookingID
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Error triggering payment success actions', [
-                'payment_id' => $payment->paymentID,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Trigger actions after failed payment
-     */
-    private function triggerPaymentFailureActions(Payment $payment)
-    {
-        try {
-            // Send failure notification to customer
-            Log::info('Payment failure actions triggered', [
-                'payment_id' => $payment->paymentID,
-                'customer_id' => $payment->customerID
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error triggering payment failure actions', [
-                'payment_id' => $payment->paymentID,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 
     /**
      * Trigger actions after successful transfer

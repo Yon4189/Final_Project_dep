@@ -355,6 +355,10 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         scheduledDate: scheduledDate,
         agreed_price: servicePrice,
         service_address: address,
+        full_address: address,
+        location_source: userLocation?.latitude ? 'gps' : 'new',
+        latitude: userLocation?.latitude || 0, // Fallback to 0 if missing but required
+        longitude: userLocation?.longitude || 0,
         notes: description,
       });
 

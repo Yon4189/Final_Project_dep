@@ -78,7 +78,7 @@ class ChapaService
     public function verifyPayment($txRef)
     {
         try {
-            $response = $this->client->get('/transaction/verify/' . $txRef, [
+            $response = $this->client->get('transaction/verify/' . $txRef, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->secretKey,
                 ]
