@@ -440,6 +440,21 @@ class CustomerService {
     return response;
   }
 
+  async submitBookingReview(bookingID: string, data: {
+    rating: number;
+    comment?: string;
+    is_anonymous?: boolean;
+  }): Promise<ApiResponse<any>> {
+    const response = await api.post<any>(`${this.BASE_PATH}/bookings/${bookingID}/review`, data);
+    
+    if (response.success) {
+      await storage.removeItem(`request_${bookingID}`);
+      await storage.removeItem('user_requests');
+    }
+    
+    return response;
+  }
+
   async updateReview(id: string, data: Partial<Review>): Promise<ApiResponse<Review>> {
     const response = await api.put<Review>(`${this.BASE_PATH}/reviews/${id}`, data);
     

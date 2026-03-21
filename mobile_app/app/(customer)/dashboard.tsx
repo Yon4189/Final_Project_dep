@@ -304,26 +304,26 @@ export default function CustomerDashboard() {
 
     return (
       <View style={styles.header}>
+        <TouchableOpacity
+          style={[styles.iconButton, {
+            backgroundColor: Colors.primary + '15',
+            borderRadius: 20,
+            padding: 8,
+            marginRight: 12
+          }]}
+          onPress={() => router.replace("/")}
+        >
+          <Ionicons name="home" size={24} color={Colors.primary} />
+        </TouchableOpacity>
+
         <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>
-            Hello, {loadingUser ? "👋" : displayName}!
+            Welcome back, {loadingUser ? "👋" : displayName}
           </Text>
           <Text style={styles.subtitle}>Find trusted service providers</Text>
         </View>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.iconButton, { 
-              backgroundColor: Colors.primary + '15', 
-              borderRadius: 20,
-              padding: 4,
-              marginRight: 4
-            }]}
-            onPress={() => router.replace("/")}
-          >
-            <Ionicons name="home" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => router.push("/(customer)/chat/index")}

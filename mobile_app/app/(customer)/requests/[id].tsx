@@ -411,7 +411,11 @@ export default function RequestDetails() {
   };
 
   const renderActions = () => {
-    if (request.status === 'cancelled' || request.status === 'completed') {
+    if (request.status === 'cancelled') {
+      return null;
+    }
+
+    if (request.status === 'completed' && request.review) {
       return null;
     }
 
@@ -445,6 +449,49 @@ export default function RequestDetails() {
           <Ionicons name="alert-circle" size={20} color={Colors.warning} />
           <Text style={styles.helpButtonText}>Report an Issue</Text>
         </TouchableOpacity>
+
+        {request.status === 'completed' && !request.review && (
+          <TouchableOpacity 
+            style={styles.reviewButton} 
+            onPress={() => setShowReviewModal(true)}
+          >
+            <Ionicons name="star" size={20} color={Colors.surface} />
+            <Text style={styles.reviewButtonText}>Rate & Review Service</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const renderReview = () => {
+    if (!request.review) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Your Review</Text>
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Ionicons
+                  key={star}
+                  name={star <= request.review!.rating ? 'star' : 'star-outline'}
+                  size={16}
+                  color={star <= request.review!.rating ? '#FFD700' : Colors.text.secondary}
+                />
+              ))}
+            </View>
+            <Text style={styles.reviewDate}>
+              {request.review.createdAt ? format(new Date(request.review.createdAt.toString()), 'PP') : ''}
+            </Text>
+          </View>
+          {request.review.comment && (
+            <Text style={styles.reviewComment}>{request.review.comment}</Text>
+          )}
+          {request.review.is_anonymous && (
+            <Text style={styles.anonymousBadge}>Submitted Anonymously</Text>
+          )}
+        </View>
       </View>
     );
   };
@@ -500,6 +547,8 @@ export default function RequestDetails() {
             </TouchableOpacity>
           </View>
         )}
+
+        {renderReview()}
 
         {renderActions()}
 
@@ -959,6 +1008,53 @@ const styles = StyleSheet.create({
   helpButtonText: {
     color: Colors.warning,
     fontSize: 14,
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 8,
+  },
+  reviewButtonText: {
+    color: Colors.surface,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  reviewCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    lineHeight: 20,
+  },
+  anonymousBadge: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   confirmationRequired: {
     marginTop: 8,

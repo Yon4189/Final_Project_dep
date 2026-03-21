@@ -49,28 +49,29 @@ export default function CustomerLayout() {
         headerShadowVisible: false,
         contentStyle: { backgroundColor: Colors.background },
         headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/(customer)/dashboard');
-              }
-            }}
-            style={{ marginLeft: 16 }}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(customer)/dashboard');
+                }
+              }}
+              style={{ marginRight: 12 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.replace('/(customer)/dashboard')}
+            >
+              <Ionicons name="home-outline" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
         ),
         headerRight: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <NotificationBadge />
-            <TouchableOpacity
-              onPress={() => router.replace('/(customer)/dashboard')}
-              style={{ marginRight: 16 }}
-            >
-              <Ionicons name="home-outline" size={24} color={Colors.primary} />
-            </TouchableOpacity>
           </View>
         ),
       }}

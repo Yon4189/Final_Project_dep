@@ -470,6 +470,7 @@ export interface Review {
   criteriaRatings?: ReviewCriteria;
   isRecommended: boolean;
   isAnonymous: boolean;
+  is_anonymous?: boolean;
   professionalResponse?: string;
   respondedAt?: Timestamp;
   isPublic: boolean;

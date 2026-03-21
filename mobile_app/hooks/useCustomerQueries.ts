@@ -146,7 +146,7 @@ export const useSubmitReview = () => {
       comment?: string, 
       is_anonymous?: boolean 
     }) => {
-      const response = await api.post<any>(`/customer/bookings/${bookingID}/review`, {
+      const response = await customerService.submitBookingReview(bookingID, {
         rating,
         comment,
         is_anonymous
