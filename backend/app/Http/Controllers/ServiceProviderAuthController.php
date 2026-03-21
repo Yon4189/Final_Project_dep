@@ -188,11 +188,11 @@ public function login(Request $request)
         ], 401);
     }
 
-    // Check if provider is approved
-    if ($provider->status !== 'approved') {
+    // Check if provider is suspended or rejected
+    if (in_array($provider->status, ['rejected', 'suspended'])) {
         return response()->json([
             'success' => false,
-            'message' => 'Your account is not approved yet'
+            'message' => 'Your account has been ' . $provider->status
         ], 403);
     }
     

@@ -14,7 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { useServiceRequest, useCancelRequest } from '../../../hooks/useCustomerQueries';
+import { useServiceRequest, useCancelRequest, useConfirmCompletion } from '../../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { api } from "@/app/services/api";
 import { ReviewModal } from '../../../components/customer/ReviewModal';
@@ -26,6 +26,7 @@ const STATUS_COLORS = {
   accepted: Colors.info,
   confirmed: Colors.info,
   in_progress: Colors.primary,
+  waiting_customer_confirmation: Colors.info,
   completed: Colors.success,
   cancelled: Colors.error,
   disputed: Colors.error,
@@ -36,6 +37,7 @@ const STATUS_ICONS = {
   accepted: 'checkmark-circle-outline',
   confirmed: 'checkmark-circle-outline',
   in_progress: 'construct-outline',
+  waiting_customer_confirmation: 'shield-checkmark-outline',
   completed: 'checkmark-done-outline',
   cancelled: 'close-circle-outline',
   disputed: 'alert-circle-outline',
@@ -46,7 +48,8 @@ const STATUS_STEPS = [
   { key: 'accepted', label: 'Accepted', icon: 'checkmark-circle-outline' },
   { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle-outline' },
   { key: 'in_progress', label: 'In Progress', icon: 'construct-outline' },
-  { key: 'completed', label: 'Completed', icon: 'checkmark-done-outline' },
+  { key: 'waiting_customer_confirmation', label: 'Job Done', icon: 'shield-checkmark-outline' },
+  { key: 'completed', label: 'Finalized', icon: 'checkmark-done-outline' },
 ];
 
 export default function RequestDetails() {
@@ -60,6 +63,7 @@ export default function RequestDetails() {
 
   const { data: request, isLoading } = useServiceRequest(id as string);
   const cancelRequest = useCancelRequest();
+  const confirmCompletion = useConfirmCompletion();
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -162,6 +166,27 @@ export default function RequestDetails() {
 
   const handleReview = () => {
     setShowReviewModal(true);
+  };
+
+  const handleConfirmCompletion = async () => {
+    Alert.alert(
+      'Confirm Completion',
+      'By confirming, you agree that the service has been performed satisfactorily and the payment will be released to the provider.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              await confirmCompletion.mutateAsync(id as string);
+              Alert.alert('Success', 'Service completion confirmed. Thank you!');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to confirm completion. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderHeader = () => (
@@ -289,6 +314,25 @@ export default function RequestDetails() {
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
             <Text style={styles.paidText}>Payment Completed</Text>
           </View>
+        ) : request.status === 'waiting_customer_confirmation' ? (
+          <View style={styles.confirmationRequired}>
+            <View style={styles.pendingPayment}>
+              <Ionicons name="information-circle-outline" size={20} color={Colors.info} />
+              <Text style={[styles.pendingPaymentText, { color: Colors.info }]}>
+                Provider marked job as done. Please confirm completion.
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={[styles.payButton, { marginTop: 12, backgroundColor: Colors.success }]} 
+              onPress={handleConfirmCompletion}
+              disabled={confirmCompletion.isPending}
+            >
+              <Ionicons name="shield-checkmark-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
+              <Text style={styles.payButtonText}>
+                {confirmCompletion.isPending ? 'Confirming...' : 'Confirm Service Completion'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : (['accepted', 'confirmed'].includes(request.status as string)) ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
             <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
@@ -367,7 +411,11 @@ export default function RequestDetails() {
   };
 
   const renderActions = () => {
-    if (request.status === 'cancelled' || request.status === 'completed') {
+    if (request.status === 'cancelled') {
+      return null;
+    }
+
+    if (request.status === 'completed' && request.review) {
       return null;
     }
 
@@ -401,6 +449,49 @@ export default function RequestDetails() {
           <Ionicons name="alert-circle" size={20} color={Colors.warning} />
           <Text style={styles.helpButtonText}>Report an Issue</Text>
         </TouchableOpacity>
+
+        {request.status === 'completed' && !request.review && (
+          <TouchableOpacity 
+            style={styles.reviewButton} 
+            onPress={() => setShowReviewModal(true)}
+          >
+            <Ionicons name="star" size={20} color={Colors.surface} />
+            <Text style={styles.reviewButtonText}>Rate & Review Service</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const renderReview = () => {
+    if (!request.review) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Your Review</Text>
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Ionicons
+                  key={star}
+                  name={star <= request.review!.rating ? 'star' : 'star-outline'}
+                  size={16}
+                  color={star <= request.review!.rating ? '#FFD700' : Colors.text.secondary}
+                />
+              ))}
+            </View>
+            <Text style={styles.reviewDate}>
+              {request.review.createdAt ? format(new Date(request.review.createdAt.toString()), 'PP') : ''}
+            </Text>
+          </View>
+          {request.review.comment && (
+            <Text style={styles.reviewComment}>{request.review.comment}</Text>
+          )}
+          {request.review.is_anonymous && (
+            <Text style={styles.anonymousBadge}>Submitted Anonymously</Text>
+          )}
+        </View>
       </View>
     );
   };
@@ -456,6 +547,8 @@ export default function RequestDetails() {
             </TouchableOpacity>
           </View>
         )}
+
+        {renderReview()}
 
         {renderActions()}
 
@@ -915,6 +1008,56 @@ const styles = StyleSheet.create({
   helpButtonText: {
     color: Colors.warning,
     fontSize: 14,
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 8,
+  },
+  reviewButtonText: {
+    color: Colors.surface,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  reviewCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    lineHeight: 20,
+  },
+  anonymousBadge: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  confirmationRequired: {
+    marginTop: 8,
   },
   bottomPadding: {
     height: 40,

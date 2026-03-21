@@ -136,6 +136,47 @@ export const useMarkAllNotificationsRead = () => {
   });
 };
 
+export const useSubmitReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ bookingID, rating, comment, is_anonymous }: { 
+      bookingID: string, 
+      rating: number, 
+      comment?: string, 
+      is_anonymous?: boolean 
+    }) => {
+      const response = await customerService.submitBookingReview(bookingID, {
+        rating,
+        comment,
+        is_anonymous
+      });
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to submit review');
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [customerKeys.all, 'serviceRequests'] });
+      queryClient.invalidateQueries({ queryKey: [customerKeys.all, 'serviceRequests', variables.bookingID] });
+    },
+  });
+};
+
+export const useUnreadNotificationsCount = () => {
+  return useQuery({
+    queryKey: [...customerKeys.notifications(), 'unread-count'],
+    queryFn: async () => {
+      const response = await customerService.getUnreadCount();
+      if (!response.success) {
+        return 0;
+      }
+      return response.data?.unread_count ?? 0;
+    },
+    refetchInterval: 30000, // Poll every 30 seconds
+  });
+};
+
 export const useNotificationSettings = () => {
   return useQuery({
     queryKey: customerKeys.notificationsSettings(),
@@ -435,6 +476,24 @@ export const useCancelServiceRequest = () => {
 
 // Alias for backward compatibility and consistency with components
 export const useCancelRequest = useCancelServiceRequest;
+
+export const useConfirmCompletion = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await customerService.confirmBookingCompletion(bookingId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to confirm service completion');
+      }
+      return response.data;
+    },
+    onSuccess: (_, bookingId) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceRequest(bookingId) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.serviceRequests() });
+    },
+  });
+};
 
 export const useRescheduleServiceRequest = () => {
   const queryClient = useQueryClient();

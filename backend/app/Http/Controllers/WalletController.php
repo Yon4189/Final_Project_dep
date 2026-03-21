@@ -371,6 +371,14 @@ public function requestWithdrawal(Request $request)
                 if ($t->withdrawalID) $type = 'withdrawal';
                 if ($t->type === 'refund') $type = 'refund';
                 
+                // Determine status for frontend
+                $status = 'completed';
+                if ($t->withdrawalID) {
+                    $status = $t->withdrawal->status ?? 'pending';
+                } elseif ($t->type === 'pending_credit') {
+                    $status = 'pending';
+                }
+                
                 return [
                     'id' => (string)$t->id,
                     'transactionId' => (string)($t->withdrawalID ? 'WDR-' . $t->withdrawalID : 'TXN-' . $t->id),
@@ -380,7 +388,7 @@ public function requestWithdrawal(Request $request)
                     'amount' => (float)$t->amount,
                     'fee' => (float)($t->booking->platform_commission ?? 0),
                     'netAmount' => (float)$t->amount,
-                    'status' => $t->withdrawalID ? ($t->withdrawal->status ?? 'pending') : 'completed',
+                    'status' => $status,
                     'TransactionType' => $type,
                     'paymentMethod' => $t->withdrawalID ? ($t->withdrawal->payment_method ?? 'bank') : 'chapa',
                     'createdAt' => $t->created_at->toIso8601String(),

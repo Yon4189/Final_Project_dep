@@ -141,6 +141,7 @@ export interface PaymentVerificationResult {
   amount: number;
   booking_id?: string;
   is_successful?: boolean;
+  message?: string;
 }
 
 export interface MobileMoneyInitiationResult {

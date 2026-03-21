@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 const getApiBaseUrl = (): string => {
 
@@ -7,13 +8,25 @@ const getApiBaseUrl = (): string => {
         return process.env.EXPO_PUBLIC_API_URL;
     }
 
-    // 2️⃣ Development fallback
+    // 2️⃣ Check for IP specify in env
+    if (process.env.EXPO_PUBLIC_API_IP) {
+        return `http://${process.env.EXPO_PUBLIC_API_IP}:8000/api`;
+    }
+
+    // 3️⃣ Development fallback
     if (__DEV__) {
         const hostUri = Constants.expoConfig?.hostUri;
 
         if (hostUri) {
             const host = hostUri.split(':')[0];
-            return `http://${host}:8000/api`;
+            if (host && host !== 'localhost' && host !== '127.0.0.1') {
+                return `http://${host}:8000/api`;
+            }
+        }
+
+        // Common emulator IP
+        if (Platform.OS === 'android') {
+            return 'http://10.0.2.2:8000/api';
         }
 
         return 'http://localhost:8000/api';

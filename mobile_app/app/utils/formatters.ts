@@ -2,9 +2,10 @@
 /**
  * Format currency to ETB
  */
-export const formatCurrency = (amount: number | undefined | null, currency: string = 'ETB'): string => {
-  if (amount === undefined || amount === null) return `${currency} 0`;
-  return `${currency} ${amount.toFixed(2)}`;
+export const formatCurrency = (amount: number | string | undefined | null, currency: string = 'ETB'): string => {
+  if (amount === undefined || amount === null) return `${currency} 0.00`;
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return `${currency} ${Number.isFinite(num) ? num.toFixed(2) : '0.00'}`;
 };
 
 /**
@@ -81,12 +82,14 @@ export const formatRelativeTime = formatTimeAgo;
 /**
  * Format distance
  */
-export const formatDistance = (distance: number | undefined | null): string => {
+export const formatDistance = (distance: number | string | undefined | null): string => {
   if (distance === undefined || distance === null) return 'Distance unknown';
-  if (distance < 1) {
-    return `${Math.round(distance * 1000)}m away`;
+  const num = typeof distance === 'string' ? parseFloat(distance) : distance;
+  if (!Number.isFinite(num)) return 'Distance unknown';
+  if (num < 1) {
+    return `${Math.round(num * 1000)}m away`;
   }
-  return `${distance.toFixed(1)}km away`;
+  return `${num.toFixed(1)}km away`;
 };
 
 /**
@@ -105,9 +108,10 @@ export const formatPhoneNumber = (phone: string): string => {
 /**
  * Format rating to display
  */
-export const formatRating = (rating: number | undefined | null): string => {
+export const formatRating = (rating: number | string | undefined | null): string => {
   if (rating === undefined || rating === null) return '0.0';
-  return rating.toFixed(1);
+  const num = typeof rating === 'string' ? parseFloat(rating) : rating;
+  return Number.isFinite(num) ? num.toFixed(1) : '0.0';
 };
 
 /**
