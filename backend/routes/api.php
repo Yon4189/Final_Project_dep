@@ -31,6 +31,10 @@ use App\Http\Controllers\OnlineStatusController;
 
 
 // ==================== PUBLIC ROUTES ====================
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok', 'message' => 'API is healthy']);
+});
+
 Route::get('/cities', [ServiceCityController::class, 'index']);
 Route::get('/test', function () {
     return response()->json([
@@ -67,6 +71,7 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 Route::match(['get', 'post'], '/webhook/chapa', [WebhookController::class, 'handleChapaWebhook']);
 Route::get('/payment/callback/{tx_ref}', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/return', [App\Http\Controllers\PaymentController::class, 'handleReturn'])->name('payment.return');
+Route::get('/payment/return/{encoded_redirect}', [App\Http\Controllers\PaymentController::class, 'handleReturn'])->name('payment.return.fixed');
 
 // ==================== PUBLIC SEARCH (Customer Prefix) ====================
 Route::prefix('customer')->group(function () {
@@ -104,14 +109,6 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
     Route::post('/bookings/{id}/reschedule', [CustomerController::class, 'rescheduleRequest']);
     Route::get('/bookings/{id}/status', [CustomerController::class, 'getRequestStatus']);
     Route::get('/bookings/{id}/track', [CustomerController::class, 'trackProvider']);
-    
-    // Chat
-    // Route::prefix('chat')->group(function () {
-    //     Route::get('/providers/{providerId}', [ChatController::class, 'getConversation']);
-    //     Route::post('/providers/{providerId}/send', [ChatController::class, 'sendMessage']);
-    //     Route::get('/conversations', [ChatController::class, 'getConversations']);
-    //     Route::post('/messages/{messageId}/read', [ChatController::class, 'markAsRead']);
-    // });
     
     // Reviews
     Route::post('/reviews', [CustomerController::class, 'createReview']);
@@ -198,14 +195,6 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     Route::post('/bookings/{id}/start', [BookingController::class, 'start']); // Provider started
     Route::post('/bookings/{id}/arrive', [BookingController::class, 'arrive']); // Provider arrived
     Route::post('/bookings/{id}/complete', [BookingController::class, 'complete']); // Job done
-    
-    // // Chat
-    // Route::prefix('chat')->group(function () {
-    //     Route::get('/customers/{customerId}', [ChatController::class, 'getConversation']);
-    //     Route::post('/customers/{customerId}/send', [ChatController::class, 'sendMessage']);
-    //     Route::get('/conversations', [ChatController::class, 'getConversations']);
-    //     Route::post('/messages/{messageId}/read', [ChatController::class, 'markAsRead']);
-    // });
     
     // Requests (old booking requests)
     Route::get('/requests', [ProviderDashboardController::class, 'getRequests']);

@@ -20,14 +20,11 @@ class ProviderDashboardController extends Controller
     public function getStats(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-
-            if (!$providerID) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Provider ID is required'
-                ], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
             $provider = ServiceProvider::find($providerID);
             if (!$provider) {
@@ -99,10 +96,11 @@ class ProviderDashboardController extends Controller
     public function getTodaySchedule(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-            if (!$providerID) {
-                return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
             $today = Carbon::today();
             
@@ -142,10 +140,11 @@ class ProviderDashboardController extends Controller
     public function getEarningsSummary(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-            if (!$providerID) {
-                return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
             $currentMonth = Carbon::now()->month;
             $currentYear = Carbon::now()->year;
@@ -240,10 +239,11 @@ class ProviderDashboardController extends Controller
     public function getReviews(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-            if (!$providerID) {
-                return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
             $perPage = $request->query('per_page', 10);
 

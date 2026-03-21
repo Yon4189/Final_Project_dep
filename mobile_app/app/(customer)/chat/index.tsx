@@ -83,10 +83,14 @@ export default function CustomerChatList() {
         const provider = item.other_party;
         const latestMessage = item.latestMessage;
 
+        if (!provider) return null; // skip broken items
+
+        const providerId = provider?.providerID ?? provider?.id;
+
         return (
             <TouchableOpacity
                 style={styles.conversationItem}
-                onPress={() => router.push(`/(customer)/chat/${provider?.providerID || provider?.id}`)}
+                onPress={() => router.push(`/(customer)/chat/${providerId}`)}
             >
                 <Image
                     source={{
@@ -216,7 +220,9 @@ export default function CustomerChatList() {
                 <FlatList
                     data={activeTab === 'chats' ? filteredConversations : providers}
                     renderItem={activeTab === 'chats' ? renderConversationItem : renderProviderItem}
-                    keyExtractor={(item) => (activeTab === 'chats' ? item.conversationID.toString() : item.id.toString())}
+                    keyExtractor={(item, index) => (activeTab === 'chats' 
+                        ? (item.conversationID?.toString() ?? `chat-${index}`) 
+                        : (item.id?.toString() ?? `provider-${index}`))}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
                     }

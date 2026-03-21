@@ -377,6 +377,18 @@ class CustomerService {
     return api.get<{ latitude: number; longitude: number }>(`${this.BASE_PATH}/requests/${id}/track`);
   }
 
+  async confirmBookingCompletion(bookingId: string): Promise<ApiResponse<any>> {
+    const response = await api.post<any>(`${this.BASE_PATH}/bookings/${bookingId}/confirm`);
+    
+    if (response.success) {
+      // Invalidate relevant caches
+      await storage.removeItem(`request_${bookingId}`);
+      await storage.removeItem('user_requests');
+    }
+    
+    return response;
+  }
+
   // ==================== Bookings ====================
 
   async createBooking(data: {

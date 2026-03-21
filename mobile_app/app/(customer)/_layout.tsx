@@ -2,9 +2,40 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import { Colors } from '@/app/constants/Colors';
-import { TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useUnreadNotificationsCount } from '@/hooks/useCustomerQueries';
+
+function NotificationBadge() {
+  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
+  const router = useRouter();
+
+  if (unreadCount === 0) {
+    return (
+      <TouchableOpacity
+        onPress={() => router.push('/(customer)/notifications')}
+        style={{ marginRight: 15 }}
+      >
+        <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push('/(customer)/notifications')}
+      style={{ marginRight: 15, position: 'relative' }}
+    >
+      <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function CustomerLayout() {
   const router = useRouter();
@@ -31,12 +62,24 @@ export default function CustomerLayout() {
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
         ),
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <NotificationBadge />
+            <TouchableOpacity
+              onPress={() => router.replace('/(customer)/dashboard')}
+              style={{ marginRight: 16 }}
+            >
+              <Ionicons name="home-outline" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        ),
       }}
     >
       <Stack.Screen
         name="dashboard"
         options={{
           headerShown: false,
+          headerRight: () => null,
           title: 'Dashboard',
         }}
       />
@@ -179,3 +222,24 @@ export default function CustomerLayout() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.error,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.surface,
+  },
+  badgeText: {
+    color: Colors.surface,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+});

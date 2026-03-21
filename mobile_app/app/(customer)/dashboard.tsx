@@ -22,7 +22,7 @@ import { Colors } from "@/app/constants/Colors";
 const { width } = Dimensions.get("window");
 import { useLocation } from "../../hooks/useLocation";
 import { useSearch } from "../../hooks/useSearch";
-import { useTopRatedProviders } from "@/hooks/useCustomerQueries";
+import { useTopRatedProviders, useUnreadNotificationsCount } from "@/hooks/useCustomerQueries";
 import { ServiceSearch } from "../../components/customer/ServiceSearch";
 import { ProviderCard } from "../../components/customer/ProviderCard";
 import { FilterModal } from "../../components/customer/FilterModal";
@@ -82,7 +82,7 @@ export default function CustomerDashboard() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const { data: unreadNotifications = 0 } = useUnreadNotificationsCount();
   // Add these with your other useState declarations
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loadingComplaints, setLoadingComplaints] = useState(false);
@@ -113,7 +113,6 @@ export default function CustomerDashboard() {
   useEffect(() => {
     loadUserData();
     loadServiceCategories();
-    loadUnreadNotifications();
   }, []);
 
   // Trigger initial search when location becomes available
@@ -155,29 +154,6 @@ export default function CustomerDashboard() {
     }
   };
 
-  const loadUnreadNotifications = async () => {
-    try {
-      const response = await api.get("/customer/notifications/unread-count");
-      console.log("Notification response:", response);
-
-      if (response.success && response.data) {
-        // Handle different possible response structures
-        if (typeof response.data === "object") {
-          const data = response.data as any;
-          // Check for count in different possible locations
-          if (data.count !== undefined) {
-            setUnreadNotifications(data.count);
-          } else if (data.unread !== undefined) {
-            setUnreadNotifications(data.unread);
-          } else if (data.total !== undefined) {
-            setUnreadNotifications(data.total);
-          }
-        }
-      }
-    } catch (error) {
-      console.log("Error fetching notifications count:", error);
-    }
-  };
 
   const loadServiceCategories = async () => {
     try {
@@ -313,7 +289,6 @@ export default function CustomerDashboard() {
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshSearch();
-    await loadUnreadNotifications();
     await loadServiceCategories();
     setRefreshing(false);
   };
@@ -337,6 +312,18 @@ export default function CustomerDashboard() {
         </View>
 
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.iconButton, { 
+              backgroundColor: Colors.primary + '15', 
+              borderRadius: 20,
+              padding: 4,
+              marginRight: 4
+            }]}
+            onPress={() => router.replace("/")}
+          >
+            <Ionicons name="home" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => router.push("/(customer)/chat/index")}

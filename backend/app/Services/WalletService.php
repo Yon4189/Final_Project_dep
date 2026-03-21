@@ -55,6 +55,21 @@ class WalletService
                 'description' => 'Payment released for booking #' . $payment->bookingID,
                 'bookingID' => $payment->bookingID
             ]);
+
+            // Notify Provider that funds are released
+            $notificationService = app(NotificationService::class);
+            $notificationService->toProvider(
+                $payment->providerID,
+                'payment_released',
+                'Funds Released',
+                'Your payment for booking #' . $payment->bookingID . ' has been released and is now available for withdrawal.',
+                [
+                    'booking_id' => $payment->bookingID,
+                    'amount' => $payment->provider_amount,
+                    'transaction_type' => 'release'
+                ],
+                $payment->bookingID
+            );
         });
 
         return $wallet;
@@ -72,6 +87,11 @@ class WalletService
         }
 
         return DB::transaction(function () use ($payment, $chapaResponse) {
+            Log::info('Updating payment status to held', [
+                'tx_ref' => $payment->tx_ref,
+                'chapa_response_keys' => $chapaResponse ? array_keys($chapaResponse) : 'none'
+            ]);
+
             // 1. Update Payment
             $payment->status = 'held';
             $payment->paid_at = now();
@@ -80,6 +100,8 @@ class WalletService
                 $payment->chapa_tx_id = $chapaResponse['data']['data']['reference'] ?? $chapaResponse['ref_id'] ?? $payment->chapa_tx_id;
             }
             $payment->save();
+            
+            Log::info('Payment status updated successfully in DB', ['payment_id' => $payment->paymentID]);
 
             // 2. Update Booking
             $booking = Booking::with(['customer', 'service', 'provider'])->find($payment->bookingID);
@@ -119,32 +141,32 @@ class WalletService
                     'bookingID' => $booking->bookingID
                 ]);
 
-                // 6. Send Notifications
-                $notificationService = app(NotificationService::class);
-                
-                // Notify Customer
-                $notificationService->toCustomer(
-                    $booking->customerID,
-                    'payment_success',
-                    'Payment Successful',
-                    'Your payment for ' . ($booking->service->title ?? 'service') . ' has been received.',
-                    ['booking_id' => $booking->bookingID],
-                    $booking->bookingID
-                );
-
-                // Notify Provider
-                $notificationService->toProvider(
-                    $booking->providerID,
-                    'payment_received',
-                    'Payment Received',
-                    'You have received a payment for ' . ($booking->service->title ?? 'service') . '. Funds are held in escrow.',
-                    [
-                        'booking_id' => $booking->bookingID,
-                        'customer_name' => $booking->customer->fullname ?? 'Customer',
-                        'amount' => $payment->amount
-                    ],
-                    $booking->bookingID
-                );
+            // 6. Send Notifications
+            $notificationService = app(NotificationService::class);
+            
+            // Notify Customer
+            $notificationService->toCustomer(
+                $booking->customerID,
+                'payment_success',
+                'Payment Successful',
+                'Your payment for ' . ($booking->service->title ?? 'service') . ' has been received.',
+                ['booking_id' => $booking->bookingID],
+                $booking->bookingID
+            );
+            
+            // Notify Provider
+            $notificationService->toProvider(
+                $booking->providerID,
+                'payment_received',
+                'Payment Received',
+                'You have received a payment for ' . ($booking->service->title ?? 'service') . '. You can now start the service. Funds are held in escrow.',
+                [
+                    'booking_id' => $booking->bookingID,
+                    'customer_name' => $booking->customer->fullname ?? 'Customer',
+                    'amount' => $payment->amount
+                ],
+                $booking->bookingID
+            );
                 
                 Log::info('Payment success processed for booking: ' . $booking->bookingID);
                 return true;

@@ -79,9 +79,12 @@ export type ProviderNotificationType =
   | "booking_cancelled"
   | "booking_completed"
   | "payment_received"
+  | "payment_released"
   | "withdrawal"
   | "review"
   | "reminder"
+  | "provider_approved"
+  | "provider_rejected"
   | "system";
 
 export interface ProviderNotificationPayload {
@@ -128,6 +131,7 @@ export type RequestStatus =
   | "accepted"
   | "confirmed"
   | "in_progress"
+  | "waiting_customer_confirmation"
   | "completed"
   | "cancelled"
   | "disputed";

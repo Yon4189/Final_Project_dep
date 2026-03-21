@@ -69,7 +69,7 @@ export default function EarningsScreen() {
 
   const safeSummary = summary || defaultSummary;
   const safeTransactions = transactions || [];
-  const safeChartData = chartData || { labels: [], data: [] };
+  const safeChartData = chartData || { labels: [""], datasets: [{ data: [0] }] };
 
   // FIXED: Helper function to safely format currency with correct Currency type
   const safeFormatCurrency = (
@@ -192,6 +192,10 @@ export default function EarningsScreen() {
   const renderChart = () => {
     if (!safeChartData.labels?.length) return null;
 
+    const chartDatasets = safeChartData.datasets && safeChartData.datasets.length > 0 
+      ? safeChartData.datasets 
+      : [{ data: safeChartData.data?.length ? safeChartData.data : [0] }];
+
     return (
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Earnings Overview</Text>
@@ -225,11 +229,7 @@ export default function EarningsScreen() {
         <LineChart
           data={{
             labels: safeChartData.labels,
-            datasets: [
-              {
-                data: safeChartData.data,
-              },
-            ],
+            datasets: chartDatasets,
           }}
           width={Math.max(width - 72, safeChartData.labels.length * 60)}
           height={220}
@@ -318,9 +318,11 @@ export default function EarningsScreen() {
   };
 
   const renderTransactionItem = ({ item }: { item: Transaction }) => {
-    const icon = getTransactionIcon(item.TransactionType);
-    const isPayment = item.TransactionType === "payment";
-    const amount = isPayment ? item.netAmount || item.amount : -item.amount;
+    const typeStr = item.TransactionType || (item as any).transactionType || "payment";
+    const icon = getTransactionIcon(typeStr);
+    const isPayment = typeStr === "payment";
+    const amountVal = item.netAmount || item.amount || 0;
+    const amount = isPayment ? amountVal : -amountVal;
 
     return (
       <TouchableOpacity
@@ -342,7 +344,7 @@ export default function EarningsScreen() {
         <View style={styles.transactionInfo}>
           <View style={styles.transactionHeader}>
             <Text style={styles.transactionTitle}>
-              {getTransactionTitle(item.TransactionType)}
+              {getTransactionTitle(typeStr)}
             </Text>
             <Text
               style={[

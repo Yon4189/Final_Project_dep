@@ -91,6 +91,25 @@ export default function ProviderDashboard() {
     >
 
       <View style={styles.headerTop}>
+        <TouchableOpacity
+          style={{ 
+            backgroundColor: Colors.surface, 
+            borderRadius: 22, 
+            width: 44, 
+            height: 44, 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+          }}
+          onPress={() => router.replace("/")}
+        >
+          <Ionicons name="home" size={26} color={Colors.primary} />
+        </TouchableOpacity>
+
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>Welcome back,</Text>
           <Text style={styles.profileName}>
@@ -101,7 +120,7 @@ export default function ProviderDashboard() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.notificationButton}
-            onPress={() => router.push('/(provider)/chat/index')}
+            onPress={() => router.push('/(provider)/chat')}
           >
             <Ionicons name="chatbubbles-outline" size={24} color={Colors.surface} />
           </TouchableOpacity>
@@ -168,7 +187,7 @@ export default function ProviderDashboard() {
       <View style={styles.statsGrid}>
         <TouchableOpacity
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.today || 0)}</Text>
           <Text style={styles.statLabel}>Today</Text>
@@ -176,7 +195,7 @@ export default function ProviderDashboard() {
 
         <TouchableOpacity
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.week || 0)}</Text>
           <Text style={styles.statLabel}>This Week</Text>
@@ -184,7 +203,7 @@ export default function ProviderDashboard() {
 
         <TouchableOpacity
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.month || 0)}</Text>
           <Text style={styles.statLabel}>This Month</Text>
@@ -194,7 +213,7 @@ export default function ProviderDashboard() {
       {/* Rating Card */}
       <TouchableOpacity
         style={styles.ratingCard}
-        onPress={() => router.push('/(provider)/reviews/index')}
+        onPress={() => router.push('/(provider)/reviews')}
       >
         <View style={styles.ratingLeft}>
           <Text style={styles.ratingValue}>{Number(profile?.rating || 0).toFixed(1) || '0.0'}</Text>
@@ -222,7 +241,7 @@ export default function ProviderDashboard() {
     <View style={styles.quickActions}>
       <TouchableOpacity
         style={styles.actionButton}
-        onPress={() => router.push('/(provider)/requests/index')}
+        onPress={() => router.push('/(provider)/requests')}
       >
         <View style={[styles.actionIcon, { backgroundColor: Colors.primary + '20' }]}>
           <Ionicons name="clipboard-outline" size={24} color={Colors.primary} />
@@ -247,7 +266,7 @@ export default function ProviderDashboard() {
 
       <TouchableOpacity
         style={styles.actionButton}
-        onPress={() => router.push('/(provider)/earnings/earnings')}
+        onPress={() => router.push('/(provider)/earnings')}
       >
         <View style={[styles.actionIcon, { backgroundColor: Colors.warning + '20' }]}>
           <Ionicons name="wallet-outline" size={24} color={Colors.warning} />
@@ -464,7 +483,7 @@ export default function ProviderDashboard() {
         {/* Recent Earnings Summary */}
         <TouchableOpacity
           style={styles.earningsSummary}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <View style={styles.earningsHeader}>
             <Text style={styles.earningsTitle}>Recent Earnings</Text>
@@ -524,7 +543,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   welcomeSection: {
-    flex: 1,
+    marginRight: 10,
   },
   welcomeText: {
     fontSize: 14,
@@ -539,6 +558,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   notificationButton: {
     position: 'relative',

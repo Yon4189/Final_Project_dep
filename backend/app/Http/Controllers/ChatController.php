@@ -35,11 +35,17 @@ class ChatController extends Controller
         $user = $request->user();
         $userType = $this->getUserType($user);
 
-        $validator = Validator::make($request->all(), [
-            'providerID' => 'required_if:user_type,customer|exists:service_providers,providerID',
-            'customerID' => 'required_if:user_type,provider|exists:customers,customerID',
-            'bookingID' => 'nullable|exists:bookings,bookingID'
-        ]);
+        // Build validation rules based on the authenticated user type
+        $rules = [
+            'bookingID' => 'nullable|exists:bookings,bookingID',
+        ];
+        if ($userType === 'customer') {
+            $rules['providerID'] = 'required|integer|exists:service_providers,providerID';
+        } else {
+            $rules['customerID'] = 'required|integer|exists:customers,customerID';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -80,7 +86,7 @@ class ChatController extends Controller
 
         // Get messages with sender info
         $messages = $conversation->messages()
-                    ->with('sender')
+                    ->with(['customerSender', 'providerSender'])
                     ->orderBy('created_at', 'desc')
                     ->get();
 
@@ -252,7 +258,9 @@ class ChatController extends Controller
                                      ->with([
                                          'customer',
                                          'provider',
-                                         'latestMessage',
+                                         'latestMessage' => function($q) {
+                                             $q->with(['customerSender', 'providerSender']);
+                                         },
                                          'booking' => function($q) {
                                              $q->select('bookingID', 'status', 'scheduledDate');
                                          }
@@ -303,7 +311,7 @@ class ChatController extends Controller
 
         // Get messages with pagination
         $messages = Message::where('conversationID', $conversationId)
-                           ->with('sender')
+                           ->with(['customerSender', 'providerSender'])
                            ->orderBy('created_at', 'desc')
                            ->paginate(50);
 

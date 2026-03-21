@@ -50,6 +50,8 @@ export default function ProviderChatList() {
         const customer = item.other_party;
         const latestMessage = item.latestMessage;
 
+        if (!customer) return null; // skip broken items
+
         return (
             <TouchableOpacity
                 style={styles.conversationItem}
@@ -102,7 +104,7 @@ export default function ProviderChatList() {
             <FlatList
                 data={conversations}
                 renderItem={renderItem}
-                keyExtractor={(item) => item.conversationID.toString()}
+                keyExtractor={(item, index) => item.conversationID?.toString() ?? `conv-${index}`}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
                 }

@@ -14,7 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { useServiceRequest, useCancelRequest } from '../../../hooks/useCustomerQueries';
+import { useServiceRequest, useCancelRequest, useConfirmCompletion } from '../../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { api } from "@/app/services/api";
 import { ReviewModal } from '../../../components/customer/ReviewModal';
@@ -26,6 +26,7 @@ const STATUS_COLORS = {
   accepted: Colors.info,
   confirmed: Colors.info,
   in_progress: Colors.primary,
+  waiting_customer_confirmation: Colors.info,
   completed: Colors.success,
   cancelled: Colors.error,
   disputed: Colors.error,
@@ -36,6 +37,7 @@ const STATUS_ICONS = {
   accepted: 'checkmark-circle-outline',
   confirmed: 'checkmark-circle-outline',
   in_progress: 'construct-outline',
+  waiting_customer_confirmation: 'shield-checkmark-outline',
   completed: 'checkmark-done-outline',
   cancelled: 'close-circle-outline',
   disputed: 'alert-circle-outline',
@@ -46,7 +48,8 @@ const STATUS_STEPS = [
   { key: 'accepted', label: 'Accepted', icon: 'checkmark-circle-outline' },
   { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle-outline' },
   { key: 'in_progress', label: 'In Progress', icon: 'construct-outline' },
-  { key: 'completed', label: 'Completed', icon: 'checkmark-done-outline' },
+  { key: 'waiting_customer_confirmation', label: 'Job Done', icon: 'shield-checkmark-outline' },
+  { key: 'completed', label: 'Finalized', icon: 'checkmark-done-outline' },
 ];
 
 export default function RequestDetails() {
@@ -60,6 +63,7 @@ export default function RequestDetails() {
 
   const { data: request, isLoading } = useServiceRequest(id as string);
   const cancelRequest = useCancelRequest();
+  const confirmCompletion = useConfirmCompletion();
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -162,6 +166,27 @@ export default function RequestDetails() {
 
   const handleReview = () => {
     setShowReviewModal(true);
+  };
+
+  const handleConfirmCompletion = async () => {
+    Alert.alert(
+      'Confirm Completion',
+      'By confirming, you agree that the service has been performed satisfactorily and the payment will be released to the provider.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              await confirmCompletion.mutateAsync(id as string);
+              Alert.alert('Success', 'Service completion confirmed. Thank you!');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to confirm completion. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderHeader = () => (
@@ -288,6 +313,25 @@ export default function RequestDetails() {
           <View style={styles.paidContainer}>
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
             <Text style={styles.paidText}>Payment Completed</Text>
+          </View>
+        ) : request.status === 'waiting_customer_confirmation' ? (
+          <View style={styles.confirmationRequired}>
+            <View style={styles.pendingPayment}>
+              <Ionicons name="information-circle-outline" size={20} color={Colors.info} />
+              <Text style={[styles.pendingPaymentText, { color: Colors.info }]}>
+                Provider marked job as done. Please confirm completion.
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={[styles.payButton, { marginTop: 12, backgroundColor: Colors.success }]} 
+              onPress={handleConfirmCompletion}
+              disabled={confirmCompletion.isPending}
+            >
+              <Ionicons name="shield-checkmark-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
+              <Text style={styles.payButtonText}>
+                {confirmCompletion.isPending ? 'Confirming...' : 'Confirm Service Completion'}
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : (['accepted', 'confirmed'].includes(request.status as string)) ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
@@ -915,6 +959,9 @@ const styles = StyleSheet.create({
   helpButtonText: {
     color: Colors.warning,
     fontSize: 14,
+  },
+  confirmationRequired: {
+    marginTop: 8,
   },
   bottomPadding: {
     height: 40,

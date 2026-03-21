@@ -143,22 +143,13 @@ export function useReviews(options?: UseQueryOptions<CustomerReview[]>) {
   return useQuery<CustomerReview[], Error>({
     queryKey: reviewKeys.lists(),
     queryFn: async () => {
-      try {
-        // Try to fetch from API
-        const response = await providerService.getReviews(1) as ApiResponse<ReviewsResponse>;
-        
-        if (response?.success && response?.data) {
-          // Return the reviews array from the response
-          return response.data.reviews || [];
-        }
-        
-        // Return mock data if API fails
-        return MOCK_REVIEWS;
-      } catch (error) {
-        console.log('Using mock reviews data');
-        // Return mock data on error
-        return MOCK_REVIEWS;
+      const response = await providerService.getReviews(1) as ApiResponse<ReviewsResponse>;
+      
+      if (!response?.success) {
+        throw new Error(response?.message || 'Failed to fetch reviews');
       }
+      
+      return response.data?.reviews || [];
     },
     ...options,
   });
@@ -170,36 +161,27 @@ export function useReviewStats(options?: UseQueryOptions<ReviewStats>) {
   return useQuery<ReviewStats, Error>({
     queryKey: reviewKeys.stats(),
     queryFn: async () => {
-      try {
-        // Fetch reviews and calculate stats
-        const response = await providerService.getReviews(1) as ApiResponse<ReviewsResponse>;
-        
-        if (response?.success && response?.data) {
-          const { averageRating, total, ratingDistribution } = response.data;
-          
-          // Convert ratingDistribution to the expected format
-          const distribution = {
-            1: ratingDistribution[1] || 0,
-            2: ratingDistribution[2] || 0,
-            3: ratingDistribution[3] || 0,
-            4: ratingDistribution[4] || 0,
-            5: ratingDistribution[5] || 0,
-          };
-          
-          return {
-            averageRating,
-            total,
-            distribution,
-          };
-        }
-        
-        // Return mock stats if API fails
-        return MOCK_STATS;
-      } catch (error) {
-        console.log('Using mock review stats');
-        // Return mock stats on error
-        return MOCK_STATS;
+      const response = await providerService.getReviews(1) as ApiResponse<ReviewsResponse>;
+      
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.message || 'Failed to fetch review stats');
       }
+      
+      const { averageRating, total, ratingDistribution } = response.data;
+      
+      const distribution = {
+        1: ratingDistribution?.[1] || 0,
+        2: ratingDistribution?.[2] || 0,
+        3: ratingDistribution?.[3] || 0,
+        4: ratingDistribution?.[4] || 0,
+        5: ratingDistribution?.[5] || 0,
+      };
+      
+      return {
+        averageRating: averageRating || 0,
+        total: total || 0,
+        distribution,
+      };
     },
     ...options,
   });
@@ -212,21 +194,13 @@ export function useRespondToReview() {
 
   return useMutation({
     mutationFn: async ({ reviewId, message }: { reviewId: string; message: string }) => {
-      try {
-        // Try to call API
-        const response = await providerService.respondToReview(reviewId, message) as ApiResponse<CustomerReview>;
-        
-        if (response?.success && response?.data) {
-          return response.data;
-        }
-        
-        // If API fails, return mock data
-        return { id: reviewId, message } as unknown as CustomerReview;
-      } catch (error) {
-        console.log('Using mock response - API not available');
-        // For development, return mock data
-        return { id: reviewId, message } as unknown as CustomerReview;
+      const response = await providerService.respondToReview(reviewId, message) as ApiResponse<CustomerReview>;
+      
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.message || 'Failed to post response');
       }
+      
+      return response.data;
     },
     onSuccess: (data, variables) => {
       // Update the cache to show the response
@@ -331,21 +305,14 @@ export function useReviewDetails(reviewId: string) {
   return useQuery<CustomerReview | null, Error>({
     queryKey: [...reviewKeys.lists(), reviewId],
     queryFn: async () => {
-      try {
-        // Since there's no getReviewById, fetch all reviews and find the one
-        const response = await providerService.getReviews(1) as ApiResponse<ReviewsResponse>;
-        
-        if (response?.success && response?.data) {
-          const found = response.data.reviews.find(r => r.id === reviewId);
-          return found || null;
-        }
-        
-        // Find in mock data
-        return MOCK_REVIEWS.find(r => r.id === reviewId) || null;
-      } catch (error) {
-        console.log('Using mock review data');
-        return MOCK_REVIEWS.find(r => r.id === reviewId) || null;
+      const response = await providerService.getReviews(1) as ApiResponse<ReviewsResponse>;
+      
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.message || 'Failed to fetch review details');
       }
+      
+      const found = response.data.reviews?.find?.(r => r.id === reviewId);
+      return found || null;
     },
     enabled: !!reviewId,
   });
