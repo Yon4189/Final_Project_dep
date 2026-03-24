@@ -142,11 +142,11 @@ const Profile = () => {
         </div>
       )}
 
-      <h1 className="text-2xl font-black text-slate-900 italic tracking-tight">Admin Account Settings</h1>
+      <h1 className="text-2xl font-black text-slate-900 italic tracking-tight uppercase">Admin Account Settings</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Avatar Section */}
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center space-y-4">
+        <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center space-y-4">
           <div className="relative w-32 h-32 mx-auto">
             <div className="w-full h-full bg-slate-50 rounded-full flex items-center justify-center border-4 border-white shadow-xl overflow-hidden ring-1 ring-slate-100">
               {profileData.profilePicture ? (
@@ -190,7 +190,7 @@ const Profile = () => {
 
         {/* Info Form */}
         <div className="md:col-span-2 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
-          <form onSubmit={handleUpdate} className="p-10 space-y-8" autoComplete="off">
+          <form onSubmit={handleUpdate} className="p-6 sm:p-10 space-y-8" autoComplete="off">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>

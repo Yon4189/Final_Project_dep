@@ -301,7 +301,7 @@ const Services = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[450px] flex flex-col">
-        <div className="overflow-x-auto flex-1">
+        <div className="overflow-x-auto flex-1 hidden lg:block">
           {isLoading ? (
             <div className="p-40 text-center flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-blue-500" size={40} />
@@ -396,6 +396,60 @@ const Services = () => {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden p-4 space-y-4">
+          {isLoading ? (
+            <div className="p-10 text-center flex flex-col items-center gap-3">
+              <Loader2 className="animate-spin text-blue-500" size={32} />
+              <p className="font-black text-slate-400 uppercase text-[10px]">Loading...</p>
+            </div>
+          ) : currentItems.length > 0 ? (
+            currentItems.map((item) => (
+              <div key={activeTab === 'categories' ? item.catagoryID : item.serviceID} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[9px] font-black text-slate-300">#{activeTab === 'categories' ? item.catagoryID : item.serviceID}</p>
+                    <p className="font-black text-slate-800 text-base leading-tight">
+                      {activeTab === 'categories' ? item.name : item.title}
+                    </p>
+                  </div>
+                  {activeTab === 'categories' && (
+                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border ${item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                      {item.status || 'Active'}
+                    </span>
+                  )}
+                </div>
+
+                {activeTab === 'services' && (
+                  <div className="flex items-center justify-between">
+                    <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase italic border border-blue-100">
+                      {getCategoryName(item.catagoryID)}
+                    </span>
+                    <span className="font-black text-slate-800 font-mono text-sm">{item.estimatedPrice} ETB</span>
+                  </div>
+                )}
+
+                {activeTab === 'categories' && item.description && (
+                  <p className="text-xs text-slate-500 italic leading-relaxed line-clamp-2">{item.description}</p>
+                )}
+
+                {activeTab === 'categories' && (
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={() => handleOpenModal(item)} className="flex-1 bg-amber-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 shadow-lg shadow-amber-100">
+                      <Edit2 size={14} /> Edit
+                    </button>
+                    <button onClick={() => handleDeleteClick(item)} className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 shadow-lg shadow-red-100">
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="py-10 text-center text-[10px] font-black text-slate-400 uppercase">No records found.</div>
           )}
         </div>
 

@@ -273,7 +273,7 @@ const Dashboard = () => {
           <span className="text-[10px] font-bold text-slate-400 italic underline underline-offset-4">Review service details before approval</span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hidden lg:block">
           {isLoading ? (
             <div className="p-20 text-center flex flex-col items-center gap-3 italic">
               <Loader2 className="animate-spin text-blue-600" size={32} />
@@ -287,7 +287,7 @@ const Dashboard = () => {
                   <th className="px-6 py-5">Category</th>
                   <th className="px-6 py-5">Service</th>
                   <th className="px-6 py-5">Service Description</th>
-                  <th className="px-6 py-5">Est. Cost</th>
+                  <th className="px-6 py-5 text-center">Est. Cost</th>
                   <th className="px-6 py-5 text-center">Verification Files</th>
                   <th className="px-6 py-5 text-center">Submission</th>
                   <th className="px-8 py-5 text-center">Action</th>
@@ -425,6 +425,78 @@ const Dashboard = () => {
               </div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Verification Queue is Empty</p>
             </div>
+          )}
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden p-4 space-y-4">
+          {isLoading ? (
+            <div className="p-10 text-center flex flex-col items-center gap-3">
+              <Loader2 className="animate-spin text-blue-600" size={24} />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading...</span>
+            </div>
+          ) : verificationQueue.length > 0 ? (
+            verificationQueue.map((item) => (
+              <div key={item.id} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0">
+                    {item.profilePicture ? (
+                      <img src={getBackendUrl(item.profilePicture)} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white font-bold">{item.name?.charAt(0)}</div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 text-sm truncate">{item.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{item.email}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Service</p>
+                    <p className="text-xs font-bold text-blue-600 truncate">{item.service_title || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Est. Cost</p>
+                    <p className="text-xs font-mono font-bold text-emerald-600 italic">
+                      {item.estimated_cost != null ? `${item.estimated_cost} ETB` : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Documents</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => viewFile(item.idPhoto)} className="flex-1 bg-slate-900 text-white py-2 rounded-xl text-[9px] font-black uppercase text-center">ID DOC</button>
+                    <button onClick={() => viewFile(item.credentialPhoto)} className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-[9px] font-black uppercase text-center">LICENCE</button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  {processingId === item.id ? (
+                    <Loader2 className="animate-spin text-blue-600" size={20} />
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleVerifyAction(item.id, item.name, false)}
+                        className="px-4 py-2 border border-red-200 text-red-500 rounded-xl text-[10px] font-black uppercase"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleVerifyAction(item.id, item.name, true)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100"
+                      >
+                        Approve
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="py-10 text-center text-[10px] font-black text-slate-400 uppercase">Queue is empty</div>
           )}
         </div>
       </div>
