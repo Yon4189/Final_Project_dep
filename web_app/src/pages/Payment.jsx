@@ -134,7 +134,7 @@ const Payment = () => {
 
             {/* Payment Information */}
             <div className="mt-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Amount</p>
                   <p className="text-xl font-bold text-gray-900">

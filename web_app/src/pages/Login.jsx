@@ -86,7 +86,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 md:p-14 animate-in fade-in zoom-in duration-500">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 sm:p-14 animate-in fade-in zoom-in duration-500">
 
         <div className="text-center mb-10">
           <h2 className="text-3xl font-black text-slate-800">

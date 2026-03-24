@@ -247,173 +247,242 @@ const Verification = () => {
             Loading Data...
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black border-b border-slate-100">
-                <tr>
-                  <th className="px-8 py-5">Provider Full Name</th>
-                  <th className="px-8 py-5">Category</th>
-                  <th className="px-8 py-5">Service</th>
-                  <th className="px-8 py-5">Service Description</th>
-                  <th className="px-8 py-5">Est. Cost</th>
-                  <th className="px-8 py-5">Verification Files</th>
-                  <th className="px-8 py-5">Submission</th>
-                  <th className="px-8 py-5">Status</th>
-                  <th className="px-8 py-5 text-right">Verification Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {currentItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+          <div className="flex-1 overflow-auto">
+            <div className="hidden lg:block">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black border-b border-slate-100">
+                  <tr>
+                    <th className="px-8 py-5">Provider Full Name</th>
+                    <th className="px-8 py-5">Category</th>
+                    <th className="px-8 py-5">Service</th>
+                    <th className="px-8 py-5">Service Description</th>
+                    <th className="px-8 py-5">Est. Cost</th>
+                    <th className="px-8 py-5">Verification Files</th>
+                    <th className="px-8 py-5">Submission</th>
+                    <th className="px-8 py-5">Status</th>
+                    <th className="px-8 py-5 text-right">Verification Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {currentItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
 
-                    {/* Full Name – profile picture + name */}
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-3">
-                        {item.profilePicture ? (
-                          <img
-                            src={getBackendUrl(item.profilePicture)}
-                            alt={item.name}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 shrink-0"
-                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                          />
-                        ) : null}
-                        <div
-                          className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0"
-                          style={{ display: item.profilePicture ? 'none' : 'flex' }}
-                        >
-                          {item.name?.charAt(0)?.toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{item.name}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">{item.email}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Category */}
-                    <td className="px-6 py-5">
-                      <p className="text-xs font-black text-slate-700 uppercase tracking-tight">{item.service_type || 'N/A'}</p>
-                    </td>
-
-                    {/* Service Title */}
-                    <td className="px-6 py-5">
-                      <p className="text-[10px] text-blue-600 font-bold">{item.service_title || '—'}</p>
-                    </td>
-
-                    {/* Service Description – truncated + modal */}
-                    <td className="px-6 py-5 max-w-[180px]">
-                      {item.service_description ? (
-                        <div>
-                          <p className="text-[11px] text-slate-600 font-medium leading-snug line-clamp-2">
-                            {item.service_description}
-                          </p>
-                          <button
-                            onClick={() => openDescriptionModal(item.service_description, item.name)}
-                            className="mt-1 flex items-center gap-1 text-blue-500 hover:text-blue-700 font-black text-[9px] uppercase"
+                      {/* Full Name – profile picture + name */}
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-3">
+                          {item.profilePicture ? (
+                            <img
+                              src={getBackendUrl(item.profilePicture)}
+                              alt={item.name}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 shrink-0"
+                              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                            />
+                          ) : null}
+                          <div
+                            className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0"
+                            style={{ display: item.profilePicture ? 'none' : 'flex' }}
                           >
-                            <Eye size={10} /> Read more
-                          </button>
+                            {item.name?.charAt(0)?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">{item.name}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">{item.email}</p>
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-[10px] text-slate-300 italic">No description</span>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Est. Cost */}
-                    <td className="px-6 py-5 text-center">
-                      <span className="font-black font-mono text-sm text-emerald-600">
-                        {item.estimated_cost != null ? (
-                          <>{item.estimated_cost} <span className="text-[10px]">ETB</span></>
-                        ) : (
-                          <span className="text-slate-300 text-[10px] italic">—</span>
-                        )}
-                      </span>
-                    </td>
+                      {/* Category */}
+                      <td className="px-6 py-5">
+                        <p className="text-xs font-black text-slate-700 uppercase tracking-tight">{item.service_type || 'N/A'}</p>
+                      </td>
 
-                    {/* Verification Files – ID doc + Licence */}
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col gap-1.5 items-center">
-                        <button
-                          onClick={() => viewFile(item.idPhoto)}
-                          className="w-28 bg-slate-900 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-black transition-colors"
-                        >
-                          <ImageIcon size={10} />
-                          {item.idPhotoType ? item.idPhotoType.split(' ')[0].toUpperCase() : 'ID DOC'}
-                        </button>
-                        <button
-                          onClick={() => viewFile(item.credentialPhoto)}
-                          className="w-28 bg-blue-600 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-blue-700 transition-colors"
-                        >
-                          <FileCheck size={10} /> LICENCE
-                        </button>
-                      </div>
-                    </td>
+                      {/* Service Title */}
+                      <td className="px-6 py-5">
+                        <p className="text-[10px] text-blue-600 font-bold">{item.service_title || '—'}</p>
+                      </td>
 
-                    {/* Submission date */}
-                    <td className="px-6 py-5 text-center">
-                      <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">{item.submission_date}</span>
-                    </td>
-
-                    {/* Status badge */}
-                    <td className="px-6 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${item.status?.toLowerCase() === 'active' ? 'bg-green-50 text-green-600 border-green-100' :
-                        item.status?.toLowerCase() === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                          item.status?.toLowerCase() === 'suspended' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                            'bg-orange-50 text-orange-600 border-orange-100'
-                        }`}>
-                        {item.status ?? 'Pending'}
-                      </span>
-                    </td>
-
-                    {/* Action buttons */}
-                    <td className="px-6 py-5 text-right">
-                      <div className="flex justify-end gap-3">
-                        {processingId === item.id ? (
-                          <div className="flex items-center gap-2 text-slate-300 font-bold text-[10px] pr-4 italic">
-                            <Loader2 className="animate-spin" size={14} /> PROCESSING...
+                      {/* Service Description – truncated + modal */}
+                      <td className="px-6 py-5 max-w-[180px]">
+                        {item.service_description ? (
+                          <div>
+                            <p className="text-[11px] text-slate-600 font-medium leading-snug line-clamp-2">
+                              {item.service_description}
+                            </p>
+                            <button
+                              onClick={() => openDescriptionModal(item.service_description, item.name)}
+                              className="mt-1 flex items-center gap-1 text-blue-500 hover:text-blue-700 font-black text-[9px] uppercase"
+                            >
+                              <Eye size={10} /> Read more
+                            </button>
                           </div>
                         ) : (
-                          <>
-                            {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'rejected') && (
-                              <button
-                                onClick={() => handleApprove(item.id, item.name)}
-                                className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
-                              >
-                                <CheckCircle size={14} /> Approve
-                              </button>
-                            )}
-                            {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'active') && (
-                              <button
-                                onClick={() => openRejectModal(item)}
-                                className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
-                              >
-                                <XCircle size={14} /> Reject
-                              </button>
-                            )}
-                            {item.status?.toLowerCase() === 'active' && (
-                              <button
-                                onClick={() => handleSuspend(item.id, item.name)}
-                                className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
-                              >
-                                <AlertCircle size={14} /> Suspend
-                              </button>
-                            )}
-                            {item.status?.toLowerCase() === 'suspended' && (
-                              <button
-                                onClick={() => handleApprove(item.id, item.name)}
-                                className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
-                              >
-                                <CheckCircle size={14} /> Reactivate
-                              </button>
-                            )}
-                          </>
+                          <span className="text-[10px] text-slate-300 italic">No description</span>
                         )}
+                      </td>
+
+                      {/* Est. Cost */}
+                      <td className="px-6 py-5 text-center">
+                        <span className="font-black font-mono text-sm text-emerald-600">
+                          {item.estimated_cost != null ? (
+                            <>{item.estimated_cost} <span className="text-[10px]">ETB</span></>
+                          ) : (
+                            <span className="text-slate-300 text-[10px] italic">—</span>
+                          )}
+                        </span>
+                      </td>
+
+                      {/* Verification Files – ID doc + Licence */}
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1.5 items-center">
+                          <button
+                            onClick={() => viewFile(item.idPhoto)}
+                            className="w-28 bg-slate-900 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-black transition-colors"
+                          >
+                            <ImageIcon size={10} />
+                            {item.idPhotoType ? item.idPhotoType.split(' ')[0].toUpperCase() : 'ID DOC'}
+                          </button>
+                          <button
+                            onClick={() => viewFile(item.credentialPhoto)}
+                            className="w-28 bg-blue-600 text-white py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 hover:bg-blue-700 transition-colors"
+                          >
+                            <FileCheck size={10} /> LICENCE
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Submission date */}
+                      <td className="px-6 py-5 text-center">
+                        <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">{item.submission_date}</span>
+                      </td>
+
+                      {/* Status badge */}
+                      <td className="px-6 py-5">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${item.status?.toLowerCase() === 'active' ? 'bg-green-50 text-green-600 border-green-100' :
+                          item.status?.toLowerCase() === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
+                            item.status?.toLowerCase() === 'suspended' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                              'bg-orange-50 text-orange-600 border-orange-100'
+                          }`}>
+                          {item.status ?? 'Pending'}
+                        </span>
+                      </td>
+
+                      {/* Action buttons */}
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex justify-end gap-3">
+                          {processingId === item.id ? (
+                            <div className="flex items-center gap-2 text-slate-300 font-bold text-[10px] pr-4 italic">
+                              <Loader2 className="animate-spin" size={14} /> PROCESSING...
+                            </div>
+                          ) : (
+                            <>
+                              {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'rejected') && (
+                                <button
+                                  onClick={() => handleApprove(item.id, item.name)}
+                                  className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
+                                >
+                                  <CheckCircle size={14} /> Approve
+                                </button>
+                              )}
+                              {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'active') && (
+                                <button
+                                  onClick={() => openRejectModal(item)}
+                                  className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
+                                >
+                                  <XCircle size={14} /> Reject
+                                </button>
+                              )}
+                              {item.status?.toLowerCase() === 'active' && (
+                                <button
+                                  onClick={() => handleSuspend(item.id, item.name)}
+                                  className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
+                                >
+                                  <AlertCircle size={14} /> Suspend
+                                </button>
+                              )}
+                              {item.status?.toLowerCase() === 'suspended' && (
+                                <button
+                                  onClick={() => handleApprove(item.id, item.name)}
+                                  className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
+                                >
+                                  <CheckCircle size={14} /> Reactivate
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden p-4 space-y-4">
+              {currentItems.length > 0 ? (
+                currentItems.map((item) => (
+                  <div key={item.id} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                    <div className="flex items-center gap-3">
+                      {item.profilePicture ? (
+                        <img
+                          src={getBackendUrl(item.profilePicture)}
+                          alt={item.name}
+                          className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 shrink-0"
+                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                        />
+                      ) : null}
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs shrink-0" style={{ display: item.profilePicture ? 'none' : 'flex' }}>
+                         {item.name?.charAt(0)?.toUpperCase()}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 text-sm truncate">{item.name}</p>
+                        <p className="text-[10px] text-slate-400 font-medium truncate">{item.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center py-2 border-y border-slate-100 border-dashed">
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Category</p>
+                        <p className="text-[11px] font-bold text-slate-800">{item.service_type || 'N/A'}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase border ${item.status?.toLowerCase() === 'active' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                        {item.status ?? 'Pending'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                         <div className="flex gap-2">
+                           <button onClick={() => viewFile(item.idPhoto)} className="flex-1 bg-slate-100 py-2.5 rounded-xl text-[9px] font-black uppercase text-slate-600 flex items-center justify-center gap-2">
+                             <ImageIcon size={14} /> ID DOC
+                           </button>
+                           <button onClick={() => viewFile(item.credentialPhoto)} className="flex-1 bg-blue-50 py-2.5 rounded-xl text-[9px] font-black uppercase text-blue-600 flex items-center justify-center gap-2 border border-blue-100">
+                             <FileCheck size={14} /> Licence
+                           </button>
+                         </div>
+
+                         {processingId === item.id ? (
+                           <div className="py-3 text-center text-[10px] font-black text-slate-400 uppercase italic">Processing...</div>
+                         ) : (
+                           <div className="grid grid-cols-2 gap-2">
+                             {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'suspended') && (
+                               <button onClick={() => handleApprove(item.id, item.name)} className="bg-green-500 text-white py-3 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100">
+                                  {item.status?.toLowerCase() === 'suspended' ? 'Reactivate' : 'Approve'}
+                               </button>
+                             )}
+                             {(item.status?.toLowerCase() === 'pending' || item.status === null || item.status?.toLowerCase() === 'active') && (
+                               <button onClick={() => openRejectModal(item)} className="bg-red-500 text-white py-3 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100">
+                                 Reject
+                               </button>
+                             )}
+                           </div>
+                         )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-20 text-center text-[10px] font-black text-slate-300 uppercase italic">No records found.</div>
+              )}
+            </div>
           </div>
         )}
 

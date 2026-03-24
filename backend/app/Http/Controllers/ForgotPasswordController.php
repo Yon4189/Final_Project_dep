@@ -58,8 +58,9 @@ class ForgotPasswordController extends Controller
             ]
         );
 
-        $resetLink = "http://localhost:5173/reset-password?email={$email}&token={$rawToken}";
-        // localhost:3000 will be replaced with real frontend URL. this is the link the user clicks when he receives the email
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $resetLink = rtrim($frontendUrl, '/') . "/reset-password?email={$email}&token={$rawToken}";
+        // frontend URL will be used to generate the link. this is the link the user clicks when he receives the email
 
         Mail::html("
             <h2>Password Reset Request</h2>

@@ -303,100 +303,152 @@ const Users = () => {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No {userType.toLowerCase()}s found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
-                <tr>
-                  <th className="px-8 py-5">User Details</th>
-                  <th className="px-8 py-5">Contact</th>
-                  <th className="px-8 py-5">Location</th>
-                  <th className="px-8 py-5">Joined</th>
-                  <th className="px-8 py-5">Status</th>
-                  <th className="px-8 py-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {currentItems.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <UserAvatar user={u} />
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-900 leading-none">{u.name}</span>
-                          <span className="text-[10px] text-slate-400 font-medium mt-1 truncate max-w-[120px] uppercase tracking-tighter italic">
-                            ID: {u.id}
+          <>
+            <div className="overflow-x-auto hidden lg:block">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
+                  <tr>
+                    <th className="px-8 py-5">User Details</th>
+                    <th className="px-8 py-5">Contact</th>
+                    <th className="px-8 py-5">Location</th>
+                    <th className="px-8 py-5">Joined</th>
+                    <th className="px-8 py-5">Status</th>
+                    <th className="px-8 py-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {currentItems.map((u) => (
+                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-4">
+                          <UserAvatar user={u} />
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-900 leading-none">{u.name}</span>
+                            <span className="text-[10px] text-slate-400 font-medium mt-1 truncate max-w-[120px] uppercase tracking-tighter italic">
+                              ID: {u.id}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <Mail size={12} className="shrink-0" />
+                            <span className="text-xs font-medium truncate max-w-[150px]">{u.email}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <Phone size={12} className="shrink-0" />
+                            <span className="text-xs font-medium tracking-tighter">{u.phone || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-slate-100 p-2 rounded-lg">
+                            <MapPin size={14} className="text-slate-400" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-600 truncate max-w-[150px] italic">
+                            {u.location}
                           </span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-slate-500">
-                          <Mail size={12} className="shrink-0" />
-                          <span className="text-xs font-medium truncate max-w-[150px]">{u.email}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-500">
-                          <Phone size={12} className="shrink-0" />
-                          <span className="text-xs font-medium tracking-tighter">{u.phone || 'N/A'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-slate-100 p-2 rounded-lg">
-                          <MapPin size={14} className="text-slate-400" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-600 truncate max-w-[150px] italic">
-                          {u.location}
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                          {u.joined}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                        {u.joined}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-[0.1em] italic ${u.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' :
-                        u.status === 'Suspended' ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' :
-                          'bg-red-50 text-red-600 border-red-200'
-                        }`}>
-                        {u.status}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex justify-end gap-3 transition-all">
-                        {u.status === 'Suspended' ? (
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-[0.1em] italic ${u.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' :
+                          u.status === 'Suspended' ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' :
+                            'bg-red-50 text-red-600 border-red-200'
+                          }`}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex justify-end gap-3 transition-all">
+                          {u.status === 'Suspended' ? (
+                            <button
+                              onClick={() => toggleUserStatus(u.id, u.status)}
+                              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
+                              title="Reactivate User"
+                            >
+                              <ShieldCheck size={14} /> Reactivate
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => toggleUserStatus(u.id, u.status)}
+                              className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
+                              title="Suspend User"
+                            >
+                              <ShieldAlert size={14} /> Suspend
+                            </button>
+                          )}
                           <button
-                            onClick={() => toggleUserStatus(u.id, u.status)}
-                            className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
-                            title="Reactivate User"
+                            onClick={() => deleteUser(u.id, u.name)}
+                            className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
+                            title="Permanent Delete"
                           >
-                            <ShieldCheck size={14} /> Reactivate
+                            <UserMinus size={14} /> Delete
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => toggleUserStatus(u.id, u.status)}
-                            className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
-                            title="Suspend User"
-                          >
-                            <ShieldAlert size={14} /> Suspend
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteUser(u.id, u.name)}
-                          className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
-                          title="Permanent Delete"
-                        >
-                          <UserMinus size={14} /> Delete
-                        </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden flex-1 p-4 space-y-4">
+              {currentItems.map((u) => (
+                <div key={u.id} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar user={u} />
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 text-sm truncate">{u.name}</p>
+                        <p className="text-[10px] text-slate-400 italic">ID: {u.id}</p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${u.status === 'Active' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                      {u.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <Mail size={12} className="text-slate-400" />
+                      <span className="truncate">{u.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone size={12} className="text-slate-400" />
+                      <span>{u.phone || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin size={12} className="text-slate-400" />
+                      <span className="truncate">{u.location}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                    <button
+                      onClick={() => toggleUserStatus(u.id, u.status)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase ${u.status === 'Suspended' ? 'bg-green-500 text-white' : 'bg-amber-600 text-white'}`}
+                    >
+                      {u.status === 'Suspended' ? 'Activate' : 'Suspend'}
+                    </button>
+                    <button
+                      onClick={() => deleteUser(u.id, u.name)}
+                      className="px-4 py-2 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination Footer */}
