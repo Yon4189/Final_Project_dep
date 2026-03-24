@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   TrendingUp, Wallet, CreditCard, History,
   ArrowUpRight, ArrowDownRight, Filter, Download,
@@ -8,39 +9,33 @@ import StatCard from '../components/StatCard';
 import api from '../api/axios';
 
 const Payments = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dbStatus, setDbStatus] = useState('checking');
+  const queryClient = useQueryClient();
 
-  const fetchData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    try {
+  // 1. Data Fetching with TanStack Query
+  const { 
+    data: { transactions = [], stats = null } = {}, 
+    isLoading: loading, 
+    error: apiError,
+    refetch 
+  } = useQuery({
+    queryKey: ['paymentsSystem'],
+    queryFn: async () => {
       const [txRes, statsRes] = await Promise.all([
         api.get('/admin/payments'),
         api.get('/admin/payments/stats')
       ]);
 
-      if (txRes.data.success) {
-        setTransactions(txRes.data.data.data || txRes.data.data);
-      }
-      if (statsRes.data.success) {
-        setStats(statsRes.data.data);
-      }
-      setDbStatus('connected');
-    } catch (err) {
-      console.error(err);
-      setDbStatus('disconnected');
-    } finally {
-      if (showLoading) setIsLoading(false);
-    }
-  };
+      const transactions = txRes.data.success ? (txRes.data.data.data || txRes.data.data) : [];
+      const stats = statsRes.data.success ? statsRes.data.data : null;
 
-  useEffect(() => {
-    fetchData(true);
-    const interval = setInterval(() => fetchData(false), 10000);
-    return () => clearInterval(interval);
-  }, []);
+      return { transactions, stats };
+    },
+    staleTime: 60000,
+    refetchInterval: 30000,
+  });
+
+  const dbStatus = apiError ? 'disconnected' : (loading ? 'checking' : 'connected');
+  const isLoading = loading; // Alias for JSX
 
   const financialStats = [
     {

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import {
   Calendar, User, Wrench, MapPin,
@@ -9,6 +10,7 @@ import {
 import api from '../api/axios';
 
 const Bookings = () => {
+  const queryClient = useQueryClient();
   const location = useLocation();
 
   // 1. Determine status from URL path (driven by Sidebar)
@@ -21,48 +23,30 @@ const Bookings = () => {
     return 'All'; // Default fallback
   };
 
-  // --- DATA STATE ---
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dbStatus, setDbStatus] = useState('checking');
-  const [statusFilter, setStatusFilter] = useState(getStatusFromPath());
+  const statusFilter = getStatusFromPath();
+
+  // 2. Data Fetching with TanStack Query
+  const { 
+    data: bookings = [], 
+    isLoading: loading, 
+    error: apiError,
+    refetch 
+  } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: async () => {
+      const response = await api.get('/admin/bookings');
+      return response.data.success ? (response.data.data || []) : [];
+    },
+    staleTime: 60000,
+    refetchInterval: 30000,
+  });
+
+  const dbStatus = apiError ? 'disconnected' : (loading ? 'checking' : 'connected');
+  const error = apiError ? 'Failed to sync bookings table.' : null;
 
   // --- UI STATE ---
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
-
-  // Update filter when Sidebar link is clicked
-  useEffect(() => {
-    setStatusFilter(getStatusFromPath());
-  }, [location.pathname]);
-
-  // 🚀 2. FETCH REAL DATA FROM LARAVEL
-  const fetchBookings = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
-      // Hits Route::get('/admin/bookings')
-      const response = await api.get('/admin/bookings');
-      if (response.data.success) {
-        setBookings(response.data.data);
-        setDbStatus('connected');
-      }
-    } catch (err) {
-      console.error("Fetch Error:", err);
-      setError('Failed to sync bookings table.');
-      setDbStatus('disconnected');
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
-
-  // Initial load + Polling every 30 seconds for live updates
-  useEffect(() => {
-    fetchBookings(true);
-    const interval = setInterval(() => fetchBookings(false), 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   // 🚀 3. FILTERING LOGIC (Status + Search)
   const filteredBookings = bookings.filter(b => {
@@ -110,8 +94,8 @@ const Bookings = () => {
             {dbStatus === 'connected' ? <CheckCircle size={14} className="text-green-500" /> : <XCircle size={14} className="text-red-500" />}
           </div>
 
-          <button onClick={() => fetchBookings(true)} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm active:scale-90">
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+          <button onClick={() => refetch()} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm active:scale-90">
+            <RefreshCw size={20} className={loading && bookings.length === 0 ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>

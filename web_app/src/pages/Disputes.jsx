@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   AlertCircle, CheckCircle, RefreshCcw, XCircle, 
   User, Wrench, MessageSquare, ExternalLink, Search,
@@ -7,9 +8,7 @@ import {
 import { disputeAPI } from '../api/dispute';
 
 const Disputes = () => {
-  const [disputes, setDisputes] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [resolutionData, setResolutionData] = useState({
@@ -21,30 +20,32 @@ const Disputes = () => {
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  const fetchDisputes = async () => {
-    try {
-      setLoading(true);
+  // 1. Data Fetching with TanStack Query
+  const { 
+    data: { disputes = [], stats = null } = {}, 
+    isLoading: loading, 
+    refetch 
+  } = useQuery({
+    queryKey: ['disputes'],
+    queryFn: async () => {
       const response = await disputeAPI.getAllDisputes();
+      let disputesData = [];
+      let statsData = null;
+
       if (response.success) {
-        setDisputes(response.data.data || []);
-        if (response.stats) {
-          setStats(response.stats);
-        } else {
-          // Fallback if stats not in index response
+        disputesData = response.data.data || [];
+        statsData = response.stats;
+        
+        if (!statsData) {
           const statsRes = await disputeAPI.getDisputeStats();
-          if (statsRes.success) setStats(statsRes.data);
+          if (statsRes.success) statsData = statsRes.data;
         }
       }
-    } catch (error) {
-      console.error('Failed to fetch disputes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDisputes();
-  }, []);
+      return { disputes: disputesData, stats: statsData };
+    },
+    staleTime: 30000,
+    refetchInterval: 20000,
+  });
 
   const handleReviewCase = async (disputeID) => {
     try {
@@ -81,7 +82,8 @@ const Disputes = () => {
       if (response.success) {
         alert('Dispute updated successfully');
         setSelectedDispute(null);
-        fetchDisputes();
+        queryClient.invalidateQueries({ queryKey: ['disputes'] });
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
       }
     } catch (error) {
       console.error('Failed to update dispute:', error);

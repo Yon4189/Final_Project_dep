@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Users, UserCheck, Clock, Banknote, Layers, Wrench,
   CheckCircle, XCircle, Loader2, Image as ImageIcon, RefreshCw,
@@ -9,18 +10,38 @@ import api from '../api/axios';
 import StatCard from '../components/StatCard';
 
 const Dashboard = () => {
-  const [verificationQueue, setVerificationQueue] = useState([]);
-  const [counts, setCounts] = useState({
+  const queryClient = useQueryClient();
+  const [processingId, setProcessingId] = useState(null);
+
+  // 1. Fetch Stats (shared with Sidebar)
+  const { data: counts = {
     providers: 0,
     customers: 0,
     pending: 0,
     categories: 0,
     services: 0,
     revenue: 0
+  }, isLoading: isStatsLoading, isError: isStatsError } = useQuery({
+    queryKey: ['adminStats'],
+    queryFn: async () => {
+      const response = await api.get('/admin/stats');
+      return response.data.success ? response.data.data : null;
+    },
+    refetchInterval: 30000,
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
-  const [dbStatus, setDbStatus] = useState('checking');
+
+  // 2. Fetch Pending Queue
+  const { data: verificationQueue = [], isLoading: isQueueLoading, isError: isQueueError } = useQuery({
+    queryKey: ['pendingProviders'],
+    queryFn: async () => {
+      const response = await api.get('/admin/providers/pending');
+      return response.data.success ? (response.data.data || []) : [];
+    },
+    refetchInterval: 10000,
+  });
+
+  const isLoading = isStatsLoading || isQueueLoading;
+  const dbStatus = (isStatsError || isQueueError) ? 'disconnected' : 'connected';
 
   // State for description modal
   const [descriptionModal, setDescriptionModal] = useState({
@@ -38,54 +59,11 @@ const Dashboard = () => {
     inputReason: ''
   });
 
-  const fetchData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    try {
-      // create headers with token if needed
-      // const headers = { ... };
-      // If you need auth, uncomment and use headers in requests
-      // const [queueRes, statsRes] = await Promise.all([
-      //   api.get('/providers/pending', { headers }),
-      //   api.get('/dashboard/stats', { headers })
-      // ]);
-      const [queueRes, statsRes] = await Promise.all([
-        api.get('/admin/providers/pending'),
-        api.get('/admin/stats')
-      ]);
-      console.log('Queue response:', queueRes.data);
-      console.log('Stats response:', statsRes.data);
-      if (queueRes.data && queueRes.data.success) {
-        setVerificationQueue(queueRes.data.data || []);
-      }
-      if (statsRes.data && statsRes.data.success) {
-        setCounts(statsRes.data.data || {
-          providers: 0,
-          customers: 0,
-          pending: 0,
-          categories: 0,
-          services: 0,
-          revenue: 0
-        });
-      }
-      setDbStatus('connected');
-    } catch (err) {
-      setDbStatus('disconnected');
-      console.error("Fetch Error:", err);
-      if (err.response && err.response.status === 401) {
-        console.log("Authentication failed - token may be expired");
-      }
-    } finally {
-      if (showLoading) setIsLoading(false);
-    }
+  // Refetch helper for the refresh button
+  const handleManualRefresh = () => {
+    queryClient.invalidateQueries(['adminStats']);
+    queryClient.invalidateQueries(['pendingProviders']);
   };
-
-  useEffect(() => {
-    fetchData(true);
-    const interval = setInterval(() => {
-      fetchData(false);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Modal-based verify action
   const handleVerifyAction = (id, name, approve) => {
@@ -112,9 +90,9 @@ const Dashboard = () => {
         verification_reason: reason
       });
       if (response.data.success) {
-        setVerificationQueue(prev => prev.filter(item => item.id !== id));
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        queryClient.invalidateQueries({ queryKey: ['pendingProviders'] });
         alert(status === 'approved' ? "Account & Service Approved!" : "Provider Rejected.");
-        fetchData();
       }
     } catch {
       alert("Action failed. Ensure backend mail server is active.");
@@ -243,7 +221,7 @@ const Dashboard = () => {
             </span>
           </div>
           <button
-            onClick={fetchData}
+            onClick={handleManualRefresh}
             className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm active:scale-95"
           >
             <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />

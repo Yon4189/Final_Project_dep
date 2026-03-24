@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import {
   Search, CheckCircle, XCircle, Loader2, Database,
@@ -16,16 +17,38 @@ const getFilterFromPath = (pathname) => {
 };
 
 const Verification = () => {
+  const queryClient = useQueryClient();
   const location = useLocation();
 
-  const [providers, setProviders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [dbStatus, setDbStatus] = useState('checking');
-  const [filter, setFilter] = useState(getFilterFromPath(location.pathname));
+  const filter = getFilterFromPath(location.pathname);
   const [processingId, setProcessingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+
+  // 1. Data Fetching with TanStack Query
+  const { 
+    data: providers = [], 
+    isLoading: loading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['providers', filter],
+    queryFn: async () => {
+      let endpoint = '/admin/providers/pending';
+      if (filter === 'Approved') endpoint = '/admin/providers/approved';
+      if (filter === 'Rejected') endpoint = '/admin/providers/rejected';
+      if (filter === 'Suspended') endpoint = '/admin/providers/suspended';
+      if (filter === 'All') endpoint = '/admin/providers';
+
+      const response = await api.get(endpoint);
+      return response.data.success ? (response.data.data || []) : [];
+    },
+    staleTime: 30000, 
+    refetchInterval: 10000,
+  });
+
+  const dbStatus = error ? 'disconnected' : (loading ? 'checking' : 'connected');
 
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -37,42 +60,8 @@ const Verification = () => {
   });
 
   useEffect(() => {
-    setFilter(getFilterFromPath(location.pathname));
     setCurrentPage(1);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
-  const fetchProviders = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    try {
-      let endpoint = '/admin/providers/pending';
-      if (filter === 'Approved') endpoint = '/admin/providers/approved';
-      if (filter === 'Rejected') endpoint = '/admin/providers/rejected';
-      if (filter === 'Suspended') endpoint = '/admin/providers/suspended';
-      if (filter === 'All') endpoint = '/admin/providers';
-
-      const response = await api.get(endpoint);
-      if (response.data.success) {
-        setProviders(response.data.data);
-        setDbStatus('connected');
-      }
-    } catch {
-      setDbStatus('disconnected');
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, [filter]);
-
-  useEffect(() => {
-    fetchProviders(true);
-    const interval = setInterval(() => {
-      fetchProviders(false);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [filter, fetchProviders]);
+  }, [filter, searchQuery]);
 
   const handleApprove = async (id, name) => {
     if (!window.confirm(`Approve ${name} and notify them via email?`)) return;
@@ -80,7 +69,8 @@ const Verification = () => {
     try {
       const response = await api.post(`/admin/providers/${id}/verify`, { status: 'approved' });
       if (response.data.success) {
-        fetchProviders();
+        queryClient.invalidateQueries({ queryKey: ['providers'] });
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         alert("Account Approved & Email Sent!");
       }
     } catch {
@@ -107,7 +97,8 @@ const Verification = () => {
       });
       if (response.data.success) {
         setIsRejectModalOpen(false);
-        fetchProviders();
+        queryClient.invalidateQueries({ queryKey: ['providers'] });
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         alert("Provider Rejected & Notified.");
       }
     } catch {
@@ -126,7 +117,8 @@ const Verification = () => {
         verification_reason: 'Account suspended by administration.'
       });
       if (response.data.success) {
-        fetchProviders();
+        queryClient.invalidateQueries({ queryKey: ['providers'] });
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         alert("Provider Suspended Successfully.");
       }
     } catch {
@@ -223,7 +215,7 @@ const Verification = () => {
             <Database size={14} className={dbStatus === 'connected' ? 'text-green-500' : 'text-red-500'} />
             <span className="text-slate-500">{dbStatus}</span>
           </div>
-          <button onClick={fetchProviders} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm">
+          <button onClick={() => refetch()} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm">
             Refresh
           </button>
         </div>
