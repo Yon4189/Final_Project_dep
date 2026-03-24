@@ -323,31 +323,67 @@ class CustomerSearchController extends Controller
             ], 404);
         }
 
-        $date = $request->query('date', now()->format('Y-m-d'));
-        
-        $availability = [
-            [
-                'id' => '1',
-                'date' => $date,
-                'startTime' => '09:00',
-                'endTime' => '10:00',
-                'isAvailable' => true
-            ],
-            [
-                'id' => '2',
-                'date' => $date,
-                'startTime' => '10:00',
-                'endTime' => '11:00',
-                'isAvailable' => true
-            ],
-            [
-                'id' => '3',
-                'date' => $date,
-                'startTime' => '14:00',
-                'endTime' => '15:00',
-                'isAvailable' => true
-            ]
-        ];
+        $dateString = $request->query('date', now()->format('Y-m-d'));
+        try {
+            $date = Carbon::parse($dateString);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Invalid date format'], 400);
+        }
+
+        $dayOfWeek = $date->dayOfWeek; // 0 (Sun) - 6 (Sat)
+
+        $availabilityRecord = \App\Models\ProviderAvailability::where('providerID', $id)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->first();
+
+        $availability = [];
+
+        if ($availabilityRecord) {
+            // Generate 1-hour slots
+            $startTime = Carbon::parse($dateString . ' ' . $availabilityRecord->start_time);
+            $endTime = Carbon::parse($dateString . ' ' . $availabilityRecord->end_time);
+
+            // Fetch busy slots (bookings that are pending, accepted, or in progress)
+            $busyTimeStrings = Booking::where('providerID', $id)
+                ->whereDate('scheduledDate', $dateString)
+                ->whereIn('status', ['pending', 'accepted', 'in_progress'])
+                ->get()
+                ->map(function ($booking) {
+                    return Carbon::parse($booking->scheduledDate)->format('H:i');
+                })
+                ->toArray();
+
+            $slotId = 1;
+
+            while ($startTime->copy()->addHour() <= $endTime) {
+                $startSlotString = $startTime->format('H:i');
+                $endSlotString = $startTime->copy()->addHour()->format('H:i');
+                
+                $isAvailable = true;
+                
+                // If it's today, filter out past times (with a 1 hour buffer)
+                if ($date->isToday() && $startTime < now()->addHour()) {
+                    $isAvailable = false;
+                }
+                
+                if (in_array($startSlotString, $busyTimeStrings)) {
+                    $isAvailable = false;
+                }
+
+                if ($isAvailable) {
+                    $availability[] = [
+                        'id' => (string)$slotId++,
+                        'date' => $dateString,
+                        'startTime' => $startSlotString,
+                        'endTime' => $endSlotString,
+                        'isAvailable' => true
+                    ];
+                }
+
+                $startTime->addHour();
+            }
+        }
 
         return response()->json([
             'success' => true,

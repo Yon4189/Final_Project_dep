@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\ProviderAvailability;
+use Illuminate\Support\Facades\Validator;
 
 class ProviderDashboardController extends Controller
 {
@@ -283,6 +285,93 @@ class ProviderDashboardController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get the provider's weekly schedule configuration.
+     */
+    public function getSchedule(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            if (!$provider) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+            $availabilities = ProviderAvailability::where('providerID', $provider->providerID)->get();
+
+            $schedule = [];
+            for ($day = 0; $day < 7; $day++) {
+                $dayRecord = $availabilities->firstWhere('day_of_week', $day);
+                
+                $schedule[] = [
+                    'day_of_week' => $day,
+                    // Strip the seconds from time strings for frontend (e.g. 08:00:00 -> 08:00)
+                    'start_time' => $dayRecord ? substr($dayRecord->start_time, 0, 5) : '08:00',
+                    'end_time' => $dayRecord ? substr($dayRecord->end_time, 0, 5) : '17:00',
+                    'is_active' => $dayRecord ? $dayRecord->is_active : false,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $schedule
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Update the provider's weekly schedule.
+     */
+    public function updateSchedule(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            if (!$provider) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+            $validator = Validator::make($request->all(), [
+                'schedule' => 'required|array|size:7',
+                'schedule.*.day_of_week' => 'required|integer|min:0|max:6',
+                'schedule.*.is_active' => 'required|boolean',
+                'schedule.*.start_time' => 'required|date_format:H:i',
+                'schedule.*.end_time' => 'required|date_format:H:i|after:schedule.*.start_time',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            foreach ($request->schedule as $day) {
+                ProviderAvailability::updateOrCreate(
+                    [
+                        'providerID' => $provider->providerID,
+                        'day_of_week' => $day['day_of_week']
+                    ],
+                    [
+                        'start_time' => $day['start_time'] . ':00',
+                        'end_time' => $day['end_time'] . ':00',
+                        'is_active' => $day['is_active']
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Schedule updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Schedule update error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

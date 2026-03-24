@@ -47,6 +47,7 @@ class ApiService {
     private token: string | null = null;
     private currentBaseURL: string = API_BASE_URL;
     private refreshInProgress: boolean = false;
+    private userData: any = null;
 
     constructor() {
         this.api = axios.create({
@@ -65,6 +66,11 @@ class ApiService {
             const token = this.token || (await storage.getItem(TOKEN_KEY));
             if (token && config.headers) {
                 config.headers.Authorization = `Bearer ${token}`;
+            }
+
+            // Attach user type header
+            if (this.userData?.user_type && config.headers) {
+                config.headers['X-User-Type'] = this.userData.user_type;
             }
 
             // Log request data for debugging (optional, remove in production)
@@ -190,9 +196,37 @@ class ApiService {
 
     private async loadToken() {
         this.token = await storage.getItem(TOKEN_KEY);
+        const storedUserData = await storage.getItem('user_data');
+        if (storedUserData) {
+            try {
+                this.userData = typeof storedUserData === 'string' ? JSON.parse(storedUserData) : storedUserData;
+            } catch (e) {
+                this.userData = storedUserData;
+            }
+        }
         if (this.token) {
             console.log('🔑 Token loaded');
         }
+    }
+
+    public async setUserData(data: any) {
+        this.userData = data;
+        await storage.setItem('user_data', JSON.stringify(data));
+        console.log('👤 User data updated in ApiService');
+    }
+
+    public async getUserData() {
+        if (!this.userData) {
+            const stored = await storage.getItem('user_data');
+            if (stored) {
+                try {
+                    this.userData = typeof stored === 'string' ? JSON.parse(stored) : stored;
+                } catch (e) {
+                    this.userData = stored;
+                }
+            }
+        }
+        return this.userData;
     }
 
     public async setToken(token: string) {

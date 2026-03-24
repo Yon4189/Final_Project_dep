@@ -10,6 +10,8 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -282,10 +284,8 @@ export default function ProviderProfile() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Working Hours</Text>
-          <TouchableOpacity onPress={() => setEditingHours(!editingHours)}>
-            <Text style={styles.editText}>
-              {editingHours ? 'Done' : 'Edit'}
-            </Text>
+          <TouchableOpacity onPress={() => router.push('/(provider)/profile/schedule')}>
+            <Text style={styles.editText}>Manage</Text>
           </TouchableOpacity>
         </View>
 
@@ -467,8 +467,16 @@ export default function ProviderProfile() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {renderHeader()}
         {renderProfileCard()}
         {renderBadges()}
@@ -486,7 +494,7 @@ export default function ProviderProfile() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -494,6 +502,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     backgroundColor: Colors.primary,

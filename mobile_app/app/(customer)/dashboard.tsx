@@ -23,10 +23,12 @@ const { width } = Dimensions.get("window");
 import { useLocation } from "../../hooks/useLocation";
 import { useSearch } from "../../hooks/useSearch";
 import { useTopRatedProviders, useUnreadNotificationsCount } from "@/hooks/useCustomerQueries";
+import { useConversations } from "@/hooks/useChat";
 import { ServiceSearch } from "../../components/customer/ServiceSearch";
 import { ProviderCard } from "../../components/customer/ProviderCard";
 import { FilterModal } from "../../components/customer/FilterModal";
 import { ServiceRequestModal } from "../../components/customer/ServiceRequestModal";
+import { RecentMessagesModal } from "../../components/customer/RecentMessagesModal";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { EmptyState } from "../../components/common/EmptyState";
 import { api } from "@/app/services/api";
@@ -77,12 +79,16 @@ export default function CustomerDashboard() {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showRecentMessages, setShowRecentMessages] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const { data: unreadNotifications = 0 } = useUnreadNotificationsCount();
+  const { data: conversationsResponse } = useConversations();
+  const conversations = conversationsResponse?.data || [];
+  const recentChats = Array.isArray(conversations) ? conversations.slice(0, 5) : [];
   // Add these with your other useState declarations
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loadingComplaints, setLoadingComplaints] = useState(false);
@@ -326,7 +332,7 @@ export default function CustomerDashboard() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push("/(customer)/chat/index")}
+            onPress={() => setShowRecentMessages(true)}
           >
             <Ionicons
               name="chatbubble-ellipses-outline"
@@ -450,6 +456,61 @@ export default function CustomerDashboard() {
     );
   };
 
+  const renderRecentChats = () => {
+    if (!recentChats || recentChats.length === 0) return null;
+
+    return (
+      <View style={styles.recentChatsSection}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleContainer}>
+            <Ionicons name="chatbubbles-outline" size={20} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Recent Chats</Text>
+          </View>
+          <TouchableOpacity onPress={() => router.push("/(customer)/chat/index")}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.recentChatsScroll}
+        >
+          {recentChats.map((item: any) => {
+            const provider = item.other_party;
+            if (!provider) return null;
+
+            return (
+              <TouchableOpacity
+                key={item.conversationID}
+                style={styles.recentChatCard}
+                onPress={() => router.push(`/(customer)/chat/${provider.providerID || provider.id}`)}
+              >
+                <View style={styles.recentChatAvatarContainer}>
+                  <Image
+                    source={{
+                      uri: provider.profilePicture
+                        ? (provider.profilePicture.startsWith('http')
+                          ? provider.profilePicture
+                          : `${API_BASE_URL.replace('/api', '')}/${provider.profilePicture}`)
+                        : 'https://via.placeholder.com/50'
+                    }}
+                    style={styles.recentChatAvatar}
+                  />
+                  {item.unread_count > 0 && (
+                    <View style={styles.recentChatUnreadBadge} />
+                  )}
+                </View>
+                <Text style={styles.recentChatName} numberOfLines={1}>
+                  {provider.businessName || provider.fullname || 'Provider'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
   const renderQuickActions = () => (
     <View style={styles.quickActionsContainer}>
       <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -476,7 +537,7 @@ export default function CustomerDashboard() {
 
         <TouchableOpacity
           style={styles.actionCard}
-          onPress={() => router.push('/(customer)/chat/index')}
+          onPress={() => setShowRecentMessages(true)}
         >
           <View style={[styles.actionIconContainer, { backgroundColor: Colors.info + '10' }]}>
             <Ionicons name="chatbubble-ellipses-outline" size={26} color={Colors.info} />
@@ -716,6 +777,7 @@ export default function CustomerDashboard() {
             }
           >
             {renderQuickActions()}
+            {renderRecentChats()}
             {renderTopRated()}
             {renderViewToggle()}
             {renderMapView()}
@@ -775,6 +837,7 @@ export default function CustomerDashboard() {
             ListHeaderComponent={
               <>
                 {renderQuickActions()}
+                {renderRecentChats()}
                 {renderTopRated()}
                 {!query && !filters.categoryId && (
                   <View style={styles.journeyCard}>
@@ -853,6 +916,19 @@ export default function CustomerDashboard() {
             }
             : undefined
         }
+      />
+
+      <RecentMessagesModal
+        visible={showRecentMessages}
+        onClose={() => setShowRecentMessages(false)}
+        conversations={conversations}
+        onSelectConversation={(providerId) => {
+          router.push(`/(customer)/chat/${providerId}`);
+        }}
+        onSeeAll={() => {
+          setShowRecentMessages(false);
+          router.push("/(customer)/chat/index");
+        }}
       />
     </SafeAreaView>
   );
@@ -1284,5 +1360,48 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.text.secondary,
     lineHeight: 18,
+  },
+  recentChatsSection: {
+    paddingVertical: 16,
+    backgroundColor: Colors.surface,
+    marginBottom: 8,
+  },
+  recentChatsScroll: {
+    paddingLeft: 20,
+    paddingRight: 8,
+  },
+  recentChatCard: {
+    width: 80,
+    marginRight: 16,
+    alignItems: 'center',
+  },
+  recentChatAvatarContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  recentChatAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  recentChatUnreadBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.error,
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  recentChatName: {
+    fontSize: 12,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

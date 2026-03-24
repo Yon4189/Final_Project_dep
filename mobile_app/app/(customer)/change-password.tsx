@@ -6,8 +6,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -132,219 +135,229 @@ export default function ChangePassword() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Change Password</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <View style={styles.content}>
-        {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Ionicons name="shield-checkmark-outline" size={24} color={Colors.primary} />
-          <Text style={styles.infoText}>
-            Choose a strong password that you don't use for other accounts
-          </Text>
-        </View>
-
-        {/* Current Password */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Current Password</Text>
-          <View style={styles.passwordContainer}>
-            <AppInput
-              value={formData.current_password}
-              onChangeText={(text) => {
-                setFormData({ ...formData, current_password: text });
-                setErrors({ ...errors, current_password: '' });
-              }}
-              placeholder="Enter your current password"
-              secureTextEntry={!showCurrentPassword}
-              error={errors.current_password}
-              leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
-            />
-            <TouchableOpacity 
-              style={styles.eyeIcon}
-              onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-            >
-              <Ionicons 
-                name={showCurrentPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color={Colors.text.secondary} 
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* New Password */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>New Password</Text>
-          <View style={styles.passwordContainer}>
-            <AppInput
-              value={formData.new_password}
-              onChangeText={(text) => {
-                setFormData({ ...formData, new_password: text });
-                setErrors({ ...errors, new_password: '' });
-              }}
-              placeholder="Enter new password"
-              secureTextEntry={!showNewPassword}
-              error={errors.new_password}
-              leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
-            />
-            <TouchableOpacity 
-              style={styles.eyeIcon}
-              onPress={() => setShowNewPassword(!showNewPassword)}
-            >
-              <Ionicons 
-                name={showNewPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color={Colors.text.secondary} 
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Password Strength Indicator */}
-          {formData.new_password.length > 0 && (
-            <View style={styles.strengthContainer}>
-              <View style={styles.strengthBarContainer}>
-                <View 
-                  style={[
-                    styles.strengthBar, 
-                    { 
-                      width: `${passwordStrength}%`,
-                      backgroundColor: getStrengthColor()
-                    }
-                  ]} 
-                />
-              </View>
-              <Text style={[styles.strengthText, { color: getStrengthColor() }]}>
-                {getStrengthText()}
-              </Text>
-            </View>
-          )}
-
-          {/* Password Requirements */}
-          <View style={styles.requirementsContainer}>
-            <Text style={styles.requirementsTitle}>Password must contain:</Text>
-            <View style={styles.requirementItem}>
-              <Ionicons 
-                name={formData.new_password.length >= 8 ? "checkmark-circle" : "ellipse-outline"} 
-                size={16} 
-                color={formData.new_password.length >= 8 ? Colors.success : Colors.text.secondary} 
-              />
-              <Text style={styles.requirementText}>At least 8 characters</Text>
-            </View>
-            <View style={styles.requirementItem}>
-              <Ionicons 
-                name={/[A-Z]/.test(formData.new_password) ? "checkmark-circle" : "ellipse-outline"} 
-                size={16} 
-                color={/[A-Z]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
-              />
-              <Text style={styles.requirementText}>At least one uppercase letter</Text>
-            </View>
-            <View style={styles.requirementItem}>
-              <Ionicons 
-                name={/[a-z]/.test(formData.new_password) ? "checkmark-circle" : "ellipse-outline"} 
-                size={16} 
-                color={/[a-z]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
-              />
-              <Text style={styles.requirementText}>At least one lowercase letter</Text>
-            </View>
-            <View style={styles.requirementItem}>
-              <Ionicons 
-                name={/[0-9]/.test(formData.new_password) ? "checkmark-circle" : "ellipse-outline"} 
-                size={16} 
-                color={/[0-9]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
-              />
-              <Text style={styles.requirementText}>At least one number</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Confirm Password */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm New Password</Text>
-          <View style={styles.passwordContainer}>
-            <AppInput
-              value={formData.confirm_password}
-              onChangeText={(text) => {
-                setFormData({ ...formData, confirm_password: text });
-                setErrors({ ...errors, confirm_password: '' });
-              }}
-              placeholder="Re-enter new password"
-              secureTextEntry={!showConfirmPassword}
-              error={errors.confirm_password}
-              leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
-            />
-            <TouchableOpacity 
-              style={styles.eyeIcon}
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              <Ionicons 
-                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color={Colors.text.secondary} 
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Password Match Indicator */}
-          {formData.confirm_password.length > 0 && (
-            <View style={styles.matchContainer}>
-              <Ionicons 
-                name={formData.new_password === formData.confirm_password ? "checkmark-circle" : "close-circle"} 
-                size={16} 
-                color={formData.new_password === formData.confirm_password ? Colors.success : Colors.error} 
-              />
-              <Text style={[
-                styles.matchText,
-                { color: formData.new_password === formData.confirm_password ? Colors.success : Colors.error }
-              ]}>
-                {formData.new_password === formData.confirm_password ? 'Passwords match' : 'Passwords do not match'}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={styles.cancelButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-
-          <AppButton
-            title="Change Password"
-            onPress={handleChangePassword}
-            loading={loading}
-            disabled={loading}
-            style={styles.changeButton}
-          />
+          <Text style={styles.headerTitle}>Change Password</Text>
+          <View style={{ width: 40 }} />
         </View>
 
-        {/* Security Tips */}
-        <View style={styles.tipsContainer}>
-          <Text style={styles.tipsTitle}>Security Tips:</Text>
-          <View style={styles.tipItem}>
-            <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-            <Text style={styles.tipText}>Use a unique password for this account</Text>
+        <View style={styles.content}>
+          {/* Info Box */}
+          <View style={styles.infoBox}>
+            <Ionicons name="shield-checkmark-outline" size={24} color={Colors.primary} />
+            <Text style={styles.infoText}>
+              Choose a strong password that you don't use for other accounts
+            </Text>
           </View>
-          <View style={styles.tipItem}>
-            <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-            <Text style={styles.tipText}>Don't share your password with anyone</Text>
+
+          {/* Current Password */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Current Password</Text>
+            <View style={styles.passwordContainer}>
+              <AppInput
+                value={formData.current_password}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, current_password: text });
+                  setErrors({ ...errors, current_password: '' });
+                }}
+                placeholder="Enter your current password"
+                secureTextEntry={!showCurrentPassword}
+                error={errors.current_password}
+                leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+              >
+                <Ionicons 
+                  name={showCurrentPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color={Colors.text.secondary} 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.tipItem}>
-            <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-            <Text style={styles.tipText}>Change your password regularly</Text>
+
+          {/* New Password */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>New Password</Text>
+            <View style={styles.passwordContainer}>
+              <AppInput
+                value={formData.new_password}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, new_password: text });
+                  setErrors({ ...errors, new_password: '' });
+                }}
+                placeholder="Enter new password"
+                secureTextEntry={!showNewPassword}
+                error={errors.new_password}
+                leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowNewPassword(!showNewPassword)}
+              >
+                <Ionicons 
+                  name={showNewPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color={Colors.text.secondary} 
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Password Strength Indicator */}
+            {formData.new_password.length > 0 && (
+              <View style={styles.strengthContainer}>
+                <View style={styles.strengthBarContainer}>
+                  <View 
+                    style={[
+                      styles.strengthBar, 
+                      { 
+                        width: `${passwordStrength}%`,
+                        backgroundColor: getStrengthColor()
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={[styles.strengthText, { color: getStrengthColor() }]}>
+                  {getStrengthText()}
+                </Text>
+              </View>
+            )}
+
+            {/* Password Requirements */}
+            <View style={styles.requirementsContainer}>
+              <Text style={styles.requirementsTitle}>Password must contain:</Text>
+              <View style={styles.requirementItem}>
+                <Ionicons 
+                  name={formData.new_password.length >= 8 ? "checkmark-circle" : "ellipse-outline"} 
+                  size={16} 
+                  color={formData.new_password.length >= 8 ? Colors.success : Colors.text.secondary} 
+                />
+                <Text style={styles.requirementText}>At least 8 characters</Text>
+              </View>
+              <View style={styles.requirementItem}>
+                <Ionicons 
+                  name={/[A-Z]/.test(formData.new_password) ? "checkmark-circle" : "ellipse-outline"} 
+                  size={16} 
+                  color={/[A-Z]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
+                />
+                <Text style={styles.requirementText}>At least one uppercase letter</Text>
+              </View>
+              <View style={styles.requirementItem}>
+                <Ionicons 
+                  name={/[a-z]/.test(formData.new_password) ? "checkmark-circle" : "ellipse-outline"} 
+                  size={16} 
+                  color={/[a-z]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
+                />
+                <Text style={styles.requirementText}>At least one lowercase letter</Text>
+              </View>
+              <View style={styles.requirementItem}>
+                <Ionicons 
+                  name={/[0-9]/.test(formData.new_password) ? "checkmark-circle" : "ellipse-outline"} 
+                  size={16} 
+                  color={/[0-9]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
+                />
+                <Text style={styles.requirementText}>At least one number</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Confirm Password */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm New Password</Text>
+            <View style={styles.passwordContainer}>
+              <AppInput
+                value={formData.confirm_password}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, confirm_password: text });
+                  setErrors({ ...errors, confirm_password: '' });
+                }}
+                placeholder="Re-enter new password"
+                secureTextEntry={!showConfirmPassword}
+                error={errors.confirm_password}
+                leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Ionicons 
+                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color={Colors.text.secondary} 
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Password Match Indicator */}
+            {formData.confirm_password.length > 0 && (
+              <View style={styles.matchContainer}>
+                <Ionicons 
+                  name={formData.new_password === formData.confirm_password ? "checkmark-circle" : "close-circle"} 
+                  size={16} 
+                  color={formData.new_password === formData.confirm_password ? Colors.success : Colors.error} 
+                />
+                <Text style={[
+                  styles.matchText,
+                  { color: formData.new_password === formData.confirm_password ? Colors.success : Colors.error }
+                ]}>
+                  {formData.new_password === formData.confirm_password ? 'Passwords match' : 'Passwords do not match'}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <AppButton
+              title="Change Password"
+              onPress={handleChangePassword}
+              loading={loading}
+              disabled={loading}
+              style={styles.changeButton}
+            />
+          </View>
+
+          {/* Security Tips */}
+          <View style={styles.tipsContainer}>
+            <Text style={styles.tipsTitle}>Security Tips:</Text>
+            <View style={styles.tipItem}>
+              <Ionicons name="shield-outline" size={16} color={Colors.primary} />
+              <Text style={styles.tipText}>Use a unique password for this account</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="shield-outline" size={16} color={Colors.primary} />
+              <Text style={styles.tipText}>Don't share your password with anyone</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="shield-outline" size={16} color={Colors.primary} />
+              <Text style={styles.tipText}>Change your password regularly</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

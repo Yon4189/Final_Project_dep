@@ -14,6 +14,7 @@ import {
   Image,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AppButton from '../../components/AppButton';
@@ -517,7 +518,16 @@ export default function RegisterProviderScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.header}>
         <Text style={styles.title}>
           <Text>Provider Registration</Text>
@@ -732,6 +742,7 @@ export default function RegisterProviderScreen() {
           value={formData.password}
           onChangeText={(t: string) => setFormData({ ...formData, password: t })}
           secureTextEntry
+          showPasswordToggle={true}
           placeholder="Minimum 8 characters"
           required
         />
@@ -741,6 +752,7 @@ export default function RegisterProviderScreen() {
           value={formData.password_confirmation}
           onChangeText={(t: string) => setFormData({ ...formData, password_confirmation: t })}
           secureTextEntry
+          showPasswordToggle={true}
           placeholder="Re-enter password"
           required
         />
@@ -838,6 +850,7 @@ export default function RegisterProviderScreen() {
       {/* Service Category Modal - Rendered for each service offering */}
       {serviceOfferings.map((_, index) => renderServiceCategoryModal(index))}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -846,6 +859,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   successContainer: {
     flex: 1,

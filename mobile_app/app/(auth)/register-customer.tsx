@@ -15,6 +15,7 @@ import {
   View,
   Image,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
@@ -368,11 +369,16 @@ export default function RegisterCustomerScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
     >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.header}>
         <Text style={styles.title}>
           <Text>Create Customer Account</Text>
@@ -513,6 +519,7 @@ export default function RegisterCustomerScreen() {
             }}
             placeholder="Minimum 8 characters"
             secureTextEntry
+            showPasswordToggle={true}
             required
             error={validationErrors.password}
           />
@@ -531,6 +538,7 @@ export default function RegisterCustomerScreen() {
             }}
             placeholder="Re-enter your password"
             secureTextEntry
+            showPasswordToggle={true}
             required
             error={validationErrors.password_confirmation}
           />
@@ -702,7 +710,9 @@ export default function RegisterCustomerScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -710,6 +720,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   header: {
     padding: 30,

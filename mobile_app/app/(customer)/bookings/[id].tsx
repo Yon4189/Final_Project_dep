@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useBookingDetails, useCancelBooking, useBookingStatus, useTrackProvider } from '@/hooks/useCustomerBookings';
+import { useConfirmCompletion } from '../../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { ReviewModal } from '../../../components/customer/ReviewModal';
 import { ComplaintModal } from '../../../components/customer/ComplaintModal';
@@ -70,6 +71,7 @@ export default function BookingDetails() {
   const { data: statusData } = useBookingStatus(id as string);
   const { data: trackingData } = useTrackProvider(id as string);
   const cancelBooking = useCancelBooking();
+  const confirmCompletion = useConfirmCompletion();
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -175,6 +177,27 @@ export default function BookingDetails() {
 
   const handleReview = () => {
     setShowReviewModal(true);
+  };
+
+  const handleConfirmCompletion = async () => {
+    Alert.alert(
+      'Confirm Completion',
+      'By confirming, you agree that the service has been performed satisfactorily and the payment will be released to the provider.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              await confirmCompletion.mutateAsync(id as string);
+              setShowReviewModal(true);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to confirm completion. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formatDateTime = (dateString: string) => {
@@ -405,6 +428,21 @@ export default function BookingDetails() {
 
     return (
       <View style={styles.actionsContainer}>
+        {status === 'waiting_customer_confirmation' && (
+          <TouchableOpacity 
+            style={[styles.payButton, { backgroundColor: Colors.success, marginBottom: 12, paddingVertical: 12 }]} 
+            onPress={handleConfirmCompletion}
+            disabled={confirmCompletion.isPending}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
+              <Text style={styles.payButtonText}>
+                {confirmCompletion.isPending ? 'Confirming...' : 'Confirm Service Completion'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {status === 'accepted' && (
           <TouchableOpacity style={styles.trackButton} onPress={handleTrackProvider}>
             <Ionicons name="location-outline" size={20} color={Colors.surface} />
@@ -419,6 +457,16 @@ export default function BookingDetails() {
           >
             <Ionicons name="close-circle" size={20} color={Colors.error} />
             <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+          </TouchableOpacity>
+        )}
+
+        {status === 'completed' && !booking.review && (
+          <TouchableOpacity 
+            style={[styles.trackButton, { backgroundColor: Colors.primary }]} 
+            onPress={() => setShowReviewModal(true)}
+          >
+            <Ionicons name="star" size={20} color={Colors.surface} />
+            <Text style={styles.trackButtonText}>Rate & Review Service</Text>
           </TouchableOpacity>
         )}
 

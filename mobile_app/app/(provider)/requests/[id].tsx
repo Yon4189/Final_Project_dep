@@ -10,6 +10,7 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
@@ -715,7 +716,10 @@ export default function RequestDetails() {
       onRequestClose={() => setShowActionModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContent}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Reject Request</Text>
             <TouchableOpacity onPress={() => setShowActionModal(false)}>
@@ -759,7 +763,7 @@ export default function RequestDetails() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

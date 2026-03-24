@@ -22,6 +22,7 @@ import { api } from '@/app/services/api';
 import { API_BASE_URL } from '@/app/config/api';
 import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
+import { subscribeToConversation, unsubscribeFromConversation } from '@/app/services/pusherClient';
 
 interface Message {
     id: string;
@@ -58,9 +59,9 @@ export default function ProviderChatScreen() {
     const router = useRouter();
     const { id: conversationIdParam } = useLocalSearchParams<{ id: string }>();
     const flatListRef = useRef<FlatList>(null);
-    const pollingInterval = useRef<NodeJS.Timeout | null>(null);
     const appState = useRef(AppState.currentState);
     const isMounted = useRef(true);
+    const wsSubscribed = useRef(false);
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
@@ -113,16 +114,31 @@ export default function ProviderChatScreen() {
             loadInitialData();
 
             return () => {
-                stopPolling();
                 isMounted.current = false;
             };
         }, [conversationId.current, invalidId])
     );
 
+    // Replace polling with a real-time WebSocket subscription.
     useEffect(() => {
-        if (invalidId || !conversationId.current) return;
-        startPolling();
+        if (invalidId || !conversation?.conversationID || wsSubscribed.current) return;
+        wsSubscribed.current = true;
 
+        subscribeToConversation(conversation.conversationID, (data: any) => {
+            if (!isMounted.current) return;
+            const incoming = normalizeMessage(data);
+            setMessages(prev => {
+                const exists = prev.some(m => m.id === incoming.id);
+                if (exists) return prev;
+                return [...prev, incoming];
+            });
+            flatListRef.current?.scrollToEnd({ animated: true });
+            if (conversationId.current) {
+                markMessagesAsRead(conversationId.current).catch(() => {});
+            }
+        });
+
+        // Fallback: refresh on foreground
         const subscription = AppState.addEventListener('change', nextAppState => {
             if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
                 refreshMessages();
@@ -131,26 +147,13 @@ export default function ProviderChatScreen() {
         });
 
         return () => {
-            stopPolling();
             subscription.remove();
+            if (conversation?.conversationID) {
+                unsubscribeFromConversation(conversation.conversationID);
+            }
+            wsSubscribed.current = false;
         };
     }, [conversation?.conversationID, invalidId]);
-
-    const startPolling = () => {
-        if (pollingInterval.current) clearInterval(pollingInterval.current);
-        pollingInterval.current = setInterval(() => {
-            if (conversationId.current && isMounted.current) {
-                fetchNewMessages();
-            }
-        }, 3000);
-    };
-
-    const stopPolling = () => {
-        if (pollingInterval.current) {
-            clearInterval(pollingInterval.current);
-            pollingInterval.current = null;
-        }
-    };
 
     const loadInitialData = async () => {
         if (!conversationId.current) return;
@@ -459,23 +462,24 @@ export default function ProviderChatScreen() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
-            {renderHeader()}
-
             <FlatList
                 ref={flatListRef}
                 data={messages}
                 renderItem={renderMessage}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.messagesList}
-                onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+                ListHeaderComponent={renderHeader}
+                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
                 onRefresh={refreshMessages}
                 refreshing={refreshing}
                 onEndReached={loadMoreMessages}
                 onEndReachedThreshold={0.3}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             />
 
             <View style={styles.inputContainer}>

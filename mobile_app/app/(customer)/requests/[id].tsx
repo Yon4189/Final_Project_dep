@@ -179,7 +179,8 @@ export default function RequestDetails() {
           onPress: async () => {
             try {
               await confirmCompletion.mutateAsync(id as string);
-              Alert.alert('Success', 'Service completion confirmed. Thank you!');
+              // Instantly pop the review modal!
+              setShowReviewModal(true);
             } catch (error) {
               Alert.alert('Error', 'Failed to confirm completion. Please try again.');
             }

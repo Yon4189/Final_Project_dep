@@ -181,6 +181,8 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     
     // Dashboard
     Route::get('/dashboard/stats', [ProviderDashboardController::class, 'getStats']);
+    Route::get('/schedule', [ProviderDashboardController::class, 'getSchedule']);
+    Route::post('/schedule', [ProviderDashboardController::class, 'updateSchedule']);
     Route::get('/schedule/today', [ProviderDashboardController::class, 'getTodaySchedule']);
     Route::get('/earnings/summary', [ProviderDashboardController::class, 'getEarningsSummary']);
     
