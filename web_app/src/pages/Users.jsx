@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import {
   Search, UserMinus, ShieldAlert, ShieldCheck,
@@ -54,7 +55,7 @@ const UserAvatar = ({ user }) => {
 console.log("loaded file: Users.jsx");
 
 const Users = () => {
-  console.log("COMPONENT RENDERING: Users component started");
+  const queryClient = useQueryClient();
   const location = useLocation();
 
   // Determine user type from URL
@@ -64,60 +65,22 @@ const Users = () => {
     return 'Customer'; // default
   };
 
+  const userType = getUserTypeFromPath();
 
-
-  // 1. Data State
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dbStatus, setDbStatus] = useState('checking');
-  const [userType, setUserType] = useState(getUserTypeFromPath()); // from path
-
-  // 2. UI State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  useEffect(() => {
-    const token = sessionStorage.getItem('admin_token');
-    console.log('Admin token on page load:', token);
-
-    if (!token) {
-      console.log('No admin token found! Redirecting to login...');
-      // Optionally redirect to login page
-      // navigate('/admin/login');
-    }
-  }, []);
-
-  // Update userType when route changes
-  useEffect(() => {
-    setUserType(getUserTypeFromPath());
-    setCurrentPage(1);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
-  // 3. Mock Data (replace with API call)
-  // mock data was here. its removed 
-
-  const fetchUsers = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
+  // 1. Data Fetching with TanStack Query
+  const { 
+    data: users = [], 
+    isLoading: loading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['users', userType],
+    queryFn: async () => {
       const url = userType === "Provider" ? "/admin/providers" : "/admin/customers";
-      console.log("Fetching from URL:", url); // Log the URL being
-
-      // fetching data from backedn
       const apiResponse = await api.get(url);
-      console.log("Raw API data: ", apiResponse.data);
-
       const responseData = apiResponse.data.data || [];
-
-      // mapping backend fields with frontend fields
-      const mappedUsers = responseData.map(u => {
-        // Normalize status to Title Case (Active, Suspended, Approved, Rejected)
+      
+      return responseData.map(u => {
         const rawStatus = (u.status || "Active").toLowerCase();
         let normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
 
@@ -133,26 +96,22 @@ const Users = () => {
           joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
         };
       });
+    },
+    staleTime: 60000, // 1 minute
+    refetchInterval: 10000, // 10 seconds polling
+  });
 
-      setUsers(mappedUsers);
+  const dbStatus = error ? 'disconnected' : (loading ? 'checking' : 'connected');
 
-      setDbStatus('connected');
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch users');
-      setDbStatus('disconnected');
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
+  // 2. UI State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
+  // Reset page when userType changes
   useEffect(() => {
-    fetchUsers(true);
-    const interval = setInterval(() => {
-      fetchUsers(false);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [userType]); // refetch when userType changes
+    setCurrentPage(1);
+  }, [userType, searchQuery]);
 
   // 4. Action Handlers
   const toggleUserStatus = async (id, currentStatus) => {
@@ -167,10 +126,9 @@ const Users = () => {
       // call backend to update status
       await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
 
-      // update frontend state
-      setUsers(prev => prev.map(u =>
-        u.id === id ? { ...u, status: currentStatus === 'Active' ? 'Suspended' : 'Active' } : u
-      ));
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
 
     } catch (err) {
       console.error(err);
@@ -189,8 +147,9 @@ const Users = () => {
       // call backend to delete user
       await api.delete(url);
 
-      // remove from frontend
-      setUsers(prev => prev.filter(u => u.id !== id));
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
 
     } catch (err) {
       console.error(err);
@@ -260,10 +219,10 @@ const Users = () => {
           </div>
 
           <button
-            onClick={fetchUsers}
+            onClick={() => refetch()}
             className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm"
           >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={20} className={loading && users.length === 0 ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -292,7 +251,7 @@ const Users = () => {
             <AlertCircle className="text-red-500" size={40} />
             <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.3em]">{error}</p>
             <button
-              onClick={fetchUsers}
+              onClick={() => refetch()}
               className="mt-2 text-xs bg-slate-100 px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition"
             >
               Retry

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
@@ -18,31 +19,22 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const [stats, setStats] = useState({
+  // Fetch stats using TanStack Query
+  const { data: stats = {
     pending: 0,
     active: 0,
     rejected: 0,
     suspended: 0,
     customers: 0,
     providers: 0
+  } } = useQuery({
+    queryKey: ['adminStats'],
+    queryFn: async () => {
+      const response = await api.get('/admin/stats');
+      return response.data.success ? response.data.data : null;
+    },
+    refetchInterval: 30000, // Update every 30 seconds
   });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await api.get('/admin/stats');
-        if (response.data.success) {
-          setStats(response.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching sidebar stats:", error);
-      }
-    };
-
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
 
 
   const [isServicesOpen, setIsServicesOpen] = useState(false);
