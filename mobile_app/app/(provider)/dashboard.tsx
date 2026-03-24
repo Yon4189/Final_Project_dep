@@ -23,6 +23,8 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatTimeAgo } from '../utils/formatters';
 import { API_BASE_URL } from '../config/api';
+import { useConversations } from '../../hooks/useChat';
+import { RecentMessagesModal } from '../../components/provider/RecentMessagesModal';
 import type { ServiceRequest } from '../types/provider.types';
 import type { RequestStatus } from '../types/provider.types';
 const { width } = Dimensions.get('window');
@@ -50,6 +52,7 @@ export default function ProviderDashboard() {
   const { profile, toggleAvailability } = useProviderStore();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'pending' | 'today' | 'upcoming'>('today');
+  const [showRecentMessages, setShowRecentMessages] = useState(false);
 
   const {
     stats,
@@ -61,6 +64,7 @@ export default function ProviderDashboard() {
     acceptRequest,
     rejectRequest,
   } = useProviderQueries();
+  const { data: conversations, isLoading: isChatsLoading } = useConversations();
   const notificationCountQuery = useProviderNotificationCount();
   const unreadNotificationCount = notificationCountQuery.data ?? 0;
 
@@ -120,9 +124,16 @@ export default function ProviderDashboard() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.notificationButton}
-            onPress={() => router.push('/(provider)/chat')}
+            onPress={() => setShowRecentMessages(true)}
           >
-            <Ionicons name="chatbubbles-outline" size={24} color={Colors.surface} />
+            <Ionicons name="chatbubble-ellipses-outline" size={24} color={Colors.surface} />
+            {conversations?.some((c: any) => c.unread_count > 0) && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {conversations.reduce((acc: number, c: any) => acc + (c.unread_count || 0), 0)}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -266,6 +277,23 @@ export default function ProviderDashboard() {
 
       <TouchableOpacity
         style={styles.actionButton}
+        onPress={() => setShowRecentMessages(true)}
+      >
+        <View style={[styles.actionIcon, { backgroundColor: Colors.info + '20' }]}>
+          <Ionicons name="chatbubble-ellipses-outline" size={24} color={Colors.info} />
+        </View>
+        <Text style={styles.actionLabel}>Messages</Text>
+        {conversations?.some((c: any) => c.unread_count > 0) && (
+          <View style={styles.actionBadge}>
+            <Text style={styles.actionBadgeText}>
+              {conversations.reduce((acc: number, c: any) => acc + (c.unread_count || 0), 0)}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionButton}
         onPress={() => router.push('/(provider)/earnings')}
       >
         <View style={[styles.actionIcon, { backgroundColor: Colors.warning + '20' }]}>
@@ -275,6 +303,59 @@ export default function ProviderDashboard() {
       </TouchableOpacity>
     </View>
   );
+
+  const renderRecentChats = () => {
+    if (isChatsLoading || !conversations?.length) return null;
+
+    return (
+      <View style={styles.chatsSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Chats</Text>
+          <TouchableOpacity onPress={() => router.push('/(provider)/chat')}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chatsScroll}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+        >
+          {conversations.slice(0, 5).map((chat: any) => {
+            const customer = chat.other_party;
+            if (!customer) return null;
+
+            return (
+              <TouchableOpacity
+                key={chat.conversationID}
+                style={styles.chatCard}
+                onPress={() => router.push(`/(provider)/chat/${chat.conversationID}`)}
+              >
+                <View style={styles.chatAvatarContainer}>
+                  <Image
+                    source={{
+                      uri: customer.profilePicture
+                        ? (customer.profilePicture.startsWith('http')
+                          ? customer.profilePicture
+                          : `${API_BASE_URL.replace('/api', '')}/${customer.profilePicture}`)
+                        : 'https://via.placeholder.com/60',
+                    }}
+                    style={styles.chatAvatar}
+                  />
+                  {chat.unread_count > 0 && (
+                    <View style={styles.chatUnreadBadge} />
+                  )}
+                </View>
+                <Text style={styles.chatName} numberOfLines={1}>
+                  {customer.fullname || 'Customer'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
 
   const renderTabs = () => (
     <View style={styles.tabsContainer}>
@@ -461,6 +542,7 @@ export default function ProviderDashboard() {
       >
         {renderHeader()}
         {renderQuickActions()}
+        {renderRecentChats()}
         {renderTabs()}
 
         <View style={styles.requestsSection}>
@@ -520,6 +602,19 @@ export default function ProviderDashboard() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      <RecentMessagesModal
+        visible={showRecentMessages}
+        onClose={() => setShowRecentMessages(false)}
+        conversations={conversations || []}
+        onSelectConversation={(conversationId) => {
+          router.push(`/(provider)/chat/${conversationId}`);
+        }}
+        onSeeAll={() => {
+          setShowRecentMessages(false);
+          router.push('/(provider)/chat');
+        }}
+      />
     </View>
   );
 }
@@ -967,6 +1062,63 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  chatsSection: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  chatsScroll: {
+    paddingBottom: 4,
+  },
+  chatCard: {
+    alignItems: 'center',
+    marginRight: 20,
+    width: 70,
+  },
+  chatAvatarContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  chatAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chatUnreadBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  chatName: {
+    fontSize: 12,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
 

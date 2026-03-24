@@ -10,6 +10,8 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -192,7 +194,11 @@ export default function NewComplaint() {
   );
 
   const renderStep2 = () => (
-    <ScrollView style={styles.stepContainer}>
+    <ScrollView 
+      style={styles.stepContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => setStep(1)}
@@ -299,6 +305,7 @@ export default function NewComplaint() {
           horizontal 
           showsHorizontalScrollIndicator={false}
           style={styles.attachmentsScroll}
+          keyboardShouldPersistTaps="handled"
         >
           {form.attachments.map((uri, index) => (
             <View key={index} style={styles.attachmentPreview}>
@@ -354,7 +361,11 @@ export default function NewComplaint() {
   );
 
   const renderStep3 = () => (
-    <ScrollView style={styles.stepContainer}>
+    <ScrollView 
+      style={styles.stepContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => setStep(2)}
@@ -408,7 +419,11 @@ export default function NewComplaint() {
         {form.attachments.length > 0 && (
           <View style={styles.reviewSection}>
             <Text style={styles.reviewLabel}>Attachments ({form.attachments.length})</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {form.attachments.map((uri, index) => (
                 <Image key={index} source={{ uri }} style={styles.reviewAttachment} />
               ))}
@@ -451,7 +466,11 @@ export default function NewComplaint() {
   );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Progress Indicator */}
       <View style={styles.progressContainer}>
         <View style={[styles.progressStep, step >= 1 && styles.progressStepActive]}>
@@ -470,7 +489,7 @@ export default function NewComplaint() {
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

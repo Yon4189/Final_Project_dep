@@ -1,7 +1,8 @@
 // components/AppInput.tsx
-import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
 import { Colors } from '@/app/constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
@@ -25,6 +26,11 @@ const styles = StyleSheet.create({
     left: 15,
     zIndex: 1,
   },
+  rightIconContainer: {
+    position: 'absolute',
+    right: 15,
+    zIndex: 1,
+  },
   input: {
     backgroundColor: Colors.background,
     padding: 15,
@@ -37,6 +43,9 @@ const styles = StyleSheet.create({
   },
   inputWithIcon: {
     paddingLeft: 45,
+  },
+  inputWithRightIcon: {
+    paddingRight: 45,
   },
   inputError: {
     borderColor: Colors.error,
@@ -67,6 +76,7 @@ interface AppInputProps {
   leftIcon?: React.ReactNode;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoCorrect?: boolean;
+  showPasswordToggle?: boolean;
 }
 const AppInput: React.FC<AppInputProps> = ({
   label,
@@ -84,7 +94,12 @@ const AppInput: React.FC<AppInputProps> = ({
   autoCapitalize = 'none',
   autoCorrect = false,
   maxLength,
+  showPasswordToggle = false,
 }) => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const isSecure = secureTextEntry && !isPasswordVisible;
+  const showToggle = secureTextEntry && showPasswordToggle;
   return (
     <View style={[styles.container, style]}>
       {label ? (
@@ -100,24 +115,37 @@ const AppInput: React.FC<AppInputProps> = ({
           </View>
         ) : null}
         <TextInput
-          style={[
-            styles.input,
-            leftIcon && styles.inputWithIcon,
-            error && styles.inputError,
-            multiline && styles.multilineInput,
-            inputStyle
-          ]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={isSecure}
           keyboardType={keyboardType}
           placeholderTextColor="#999"
           multiline={multiline}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
           maxLength={maxLength}
+          style={[
+            styles.input,
+            leftIcon && styles.inputWithIcon,
+            showToggle && styles.inputWithRightIcon,
+            error && styles.inputError,
+            multiline && styles.multilineInput,
+            inputStyle
+          ]}
         />
+        {showToggle ? (
+          <TouchableOpacity 
+            style={styles.rightIconContainer}
+            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+          >
+            <Ionicons 
+              name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
+              size={20} 
+              color={Colors.text.secondary} 
+            />
+          </TouchableOpacity>
+        ) : null}
       </View>
       {error ? (
         <Text style={styles.errorText}>

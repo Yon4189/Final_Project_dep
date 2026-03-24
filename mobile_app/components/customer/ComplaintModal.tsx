@@ -11,6 +11,8 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -414,7 +416,10 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
       onRequestClose={handleClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContent}
+        >
           {/* Header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={handleClose}>
@@ -476,7 +481,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
               </View>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

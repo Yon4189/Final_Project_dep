@@ -23,6 +23,7 @@ import { api } from '@/app/services/api';
 import { API_BASE_URL } from '@/app/config/api';
 import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
+import { subscribeToConversation, unsubscribeFromConversation } from '@/app/services/pusherClient';
 
 interface Message {
   id: string;               // unique client-side key (either "temp_..." or "msg_<id>")
@@ -61,9 +62,9 @@ export default function ChatScreen() {
   const router = useRouter();
   const { id: providerId } = useLocalSearchParams<{ id: string }>();
   const flatListRef = useRef<FlatList>(null);
-  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const appState = useRef(AppState.currentState);
   const isMounted = useRef(true);
+  const wsSubscribed = useRef(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -103,43 +104,45 @@ export default function ChatScreen() {
     useCallback(() => {
       loadInitialData();
       return () => {
-        stopPolling();
         isMounted.current = false;
       };
     }, [providerId])
   );
 
+  // Subscribe to WebSocket once we have a real conversationID.
   useEffect(() => {
-    isMounted.current = true;
-    startPolling();
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+    if (!conversation?.conversationID || wsSubscribed.current) return;
+    wsSubscribed.current = true;
+
+    subscribeToConversation(conversation.conversationID, (data: any) => {
+      if (!isMounted.current) return;
+      const incoming = normalizeMessage(data);
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === incoming.id);
+        if (exists) return prev;
+        return [...prev, incoming];
+      });
+      flatListRef.current?.scrollToEnd({ animated: true });
+      // Mark as read silently
+      markMessagesAsRead(conversation!.conversationID).catch(() => {});
+    });
+
+    // Fallback AppState refresh when foregrounded
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
         refreshMessages();
       }
-      appState.current = nextAppState;
+      appState.current = nextState;
     });
+
     return () => {
-      stopPolling();
       subscription.remove();
-      isMounted.current = false;
+      if (conversation?.conversationID) {
+        unsubscribeFromConversation(conversation.conversationID);
+      }
+      wsSubscribed.current = false;
     };
   }, [conversation?.conversationID]);
-
-  const startPolling = () => {
-    if (pollingInterval.current) clearInterval(pollingInterval.current);
-    pollingInterval.current = setInterval(() => {
-      if (conversation?.conversationID && isMounted.current) {
-        fetchNewMessages();
-      }
-    }, 3000);
-  };
-
-  const stopPolling = () => {
-    if (pollingInterval.current) {
-      clearInterval(pollingInterval.current);
-      pollingInterval.current = null;
-    }
-  };
 
   const loadInitialData = async () => {
     try {
@@ -149,6 +152,14 @@ export default function ChatScreen() {
         const userData = JSON.parse(userDataStr);
         setCustomerId(userData.customerID || userData.id);
       }
+
+      // Guard against 'index' or invalid ID
+      if (!providerId || providerId === 'index' || isNaN(parseInt(providerId))) {
+        console.log('ChatScreen - Invalid providerId, skipping data load:', providerId);
+        setIsLoading(false);
+        return;
+      }
+
       await fetchProviderDetails();
       await getOrCreateConversation();
     } catch (error) {
@@ -198,6 +209,7 @@ export default function ChatScreen() {
   };
 
   const fetchProviderDetails = async () => {
+    if (!providerId || providerId === 'index' || isNaN(parseInt(providerId))) return;
     try {
       const response = await api.get<any>(`/customer/providers/${providerId}`);
       if (response.success && response.data) {
@@ -551,22 +563,24 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      {renderHeader()}
       <FlatList
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
-        keyExtractor={(item) => item.id} // now always a unique string
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.messagesList}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        ListHeaderComponent={renderHeader}
+        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         onRefresh={refreshMessages}
         refreshing={refreshing}
         onEndReached={loadMoreMessages}
         onEndReachedThreshold={0.3}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       />
       <View style={styles.inputContainer}>
         <TextInput

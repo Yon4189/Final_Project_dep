@@ -321,6 +321,12 @@ class ApiService {
         }
 
         config.headers['X-Request-ID'] = this.generateRequestId();
+        
+        // Attach user type header
+        const userType = this.userType || (await storage.getItem(USER_TYPE_KEY));
+        if (userType && config.headers) {
+          config.headers['X-User-Type'] = userType;
+        }
 
         if (__DEV__) {
           console.log('🚀 API Request:', {

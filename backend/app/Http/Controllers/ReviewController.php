@@ -110,8 +110,12 @@ class ReviewController extends Controller
 
         $provider = ServiceProvider::find($providerID);
         if ($provider) {
-            $provider->average_rating = round($stats->avg_rating ?? 0, 2);
-            $provider->total_reviews = $stats->total ?? 0;
+            $avg = round($stats->avg_rating ?? 0, 2);
+            $total = $stats->total ?? 0;
+            
+            $provider->average_rating = $avg;
+            $provider->rating = $avg;
+            $provider->total_reviews = $total;
             $provider->save();
         }
     }

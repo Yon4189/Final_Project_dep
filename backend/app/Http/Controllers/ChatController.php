@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Booking;
 use App\Services\NotificationService;
+use App\Events\MessageSent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -201,14 +202,20 @@ class ChatController extends Controller
             ], 500);
         }
 
-        // -----------------------------------------------------------
-        // Post-commit: load sender info and send notification.
+        // Post-commit: broadcast via WebSocket and send push notification.
         // Any failure here must NOT return 500 — the message is saved.
         // -----------------------------------------------------------
         try {
             $message->refresh();
         } catch (\Exception $e) {
             Log::warning('Failed to refresh message after save: ' . $e->getMessage());
+        }
+
+        // Broadcast the new message to all channel subscribers in real time.
+        try {
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Exception $e) {
+            Log::warning('WebSocket broadcast failed (non-fatal): ' . $e->getMessage());
         }
 
         $senderName = $user->fullname ?? 'User';

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import axios from 'axios';
+import AppInput from '../../components/AppInput';
 import { API_BASE_URL } from '../config/api';
 import { useRouter } from 'expo-router';
 
@@ -22,13 +23,9 @@ export default function ForgotPassword() {
       const response = await axios.post(`${API_BASE_URL}/forgot-password`, { email });
       
       if (response.data.success) {
-        // IMPORTANT: Your backend returns the token in the response!
-        // We save it here so the user doesn't have to click the link.
-        setToken(response.data.token); 
-        
         Alert.alert(
-          "Verification Successful", 
-          "We found your account. Please set your new password below."
+          "Email Sent", 
+          "We found your account. Please check your email for the verification code and enter it below."
         );
         setStep(2);
       } else {
@@ -43,6 +40,9 @@ export default function ForgotPassword() {
 
   // STEP 2: Update Password using the stored token
   const handleResetPassword = async () => {
+    if (token.length !== 6) {
+      return Alert.alert("Error", "Please enter the 6-digit verification code");
+    }
     if (password.length < 8) {
       return Alert.alert("Error", "Password must be at least 8 characters");
     }
@@ -74,17 +74,23 @@ export default function ForgotPassword() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
       <Text style={styles.title}>{step === 1 ? "Forgot Password" : "Set New Password"}</Text>
       
       {step === 1 ? (
         <View style={styles.card}>
-          <Text style={styles.label}>Email Address</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="Enter your registered email" 
-            value={email} 
-            onChangeText={setEmail} 
+          <AppInput
+            label="Email Address"
+            placeholder="Enter your registered email"
+            value={email}
+            onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -94,22 +100,33 @@ export default function ForgotPassword() {
         </View>
       ) : (
         <View style={styles.card}>
-          <Text style={styles.label}>New Password</Text>
+          <Text style={styles.label}>6-Digit Verification Code</Text>
           <TextInput 
             style={styles.input} 
-            placeholder="At least 8 characters" 
-            value={password} 
-            onChangeText={setPassword} 
-            secureTextEntry 
+            placeholder="Enter the code sent to your email" 
+            value={token} 
+            onChangeText={setToken} 
+            keyboardType="number-pad"
+            maxLength={6}
+            autoCapitalize="none"
+          />
+
+          <AppInput
+            label="New Password"
+            placeholder="At least 8 characters"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            showPasswordToggle={true}
           />
           
-          <Text style={styles.label}>Confirm Password</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="Repeat new password" 
-            value={passwordConfirmation} 
-            onChangeText={setPasswordConfirmation} 
-            secureTextEntry 
+          <AppInput
+            label="Confirm Password"
+            placeholder="Repeat new password"
+            value={passwordConfirmation}
+            onChangeText={setPasswordConfirmation}
+            secureTextEntry
+            showPasswordToggle={true}
           />
 
           <TouchableOpacity style={styles.button} onPress={handleResetPassword} disabled={loading}>
@@ -121,12 +138,19 @@ export default function ForgotPassword() {
           </TouchableOpacity>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, justifyContent: 'center', backgroundColor: '#F5F7FA' },
+  container: { 
+    flexGrow: 1, 
+    padding: 20, 
+    justifyContent: 'center', 
+    backgroundColor: '#F5F7FA',
+    paddingBottom: 40,
+  },
   title: { fontSize: 28, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 30, textAlign: 'center' },
   card: { backgroundColor: '#fff', padding: 20, borderRadius: 15, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
   label: { fontSize: 14, fontWeight: '600', color: '#444', marginBottom: 8 },

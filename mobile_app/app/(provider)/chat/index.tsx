@@ -9,6 +9,9 @@ import {
     RefreshControl,
     ActivityIndicator,
     SafeAreaView,
+    TextInput,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +25,7 @@ export default function ProviderChatList() {
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const fetchConversations = async () => {
         try {
@@ -99,24 +103,69 @@ export default function ProviderChatList() {
         );
     }
 
+    const filteredConversations = conversations.filter((conv: any) => {
+        const name = conv.other_party?.fullname || '';
+        return name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
+    if (loading && !refreshing) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+        );
+    }
+
     return (
-        <SafeAreaView style={styles.container}>
-            <FlatList
-                data={conversations}
-                renderItem={renderItem}
-                keyExtractor={(item, index) => item.conversationID?.toString() ?? `conv-${index}`}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="chatbubbles-outline" size={64} color={Colors.text.secondary} />
-                        <Text style={styles.emptyText}>No conversations yet</Text>
-                        <Text style={styles.emptySubtitle}>When customers message you, they will appear here.</Text>
-                    </View>
-                }
-            />
-        </SafeAreaView>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+            <SafeAreaView style={{ flex: 1 }}>
+                <FlatList
+                    data={filteredConversations}
+                    renderItem={renderItem}
+                    keyExtractor={(item, index) => item.conversationID?.toString() ?? `conv-${index}`}
+                    ListHeaderComponent={
+                        <View style={styles.searchContainer}>
+                            <View style={styles.searchBar}>
+                                <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Search customers..."
+                                    value={searchQuery}
+                                    onChangeText={setSearchQuery}
+                                    placeholderTextColor={Colors.text.secondary}
+                                />
+                                {searchQuery !== '' && (
+                                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                        <Ionicons name="close-circle" size={20} color={Colors.text.secondary} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+                    }
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+                    }
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="chatbubbles-outline" size={64} color={Colors.text.secondary} />
+                            <Text style={styles.emptyText}>
+                                {searchQuery ? 'No customers found' : 'No conversations yet'}
+                            </Text>
+                            <Text style={styles.emptySubtitle}>
+                                {searchQuery 
+                                    ? 'Try searching for a different name.' 
+                                    : 'When customers message you, they will appear here.'}
+                            </Text>
+                        </View>
+                    }
+                    keyboardShouldPersistTaps="handled"
+                />
+            </SafeAreaView>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -210,5 +259,26 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: Colors.text.secondary,
         textAlign: 'center',
+    },
+    searchContainer: {
+        padding: 15,
+        backgroundColor: Colors.surface,
+    },
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: Colors.background,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 16,
+        color: Colors.text.primary,
+        padding: 0,
     },
 });

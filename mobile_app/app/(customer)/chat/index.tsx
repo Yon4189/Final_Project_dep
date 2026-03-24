@@ -11,6 +11,8 @@ import {
     ActivityIndicator,
     SafeAreaView,
     TextInput,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -127,10 +129,11 @@ export default function CustomerChatList() {
     };
 
     const renderProviderItem = ({ item }: { item: any }) => {
+        const providerId = item.id || item.providerID;
         return (
             <TouchableOpacity
                 style={styles.conversationItem}
-                onPress={() => router.push(`/(customer)/chat/${item.id}`)}
+                onPress={() => router.push(`/(customer)/chat/${providerId}`)}
             >
                 <Image
                     source={{
@@ -178,51 +181,60 @@ export default function CustomerChatList() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.searchContainer}>
-                <View style={styles.searchBar}>
-                    <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search providers..."
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        placeholderTextColor={Colors.text.secondary}
-                    />
-                    {searchQuery !== '' && (
-                        <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <Ionicons name="close-circle" size={20} color={Colors.text.secondary} />
-                        </TouchableOpacity>
-                    )}
-                </View>
-            </View>
-
-            <View style={styles.tabsContainer}>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'chats' && styles.activeTab]}
-                    onPress={() => setActiveTab('chats')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'chats' && styles.activeTabText]}>Messages</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'providers' && styles.activeTab]}
-                    onPress={() => setActiveTab('providers')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'providers' && styles.activeTabText]}>All Providers</Text>
-                </TouchableOpacity>
-            </View>
-
-            {activeTab === 'providers' && loadingProviders && searchQuery !== '' ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={Colors.primary} />
-                </View>
-            ) : (
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+            <SafeAreaView style={{ flex: 1 }}>
                 <FlatList
                     data={activeTab === 'chats' ? filteredConversations : providers}
                     renderItem={activeTab === 'chats' ? renderConversationItem : renderProviderItem}
-                    keyExtractor={(item, index) => (activeTab === 'chats' 
-                        ? (item.conversationID?.toString() ?? `chat-${index}`) 
+                    keyExtractor={(item, index) => (activeTab === 'chats'
+                        ? (item.conversationID?.toString() ?? `chat-${index}`)
                         : (item.id?.toString() ?? `provider-${index}`))}
+                    ListHeaderComponent={
+                        <View>
+                            <View style={styles.searchContainer}>
+                                <View style={styles.searchBar}>
+                                    <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
+                                    <TextInput
+                                        style={styles.searchInput}
+                                        placeholder="Search providers..."
+                                        value={searchQuery}
+                                        onChangeText={setSearchQuery}
+                                        placeholderTextColor={Colors.text.secondary}
+                                    />
+                                    {searchQuery !== '' && (
+                                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                            <Ionicons name="close-circle" size={20} color={Colors.text.secondary} />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </View>
+
+                            <View style={styles.tabsContainer}>
+                                <TouchableOpacity
+                                    style={[styles.tab, activeTab === 'chats' && styles.activeTab]}
+                                    onPress={() => setActiveTab('chats')}
+                                >
+                                    <Text style={[styles.tabText, activeTab === 'chats' && styles.activeTabText]}>Messages</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.tab, activeTab === 'providers' && styles.activeTab]}
+                                    onPress={() => setActiveTab('providers')}
+                                >
+                                    <Text style={[styles.tabText, activeTab === 'providers' && styles.activeTabText]}>All Providers</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {activeTab === 'providers' && loadingProviders && searchQuery !== '' && (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="small" color={Colors.primary} />
+                                </View>
+                            )}
+                        </View>
+                    }
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
                     }
@@ -243,9 +255,10 @@ export default function CustomerChatList() {
                             </Text>
                         </View>
                     }
+                    keyboardShouldPersistTaps="handled"
                 />
-            )}
-        </SafeAreaView>
+            </SafeAreaView>
+        </KeyboardAvoidingView>
     );
 }
 

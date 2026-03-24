@@ -11,6 +11,8 @@ import {
   View,
   ActivityIndicator,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
@@ -206,11 +208,15 @@ export default function LoginScreen() {
 
   // Rest of your component remains the same...
   return (
-    <ScrollView
-      style={styles.container}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.contentContainer}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
     >
+      <ScrollView
+        style={styles.container}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.contentContainer}
+      >
       <View style={styles.header}>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
@@ -296,6 +302,7 @@ export default function LoginScreen() {
                 onChangeText={(text: string) => setFormData({ ...formData, password: text })}
                 placeholder="Enter your password"
                 secureTextEntry
+                showPasswordToggle={true}
                 required
               //editable={!loading}
               />
@@ -352,7 +359,8 @@ export default function LoginScreen() {
           disabled={loading}
         />
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
