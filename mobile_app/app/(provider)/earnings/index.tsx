@@ -328,9 +328,11 @@ export default function EarningsScreen() {
       <TouchableOpacity
         key={item.id}
         style={styles.transactionItem}
-        onPress={() =>
-          router.push(`/(provider)/earnings/transaction/${item.id}`)
-        }
+        onPress={() => {
+          if (item.bookingId) {
+            router.push(`/(provider)/requests/${item.bookingId}`);
+          }
+        }}
       >
         <View
           style={[

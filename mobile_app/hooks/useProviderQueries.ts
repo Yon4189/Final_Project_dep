@@ -231,6 +231,26 @@ export function useStartService(options?: UseMutationOptions<ServiceRequest, Err
   });
 }
 
+export function useArriveRequest(options?: UseMutationOptions<ServiceRequest, Error, string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<ServiceRequest, Error, string>({
+    mutationFn: async (id: string) => {
+      const response = await providerService.arriveService(id);
+      if (!response.success) throw new Error(response.message);
+      return response.data as ServiceRequest;
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: providerKeys.requests() });
+      queryClient.invalidateQueries({ queryKey: providerKeys.request(variables) });
+      handleSuccess('Arrival confirmed');
+    },
+    onError: (error, variables, context) => {
+      handleError(error);
+    },
+  });
+}
+
 export function useCompleteService(options?: UseMutationOptions<ServiceRequest, Error, string>) {
   const queryClient = useQueryClient();
 
@@ -563,6 +583,7 @@ export function useProviderQueries() {
     acceptRequest: useAcceptRequest(),
     rejectRequest: useRejectRequest(),
     rescheduleRequest: useRescheduleRequest(),
+    arriveRequest: useArriveRequest(),
     startService: useStartService(),
     completeService: useCompleteService(),
     updateAvailability: useUpdateAvailability(),

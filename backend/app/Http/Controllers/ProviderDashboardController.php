@@ -247,41 +247,53 @@ class ProviderDashboardController extends Controller
             }
             $providerID = $provider->providerID;
 
-            $perPage = $request->query('per_page', 10);
+            $perPage = $request->query('per_page', 100);
 
-            $reviews = Review::whereHas('booking', function($query) use ($providerID) {
-                    $query->where('providerID', $providerID);
-                })
+            $reviews = Review::where('providerID', $providerID)
                 ->with('booking.customer')
                 ->orderBy('created_at', 'desc')
                 ->paginate($perPage);
 
             $formattedReviews = collect($reviews->items())->map(function($review) {
+                $customer = $review->booking?->customer;
                 return [
-                    'id' => (string)$review->reviewID,
-                    'customerName' => $review->booking->customer->fullname ?? $review->booking->customer->name ?? 'Anonymous',
-                    'rating' => $review->rating,
-                    'comment' => $review->comment,
-                    'date' => $review->created_at->format('Y-m-d')
+                    'id'            => (string)$review->reviewID,
+                    'bookingId'     => (string)$review->bookingID,
+                    'customerId'    => (string)$review->customerID,
+                    'customerName'  => $customer->fullname ?? $customer->name ?? 'Anonymous',
+                    'customerImage' => $customer->profilePicture ?? $customer->profile_photo ?? null,
+                    'rating'        => (float)$review->rating,
+                    'comment'       => $review->comment ?? '',
+                    'createdAt'     => $review->created_at->toISOString(),
+                    'date'          => $review->created_at->format('Y-m-d'),
                 ];
             });
 
-            $averageRating = Review::whereHas('booking', function($query) use ($providerID) {
-                    $query->where('providerID', $providerID);
-                })->avg('rating');
+            // Calculate average and distribution
+            $allRatings = Review::where('providerID', $providerID)->pluck('rating');
+            $averageRating = $allRatings->count() ? round($allRatings->avg(), 1) : 0;
+
+            $distribution = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+            foreach ($allRatings as $r) {
+                $star = (int)round($r);
+                if ($star >= 1 && $star <= 5) {
+                    $distribution[$star]++;
+                }
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'reviews' => $formattedReviews,
-                    'averageRating' => round((float)$averageRating, 1) ?: 5.0,
-                    'total' => $reviews->total()
+                    'reviews'            => $formattedReviews,
+                    'averageRating'      => $averageRating,
+                    'total'              => $reviews->total(),
+                    'ratingDistribution' => $distribution,
                 ],
                 'pagination' => [
                     'current_page' => $reviews->currentPage(),
-                    'last_page' => $reviews->lastPage(),
-                    'per_page' => $reviews->perPage(),
-                    'total' => $reviews->total()
+                    'last_page'    => $reviews->lastPage(),
+                    'per_page'     => $reviews->perPage(),
+                    'total'        => $reviews->total(),
                 ]
             ]);
         } catch (\Exception $e) {

@@ -107,6 +107,41 @@ export async function unsubscribeFromConversation(conversationId: number) {
   console.log(`[Reverb] Unsubscribed from ${channelName}`);
 }
 
+/** Subscribe to user-specific updates (e.g. booking changes). */
+export async function subscribeToUserUpdates(
+  userType: 'customer' | 'provider',
+  userId: string | number,
+  onUpdate: (data: any) => void,
+) {
+  const pusher = await getPusher();
+  const channelName = `private-${userType}.${userId}`;
+
+  const channel = pusher.subscribe(channelName);
+  
+  channel.bind('BookingUpdated', (data: any) => {
+    try {
+      const payload = typeof data === 'string' ? JSON.parse(data) : data;
+      onUpdate(payload);
+    } catch (e) {
+      console.warn('[Reverb] Failed to parse event data:', e);
+    }
+  });
+
+  console.log(`[Reverb] Subscribed to ${channelName}`);
+  return channel;
+}
+
+/** Unsubscribe from user-specific updates. */
+export async function unsubscribeFromUserUpdates(
+  userType: 'customer' | 'provider',
+  userId: string | number,
+) {
+  if (!pusherInstance) return;
+  const channelName = `private-${userType}.${userId}`;
+  pusherInstance.unsubscribe(channelName);
+  console.log(`[Reverb] Unsubscribed from ${channelName}`);
+}
+
 /** Explicitly disconnect (call on logout). */
 export async function disconnectPusher() {
   if (!pusherInstance) return;
