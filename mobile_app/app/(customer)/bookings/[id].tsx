@@ -1,5 +1,5 @@
 // app/(customer)/bookings/[id].tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,10 +21,15 @@ import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { ReviewModal } from '../../../components/customer/ReviewModal';
 import { ComplaintModal } from '../../../components/customer/ComplaintModal';
 import { format } from 'date-fns';
+import * as pusherClient from '@/app/services/pusherClient';
 
 const STATUS_COLORS = {
   pending: Colors.warning,
   accepted: Colors.info,
+  confirmed: Colors.info,
+  arrived: Colors.primary,
+  in_progress: Colors.primary,
+  waiting_customer_confirmation: Colors.success,
   completed: Colors.success,
   cancelled: Colors.error,
   rejected: Colors.error,
@@ -35,6 +40,10 @@ const STATUS_COLORS = {
 const STATUS_ICONS = {
   pending: 'time-outline',
   accepted: 'checkmark-circle-outline',
+  confirmed: 'card-outline',
+  arrived: 'pin-outline',
+  in_progress: 'construct-outline',
+  waiting_customer_confirmation: 'shield-checkmark-outline',
   completed: 'checkmark-done-outline',
   cancelled: 'close-circle-outline',
   rejected: 'close-circle-outline',
@@ -45,6 +54,10 @@ const STATUS_ICONS = {
 const STATUS_LABELS = {
   pending: 'Pending',
   accepted: 'Accepted',
+  confirmed: 'Confirmed',
+  arrived: 'Arrived',
+  in_progress: 'In Progress',
+  waiting_customer_confirmation: 'Waiting Confirmation',
   completed: 'Completed',
   cancelled: 'Cancelled',
   rejected: 'Rejected',
@@ -53,8 +66,10 @@ const STATUS_LABELS = {
 };
 
 const STATUS_STEPS = [
-  { key: 'pending', label: 'Request Sent', icon: 'send-outline' },
+  { key: 'pending', label: 'Requested', icon: 'send-outline' },
   { key: 'accepted', label: 'Accepted', icon: 'checkmark-circle-outline' },
+  { key: 'arrived', label: 'Arrived', icon: 'pin-outline' },
+  { key: 'in_progress', label: 'Started', icon: 'construct-outline' },
   { key: 'completed', label: 'Completed', icon: 'checkmark-done-outline' },
 ];
 
@@ -105,8 +120,10 @@ export default function BookingDetails() {
   };
 
   const getCurrentStep = () => {
-    if (status === 'completed') return 2;
-    if (status === 'accepted') return 1;
+    if (status === 'completed') return 4;
+    if (status === 'waiting_customer_confirmation' || status === 'in_progress') return 3;
+    if (status === 'arrived') return 2;
+    if (['accepted', 'confirmed'].includes(status)) return 1;
     if (status === 'pending') return 0;
     return -1; // For cancelled/rejected/expired
   };
@@ -122,6 +139,26 @@ export default function BookingDetails() {
   const handleMessageProvider = () => {
     router.push(`/(customer)/chat/${booking.providerID}`);
   };
+
+  // Real-time updates
+  useEffect(() => {
+    if (booking?.customerID) {
+      pusherClient.subscribeToUserUpdates(
+        'customer',
+        booking.customerID,
+        (data: any) => {
+          console.log('[Pusher] Booking update received:', data);
+          if (data.related_booking_id?.toString() === id?.toString()) {
+            refetch();
+          }
+        }
+      );
+
+      return () => {
+        pusherClient.unsubscribeFromUserUpdates('customer', booking.customerID);
+      };
+    }
+  }, [booking?.customerID, id]);
 
   const handleTrackProvider = () => {
     if (trackingData?.data?.location) {
@@ -167,8 +204,15 @@ export default function BookingDetails() {
   };
 
   const handlePayNow = () => {
-    // Implement payment flow
-    Alert.alert('Info', 'Payment integration coming soon');
+    router.push({
+      pathname: '/(customer)/payment',
+      params: { 
+        bookingId: id as string,
+        amount: booking.agreed_price,
+        providerId: booking.providerID,
+        serviceId: booking.serviceID
+      }
+    });
   };
 
   const handleReportIssue = () => {
@@ -443,14 +487,24 @@ export default function BookingDetails() {
           </TouchableOpacity>
         )}
 
-        {status === 'accepted' && (
+        {(status === 'accepted' || (status === 'confirmed' && booking.payment?.status !== 'paid')) && (
+          <TouchableOpacity 
+            style={[styles.payButton, { marginBottom: 12 }]} 
+            onPress={handlePayNow}
+          >
+            <Ionicons name="card-outline" size={20} color={Colors.surface} style={{ marginRight: 8 }} />
+            <Text style={styles.payButtonText}>Pay for Service</Text>
+          </TouchableOpacity>
+        )}
+
+        {['accepted', 'confirmed', 'arrived', 'in_progress'].includes(status) && (
           <TouchableOpacity style={styles.trackButton} onPress={handleTrackProvider}>
             <Ionicons name="location-outline" size={20} color={Colors.surface} />
             <Text style={styles.trackButtonText}>Track Provider</Text>
           </TouchableOpacity>
         )}
 
-        {['pending', 'accepted'].includes(status) && (
+        {['pending', 'accepted', 'confirmed'].includes(status) && (
           <TouchableOpacity
             style={styles.cancelButton}
             onPress={() => setShowCancelModal(true)}

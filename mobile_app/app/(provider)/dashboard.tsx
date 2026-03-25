@@ -19,6 +19,7 @@ import { Colors } from '../constants/Colors';
 import { useProviderStore } from '../store/providerStore';
 import { useProviderQueries } from '../../hooks/useProviderQueries';
 import { useProviderNotificationCount } from '../../hooks/useProviderNotifications';
+import * as pusherClient from '@/app/services/pusherClient';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatTimeAgo } from '../utils/formatters';
@@ -32,7 +33,9 @@ const STATUS_COLORS: Record<RequestStatus, string> = {
   pending: Colors.warning,
   accepted: Colors.info,
   confirmed: Colors.primary,
+  arrived: Colors.primary,
   in_progress: Colors.info,
+  waiting_customer_confirmation: Colors.warning,
   completed: Colors.success,
   cancelled: Colors.error,
   disputed: Colors.warning,
@@ -40,8 +43,10 @@ const STATUS_COLORS: Record<RequestStatus, string> = {
 const STATUS_ICONS: Record<RequestStatus, keyof typeof Ionicons.glyphMap> = {
   pending: 'time-outline',
   accepted: 'checkmark-circle-outline',
-  confirmed: 'checkmark-circle-outline',
+  confirmed: 'card-outline',
+  arrived: 'navigate-outline',
   in_progress: 'construct-outline',
+  waiting_customer_confirmation: 'hourglass-outline',
   completed: 'checkmark-done-outline',
   cancelled: 'close-circle-outline',
   disputed: 'alert-circle-outline',
@@ -63,6 +68,9 @@ export default function ProviderDashboard() {
     refetch,
     acceptRequest,
     rejectRequest,
+    arriveRequest,
+    startService,
+    completeService,
   } = useProviderQueries();
   const { data: conversations, isLoading: isChatsLoading } = useConversations();
   const notificationCountQuery = useProviderNotificationCount();
@@ -85,6 +93,24 @@ export default function ProviderDashboard() {
     await Promise.all([refetch(), notificationCountQuery.refetch()]);
     setRefreshing(false);
   };
+
+  // Real-time updates
+  useEffect(() => {
+    if (profile?.providerID) {
+      pusherClient.subscribeToUserUpdates(
+        "provider",
+        profile.providerID,
+        (data: any) => {
+          console.log("[Pusher] Dashboard update received:", data);
+          refetch(); // Refresh whole dashboard on any booking update
+        }
+      );
+
+      return () => {
+        pusherClient.unsubscribeFromUserUpdates("provider", profile.providerID);
+      };
+    }
+  }, [profile?.providerID]);
 
   const renderHeader = () => (
     <LinearGradient
@@ -461,13 +487,57 @@ export default function ProviderDashboard() {
         </View>
       )}
 
-      {['accepted', 'confirmed'].includes(item.status) && (
+      {item.status === 'confirmed' && (
+        <View style={styles.requestActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: Colors.primary, flex: 1, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 }]}
+            onPress={() => arriveRequest.mutate(item.id)}
+          >
+            <Ionicons name="navigate-outline" size={18} color={Colors.surface} style={{ marginRight: 6 }} />
+            <Text style={{ color: Colors.surface, fontWeight: 'bold' }}>Mark Arrived</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {item.status === 'arrived' && (
+        <View style={styles.requestActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: Colors.success, flex: 1, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 }]}
+            onPress={() => startService.mutate(item.id)}
+          >
+            <Ionicons name="play-outline" size={18} color={Colors.surface} style={{ marginRight: 6 }} />
+            <Text style={{ color: Colors.surface, fontWeight: 'bold' }}>Start Service</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {item.status === 'in_progress' && (
+        <View style={styles.requestActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: Colors.info, flex: 1, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 }]}
+            onPress={() => completeService.mutate(item.id)}
+          >
+            <Ionicons name="checkmark-done-outline" size={18} color={Colors.surface} style={{ marginRight: 6 }} />
+            <Text style={{ color: Colors.surface, fontWeight: 'bold' }}>Complete Work</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {item.status === 'waiting_customer_confirmation' && (
+        <View style={[styles.statusBanner, { backgroundColor: Colors.warning + '20', marginTop: 10, padding: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: Colors.warning }]}>
+          <Text style={{ color: Colors.warning, fontSize: 12, fontWeight: '600' }}>
+            Awaiting customer confirmation to release payment.
+          </Text>
+        </View>
+      )}
+
+      {['accepted'].includes(item.status) && (
         <TouchableOpacity
           style={styles.directionsButton}
           onPress={() => router.push(`/(provider)/requests/${item.id}`)}
         >
           <Ionicons name="navigate" size={20} color={Colors.surface} />
-          <Text style={styles.directionsButtonText}>Get Directions</Text>
+          <Text style={styles.directionsButtonText}>View Details / Map</Text>
         </TouchableOpacity>
       )}
     </TouchableOpacity>

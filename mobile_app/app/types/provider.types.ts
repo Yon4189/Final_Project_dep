@@ -130,6 +130,7 @@ export type RequestStatus =
   | "pending"
   | "accepted"
   | "confirmed"
+  | "arrived"
   | "in_progress"
   | "waiting_customer_confirmation"
   | "completed"
@@ -161,6 +162,7 @@ export interface ServiceRequest {
   createdAt: string;
   updatedAt: string;
   confirmedAt?: string;
+  arrivedAt?: string;
   startedAt?: string;
   completedAt?: string;
   cancelledAt?: string;

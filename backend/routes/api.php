@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\ServiceProviderAuthController;
 use App\Http\Controllers\NotificationController;
@@ -29,6 +30,9 @@ use App\Http\Controllers\OnlineStatusController;
 
 
 
+
+// ==================== BROADCASTING ROUTES ====================
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 // ==================== PUBLIC ROUTES ====================
 Route::get('/health', function () {
@@ -74,7 +78,7 @@ Route::get('/payment/return', [App\Http\Controllers\PaymentController::class, 'h
 Route::get('/payment/return/{encoded_redirect}', [App\Http\Controllers\PaymentController::class, 'handleReturn'])->name('payment.return.fixed');
 
 // ==================== PUBLIC SEARCH (Customer Prefix) ====================
-Route::prefix('customer')->group(function () {
+Route::group(['prefix' => 'customer'], function () {
     Route::get('/providers/search', [CustomerSearchController::class, 'searchProviders']);
     Route::get('/providers/top-rated', [CustomerSearchController::class, 'getTopRated']);
     Route::get('/providers/{id}', [CustomerSearchController::class, 'getProviderDetails']);
@@ -84,7 +88,7 @@ Route::prefix('customer')->group(function () {
 });
 
 // ==================== PROTECTED CUSTOMER ROUTES ====================
-Route::middleware('auth:customer')->prefix('customer')->group(function () {
+Route::group(['middleware' => 'auth:customer', 'prefix' => 'customer'], function () {
     // Profile Management
     Route::get('/profile', [CustomerController::class, 'getProfile']);
     Route::put('/profile', [CustomerController::class, 'updateProfile']);
@@ -159,7 +163,7 @@ Route::middleware('auth:customer')->prefix('customer')->group(function () {
 
 
     // Address Book Routes
-Route::prefix('addresses')->group(function () {
+Route::group(['prefix' => 'addresses'], function () {
     Route::get('/', [AddressController::class, 'index']);
     Route::post('/', [AddressController::class, 'store']);
     Route::get('/{addressID}', [AddressController::class, 'show']);
@@ -172,7 +176,7 @@ Route::get('/bookings/{bookingID}/track', [ProviderTrackingController::class, 'g
 
 // Public routes (no authentication required)
 // ==================== PROTECTED PROVIDER ROUTES ====================
-Route::middleware('auth:provider')->prefix('provider')->group(function () {
+Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function () {
     // Auth & Profile
     Route::post('/logout', [ServiceProviderAuthController::class, 'logout']);
     Route::get('/profile', [ServiceProviderAuthController::class, 'profile']);
@@ -197,6 +201,12 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
     Route::post('/bookings/{id}/start', [BookingController::class, 'start']); // Provider started
     Route::post('/bookings/{id}/arrive', [BookingController::class, 'arrive']); // Provider arrived
     Route::post('/bookings/{id}/complete', [BookingController::class, 'complete']); // Job done
+    
+    // Alias for requests/bookngs used by mobile app
+    Route::get('/requests/{id}', [BookingController::class, 'show']);
+    Route::post('/requests/{id}/arrive', [BookingController::class, 'arrive']);
+    Route::post('/requests/{id}/start', [BookingController::class, 'start']);
+    Route::post('/requests/{id}/complete', [BookingController::class, 'complete']);
     
     // Requests (old booking requests)
     Route::get('/requests', [ProviderDashboardController::class, 'getRequests']);
@@ -226,7 +236,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
 });
 
 // ==================== ADMIN ROUTES ====================
-Route::middleware('auth:admin')->prefix('admin')->group(function () {
+Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin'], function () {
     // Statistics
     Route::get('/stats', [AdminAuthController::class, 'getStats']);
     Route::get('/search', [AdminAuthController::class, 'globalSearch']);
@@ -294,7 +304,7 @@ Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'provide
 
 
 // ==================== CHAT ROUTES (Shared) ====================
-Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {
+Route::group(['middleware' => 'auth:customer,provider', 'prefix' => 'chat'], function () {
     // Conversations
     Route::get('/conversations', [ChatController::class, 'getConversations']);
     Route::post('/conversations', [ChatController::class, 'getOrCreateConversation']);
@@ -313,7 +323,7 @@ Route::get('provider/{providerID}/notifications', [NotificationController::class
 
 
 // Provider wallet routes
-Route::middleware('auth:provider')->prefix('provider')->group(function () {
+Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function () {
     Route::get('/wallet', [WalletController::class, 'dashboard']);
     Route::get('/wallet/summary', [WalletController::class, 'summary']);
     Route::post('/withdrawals', [WalletController::class, 'requestWithdrawal']);
@@ -331,7 +341,7 @@ Route::middleware('auth:provider')->prefix('provider')->group(function () {
 
 
 // Admin withdrawal management routes
-Route::middleware('auth:admin')->prefix('admin')->group(function () {
+Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin'], function () {
     // Withdrawal endpoints
     Route::get('/withdrawals/pending', [AdminWithdrawalController::class, 'getPendingWithdrawals']);
     Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approveWithdrawal']);
@@ -349,14 +359,14 @@ Route::get('/getcodes', [PaymentController::class, 'debugBankCodes']);
 
 
 // Provider heartbeat route
-Route::middleware('auth:provider')->prefix('provider')->group(function () {
+Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function () {
     Route::post('/heartbeat', [OnlineStatusController::class, 'providerHeartbeat']);
     // Override logout to use our new method
     Route::post('/logout', [OnlineStatusController::class, 'providerLogout']);
 });
 
 // Customer heartbeat route
-Route::middleware('auth:customer')->prefix('customer')->group(function () {
+Route::group(['middleware' => 'auth:customer', 'prefix' => 'customer'], function () {
     Route::post('/heartbeat', [OnlineStatusController::class, 'customerHeartbeat']);
     Route::post('/logout', [OnlineStatusController::class, 'customerLogout']);
 });

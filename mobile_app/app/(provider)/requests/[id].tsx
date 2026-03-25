@@ -26,12 +26,15 @@ import Map from "../../../components/Map/index";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderQueries, useProviderRequest } from "../../../hooks/useProviderQueries";
 import { api } from "@/app/services/api";
+import * as pusherClient from "@/app/services/pusherClient";
 
 const STATUS_COLORS = {
   pending: Colors.warning,
   accepted: Colors.primary,
   confirmed: Colors.primary,
+  arrived: Colors.primary,
   in_progress: Colors.info,
+  waiting_customer_confirmation: Colors.info,
   completed: Colors.success,
   cancelled: Colors.error,
 };
@@ -39,17 +42,19 @@ const STATUS_COLORS = {
 const STATUS_ICONS = {
   pending: "time-outline",
   accepted: "checkmark-circle-outline",
-  confirmed: "checkmark-circle-outline",
+  confirmed: "card-outline",
+  arrived: "pin-outline",
   in_progress: "construct-outline",
+  waiting_customer_confirmation: "shield-checkmark-outline",
   completed: "checkmark-done-outline",
   cancelled: "close-circle-outline",
 };
 
 const STATUS_STEPS = [
-  { key: "pending", label: "Request Received", icon: "mail-outline" },
+  { key: "pending", label: "Requested", icon: "mail-outline" },
   { key: "accepted", label: "Accepted", icon: "checkmark-circle-outline" },
-  { key: "confirmed", label: "Confirmed", icon: "checkmark-circle-outline" },
-  { key: "in_progress", label: "In Progress", icon: "construct-outline" },
+  { key: "arrived", label: "Arrived", icon: "pin-outline" },
+  { key: "in_progress", label: "Started", icon: "construct-outline" },
   { key: "completed", label: "Completed", icon: "checkmark-done-outline" },
 ];
 
@@ -78,6 +83,7 @@ export default function RequestDetails() {
     acceptRequest,
     rejectRequest,
     rescheduleRequest,
+    arriveRequest,
     startService,
     completeService,
   } = useProviderQueries();
@@ -100,6 +106,26 @@ export default function RequestDetails() {
     }
   }, [request]);
 
+  // Real-time updates
+  useEffect(() => {
+    if (request?.providerID) {
+      pusherClient.subscribeToUserUpdates(
+        "provider",
+        request.providerID,
+        (data: any) => {
+          console.log("[Pusher] Booking update received:", data);
+          if (data.related_booking_id?.toString() === id?.toString()) {
+            refetchRequest();
+          }
+        }
+      );
+
+      return () => {
+        pusherClient.unsubscribeFromUserUpdates("provider", request.providerID);
+      };
+    }
+  }, [request?.providerID, id]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([refetchRequest(), refetchQueries()]);
@@ -119,10 +145,12 @@ export default function RequestDetails() {
 
   const getCurrentStep = () => {
     if (!request) return 0;
-    const statusIndex = STATUS_STEPS.findIndex(
-      (step) => step.key === request.status,
-    );
-    return statusIndex >= 0 ? statusIndex : 0;
+    if (request.status === 'completed') return 4;
+    if (request.status === 'waiting_customer_confirmation' || request.status === 'in_progress') return 3;
+    if (request.status === 'arrived') return 2;
+    if (['accepted', 'confirmed'].includes(request.status)) return 1;
+    if (request.status === 'pending') return 0;
+    return 0;
   };
 
   const handleCall = () => {
@@ -236,6 +264,23 @@ export default function RequestDetails() {
     } catch (error) {
       Alert.alert("Error", "Failed to reschedule request");
     }
+  };
+
+  const handleArrive = () => {
+    Alert.alert("Confirm Arrival", "Have you arrived at the customer's location?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Arrived",
+        onPress: async () => {
+          try {
+            await arriveRequest.mutateAsync(id as string);
+            Alert.alert("Success", "Arrival confirmed");
+          } catch (error) {
+            Alert.alert("Error", "Failed to confirm arrival");
+          }
+        },
+      },
+    ]);
   };
 
   const handleStart = () => {
@@ -544,7 +589,7 @@ export default function RequestDetails() {
           </Text>
         </View>
 
-        {request?.status === "completed" && (
+        {(request?.status === "completed" || request?.status === "waiting_customer_confirmation") && (
           <View style={styles.paymentStatus}>
             <Ionicons
               name="checkmark-circle"
@@ -553,6 +598,19 @@ export default function RequestDetails() {
             />
             <Text style={styles.paymentStatusText}>
               Payment pending customer confirmation
+            </Text>
+          </View>
+        )}
+
+        {request?.status === "confirmed" && (
+          <View style={styles.paymentStatus}>
+            <Ionicons
+              name="card-outline"
+              size={20}
+              color={Colors.primary}
+            />
+            <Text style={[styles.paymentStatusText, { color: Colors.primary }]}>
+              Payment Held - Ready to start
             </Text>
           </View>
         )}
@@ -628,7 +686,9 @@ export default function RequestDetails() {
     const isPending = request.status === "pending";
     const isAccepted = request.status === "accepted";
     const isConfirmed = request.status === "confirmed";
+    const isArrived = request.status === "arrived";
     const isInProgress = request.status === "in_progress";
+    const isWaitingConfirmation = request.status === "waiting_customer_confirmation";
     const isCompleted = request.status === "completed";
     const isCancelled = request.status === "cancelled";
 
@@ -670,11 +730,18 @@ export default function RequestDetails() {
               <Text style={styles.rescheduleButtonText}>Reschedule</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.startButton} onPress={handleStart}>
-              <Ionicons name="play-circle" size={20} color={Colors.surface} />
-              <Text style={styles.startButtonText}>Start Service</Text>
+            <TouchableOpacity style={styles.arriveButton} onPress={handleArrive}>
+              <Ionicons name="pin" size={20} color={Colors.surface} />
+              <Text style={styles.arriveButtonText}>Mark Arrived</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {isArrived && (
+          <TouchableOpacity style={styles.startButton} onPress={handleStart}>
+            <Ionicons name="play-circle" size={20} color={Colors.surface} />
+            <Text style={styles.startButtonText}>Start Service</Text>
+          </TouchableOpacity>
         )}
 
         {isInProgress && (
@@ -691,6 +758,19 @@ export default function RequestDetails() {
           </TouchableOpacity>
         )}
 
+        {isWaitingConfirmation && (
+          <View style={[styles.completedMessage, { backgroundColor: Colors.info + '10' }]}>
+            <Ionicons
+              name="time-outline"
+              size={24}
+              color={Colors.info}
+            />
+            <Text style={[styles.completedText, { color: Colors.info }]}>
+              Service marked as complete. Waiting for customer to confirm and release payment.
+            </Text>
+          </View>
+        )}
+
         {isCompleted && (
           <View style={styles.completedMessage}>
             <Ionicons
@@ -699,8 +779,7 @@ export default function RequestDetails() {
               color={Colors.success}
             />
             <Text style={styles.completedText}>
-              Service completed. Payment will be released after customer
-              confirmation.
+              Service completed successfully. Payment has been processed.
             </Text>
           </View>
         )}
@@ -1364,6 +1443,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   startButtonText: {
+    color: Colors.surface,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  arriveButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  arriveButtonText: {
     color: Colors.surface,
     fontSize: 15,
     fontWeight: "600",

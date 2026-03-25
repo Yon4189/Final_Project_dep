@@ -1,0 +1,1000 @@
+﻿#45 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(26): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#46 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePathEncoding->handle()
+#47 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#48 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate/Pipeline/Pipeline->then()
+#49 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#50 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#51 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#52 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#53 {main}
+
+[previous exception] [object] (PDOException(code: 42S22): SQLSTATE[42S22]: Column not found: 1054 Unknown column 'paid_at' in 'field list' at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:605)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(605): PDO->prepare()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(827): Illuminate/Database/Connection->{closure:Illuminate/Database/Connection::affectingStatement():597}()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(597): Illuminate/Database/Connection->run()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(549): Illuminate/Database/Connection->affectingStatement()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(4118): Illuminate/Database/Connection->update()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(1266): Illuminate/Database/Query/Builder->update()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1316): Illuminate/Database/Eloquent/Builder->update()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1233): Illuminate/Database/Eloquent/Model->performUpdate()
+#9 C:/Final-project/Final-project/backend/app/Services/WalletService.php(114): Illuminate/Database/Eloquent/Model->save()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(35): App/Services/WalletService->{closure:App/Services/WalletService::handlePaymentSuccess():89}()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(491): Illuminate/Database/Connection->transaction()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Database/DatabaseManager->__call()
+#13 C:/Final-project/Final-project/backend/app/Services/WalletService.php(89): Illuminate/Support/Facades/Facade::__callStatic()
+#14 C:/Final-project/Final-project/backend/app/Http/Controllers/PaymentController.php(299): App/Services/WalletService->handlePaymentSuccess()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App/Http/Controllers/PaymentController->verify()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(265): Illuminate/Routing/ControllerDispatcher->dispatch()
+#17 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(211): Illuminate/Routing/Route->runController()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate/Routing/Route->run()
+#19 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Routing/Router->{closure:Illuminate/Routing/Router::runRouteWithinStack():821}()
+#20 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#21 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Routing/Middleware/SubstituteBindings->handle()
+#22 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#23 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Auth/Middleware/Authenticate->handle()
+#24 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#25 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate/Pipeline/Pipeline->then()
+#26 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate/Routing/Router->runRouteWithinStack()
+#27 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate/Routing/Router->runRoute()
+#28 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate/Routing/Router->dispatchToRoute()
+#29 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate/Routing/Router->dispatch()
+#30 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Foundation/Http/Kernel->{closure:Illuminate/Foundation/Http/Kernel::dispatchToRouter():197}()
+#31 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#32 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#33 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull->handle()
+#34 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#35 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#36 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/TrimStrings->handle()
+#37 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#38 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePostSize->handle()
+#39 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#40 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance->handle()
+#41 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#42 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/HandleCors->handle()
+#43 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#44 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/TrustProxies->handle()
+#45 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#46 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks->handle()
+#47 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(26): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#48 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePathEncoding->handle()
+#49 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#50 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate/Pipeline/Pipeline->then()
+#51 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#52 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#53 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#54 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#55 {main}
+"} 
+[2026-03-21 20:59:21] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-55-1774126743","chapa_response_keys":["message","status","data"]} 
+[2026-03-21 20:59:21] local.INFO: Payment status updated successfully in DB {"payment_id":73} 
+[2026-03-21 20:59:21] local.ERROR: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'paid_at' in 'field list' (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: final_project, SQL: update `bookings` set `payment_status` = held, `paid_at` = 2026-03-21 20:59:21, `bookings`.`updated_at` = 2026-03-21 20:59:21 where `bookingID` = 55) {"userId":15,"exception":"[object] (Illuminate\\Database\\QueryException(code: 42S22): SQLSTATE[42S22]: Column not found: 1054 Unknown column 'paid_at' in 'field list' (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: final_project, SQL: update `bookings` set `payment_status` = held, `paid_at` = 2026-03-21 20:59:21, `bookings`.`updated_at` = 2026-03-21 20:59:21 where `bookingID` = 55) at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:838)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(597): Illuminate/Database/Connection->run()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(549): Illuminate/Database/Connection->affectingStatement()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(4118): Illuminate/Database/Connection->update()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(1266): Illuminate/Database/Query/Builder->update()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1316): Illuminate/Database/Eloquent/Builder->update()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1233): Illuminate/Database/Eloquent/Model->performUpdate()
+#7 C:/Final-project/Final-project/backend/app/Services/WalletService.php(114): Illuminate/Database/Eloquent/Model->save()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(35): App/Services/WalletService->{closure:App/Services/WalletService::handlePaymentSuccess():89}()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(491): Illuminate/Database/Connection->transaction()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Database/DatabaseManager->__call()
+#11 C:/Final-project/Final-project/backend/app/Services/WalletService.php(89): Illuminate/Support/Facades/Facade::__callStatic()
+#12 C:/Final-project/Final-project/backend/app/Http/Controllers/PaymentController.php(299): App/Services/WalletService->handlePaymentSuccess()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App/Http/Controllers/PaymentController->verify()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(265): Illuminate/Routing/ControllerDispatcher->dispatch()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(211): Illuminate/Routing/Route->runController()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate/Routing/Route->run()
+#17 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Routing/Router->{closure:Illuminate/Routing/Router::runRouteWithinStack():821}()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#19 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Routing/Middleware/SubstituteBindings->handle()
+#20 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#21 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Auth/Middleware/Authenticate->handle()
+#22 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#23 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate/Pipeline/Pipeline->then()
+#24 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate/Routing/Router->runRouteWithinStack()
+#25 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate/Routing/Router->runRoute()
+#26 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate/Routing/Router->dispatchToRoute()
+#27 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate/Routing/Router->dispatch()
+#28 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Foundation/Http/Kernel->{closure:Illuminate/Foundation/Http/Kernel::dispatchToRouter():197}()
+#29 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#30 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#31 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull->handle()
+#32 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#33 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#34 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/TrimStrings->handle()
+#35 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#36 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePostSize->handle()
+#37 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#38 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance->handle()
+#39 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#40 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/HandleCors->handle()
+#41 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#42 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/TrustProxies->handle()
+#43 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#44 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks->handle()
+#45 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(26): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#46 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePathEncoding->handle()
+#47 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#48 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate/Pipeline/Pipeline->then()
+#49 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#50 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#51 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#52 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#53 {main}
+
+[previous exception] [object] (PDOException(code: 42S22): SQLSTATE[42S22]: Column not found: 1054 Unknown column 'paid_at' in 'field list' at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:605)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(605): PDO->prepare()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(827): Illuminate/Database/Connection->{closure:Illuminate/Database/Connection::affectingStatement():597}()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(597): Illuminate/Database/Connection->run()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(549): Illuminate/Database/Connection->affectingStatement()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(4118): Illuminate/Database/Connection->update()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(1266): Illuminate/Database/Query/Builder->update()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1316): Illuminate/Database/Eloquent/Builder->update()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1233): Illuminate/Database/Eloquent/Model->performUpdate()
+#9 C:/Final-project/Final-project/backend/app/Services/WalletService.php(114): Illuminate/Database/Eloquent/Model->save()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(35): App/Services/WalletService->{closure:App/Services/WalletService::handlePaymentSuccess():89}()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(491): Illuminate/Database/Connection->transaction()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Database/DatabaseManager->__call()
+#13 C:/Final-project/Final-project/backend/app/Services/WalletService.php(89): Illuminate/Support/Facades/Facade::__callStatic()
+#14 C:/Final-project/Final-project/backend/app/Http/Controllers/PaymentController.php(299): App/Services/WalletService->handlePaymentSuccess()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App/Http/Controllers/PaymentController->verify()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(265): Illuminate/Routing/ControllerDispatcher->dispatch()
+#17 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(211): Illuminate/Routing/Route->runController()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate/Routing/Route->run()
+#19 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Routing/Router->{closure:Illuminate/Routing/Router::runRouteWithinStack():821}()
+#20 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#21 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Routing/Middleware/SubstituteBindings->handle()
+#22 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#23 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Auth/Middleware/Authenticate->handle()
+#24 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#25 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate/Pipeline/Pipeline->then()
+#26 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate/Routing/Router->runRouteWithinStack()
+#27 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate/Routing/Router->runRoute()
+#28 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate/Routing/Router->dispatchToRoute()
+#29 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate/Routing/Router->dispatch()
+#30 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Foundation/Http/Kernel->{closure:Illuminate/Foundation/Http/Kernel::dispatchToRouter():197}()
+#31 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#32 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#33 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull->handle()
+#34 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#35 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#36 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/TrimStrings->handle()
+#37 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#38 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePostSize->handle()
+#39 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#40 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance->handle()
+#41 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#42 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/HandleCors->handle()
+#43 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#44 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/TrustProxies->handle()
+#45 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#46 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks->handle()
+#47 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(26): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#48 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePathEncoding->handle()
+#49 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#50 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate/Pipeline/Pipeline->then()
+#51 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#52 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#53 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#54 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#55 {main}
+"} 
+[2026-03-21 20:59:24] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-55-1774126743","chapa_response_keys":["message","status","data"]} 
+[2026-03-21 20:59:24] local.INFO: Payment status updated successfully in DB {"payment_id":73} 
+[2026-03-21 20:59:24] local.ERROR: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'paid_at' in 'field list' (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: final_project, SQL: update `bookings` set `payment_status` = held, `paid_at` = 2026-03-21 20:59:24, `bookings`.`updated_at` = 2026-03-21 20:59:24 where `bookingID` = 55) {"userId":15,"exception":"[object] (Illuminate\\Database\\QueryException(code: 42S22): SQLSTATE[42S22]: Column not found: 1054 Unknown column 'paid_at' in 'field list' (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: final_project, SQL: update `bookings` set `payment_status` = held, `paid_at` = 2026-03-21 20:59:24, `bookings`.`updated_at` = 2026-03-21 20:59:24 where `bookingID` = 55) at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:838)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(597): Illuminate/Database/Connection->run()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(549): Illuminate/Database/Connection->affectingStatement()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(4118): Illuminate/Database/Connection->update()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(1266): Illuminate/Database/Query/Builder->update()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1316): Illuminate/Database/Eloquent/Builder->update()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1233): Illuminate/Database/Eloquent/Model->performUpdate()
+#7 C:/Final-project/Final-project/backend/app/Services/WalletService.php(114): Illuminate/Database/Eloquent/Model->save()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(35): App/Services/WalletService->{closure:App/Services/WalletService::handlePaymentSuccess():89}()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(491): Illuminate/Database/Connection->transaction()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Database/DatabaseManager->__call()
+#11 C:/Final-project/Final-project/backend/app/Services/WalletService.php(89): Illuminate/Support/Facades/Facade::__callStatic()
+#12 C:/Final-project/Final-project/backend/app/Http/Controllers/PaymentController.php(299): App/Services/WalletService->handlePaymentSuccess()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App/Http/Controllers/PaymentController->verify()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(265): Illuminate/Routing/ControllerDispatcher->dispatch()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(211): Illuminate/Routing/Route->runController()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate/Routing/Route->run()
+#17 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Routing/Router->{closure:Illuminate/Routing/Router::runRouteWithinStack():821}()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#19 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Routing/Middleware/SubstituteBindings->handle()
+#20 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#21 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Auth/Middleware/Authenticate->handle()
+#22 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#23 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate/Pipeline/Pipeline->then()
+#24 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate/Routing/Router->runRouteWithinStack()
+#25 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate/Routing/Router->runRoute()
+#26 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate/Routing/Router->dispatchToRoute()
+#27 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate/Routing/Router->dispatch()
+#28 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Foundation/Http/Kernel->{closure:Illuminate/Foundation/Http/Kernel::dispatchToRouter():197}()
+#29 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#30 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#31 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull->handle()
+#32 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#33 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#34 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/TrimStrings->handle()
+#35 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#36 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePostSize->handle()
+#37 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#38 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance->handle()
+#39 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#40 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/HandleCors->handle()
+#41 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#42 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/TrustProxies->handle()
+#43 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#44 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks->handle()
+#45 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(26): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#46 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePathEncoding->handle()
+#47 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#48 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate/Pipeline/Pipeline->then()
+#49 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#50 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#51 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#52 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#53 {main}
+
+[previous exception] [object] (PDOException(code: 42S22): SQLSTATE[42S22]: Column not found: 1054 Unknown column 'paid_at' in 'field list' at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:605)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(605): PDO->prepare()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(827): Illuminate/Database/Connection->{closure:Illuminate/Database/Connection::affectingStatement():597}()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(597): Illuminate/Database/Connection->run()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(549): Illuminate/Database/Connection->affectingStatement()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(4118): Illuminate/Database/Connection->update()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(1266): Illuminate/Database/Query/Builder->update()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1316): Illuminate/Database/Eloquent/Builder->update()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Model.php(1233): Illuminate/Database/Eloquent/Model->performUpdate()
+#9 C:/Final-project/Final-project/backend/app/Services/WalletService.php(114): Illuminate/Database/Eloquent/Model->save()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(35): App/Services/WalletService->{closure:App/Services/WalletService::handlePaymentSuccess():89}()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(491): Illuminate/Database/Connection->transaction()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Database/DatabaseManager->__call()
+#13 C:/Final-project/Final-project/backend/app/Services/WalletService.php(89): Illuminate/Support/Facades/Facade::__callStatic()
+#14 C:/Final-project/Final-project/backend/app/Http/Controllers/PaymentController.php(299): App/Services/WalletService->handlePaymentSuccess()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App/Http/Controllers/PaymentController->verify()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(265): Illuminate/Routing/ControllerDispatcher->dispatch()
+#17 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(211): Illuminate/Routing/Route->runController()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate/Routing/Route->run()
+#19 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Routing/Router->{closure:Illuminate/Routing/Router::runRouteWithinStack():821}()
+#20 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#21 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Routing/Middleware/SubstituteBindings->handle()
+#22 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#23 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Auth/Middleware/Authenticate->handle()
+#24 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#25 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate/Pipeline/Pipeline->then()
+#26 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate/Routing/Router->runRouteWithinStack()
+#27 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate/Routing/Router->runRoute()
+#28 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate/Routing/Router->dispatchToRoute()
+#29 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate/Routing/Router->dispatch()
+#30 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate/Foundation/Http/Kernel->{closure:Illuminate/Foundation/Http/Kernel::dispatchToRouter():197}()
+#31 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:Illuminate/Pipeline/Pipeline::prepareDestination():178}()
+#32 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#33 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull->handle()
+#34 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#35 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate/Foundation/Http/Middleware/TransformsRequest->handle()
+#36 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/TrimStrings->handle()
+#37 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#38 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePostSize->handle()
+#39 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#40 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance->handle()
+#41 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#42 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/HandleCors->handle()
+#43 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#44 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/TrustProxies->handle()
+#45 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#46 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks->handle()
+#47 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(26): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#48 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate/Http/Middleware/ValidatePathEncoding->handle()
+#49 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate/Pipeline/Pipeline->{closure:{closure:Illuminate/Pipeline/Pipeline::carry():194}:195}()
+#50 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate/Pipeline/Pipeline->then()
+#51 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#52 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#53 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#54 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#55 {main}
+"} 
+[2026-03-21 20:59:27] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-55-1774126743","chapa_response_keys":["message","status","data"]} 
+[2026-03-21 20:59:27] local.INFO: Payment status updated successfully in DB {"payment_id":73} 
+[2026-03-21 20:59:28] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":15,"type":"payment_success","title":"Payment Successful","message":"Your payment for i give egg delivery service. has been received.","data":{"booking_id":55},"related_booking_id":55}} 
+[2026-03-21 20:59:28] local.INFO: Notification created {"id":71} 
+[2026-03-21 20:59:28] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":17,"type":"payment_received","title":"Payment Received","message":"You have received a payment for i give egg delivery service.. You can now start the service. Funds are held in escrow.","data":{"booking_id":55,"customer_name":"haile","amount":"1200.00"},"related_booking_id":55}} 
+[2026-03-21 20:59:28] local.INFO: Notification created {"id":72} 
+[2026-03-21 20:59:28] local.INFO: Payment success processed for booking: 55  
+[2026-03-21 21:00:01] local.ERROR: PHP Parse error: Syntax error, unexpected T_NS_SEPARATOR on line 1 {"exception":"[object] (Psy\\Exception\\ParseErrorException(code: 0): PHP Parse error: Syntax error, unexpected T_NS_SEPARATOR on line 1 at C:/Final-project/Final-project/backend/vendor/psy/psysh/src/Exception/ParseErrorException.php:44)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/psy/psysh/src/CodeCleaner.php(488): Psy/Exception/ParseErrorException::fromParseError()
+#1 C:/Final-project/Final-project/backend/vendor/psy/psysh/src/CodeCleaner.php(269): Psy/CodeCleaner->parse()
+#2 C:/Final-project/Final-project/backend/vendor/psy/psysh/src/Shell.php(985): Psy/CodeCleaner->clean()
+#3 C:/Final-project/Final-project/backend/vendor/psy/psysh/src/Shell.php(1018): Psy/Shell->addCode()
+#4 C:/Final-project/Final-project/backend/vendor/psy/psysh/src/Shell.php(1562): Psy/Shell->setCode()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/tinker/src/Console/TinkerCommand.php(76): Psy/Shell->execute()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel/Tinker/Console/TinkerCommand->handle()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate/Container/BoundMethod::{closure:Illuminate/Container/BoundMethod::call():35}()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate/Container/Util::unwrapIfClosure()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate/Container/BoundMethod::callBoundMethod()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate/Container/BoundMethod::call()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate/Container/Container->call()
+#12 C:/Final-project/Final-project/backend/vendor/symfony/console/Command/Command.php(341): Illuminate/Console/Command->execute()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony/Component/Console/Command/Command->run()
+#14 C:/Final-project/Final-project/backend/vendor/symfony/console/Application.php(1102): Illuminate/Console/Command->run()
+#15 C:/Final-project/Final-project/backend/vendor/symfony/console/Application.php(356): Symfony/Component/Console/Application->doRunCommand()
+#16 C:/Final-project/Final-project/backend/vendor/symfony/console/Application.php(195): Symfony/Component/Console/Application->doRun()
+#17 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony/Component/Console/Application->run()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate/Foundation/Console/Kernel->handle()
+#19 C:/Final-project/Final-project/backend/artisan(16): Illuminate/Foundation/Application->handleCommand()
+#20 {main}
+"} 
+[2026-03-21 21:02:59] local.INFO: booking created successfully {"booking_id":56,"customer_id":2,"provider_id":14,"location_source":"new"} 
+[2026-03-21 21:03:24] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":2,"type":"booking_accepted","title":"Booking Accepted","message":"Your booking has been accepted by Abe","data":{"provider_name":"Abe","booking_id":56},"related_booking_id":56}} 
+[2026-03-21 21:03:24] local.INFO: Notification created {"id":73} 
+[2026-03-21 21:03:46] local.INFO: Chapa initialization intent {"amount":"2000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-56-1774127026","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-56-1774127026","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-56-1774127026"} 
+[2026-03-21 21:03:46] local.INFO: Chapa Request Debug {"full_url":"https://api.chapa.co/v1/transaction/initialize","secret_key_prefix":"CHASECK_TEST-Ep...","payload":{"amount":"2000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-56-1774127026","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-56-1774127026","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-56-1774127026"}} 
+[2026-03-21 21:03:56] local.INFO: RETURN HIT {"full_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-56-1774127026","query":{"tx_ref":"BOOKING-56-1774127026"}} 
+[2026-03-21 21:03:56] local.INFO: FINAL REDIRECT {"tx_ref":"BOOKING-56-1774127026","status":"","redirect":"exp://192.168.183.153:8081/--/payment?tx_ref=BOOKING-56-1774127026&status="} 
+[2026-03-21 21:03:59] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-56-1774127026","chapa_response_keys":["message","status","data"]} 
+[2026-03-21 21:04:00] local.INFO: Payment status updated successfully in DB {"payment_id":74} 
+[2026-03-21 21:04:00] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":2,"type":"payment_success","title":"Payment Successful","message":"Your payment for clean house has been received.","data":{"booking_id":56},"related_booking_id":56}} 
+[2026-03-21 21:04:00] local.INFO: Notification created {"id":74} 
+[2026-03-21 21:04:00] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":14,"type":"payment_received","title":"Payment Received","message":"You have received a payment for clean house. You can now start the service. Funds are held in escrow.","data":{"booking_id":56,"customer_name":"gebre","amount":"2000.00"},"related_booking_id":56}} 
+[2026-03-21 21:04:00] local.INFO: Notification created {"id":75} 
+[2026-03-21 21:04:00] local.INFO: Payment success processed for booking: 56  
+[2026-03-21 21:36:56] local.INFO: booking created successfully {"booking_id":57,"customer_id":2,"provider_id":16,"location_source":"new"} 
+[2026-03-21 21:37:38] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":2,"type":"booking_accepted","title":"Booking Accepted","message":"Your booking has been accepted by Marilgm","data":{"provider_name":"Marilgm","booking_id":57},"related_booking_id":57}} 
+[2026-03-21 21:37:38] local.INFO: Notification created {"id":76} 
+[2026-03-21 21:37:54] local.INFO: Chapa initialization intent {"amount":"3000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-57-1774129074","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-57-1774129074","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-57-1774129074"} 
+[2026-03-21 21:37:54] local.INFO: Chapa Request Debug {"full_url":"https://api.chapa.co/v1/transaction/initialize","secret_key_prefix":"CHASECK_TEST-Ep...","payload":{"amount":"3000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-57-1774129074","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-57-1774129074","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-57-1774129074"}} 
+[2026-03-21 21:38:34] local.INFO: RETURN HIT {"full_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-57-1774129074","query":{"tx_ref":"BOOKING-57-1774129074"}} 
+[2026-03-21 21:38:34] local.INFO: FINAL REDIRECT {"tx_ref":"BOOKING-57-1774129074","status":"","redirect":"exp://192.168.183.153:8081/--/payment?tx_ref=BOOKING-57-1774129074&status="} 
+[2026-03-21 21:38:36] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-57-1774129074","chapa_response_keys":["message","status","data"]} 
+[2026-03-21 21:38:36] local.INFO: Payment status updated successfully in DB {"payment_id":75} 
+[2026-03-21 21:38:37] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":2,"type":"payment_success","title":"Payment Successful","message":"Your payment for caple installation  has been received.","data":{"booking_id":57},"related_booking_id":57}} 
+[2026-03-21 21:38:37] local.INFO: Notification created {"id":77} 
+[2026-03-21 21:38:37] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":16,"type":"payment_received","title":"Payment Received","message":"You have received a payment for caple installation . You can now start the service. Funds are held in escrow.","data":{"booking_id":57,"customer_name":"gebre","amount":"3000.00"},"related_booking_id":57}} 
+[2026-03-21 21:38:37] local.INFO: Notification created {"id":78} 
+[2026-03-21 21:38:37] local.INFO: Payment success processed for booking: 57  
+[2026-03-21 21:46:08] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":15,"type":"booking_accepted","title":"Booking Accepted","message":"Your booking has been accepted by Marilgm","data":{"provider_name":"Marilgm","booking_id":54},"related_booking_id":54}} 
+[2026-03-21 21:46:08] local.INFO: Notification created {"id":79} 
+[2026-03-21 22:07:47] local.ERROR: Maximum execution time of 30 seconds exceeded {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Maximum execution time of 30 seconds exceeded at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Auth/EloquentUserProvider.php:11)
+[stacktrace]
+#0 {main}
+"} 
+[2026-03-24 11:38:13] local.INFO: Chapa initialization intent {"amount":"10000.00","currency":"ETB","email":"yositilahun21@gmail.com","first_name":"yoseph","tx_ref":"BOOKING-37-1774352292","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-37-1774352292","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-37-1774352292"} 
+[2026-03-24 11:38:14] local.INFO: Chapa Request Debug {"full_url":"https://api.chapa.co/v1/transaction/initialize","secret_key_prefix":"CHASECK_TEST-Ep...","payload":{"amount":"10000.00","currency":"ETB","email":"yositilahun21@gmail.com","first_name":"yoseph","tx_ref":"BOOKING-37-1774352292","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-37-1774352292","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-37-1774352292"}} 
+[2026-03-24 11:38:39] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-37-1774352292","chapa_response_keys":["message","status","data"]} 
+[2026-03-24 11:38:39] local.INFO: Payment status updated successfully in DB {"payment_id":76} 
+[2026-03-24 11:38:39] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":1,"type":"payment_success","title":"Payment Successful","message":"Your payment for cleaner of compound has been received.","data":{"booking_id":37},"related_booking_id":37}} 
+[2026-03-24 11:38:39] local.INFO: Notification created {"id":80} 
+[2026-03-24 11:38:39] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":10,"type":"payment_received","title":"Payment Received","message":"You have received a payment for cleaner of compound. You can now start the service. Funds are held in escrow.","data":{"booking_id":37,"customer_name":"yoseph","amount":"10000.00"},"related_booking_id":37}} 
+[2026-03-24 11:38:39] local.INFO: Notification created {"id":81} 
+[2026-03-24 11:38:39] local.INFO: Payment success processed for booking: 37  
+[2026-03-24 11:40:09] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":10,"type":"new_message","title":"New Message","message":"yoseph sent you a message","data":{"conversationID":7,"sender_name":"yoseph","message_preview":"Jegna"},"related_booking_id":null}} 
+[2026-03-24 11:40:09] local.INFO: Notification created {"id":82} 
+[2026-03-24 11:51:49] local.INFO: booking created successfully {"booking_id":58,"customer_id":14,"provider_id":16,"location_source":"new"} 
+[2026-03-24 11:52:44] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":14,"type":"booking_rejected","title":"Booking Rejected","message":"Your booking has been rejected by Marilgm","data":{"provider_name":"Marilgm","booking_id":58,"reason":"Rejected by provider"},"related_booking_id":58}} 
+[2026-03-24 11:52:44] local.INFO: Notification created {"id":83} 
+[2026-03-24 11:53:45] local.INFO: booking created successfully {"booking_id":59,"customer_id":14,"provider_id":16,"location_source":"new"} 
+[2026-03-24 11:54:13] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":14,"type":"booking_accepted","title":"Booking Accepted","message":"Your booking has been accepted by Marilgm","data":{"provider_name":"Marilgm","booking_id":59},"related_booking_id":59}} 
+[2026-03-24 11:54:13] local.INFO: Notification created {"id":84} 
+[2026-03-24 11:54:35] local.INFO: Chapa initialization intent {"amount":"3000.00","currency":"ETB","email":"yobu@gmail.com","first_name":"gebrue","tx_ref":"BOOKING-59-1774353275","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-59-1774353275","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-59-1774353275"} 
+[2026-03-24 11:54:35] local.INFO: Chapa Request Debug {"full_url":"https://api.chapa.co/v1/transaction/initialize","secret_key_prefix":"CHASECK_TEST-Ep...","payload":{"amount":"3000.00","currency":"ETB","email":"yobu@gmail.com","first_name":"gebrue","tx_ref":"BOOKING-59-1774353275","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-59-1774353275","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-59-1774353275"}} 
+[2026-03-24 11:55:09] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-59-1774353275","chapa_response_keys":["message","status","data"]} 
+[2026-03-24 11:55:09] local.INFO: Payment status updated successfully in DB {"payment_id":77} 
+[2026-03-24 11:55:09] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":14,"type":"payment_success","title":"Payment Successful","message":"Your payment for caple installation  has been received.","data":{"booking_id":59},"related_booking_id":59}} 
+[2026-03-24 11:55:09] local.INFO: Notification created {"id":85} 
+[2026-03-24 11:55:09] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":16,"type":"payment_received","title":"Payment Received","message":"You have received a payment for caple installation . You can now start the service. Funds are held in escrow.","data":{"booking_id":59,"customer_name":"gebrue","amount":"3000.00"},"related_booking_id":59}} 
+[2026-03-24 11:55:09] local.INFO: Notification created {"id":86} 
+[2026-03-24 11:55:09] local.INFO: Payment success processed for booking: 59  
+[2026-03-24 12:58:52] local.INFO: Chapa initialization intent {"amount":"3000.00","currency":"ETB","email":"haile@gmail.com","first_name":"haile","tx_ref":"BOOKING-54-1774357132","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-54-1774357132","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-54-1774357132"} 
+[2026-03-24 12:58:52] local.INFO: Chapa Request Debug {"full_url":"https://api.chapa.co/v1/transaction/initialize","secret_key_prefix":"CHASECK_TEST-Ep...","payload":{"amount":"3000.00","currency":"ETB","email":"haile@gmail.com","first_name":"haile","tx_ref":"BOOKING-54-1774357132","callback_url":"http://192.168.183.153:8000/api/payment/callback/BOOKING-54-1774357132","return_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-54-1774357132"}} 
+[2026-03-24 12:59:12] local.INFO: RETURN HIT {"full_url":"http://192.168.183.153:8000/api/payment/return/ZXhwOi8vMTkyLjE2OC4xODMuMTUzOjgwODEvLS0vcGF5bWVudA?tx_ref=BOOKING-54-1774357132","query":{"tx_ref":"BOOKING-54-1774357132"}} 
+[2026-03-24 12:59:12] local.INFO: FINAL REDIRECT {"tx_ref":"BOOKING-54-1774357132","status":"","redirect":"exp://192.168.183.153:8081/--/payment?tx_ref=BOOKING-54-1774357132&status="} 
+[2026-03-24 12:59:20] local.INFO: Updating payment status to held {"tx_ref":"BOOKING-54-1774357132","chapa_response_keys":["message","status","data"]} 
+[2026-03-24 12:59:20] local.INFO: Payment status updated successfully in DB {"payment_id":78} 
+[2026-03-24 12:59:20] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":15,"type":"payment_success","title":"Payment Successful","message":"Your payment for caple installation  has been received.","data":{"booking_id":54},"related_booking_id":54}} 
+[2026-03-24 12:59:20] local.INFO: Notification created {"id":87} 
+[2026-03-24 12:59:20] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":16,"type":"payment_received","title":"Payment Received","message":"You have received a payment for caple installation . You can now start the service. Funds are held in escrow.","data":{"booking_id":54,"customer_name":"haile","amount":"3000.00"},"related_booking_id":54}} 
+[2026-03-24 12:59:20] local.INFO: Notification created {"id":88} 
+[2026-03-24 12:59:20] local.INFO: Payment success processed for booking: 54  
+[2026-03-24 13:21:50] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":16,"type":"new_message","title":"New Message","message":"gebrue sent you a message","data":{"conversationID":19,"sender_name":"gebrue","message_preview":"Hi"},"related_booking_id":null}} 
+[2026-03-24 13:21:50] local.INFO: Notification created {"id":89} 
+[2026-03-24 17:08:32] local.INFO: Chapa initialization intent {"amount":"3000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-57-1774372109","callback_url":"http://localhost:8000/api/payment/callback/BOOKING-57-1774372109","return_url":"http://localhost:8000/api/payment/return/aHR0cDovL2xvY2FsaG9zdDo4MDgxL3BheW1lbnQ?tx_ref=BOOKING-57-1774372109"} 
+[2026-03-24 17:08:32] local.INFO: Chapa Request Debug {"full_url":"https://api.chapa.co/v1/transaction/initialize","secret_key_prefix":"CHASECK_TEST-Ep...","payload":{"amount":"3000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-57-1774372109","callback_url":"http://localhost:8000/api/payment/callback/BOOKING-57-1774372109","return_url":"http://localhost:8000/api/payment/return/aHR0cDovL2xvY2FsaG9zdDo4MDgxL3BheW1lbnQ?tx_ref=BOOKING-57-1774372109"}} 
+[2026-03-24 17:08:47] local.INFO: Chapa initialization intent {"amount":"3000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-57-1774372127","callback_url":"http://localhost:8000/api/payment/callback/BOOKING-57-1774372127","return_url":"http://localhost:8000/api/payment/return/aHR0cDovL2xvY2FsaG9zdDo4MDgxL3BheW1lbnQ?tx_ref=BOOKING-57-1774372127"} 
+[2026-03-24 17:08:47] local.INFO: Chapa Request Debug {"full_url":"https://api.chapa.co/v1/transaction/initialize","secret_key_prefix":"CHASECK_TEST-Ep...","payload":{"amount":"3000.00","currency":"ETB","email":"gebre@gmail.com","first_name":"gebre","tx_ref":"BOOKING-57-1774372127","callback_url":"http://localhost:8000/api/payment/callback/BOOKING-57-1774372127","return_url":"http://localhost:8000/api/payment/return/aHR0cDovL2xvY2FsaG9zdDo4MDgxL3BheW1lbnQ?tx_ref=BOOKING-57-1774372127"}} 
+[2026-03-24 17:10:56] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":1,"type":"new_message","title":"New Message","message":"hagere sent you a message","data":{"conversationID":8,"sender_name":"hagere","message_preview":"Hi"},"related_booking_id":null}} 
+[2026-03-24 17:10:56] local.INFO: Notification created {"id":90} 
+[2026-03-24 17:14:07] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":1,"type":"new_message","title":"New Message","message":"hagere sent you a message","data":{"conversationID":8,"sender_name":"hagere","message_preview":"áŠáŒˆ áˆµáˆ« á‰µáˆ°áˆ«áˆˆáˆ…"},"related_booking_id":null}} 
+[2026-03-24 17:14:07] local.INFO: Notification created {"id":91} 
+[2026-03-24 17:18:55] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":17,"type":"new_message","title":"New Message","message":"yoseph sent you a message","data":{"conversationID":20,"sender_name":"yoseph","message_preview":"Hi gecho"},"related_booking_id":null}} 
+[2026-03-24 17:18:55] local.INFO: Notification created {"id":92} 
+[2026-03-24 17:19:16] local.INFO: Creating notification {"data":{"notifiable_type":"provider","notifiable_id":17,"type":"new_message","title":"New Message","message":"yoseph sent you a message","data":{"conversationID":20,"sender_name":"yoseph","message_preview":"Hi gecho"},"related_booking_id":null}} 
+[2026-03-24 17:19:17] local.INFO: Notification created {"id":93} 
+[2026-03-24 17:35:38] local.DEBUG: From: Final_Project <hello@example.com>
+To: yositilahun21@gmail.com
+Subject: Reset Your Password
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 17:35:37 +0000
+Message-ID: <d47cb09e1b06cc995fb42ac9f53b789a@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <h2>Password Reset Request</h2>
+            <p>Hello,</p>
+            <p>Click the button below to reset your password:</p>
+
+            <a href='http://localhost:5173/reset-password?email=yositilahun21@gmail.com&token=GUKpzhEeYX05fTVDlCG6i4uQxzk0hKFxwvaULFkb6vT6v9PdrTAwXMeVKXf7' 
+            style='
+                display:inline-block;
+                padding:12px 20px;
+                background-color:#2563eb;
+                color:white;
+                text-decoration:none;
+                border-radius:6px;
+                font-weight:bold;
+            '>
+            Reset Password
+            </a>
+
+            <p style='margin-top:15px;'>This link expires in 30 minutes.</p>
+          
+[2026-03-24 17:37:14] local.DEBUG: From: Final_Project <hello@example.com>
+To: haga@gmail.com
+Subject: Reset Your Password
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 17:37:14 +0000
+Message-ID: <b19dcf9e7f41aed319e371d0ca0629e3@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <h2>Password Reset Request</h2>
+            <p>Hello,</p>
+            <p>Click the button below to reset your password:</p>
+
+            <a href='http://localhost:5173/reset-password?email=haga@gmail.com&token=gdT1WoD7QK9zoKrp6CAkevX1TYkr9z8j8Iuk4pNf6IEWK0Oo8I1ixBf6jVRZ' 
+            style='
+                display:inline-block;
+                padding:12px 20px;
+                background-color:#2563eb;
+                color:white;
+                text-decoration:none;
+                border-radius:6px;
+                font-weight:bold;
+            '>
+            Reset Password
+            </a>
+
+            <p style='margin-top:15px;'>This link expires in 30 minutes.</p>
+          
+[2026-03-24 17:43:07] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":1,"type":"new_message","title":"New Message","message":"gecho sent you a message","data":{"conversationID":20,"sender_name":"gecho","message_preview":"Hi josi what i help you"},"related_booking_id":null}} 
+[2026-03-24 17:43:07] local.INFO: Notification created {"id":94} 
+[2026-03-24 18:12:46] local.DEBUG: From: Final_Project <hello@example.com>
+To: yositilahun21@gmail.com
+Subject: Reset Your Password
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 18:12:46 +0000
+Message-ID: <d685bee8e23c06f954b4ca5829b21b9e@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <h2>Password Reset Request</h2>
+            <p>Hello,</p>
+            <p>Click the button below to reset your password:</p>
+
+            <a href='http://localhost:5173/reset-password?email=yositilahun21@gmail.com&token=lI681THrQBGiUj703K40EAEsIBv27ZAWH3UmauEKTDQjsLKQDYcDi0gI7IXH' 
+            style='
+                display:inline-block;
+                padding:12px 20px;
+                background-color:#2563eb;
+                color:white;
+                text-decoration:none;
+                border-radius:6px;
+                font-weight:bold;
+            '>
+            Reset Password
+            </a>
+
+            <p style='margin-top:15px;'>This link expires in 30 minutes.</p>
+          
+[2026-03-24 18:55:32] local.DEBUG: From: Final_Project <hello@example.com>
+To: yositilahun21@gmail.com
+Subject: Reset Your Password
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 18:55:32 +0000
+Message-ID: <6f1ba7f0760098e2566e98bcbb1758d2@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <h2>Password Reset Request</h2>
+            <p>Hello,</p>
+            <p>Click the button below to reset your password:</p>
+
+            <a href='http://localhost:5173/reset-password?email=yositilahun21@gmail.com&token=wmNZjd3UNoG6gg0suESD5R8Mg9mqE1vImsBS1zszp3KOJy2wgMSR914GaEdz' 
+            style='
+                display:inline-block;
+                padding:12px 20px;
+                background-color:#2563eb;
+                color:white;
+                text-decoration:none;
+                border-radius:6px;
+                font-weight:bold;
+            '>
+            Reset Password
+            </a>
+
+            <p style='margin-top:15px;'>This link expires in 30 minutes.</p>
+          
+[2026-03-24 19:02:41] local.DEBUG: From: Final_Project <hello@example.com>
+To: yositilahun21@gmail.com
+Subject: Reset Your Password
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 19:02:41 +0000
+Message-ID: <999ccb1d9434feeec94e08843fa23b67@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <h2>Password Reset Request</h2>
+            <p>Hello,</p>
+            <p>Click the button below to reset your password:</p>
+
+            <a href='http://localhost:5173/reset-password?email=yositilahun21@gmail.com&token=eZdkdP156GPcWIuWeMohBZic2ceGIbHjXJiBLTSE26g25OtkuWdlCeMKUAUs' 
+            style='
+                display:inline-block;
+                padding:12px 20px;
+                background-color:#2563eb;
+                color:white;
+                text-decoration:none;
+                border-radius:6px;
+                font-weight:bold;
+            '>
+            Reset Password
+            </a>
+
+            <p style='margin-top:15px;'>This link expires in 30 minutes.</p>
+          
+[2026-03-24 19:19:09] local.DEBUG: From: Final_Project <hello@example.com>
+To: yositilahun21@gmail.com
+Subject: Your Password Reset Verification Code
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 19:19:09 +0000
+Message-ID: <e547c683e5345bafd55d48fc02b67736@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;'>
+                <h2 style='color: #2563eb; text-align: center;'>Password Reset Request</h2>
+                <p>Hello,</p>
+                <p>We received a request to reset your password. Use the verification code below to proceed:</p>
+
+                <div style='background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;'>
+                    <span style='font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;'>370214</span>
+                </div>
+
+                <p style='color: #4b5563;'>This code will expire in 30 minutes.</p>
+                <p style='color: #4b5563;'>If you did not request a password reset, please ignore this email.</p>
+                <hr style='border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
+                <p style='font-size: 12px; color: #9ca3af; text-align: center;'>&copy; Final_Project. All rights reserved.</p>
+            </div>
+          
+[2026-03-24 19:20:59] local.DEBUG: From: Final_Project <hello@example.com>
+To: yositilahun21@gmail.com
+Subject: Your Password Reset Verification Code
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 19:20:59 +0000
+Message-ID: <5b2ad14e4df28c5f155b5fc35dd44511@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;'>
+                <h2 style='color: #2563eb; text-align: center;'>Password Reset Request</h2>
+                <p>Hello,</p>
+                <p>We received a request to reset your password. Use the verification code below to proceed:</p>
+
+                <div style='background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;'>
+                    <span style='font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;'>612183</span>
+                </div>
+
+                <p style='color: #4b5563;'>This code will expire in 30 minutes.</p>
+                <p style='color: #4b5563;'>If you did not request a password reset, please ignore this email.</p>
+                <hr style='border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
+                <p style='font-size: 12px; color: #9ca3af; text-align: center;'>&copy; Final_Project. All rights reserved.</p>
+            </div>
+          
+[2026-03-24 19:22:44] local.DEBUG: From: Final_Project <hello@example.com>
+To: yositilahun21@gmail.com
+Subject: Your Password Reset Verification Code
+MIME-Version: 1.0
+Date: Tue, 24 Mar 2026 19:22:44 +0000
+Message-ID: <cc9300cd3bdee6be080f533e9aeb57c4@example.com>
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;'>
+                <h2 style='color: #2563eb; text-align: center;'>Password Reset Request</h2>
+                <p>Hello,</p>
+                <p>We received a request to reset your password. Use the verification code below to proceed:</p>
+
+                <div style='background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;'>
+                    <span style='font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;'>165424</span>
+                </div>
+
+                <p style='color: #4b5563;'>This code will expire in 30 minutes.</p>
+                <p style='color: #4b5563;'>If you did not request a password reset, please ignore this email.</p>
+                <hr style='border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
+                <p style='font-size: 12px; color: #9ca3af; text-align: center;'>&copy; Final_Project. All rights reserved.</p>
+            </div>
+          
+[2026-03-24 20:26:33] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":1,"type":"new_message","title":"New Message","message":"yoseph sent you a message","data":{"conversationID":12,"sender_name":"yoseph","message_preview":"Hi josi.i have no work today"},"related_booking_id":null}} 
+[2026-03-24 20:26:34] local.INFO: Notification created {"id":95} 
+[2026-03-24 20:59:29] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":1,"type":"new_message","title":"New Message","message":"gecho sent you a message","data":{"conversationID":20,"sender_name":"gecho","message_preview":"Gebryd"},"related_booking_id":null}} 
+[2026-03-24 20:59:29] local.INFO: Notification created {"id":96} 
+[2026-03-24 21:27:57] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:28:00] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:28:03] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:28:07] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:28:10] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:28:16] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:28:19] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:28:23] local.ERROR: Failed to create broadcaster for connection "reverb" with error: Class "Pusher\Pusher" not found. {"exception":"[object] (RuntimeException(code: 0): Failed to create broadcaster for connection \"reverb\" with error: Class \"Pusher\\Pusher\" not found. at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:300)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#4 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#7 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#14 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#16 {main}
+
+[previous exception] [object] (Error(code: 0): Class \"Pusher\\Pusher\" not found at C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php:356)
+[stacktrace]
+#0 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(334): Illuminate/Broadcasting/BroadcastManager->pusher()
+#1 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(323): Illuminate/Broadcasting/BroadcastManager->createPusherDriver()
+#2 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(298): Illuminate/Broadcasting/BroadcastManager->createReverbDriver()
+#3 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(268): Illuminate/Broadcasting/BroadcastManager->resolve()
+#4 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(257): Illuminate/Broadcasting/BroadcastManager->get()
+#5 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Broadcasting/BroadcastManager.php(553): Illuminate/Broadcasting/BroadcastManager->driver()
+#6 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Broadcasting/BroadcastManager->__call()
+#7 C:/Final-project/Final-project/backend/routes/channels.php(15): Illuminate/Support/Facades/Facade::__callStatic()
+#8 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(132): require('...')
+#9 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1194): Illuminate/Foundation/Configuration/ApplicationBuilder->{closure:Illuminate/Foundation/Configuration/ApplicationBuilder::withBroadcasting():128}()
+#10 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1137): Illuminate/Foundation/Application->fireAppCallbacks()
+#11 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate/Foundation/Application->boot()
+#12 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/BootProviders->bootstrap()
+#13 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate/Foundation/Application->bootstrapWith()
+#14 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate/Foundation/Http/Kernel->bootstrap()
+#15 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate/Foundation/Http/Kernel->sendRequestThroughRouter()
+#16 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate/Foundation/Http/Kernel->handle()
+#17 C:/Final-project/Final-project/backend/public/index.php(20): Illuminate/Foundation/Application->handleRequest()
+#18 C:/Final-project/Final-project/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('...')
+#19 {main}
+"} 
+[2026-03-24 21:35:15] local.WARNING: WebSocket broadcast failed (non-fatal): Pusher error: cURL error 7: Failed to connect to localhost port 8080 after 2229 ms: Could not connect to server (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for http://localhost:8080/apps/178325/events?auth_key=2eo9gp6ny5veq2s49nt0&auth_timestamp=1774388113&auth_version=1.0&body_md5=056a6038373aaa5f498aee71eb7f4e73&auth_signature=00285a52d4ed96faa53b6038629067cbbe21d2613cbd1921dfc39002d72eba53.  
+[2026-03-24 21:35:15] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":14,"type":"new_message","title":"New Message","message":"Abe sent you a message","data":{"conversationID":18,"sender_name":"Abe","message_preview":"Tygg"},"related_booking_id":null}} 
+[2026-03-24 21:35:15] local.INFO: Notification created {"id":97} 
+[2026-03-24 21:55:17] local.WARNING: WebSocket broadcast failed (non-fatal): Pusher error: cURL error 7: Failed to connect to localhost port 8080 after 2238 ms: Could not connect to server (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for http://localhost:8080/apps/178325/events?auth_key=2eo9gp6ny5veq2s49nt0&auth_timestamp=1774389314&auth_version=1.0&body_md5=23d3e83632c7e00d8eba4dbf075857e9&auth_signature=3417bbc0019949d5642deb0e32809a9de48d2c50d38382b7654ab1a461c959b0.  
+[2026-03-24 21:55:17] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":8,"type":"new_message","title":"New Message","message":"Abe sent you a message","data":{"conversationID":14,"sender_name":"Abe","message_preview":"Yyy"},"related_booking_id":null}} 
+[2026-03-24 21:55:17] local.INFO: Notification created {"id":98} 
+[2026-03-24 22:26:18] local.WARNING: WebSocket broadcast failed (non-fatal): Pusher error: cURL error 7: Failed to connect to localhost port 8080 after 2634 ms: Could not connect to server (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for http://localhost:8080/apps/178325/events?auth_key=2eo9gp6ny5veq2s49nt0&auth_timestamp=1774391174&auth_version=1.0&body_md5=f74264bffabbd4459ed50170af0efffb&auth_signature=fc7d11fef1601071250c24ad9850797a933d92d8dbc7abee177c88f681c289c2.  
+[2026-03-24 22:26:18] local.INFO: Creating notification {"data":{"notifiable_type":"customer","notifiable_id":8,"type":"new_message","title":"New Message","message":"Abe sent you a message","data":{"conversationID":13,"sender_name":"Abe","message_preview":"Hhjj"},"related_booking_id":38}} 
+[2026-03-24 22:26:18] local.INFO: Notification created {"id":99} 

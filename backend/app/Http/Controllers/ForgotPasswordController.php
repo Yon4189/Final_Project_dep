@@ -102,7 +102,7 @@ class ForgotPasswordController extends Controller
 
         // check if token exists & not expired
         $record = DB::table('password_resets')->where('email', $email)->first();
-        if (!$record ||!Hash::check($token, $record->token) || $record->expires_at < now()) {
+        if (!$record || !is_object($record) || !Hash::check($token, $record->token) || $record->expires_at < now()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid or expired token'
