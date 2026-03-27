@@ -45,18 +45,26 @@ const FILTERS: {
 
 const STATUS_COLORS = {
   pending: Colors.warning,
+  accepted: Colors.info,
   confirmed: Colors.primary,
+  arrived: Colors.primary,
   in_progress: Colors.info,
+  waiting_customer_confirmation: Colors.warning,
   completed: Colors.success,
   cancelled: Colors.error,
+  disputed: Colors.error,
 };
 
 const STATUS_ICONS = {
   pending: "time-outline",
-  confirmed: "checkmark-circle-outline",
+  accepted: "checkmark-circle-outline",
+  confirmed: "card-outline",
+  arrived: "navigate-outline",
   in_progress: "construct-outline",
+  waiting_customer_confirmation: "hourglass-outline",
   completed: "checkmark-done-outline",
   cancelled: "close-circle-outline",
+  disputed: "alert-circle-outline",
 };
 
 export default function ProviderRequests() {
@@ -358,22 +366,30 @@ export default function ProviderRequests() {
           </View>
         </View>
 
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) + "20" },
-          ]}
-        >
-          <Ionicons
-            name={getStatusIcon(item.status) as any}
-            size={12}
-            color={getStatusColor(item.status)}
-          />
-          <Text
-            style={[styles.statusText, { color: getStatusColor(item.status) }]}
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          {item.payment && (item.status === 'confirmed' || item.payment.status === 'held' || item.payment.status === 'paid') && (
+            <View style={[styles.statusBadge, { backgroundColor: Colors.success + '20' }]}>
+              <Ionicons name="card" size={12} color={Colors.success} />
+              <Text style={[styles.statusText, { color: Colors.success }]}>PAID</Text>
+            </View>
+          )}
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(item.status) + "20" },
+            ]}
           >
-            {(item.status || "").replace("_", " ")}
-          </Text>
+            <Ionicons
+              name={getStatusIcon(item.status) as any}
+              size={12}
+              color={getStatusColor(item.status)}
+            />
+            <Text
+              style={[styles.statusText, { color: getStatusColor(item.status) }]}
+            >
+              {(item.status || "").replace("_", " ")}
+            </Text>
+          </View>
         </View>
       </View>
 

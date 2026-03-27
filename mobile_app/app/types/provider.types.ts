@@ -2,11 +2,13 @@
 import { Ionicons } from "@expo/vector-icons";
 export interface ProviderProfile {
   id: string;
+  providerID: string; // Add this
   userId: string;
   fullname: string; // Add this from database
   businessName: string; // Keep for backward compatibility
   bio: string;
   profilePicture?: string; // Change from profileImage to profilePicture
+  profile_picture?: string; // Add this
   profileImage?: string; // Keep for backward compatibility
   coverImage?: string;
   phone: string;
@@ -169,6 +171,11 @@ export interface ServiceRequest {
   cancellationReason?: string;
   distance?: number; // in km
   travelTime?: number; // in minutes
+  payment?: {
+    status: string;
+    amount: number;
+    paid_at?: string;
+  };
 }
 
 // Earnings Types

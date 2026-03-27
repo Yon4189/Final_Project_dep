@@ -427,15 +427,23 @@ export default function ProviderDashboard() {
           </View>
         </View>
 
-        <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] + '20' }]}>
-          <Ionicons
-            name={STATUS_ICONS[item.status]}
-            size={12}
-            color={STATUS_COLORS[item.status]}
-          />
-          <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}>
-            {item.status.replace('_', ' ')}
-          </Text>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          {item.payment && (item.status === 'confirmed' || item.payment.status === 'held' || item.payment.status === 'paid') && (
+            <View style={[styles.statusBadge, { backgroundColor: Colors.success + '20' }]}>
+              <Ionicons name="card" size={12} color={Colors.success} />
+              <Text style={[styles.statusText, { color: Colors.success }]}>PAID</Text>
+            </View>
+          )}
+          <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] + '20' }]}>
+            <Ionicons
+              name={STATUS_ICONS[item.status]}
+              size={12}
+              color={STATUS_COLORS[item.status]}
+            />
+            <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}>
+              {item.status.replace('_', ' ')}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -1189,6 +1197,12 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  statusBanner: {
+    marginTop: 10,
+    padding: 8,
+    borderRadius: 8,
+    borderLeftWidth: 4,
   },
 });
 

@@ -107,10 +107,8 @@ class WalletService
             $booking = Booking::with(['customer', 'service', 'provider'])->find($payment->bookingID);
             if ($booking) {
                 $booking->payment_status = 'held';
+                $booking->status = 'confirmed';
                 $booking->paid_at = now();
-                // If it was accepted, it stays accepted or moves to paid status if you use that
-                // Many parts of the app expect 'accepted' or 'in_progress', but 'paid' might be a new intermediate
-                // For now, keep its current status to avoid breaking flow, just update payment_status
                 $booking->save();
 
                 // 3. Create Transaction (for provider dashboard earnings)
