@@ -432,15 +432,24 @@ class AdminAuthController extends Authenticatable
                 ->get()
                 ->map(function($b) {
                     return [
-                        'id' => $b->bookingID,
+                        // Old keys for safety
                         'customer' => $b->customer->fullname ?? 'Unknown',
                         'provider' => $b->provider->fullname ?? 'Unknown',
                         'service' => $b->service->title ?? 'Unknown',
-                        'status' => ucfirst($b->status),
                         'date' => $b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A',
                         'time' => $b->scheduledTime ?? 'N/A',
+                        'amount' => ($b->agreed_price ?? 0) . ' ETB',
+                        
+                        // New keys for modern Bookings.jsx
+                        'id' => $b->bookingID,
+                        'customer_name' => $b->customer->fullname ?? 'Unknown',
+                        'provider_name' => $b->provider->fullname ?? 'Unknown',
+                        'service_title' => $b->service->title ?? 'Unknown',
+                        'status' => ucfirst($b->status),
+                        'scheduled_at' => ($b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A'),
                         'location' => $b->service_address ?? 'Location pinned',
-                        'amount' => ($b->agreed_price ?? 0) . ' ETB'
+                        'price' => $b->agreed_price ?? 0,
+                        'notes' => $b->notes ?? null
                     ];
                 });
 
