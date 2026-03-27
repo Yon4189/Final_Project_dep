@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>How to Run – Final Project</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Fira+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f4f6fb;
+      color: #1a1d2e;
+      padding: 40px 20px;
+    }
+
+    .page {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+      overflow: hidden;
+    }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      padding: 48px 48px 36px;
+      color: #fff;
+    }
+    .header .badge {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 999px;
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 36px;
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 10px;
+    }
+    .header p {
+      font-size: 15px;
+      opacity: 0.82;
+      max-width: 560px;
+      line-height: 1.6;
+    }
+
+    /* OVERVIEW TABLE */
+    .overview {
+      padding: 36px 48px 0;
+    }
+    .overview h2 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      background: #f0f4ff;
+      color: #374151;
+      font-weight: 700;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid #dde3f0;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #eef0f5;
+      color: #374151;
+    }
+    tr:last-child td { border-bottom: none; }
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tag-blue  { background: #dbeafe; color: #1d4ed8; }
+    .tag-green { background: #d1fae5; color: #065f46; }
+    .tag-purple{ background: #ede9fe; color: #6d28d9; }
+    code {
+      font-family: 'Fira Mono', monospace;
+      font-size: 12px;
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #111827;
+    }
+
+    /* SECTIONS */
+    .sections { padding: 36px 48px; }
+
+    .section {
+      margin-bottom: 36px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 24px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .section-header.blue   { background: linear-gradient(90deg,#eff6ff,#fff); }
+    .section-header.green  { background: linear-gradient(90deg,#f0fdf4,#fff); }
+    .section-header.purple { background: linear-gradient(90deg,#faf5ff,#fff); }
+
+    .icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .icon.blue   { background: #2563eb; }
+    .icon.green  { background: #059669; }
+    .icon.purple { background: #7c3aed; }
+
+    .section-header h3 { font-size: 17px; font-weight: 700; color: #111827; }
+    .section-header .dir { font-size: 12px; color: #6b7280; margin-top: 2px; font-family: 'Fira Mono', monospace; }
+
+    .steps { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+    .step { display: flex; gap: 14px; align-items: flex-start; }
+    .step-num {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 10px;
+    }
+    .step-num.blue   { background: #dbeafe; color: #1d4ed8; }
+    .step-num.green  { background: #d1fae5; color: #065f46; }
+    .step-num.purple { background: #ede9fe; color: #6d28d9; }
+
+    .step-body { flex: 1; }
+    .step-body .label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .step-body .note  { font-size: 12px; color: #6b7280; margin-top: 5px; line-height: 1.5; }
+
+    .cmd-block {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cmd-block .prompt { color: #6ee7b7; font-family: 'Fira Mono', monospace; font-size: 13px; flex-shrink: 0; }
+    .cmd-block .cmd    { color: #f1f5f9; font-family: 'Fira Mono', monospace; font-size: 13px; }
+
+    .multi-cmd { display: flex; flex-direction: column; gap: 6px; }
+
+    /* TIPS */
+    .tips {
+      margin: 0 48px 36px;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 12px;
+      padding: 18px 22px;
+    }
+    .tips h4 { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .tips ul { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+    .tips li { font-size: 13px; color: #78350f; line-height: 1.5; }
+
+    /* FOOTER */
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e5e7eb;
+      padding: 20px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .footer strong { color: #374151; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="badge">Developer Guide</div>
+    <h1>How to Run the Project</h1>
+    <p>Step-by-step instructions for starting the Backend API, Mobile App, and Web Admin Dashboard locally.</p>
+  </div>
+
+  <!-- OVERVIEW TABLE -->
+  <div class="overview">
+    <h2>Quick Reference</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Technology</th>
+          <th>Directory</th>
+          <th>URL / Port</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Backend API</strong></td>
+          <td><span class="tag tag-blue">Laravel</span></td>
+          <td><code>backend/</code></td>
+          <td><code>http://localhost:8000</code></td>
+        </tr>
+        <tr>
+          <td><strong>Queue Worker</strong></td>
+          <td><span class="tag tag-blue">Laravel</span></td>
+          <td><code>backend/</code></td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>WebSocket Server</strong></td>
+          <td><span class="tag tag-blue">Reverb</span></td>
+          <td><code>backend/</code></td>
+          <td>Port <code>8080</code></td>
+        </tr>
+        <tr>
+          <td><strong>Mobile App</strong></td>
+          <td><span class="tag tag-green">Expo</span></td>
+          <td><code>mobile_app/</code></td>
+          <td>QR Code / Emulator</td>
+        </tr>
+        <tr>
+          <td><strong>Web Admin</strong></td>
+          <td><span class="tag tag-purple">React + Vite</span></td>
+          <td><code>web_app/</code></td>
+          <td><code>http://localhost:5173</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTIONS -->
+  <div class="sections">
+
+    <!-- BACKEND -->
+    <div class="section">
+      <div class="section-header blue">
+        <div class="icon blue">🖥️</div>
+        <div>
+          <h3>1. Backend (Laravel API)</h3>
+          <div class="dir">c:\Final-project\Final-project\backend</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num blue">1</div>
+          <div class="step-body">
+            <div class="label">Open a terminal in the <code>backend</code> folder and install PHP dependencies</div>
+            <div class="cmd-block"><span class="prompt">$</span><span class="cmd">composer install</span></div>
+            <div class="note">⚡ Only needed once, or after adding new packages.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num blue">2</div>
+          <div class="step-body">
+            <div class="label">Run database migrations</div>
+            <div class="cmd-block"><span class="prompt">$</span><span class="cmd">php artisan migrate</span></div>
+            <div class="note">⚡ Requires MySQL to be running with a database named <code>final_project</code>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num blue">3</div>
+          <div class="step-body">
+            <div class="label">Start the API server (open 3 separate terminals)</div>
+            <div class="multi-cmd">
+              <div class="cmd-block"><span class="prompt">$</span><span class="cmd">php artisan serve --host=0.0.0.0 --port=8000</span></div>
+              <div class="cmd-block"><span class="prompt">$</span><span class="cmd">php artisan queue:work</span></div>
+              <div class="cmd-block"><span class="prompt">$</span><span class="cmd">php artisan reverb:start --host=0.0.0.0 --port=8080</span></div>
+            </div>
+            <div class="note">⚡ Each command runs in its own terminal window and stays running.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOBILE APP -->
+    <div class="section">
+      <div class="section-header green">
+        <div class="icon green">📱</div>
+        <div>
+          <h3>2. Mobile App (Expo / React Native)</h3>
+          <div class="dir">c:\Final-project\Final-project\mobile_app</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num green">1</div>
+          <div class="step-body">
+            <div class="label">Install Node dependencies</div>
+            <div class="cmd-block"><span class="prompt">$</span><span class="cmd">npm install</span></div>
+            <div class="note">⚡ Only needed once, or after <code>package.json</code> changes.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num green">2</div>
+          <div class="step-body">
+            <div class="label">Start the Expo development server</div>
+            <div class="cmd-block"><span class="prompt">$</span><span class="cmd">npx expo start</span></div>
+            <div class="note">📷 Scan the QR code with <strong>Expo Go</strong> on your phone.<br>Or press <code>a</code> (Android emulator) · <code>i</code> (iOS simulator) · <code>w</code> (browser).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEB APP -->
+    <div class="section">
+      <div class="section-header purple">
+        <div class="icon purple">🌐</div>
+        <div>
+          <h3>3. Web Admin Dashboard (React + Vite)</h3>
+          <div class="dir">c:\Final-project\Final-project\web_app</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num purple">1</div>
+          <div class="step-body">
+            <div class="label">Install Node dependencies</div>
+            <div class="cmd-block"><span class="prompt">$</span><span class="cmd">npm install</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num purple">2</div>
+          <div class="step-body">
+            <div class="label">Start the development server</div>
+            <div class="cmd-block"><span class="prompt">$</span><span class="cmd">npm run dev</span></div>
+            <div class="note">🌐 Opens at <strong>http://localhost:5173</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .sections -->
+
+  <!-- TIPS -->
+  <div class="tips">
+    <h4>⚠️ Important Notes</h4>
+    <ul>
+      <li>Always start the <strong>Backend</strong> first before the Mobile App or Web Admin.</li>
+      <li>Make sure <strong>MySQL</strong> is running and the <code>final_project</code> database exists.</li>
+      <li>The backend must use <code>--host=0.0.0.0</code> so the mobile app on your phone can reach it via your local network IP.</li>
+      <li>The mobile app auto-detects your machine's LAN IP through Expo — no manual IP config needed.</li>
+    </ul>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div><strong>Final Project</strong> — Developer Run Guide</div>
+    <div>Print this page → Save as PDF</div>
+  </div>
+
+</div>
+</body>
+</html>
