@@ -3,5 +3,6 @@
 return [
     App\Providers\AppServiceProvider::class,
     App\Providers\RouteServiceProvider::class,
+    Laravel\Reverb\ReverbServiceProvider::class,
 
 ];

@@ -742,7 +742,7 @@ class BookingController extends Controller
         
         $booking = Booking::where('bookingID', $id)
             ->where('providerID', $provider->providerID)
-            ->whereIn('status', ['accepted', 'in_progress', 'started'])
+            ->whereIn('status', ['accepted', 'confirmed', 'in_progress', 'started'])
             ->first();
             
         if (!$booking) {
