@@ -23,6 +23,7 @@ interface ComplaintModalProps {
   visible: boolean;
   onClose: () => void;
   bookingId: string;
+  providerId?: string;
   providerName: string;
   serviceName?: string;
   onSuccess?: () => void;
@@ -57,6 +58,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
   visible,
   onClose,
   bookingId,
+  providerId,
   providerName,
   serviceName,
   onSuccess,
@@ -143,10 +145,10 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
   const handleSubmit = async () => {
     try {
       await createComplaint.mutateAsync({
-        bookingId,
-        subject: form.subject,
+        booking_id: bookingId,      // snake_case for backend
+        provider_id: providerId,    // new field
+        type: form.issueType,       // mapped field name
         description: form.description,
-        issueType: form.issueType,
         priority: form.priority,
         attachments: form.attachments,
       });
@@ -169,6 +171,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
         ]
       );
     } catch (error) {
+      console.error('Complaint submission error:', error);
       Alert.alert('Error', 'Failed to submit complaint. Please try again.');
     }
   };

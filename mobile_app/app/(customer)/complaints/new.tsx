@@ -23,6 +23,7 @@ import type { ServiceRequest } from '@/app/types/customer.types';
 
 interface ComplaintForm {
   bookingId: string;
+  providerId: string;
   subject: string;
   description: string;
   issueType: string;
@@ -56,6 +57,7 @@ export default function NewComplaint() {
 
   const [form, setForm] = useState<ComplaintForm>({
     bookingId: '',
+    providerId: '',
     subject: '',
     description: '',
     issueType: '',
@@ -66,8 +68,8 @@ export default function NewComplaint() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1); // 1: Select Booking, 2: Complaint Details, 3: Review
 
-  const handleSelectBooking = (bookingId: string) => {
-    setForm({ ...form, bookingId });
+  const handleSelectBooking = (bookingId: string, providerId: string) => {
+    setForm({ ...form, bookingId, providerId });
     setStep(2);
   };
 
@@ -134,10 +136,11 @@ export default function NewComplaint() {
 
     try {
       await createComplaint.mutateAsync({
-        bookingId: form.bookingId,
+        booking_id: form.bookingId,
+        provider_id: form.providerId,
+        type: form.issueType,
         subject: form.subject,
         description: form.description,
-        issueType: form.issueType,
         priority: form.priority,
         attachments: form.attachments,
       });
@@ -177,7 +180,7 @@ export default function NewComplaint() {
           <TouchableOpacity
             key={request.id}
             style={styles.bookingCard}
-            onPress={() => handleSelectBooking(request.id)}
+            onPress={() => handleSelectBooking(request.id, request.providerId)}
           >
             <View style={styles.bookingInfo}>
               <Text style={styles.bookingService}>{request.serviceName}</Text>

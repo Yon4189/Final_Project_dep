@@ -486,10 +486,13 @@ class CustomerService {
   // ==================== Complaints ====================
 
   async createComplaint(data: {
-    bookingId: string;
-    subject: string;
+    bookingId?: string;
+    booking_id?: string;
+    provider_id?: string;
+    subject?: string;
     description: string;
-    issueType: string;
+    issueType?: string;
+    type?: string;
     priority?: 'low' | 'medium' | 'high';
     attachments?: string[];
   }): Promise<ApiResponse<Complaint>> {

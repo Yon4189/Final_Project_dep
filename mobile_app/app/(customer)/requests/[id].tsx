@@ -631,6 +631,7 @@ export default function RequestDetails() {
         visible={showComplaintModal}
         onClose={() => setShowComplaintModal(false)}
         bookingId={id as string}
+        providerId={request.providerId}
         providerName={request.providerName || 'Provider'}
       />
     </View>
