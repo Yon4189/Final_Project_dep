@@ -140,7 +140,7 @@ class AdminAuthController extends Authenticatable
     {
         // 1. Validate incoming request
         $request->validate([
-            'status' => 'required|string|in:approved,rejected,suspended',
+            'status' => 'required|string|in:approved,rejected,suspended,Active,Suspended',
             'verification_reason' => 'nullable|string|max:255',
         ]);
 
@@ -250,7 +250,7 @@ class AdminAuthController extends Authenticatable
      */
     public function approvedProviders()
     {
-        $approved = ServiceProvider::where('status', 'approved')
+        $approved = ServiceProvider::where('status', 'approved','Active')
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -372,7 +372,7 @@ class AdminAuthController extends Authenticatable
         
         // Ensure accurate state toggling for customers (Active <-> Suspended)
         // Default DB value is 'Active', so we toggle against it case-insensitively
-        $customer->status = strtolower($customer->status) === 'active' ? 'Suspended' : 'Active';
+        $customer->status = strtolower($customer->status) === 'approved' ? 'Suspended' : 'Active';
         $customer->save();
         
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $customer->status]);
@@ -602,5 +602,48 @@ class AdminAuthController extends Authenticatable
             'success' => true,
             'data' => $results
         ]);
+    }
+
+    public function acceptedBookings()
+    {
+        $booking = Booking::where('status', 'accepted')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
+    }
+
+    public function pendingBookings()
+    {
+        $booking = Booking::where('status', 'pending')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
+    }
+    public function compeltedBookings()
+    {
+        $booking = Booking::where('status', 'compeleted')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
+    }
+
+    public function rejectedBookings()
+    {
+        $booking = Booking::where('status', 'rejected')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
     }
 }
