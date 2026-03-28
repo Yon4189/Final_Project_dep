@@ -21,7 +21,7 @@ class CustomerSearchController extends Controller
         $categoryId = $request->query('category_id');
         $serviceId = $request->query('service_id');
         $minRating = $request->query('min_rating', 0);
-        $maxDistance = $request->query('max_distance', 50);
+        $maxDistance = $request->query('max_distance', 999999);
         $sortBy = $request->query('sort_by', 'rating');
         $page = $request->query('page', 1);
         $perPage = $request->query('per_page', 20);
@@ -30,7 +30,7 @@ class CustomerSearchController extends Controller
         $verifiedOnly = $request->query('verified_only');
         $availableNow = $request->query('available_now');
 
-        $providers = ServiceProvider::where('status', 'Active')
+        $providers = ServiceProvider::whereIn('status', ['Active', 'approved'])
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($subQuery) use ($query) {
                     // name must start with search term (like vs code)
@@ -144,7 +144,7 @@ class CustomerSearchController extends Controller
                 'reviewCount' => 0, // will be calculated from reviews table
                 'completedJobs' => $provider->completed_jobs ?? 0,
                 'yearsExperience' => 5, // default since not in table
-                'verified' => $provider->status === 'Active',
+                'verified' => in_array($provider->status, ['Active', 'approved']),
                 'insured' => true, // default since not in table
                 'isAvailable' => $provider->is_online ?? false,
                 'services' => $this->transformServices($services),
@@ -187,7 +187,7 @@ class CustomerSearchController extends Controller
     {
         $limit = $request->query('limit', 5);
         
-        $providers = ServiceProvider::where('status', 'Active')
+        $providers = ServiceProvider::whereIn('status', ['Active', 'approved'])
             ->where('rating', '>=', 4.0)
             ->orderByDesc('rating')
             ->limit($limit)
@@ -206,7 +206,7 @@ class CustomerSearchController extends Controller
                 'reviewCount' => 0,
                 'completedJobs' => $provider->completed_jobs ?? 0,
                 'yearsExperience' => 5,
-                'verified' => $provider->status === 'Active',
+                'verified' => in_array($provider->status, ['Active', 'approved']),
                 'insured' => true,
                 'isAvailable' => $provider->is_online ?? false,
                 'services' => [],
@@ -234,7 +234,7 @@ class CustomerSearchController extends Controller
     public function getProviderDetails($id)
     {
         $provider = ServiceProvider::where('providerID', $id)
-            ->where('status', 'Active')
+            ->whereIn('status', ['Active', 'approved'])
             ->with('category') // eager load category
             ->first();
 
@@ -287,7 +287,7 @@ class CustomerSearchController extends Controller
             'reviewCount' => 0, // calculate from reviews table
             'completedJobs' => $provider->completed_jobs ?? 0,
             'yearsExperience' => 5, // calculate from join date
-            'verified' => $provider->status === 'Active',
+            'verified' => in_array($provider->status, ['Active', 'approved']),
             'insured' => true,
             'isAvailable' => $provider->is_online ?? false,
             'about' => $provider->bio ?? 'professional service provider',
@@ -313,7 +313,7 @@ class CustomerSearchController extends Controller
     public function getProviderAvailability($id, Request $request)
     {
         $provider = ServiceProvider::where('providerID', $id)
-            ->where('status', 'Active')
+            ->whereIn('status', ['Active', 'approved'])
             ->first();
 
         if (!$provider) {
@@ -394,7 +394,7 @@ class CustomerSearchController extends Controller
     public function getProviderReviews($id, Request $request)
     {
         $provider = ServiceProvider::where('providerID', $id)
-            ->where('status', 'Active')
+            ->whereIn('status', ['Active', 'approved'])
             ->first();
 
         if (!$provider) {
@@ -435,7 +435,7 @@ class CustomerSearchController extends Controller
             ], 400);
         }
 
-        $providers = ServiceProvider::where('status', 'Active')
+        $providers = ServiceProvider::whereIn('status', ['Active', 'approved'])
             ->whereNotNull('current_latitude')
             ->whereNotNull('current_longitude')
             ->selectRaw('*, (6371 * acos(cos(radians(?)) * cos(radians(current_latitude)) * cos(radians(current_longitude) - radians(?)) + sin(radians(?)) * sin(radians(current_latitude)))) AS distance', [$latitude, $longitude, $latitude])
@@ -454,7 +454,7 @@ class CustomerSearchController extends Controller
                 'profileImage' => $provider->profilePicture,
                 'rating' => round($provider->rating, 1),
                 'reviewCount' => 0,
-                'verified' => $provider->status === 'Active',
+                'verified' => in_array($provider->status, ['Active', 'approved']),
                 'distance' => round($provider->distance, 2),
                 'location' => [
                     'latitude' => $provider->current_latitude,

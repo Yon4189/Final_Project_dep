@@ -17,9 +17,10 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '@/app/constants/Colors';
+import { Colors, ThemeColors } from '@/app/constants/Colors';
 import { useProfile, useUpdateProfile } from '../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { useTheme } from '../context/ThemeContext';
 
 interface EditableField {
   key: string;
@@ -31,6 +32,10 @@ interface EditableField {
 
 export default function CustomerProfile() {
   const router = useRouter();
+  const { isDark, setTheme, colors } = useTheme();
+  
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
   
@@ -234,6 +239,25 @@ export default function CustomerProfile() {
           </View>
         </View>
 
+        {/* Appearance */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.sectionContent}>
+            <View style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="moon-outline" size={22} color={colors.text.secondary} />
+                <Text style={styles.settingLabel}>Dark Mode</Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.surface}
+              />
+            </View>
+          </View>
+        </View>
+
         {/* Notifications */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
@@ -302,20 +326,20 @@ export default function CustomerProfile() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
   },
   header: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     paddingVertical: 24,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   profileImageContainer: {
     position: 'relative',
@@ -326,20 +350,20 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
   },
   editImageButton: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
   },
   headerActions: {
     flexDirection: 'row',
@@ -348,13 +372,13 @@ const styles = StyleSheet.create({
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
   },
   editButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     marginLeft: 8,
     fontSize: 14,
     fontWeight: '500',
@@ -364,21 +388,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   cancelButtonText: {
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     fontSize: 14,
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 20,
   },
   saveButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -388,21 +412,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     paddingHorizontal: 20,
     marginBottom: 8,
   },
   sectionContent: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   fieldContainer: {
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   fieldLabelContainer: {
     flexDirection: 'row',
@@ -412,22 +436,22 @@ const styles = StyleSheet.create({
   fieldLabel: {
     marginLeft: 8,
     fontSize: 13,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   fieldValue: {
     fontSize: 16,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     paddingVertical: 4,
   },
   fieldInput: {
     fontSize: 16,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   settingItem: {
     flexDirection: 'row',
@@ -436,7 +460,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   settingLeft: {
     flexDirection: 'row',
@@ -445,25 +469,25 @@ const styles = StyleSheet.create({
   settingLabel: {
     marginLeft: 12,
     fontSize: 15,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     marginHorizontal: 20,
     marginTop: 30,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.error + '30',
+    borderColor: colors.error + '30',
   },
   logoutText: {
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '500',
-    color: Colors.error,
+    color: colors.error,
   },
   bottomPadding: {
     height: 40,

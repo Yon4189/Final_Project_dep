@@ -502,8 +502,7 @@ export default function WithdrawScreen() {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -569,42 +568,44 @@ export default function WithdrawScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-      </ScrollView>
+        <View>
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+        </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        {step < 3 ? (
-          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              isPending && styles.confirmButtonDisabled,
-            ]}
-            onPress={handleWithdraw}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <ActivityIndicator size="small" color={Colors.surface} />
-            ) : (
-              <>
-                <Text style={styles.confirmButtonText}>Confirm Withdrawal</Text>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={20}
-                  color={Colors.surface}
-                />
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
+        {/* Footer */}
+        <View style={styles.footer}>
+          {step < 3 ? (
+            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+              <Text style={styles.nextButtonText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                isPending && styles.confirmButtonDisabled,
+              ]}
+              onPress={handleWithdraw}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <ActivityIndicator size="small" color={Colors.surface} />
+              ) : (
+                <>
+                  <Text style={styles.confirmButtonText}>Confirm Withdrawal</Text>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={Colors.surface}
+                  />
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   stepContainer: {
-    flex: 1,
+    paddingBottom: 20,
   },
   stepTitle: {
     fontSize: 22,

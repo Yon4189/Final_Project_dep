@@ -22,7 +22,8 @@ import { useProviderNotificationCount } from '../../hooks/useProviderNotificatio
 import * as pusherClient from '@/app/services/pusherClient';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
-import { formatCurrency, formatTimeAgo } from '../utils/formatters';
+import { formatTimeAgo } from '../utils/formatters';
+import { PriceText } from '../../components/common/PriceText';
 import { API_BASE_URL } from '../config/api';
 import { useConversations } from '../../hooks/useChat';
 import { RecentMessagesModal } from '../../components/provider/RecentMessagesModal';
@@ -226,7 +227,7 @@ export default function ProviderDashboard() {
           style={styles.statCard}
           onPress={() => router.push('/(provider)/earnings')}
         >
-          <Text style={styles.statValue}>{formatCurrency(earnings?.today || 0)}</Text>
+          <PriceText style={styles.statValue} amount={earnings?.today || 0} />
           <Text style={styles.statLabel}>Today</Text>
         </TouchableOpacity>
 
@@ -234,7 +235,7 @@ export default function ProviderDashboard() {
           style={styles.statCard}
           onPress={() => router.push('/(provider)/earnings')}
         >
-          <Text style={styles.statValue}>{formatCurrency(earnings?.week || 0)}</Text>
+          <PriceText style={styles.statValue} amount={earnings?.week || 0} />
           <Text style={styles.statLabel}>This Week</Text>
         </TouchableOpacity>
 
@@ -242,7 +243,7 @@ export default function ProviderDashboard() {
           style={styles.statCard}
           onPress={() => router.push('/(provider)/earnings')}
         >
-          <Text style={styles.statValue}>{formatCurrency(earnings?.month || 0)}</Text>
+          <PriceText style={styles.statValue} amount={earnings?.month || 0} />
           <Text style={styles.statLabel}>This Month</Text>
         </TouchableOpacity>
       </View>
@@ -473,7 +474,7 @@ export default function ProviderDashboard() {
 
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Est. Price:</Text>
-          <Text style={styles.priceValue}>{formatCurrency(item.estimatedPrice)}</Text>
+          <PriceText style={styles.priceValue} amount={item.estimatedPrice} />
         </View>
       </View>
 
@@ -652,22 +653,22 @@ export default function ProviderDashboard() {
 
           <View style={styles.earningsGrid}>
             <View style={styles.earningsItem}>
-              <Text style={styles.earningsAmount}>{formatCurrency(earnings?.today || 0)}</Text>
+              <PriceText style={styles.earningsAmount} amount={earnings?.today || 0} />
               <Text style={styles.earningsLabel}>Today</Text>
             </View>
             <View style={styles.earningsItem}>
-              <Text style={styles.earningsAmount}>{formatCurrency(earnings?.week || 0)}</Text>
+              <PriceText style={styles.earningsAmount} amount={earnings?.week || 0} />
               <Text style={styles.earningsLabel}>This Week</Text>
             </View>
             <View style={styles.earningsItem}>
-              <Text style={styles.earningsAmount}>{formatCurrency(earnings?.month || 0)}</Text>
+              <PriceText style={styles.earningsAmount} amount={earnings?.month || 0} />
               <Text style={styles.earningsLabel}>This Month</Text>
             </View>
           </View>
 
           <View style={styles.withdrawSection}>
             <Text style={styles.availableBalance}>
-              Available for withdrawal: {formatCurrency(earnings?.available || 0)}
+              Available for withdrawal: <PriceText amount={earnings?.available || 0} />
             </Text>
             <TouchableOpacity
               style={styles.withdrawButton}

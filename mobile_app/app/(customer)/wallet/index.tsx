@@ -20,6 +20,7 @@ import { Colors } from '../../constants/Colors';
 import { useWalletBalance } from '@/hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { EmptyState } from '../../../components/common/EmptyState';
+import { PriceText } from '../../../components/common/PriceText';
 import { format } from 'date-fns';
 
 interface Transaction {
@@ -182,11 +183,9 @@ export default function WalletScreen() {
 
       <View style={styles.balanceContainer}>
         <Text style={styles.balanceLabel}>Total Balance</Text>
-        <Text style={styles.balanceAmount}>
-          {wallet ? formatCurrency(wallet.balance) : 'ETB 0.00'}
-        </Text>
+        <PriceText style={styles.balanceAmount} amount={wallet?.balance || 0} />
         <Text style={styles.balanceSubtext}>
-          Pending: {wallet ? formatCurrency(wallet.pendingAmount) : 'ETB 0.00'}
+          Pending: <PriceText amount={wallet?.pendingAmount || 0} />
         </Text>
       </View>
 
@@ -245,16 +244,12 @@ export default function WalletScreen() {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statCard}>
-          <Text style={[styles.statValue, { color: Colors.error }]}>
-            {formatCurrency(summary.spent)}
-          </Text>
+          <PriceText style={[styles.statValue, { color: Colors.error }]} amount={summary.spent} />
           <Text style={styles.statLabel}>Spent</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statCard}>
-          <Text style={[styles.statValue, { color: Colors.success }]}>
-            {formatCurrency(summary.received)}
-          </Text>
+          <PriceText style={[styles.statValue, { color: Colors.success }]} amount={summary.received} />
           <Text style={styles.statLabel}>Received</Text>
         </View>
       </View>
@@ -364,8 +359,14 @@ export default function WalletScreen() {
             { color: getTransactionColor(item.type) }
           ]}>
             {item.type === 'payment' || item.type === 'fee' ? '-' : '+'}
-            {formatCurrency(item.amount)}
           </Text>
+          <PriceText 
+            style={[
+              styles.transactionAmount,
+              { color: getTransactionColor(item.type) }
+            ]} 
+            amount={item.amount} 
+          />
         </View>
 
         {item.serviceName && (
@@ -439,7 +440,7 @@ export default function WalletScreen() {
                 style={styles.quickAmount}
                 onPress={() => setTopUpAmount(amount.toString())}
               >
-                <Text style={styles.quickAmountText}>ETB {amount}</Text>
+                <PriceText style={styles.quickAmountText} amount={amount} />
               </TouchableOpacity>
             ))}
           </View>
@@ -515,7 +516,7 @@ export default function WalletScreen() {
           </View>
 
           <Text style={styles.modalSubtitle}>
-            Available Balance: {wallet ? formatCurrency(wallet.balance) : 'ETB 0.00'}
+            Available Balance: <PriceText amount={wallet?.balance || 0} />
           </Text>
 
           <View style={styles.amountInputContainer}>
@@ -541,13 +542,11 @@ export default function WalletScreen() {
           <View style={styles.withdrawInfo}>
             <View style={styles.withdrawInfoRow}>
               <Text style={styles.withdrawInfoLabel}>Withdrawal Fee</Text>
-              <Text style={styles.withdrawInfoValue}>ETB 5.00</Text>
+              <PriceText style={styles.withdrawInfoValue} amount={5.00} />
             </View>
             <View style={styles.withdrawInfoRow}>
               <Text style={styles.withdrawInfoLabel}>You'll Receive</Text>
-              <Text style={styles.withdrawInfoValue}>
-                {formatCurrency(Math.max(0, parseFloat(withdrawAmount || '0') - 5))}
-              </Text>
+              <PriceText style={styles.withdrawInfoValue} amount={Math.max(0, parseFloat(withdrawAmount || '0') - 5)} />
             </View>
             <View style={styles.withdrawInfoRow}>
               <Text style={styles.withdrawInfoLabel}>Processing Time</Text>

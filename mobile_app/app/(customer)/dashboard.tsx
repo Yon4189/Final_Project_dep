@@ -527,7 +527,7 @@ export default function CustomerDashboard() {
 
         <TouchableOpacity
           style={styles.actionCard}
-          onPress={() => router.push('/(customer)/wallet/index')}
+          onPress={() => router.push('/(customer)/wallet')}
         >
           <View style={[styles.actionIconContainer, { backgroundColor: Colors.success + '10' }]}>
             <Ionicons name="card-outline" size={26} color={Colors.success} />
@@ -1257,18 +1257,19 @@ const styles = StyleSheet.create({
   },
   quickActionsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginTop: 16,
-    gap: 12,
+    gap: 8,
   },
   actionCard: {
-    width: (width - 52) / 2, // 2 columns with gap
+    flex: 1,
     backgroundColor: Colors.surface,
     borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
     shadowColor: '#000',
@@ -1283,12 +1284,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginBottom: 8,
   },
   actionCardLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: Colors.text.primary,
     fontWeight: '600',
+    textAlign: 'center',
   },
   journeyCard: {
     backgroundColor: Colors.surface,
