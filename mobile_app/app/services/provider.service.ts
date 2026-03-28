@@ -308,6 +308,18 @@ class ProviderService {
     return response;
   }
 
+  // ==================== Tracking ====================
+
+  async updateLocation(data: {
+    bookingID: string;
+    latitude: number;
+    longitude: number;
+    speed?: number;
+    heading?: number;
+  }): Promise<ApiResponse<any>> {
+    return api.post<any>(`${this.BASE_PATH}/tracking/update`, data);
+  }
+
   // ==================== Dashboard Stats ====================
 
   async getDashboardStats(): Promise<ApiResponse<{

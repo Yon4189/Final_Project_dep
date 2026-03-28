@@ -29,7 +29,8 @@ class Customer extends Authenticatable
         'service_city',
         'service_latitude',
         'service_longitude',
-        'location'
+        'location',
+        'expo_push_token'
     ];
 
     // Hide sensitive fields

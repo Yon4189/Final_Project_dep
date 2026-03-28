@@ -18,6 +18,7 @@ import { useBookingDetails } from '../../hooks/useCustomerBookings';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { PriceText } from '../../components/common/PriceText';
 export default function PaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -339,16 +340,16 @@ export default function PaymentScreen() {
       <Text style={styles.summaryTitle}>Payment Summary</Text>
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>Service Fee</Text>
-        <Text style={styles.summaryValue}>ETB {effectiveAmount.toFixed(2)}</Text>
+        <PriceText style={styles.summaryValue} amount={effectiveAmount} />
       </View>
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>Platform Fee (5%)</Text>
-        <Text style={styles.summaryValue}>ETB {platformFee.toFixed(2)}</Text>
+        <PriceText style={styles.summaryValue} amount={platformFee} />
       </View>
       <View style={styles.summaryDivider} />
       <View style={[styles.summaryRow, styles.totalRow]}>
         <Text style={styles.totalLabel}>Total Amount</Text>
-        <Text style={styles.totalValue}>ETB {totalAmount.toFixed(2)}</Text>
+        <PriceText style={styles.totalValue} amount={totalAmount} />
       </View>
     </View>
   );

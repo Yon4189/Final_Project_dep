@@ -7,6 +7,7 @@ use App\Models\Notification;
 use App\Models\Customer;
 use App\Models\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use App\Events\BookingUpdated;
 
 class NotificationService
@@ -112,6 +113,9 @@ class NotificationService
             $notification->broadcasted = true;
             $notification->save();
             
+            // Send push notification
+            $this->sendPushNotification($notification);
+            
             return $notification;
         } catch (\Exception $e) {
             Log::error('Failed to create notification: ' . $e->getMessage());
@@ -120,17 +124,65 @@ class NotificationService
     }
 
     /**
-     * Send push notification (to be implemented with Firebase)
+     * Send push notification using Expo Push API
      */
     private function sendPushNotification($notification)
     {
-        // This will be implemented when we add Firebase
-        // For now, just mark as push not sent
-        $notification->push_sent = false;
-        $notification->save();
-        
-        // You can dispatch a job here to send push later
-        // dispatch(new SendPushNotificationJob($notification));
+        try {
+            // Get user to find push token
+            $user = null;
+            if ($notification->notifiable_type === 'customer') {
+                $user = Customer::find($notification->notifiable_id);
+            } elseif ($notification->notifiable_type === 'provider') {
+                $user = ServiceProvider::find($notification->notifiable_id);
+            }
+
+            if (!$user || !$user->expo_push_token) {
+                Log::info('Push notification skipped: No token found', [
+                    'notifiable_type' => $notification->notifiable_type,
+                    'notifiable_id' => $notification->notifiable_id
+                ]);
+                return;
+            }
+
+            Log::info('Sending push notification via Expo', [
+                'token' => $user->expo_push_token,
+                'title' => $notification->title
+            ]);
+
+            $response = Http::post('https://exp.host/--/api/v2/push/send', [
+                'to' => $user->expo_push_token,
+                'title' => $notification->title ?? 'New Notification',
+                'body' => $notification->message,
+                'data' => array_merge($notification->data ?? [], [
+                    'notificationID' => $notification->notificationID,
+                    'type' => $notification->type,
+                    'bookingID' => $notification->related_booking_id
+                ]),
+                'sound' => 'default',
+                'priority' => 'high'
+            ]);
+
+            // If $response is a LazyPromise (async), wait for it to get the Response object
+            if ($response instanceof \Illuminate\Http\Client\Promises\LazyPromise) {
+                $response = $response->wait();
+            }
+
+            if ($response->successful()) {
+                $notification->update([
+                    'push_sent' => true,
+                    'push_sent_at' => now()
+                ]);
+                Log::info('Push notification sent successfully');
+            } else {
+                Log::error('Expo Push API error', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send push notification: ' . $e->getMessage());
+        }
     }
 
         /**

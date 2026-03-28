@@ -15,9 +15,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { useBookingDetails, useCancelBooking, useBookingStatus, useTrackProvider } from '@/hooks/useCustomerBookings';
+import { useBookingDetails, useCancelBooking, useBookingStatus, useTrackProvider, bookingKeys } from '@/hooks/useCustomerBookings';
 import { useConfirmCompletion } from '../../../hooks/useCustomerQueries';
+import { useQueryClient } from '@tanstack/react-query';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import Map from '../../../components/Map/index';
+import { PriceText } from '../../../components/common/PriceText';
 import { ReviewModal } from '../../../components/customer/ReviewModal';
 import { ComplaintModal } from '../../../components/customer/ComplaintModal';
 import { format } from 'date-fns';
@@ -76,6 +79,7 @@ const STATUS_STEPS = [
 export default function BookingDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
@@ -140,40 +144,110 @@ export default function BookingDetails() {
     router.push(`/(customer)/chat/${booking.providerID}`);
   };
 
+  const [liveLocation, setLiveLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    heading?: number;
+    speed?: number;
+  } | null>(null);
+
   // Real-time updates
   useEffect(() => {
-    if (booking?.customerID) {
+    if (booking?.customerID && id) {
+      // General booking status updates
       pusherClient.subscribeToUserUpdates(
         'customer',
         booking.customerID,
         (data: any) => {
-          console.log('[Pusher] Booking update received:', data);
+          console.log('[Pusher] Booking status update received:', data);
           if (data.related_booking_id?.toString() === id?.toString()) {
-            refetch();
+            queryClient.invalidateQueries({ queryKey: bookingKeys.detail(id as string) });
           }
         }
       );
 
+      // Live GPS tracking channel
+      pusherClient.subscribeToBookingTracking(id as string, (data) => {
+        console.log('[Reverb] Live location received:', data);
+        setLiveLocation({
+          latitude: data.latitude,
+          longitude: data.longitude,
+          heading: data.heading,
+          speed: data.speed,
+        });
+      });
+
       return () => {
         pusherClient.unsubscribeFromUserUpdates('customer', booking.customerID);
+        pusherClient.unsubscribeFromBookingTracking(id as string);
       };
     }
   }, [booking?.customerID, id]);
 
   const handleTrackProvider = () => {
-    if (trackingData?.data?.location) {
-      // Open in maps
-      const { latitude, longitude } = trackingData.data.location;
-      const url = Platform.select({
-        ios: `maps://app?daddr=${latitude},${longitude}`,
-        android: `google.navigation:q=${latitude},${longitude}`,
-      });
-      if (url) {
-        Linking.openURL(url);
-      }
-    } else {
-      Alert.alert('Info', 'Live tracking not available yet');
-    }
+    setSelectedTab('details');
+    // We could scroll to the map here if we had a ref
+    Alert.alert('Tracking', 'Live tracking is now active on the map above.');
+  };
+
+  const renderLiveTracking = () => {
+    const showTrack = ['accepted', 'confirmed', 'arrived', 'in_progress'].includes(status);
+    if (!showTrack) return null;
+
+    const providerPos = liveLocation || (trackingData?.data?.current ? {
+      latitude: parseFloat(trackingData.data.current.latitude),
+      longitude: parseFloat(trackingData.data.current.longitude),
+    } : null);
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.liveTrackingHeader}>
+          <Text style={styles.sectionTitle}>Live Tracking</Text>
+          <View style={styles.liveIndicator}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        </View>
+        
+        <View style={styles.mapContainer}>
+          <Map
+            center={providerPos ? [providerPos.latitude, providerPos.longitude] : undefined}
+            userLocation={{
+              latitude: booking.service_latitude,
+              longitude: booking.service_longitude
+            }}
+            markers={providerPos ? [
+              {
+                position: [providerPos.latitude, providerPos.longitude],
+                title: booking.provider?.fullname || 'Provider',
+                description: 'Current Location'
+              }
+            ] : []}
+            style={{ height: 250, width: '100%' }}
+          />
+          
+          {!providerPos && (
+            <View style={styles.mapOverlay}>
+              <Text style={styles.mapOverlayText}>Waiting for provider location...</Text>
+            </View>
+          )}
+        </View>
+
+        {trackingData?.data?.eta && (
+          <View style={styles.etaCard}>
+            <View style={styles.etaItem}>
+              <Text style={styles.etaLabel}>Distance</Text>
+              <Text style={styles.etaValue}>{trackingData.data.eta.distance_km} km</Text>
+            </View>
+            <View style={styles.etaDivider} />
+            <View style={styles.etaItem}>
+              <Text style={styles.etaLabel}>Est. Arrival</Text>
+              <Text style={styles.etaValue}>{trackingData.data.eta.minutes} min</Text>
+            </View>
+          </View>
+        )}
+      </View>
+    );
   };
 
   const handleCancelBooking = async () => {
@@ -375,7 +449,7 @@ export default function BookingDetails() {
       <View style={styles.paymentCard}>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Agreed Price</Text>
-          <Text style={styles.priceValue}>ETB {booking.agreed_price.toFixed(2)}</Text>
+          <PriceText style={styles.priceValue} amount={booking.agreed_price} />
         </View>
 
         {booking.payment?.status === 'paid' ? (
@@ -400,7 +474,7 @@ export default function BookingDetails() {
           <View style={styles.refundContainer}>
             <Ionicons name="refresh-outline" size={20} color={Colors.info} />
             <Text style={styles.refundText}>
-              Refund of ETB {booking.refund_amount.toFixed(2)} processed
+              Refund of <PriceText amount={booking.refund_amount} /> processed
             </Text>
           </View>
         ) : null}
@@ -564,6 +638,7 @@ export default function BookingDetails() {
 
         {selectedTab === 'details' && (
           <>
+            {renderLiveTracking()}
             {renderServiceDetails()}
             {renderPaymentDetails()}
           </>
@@ -733,6 +808,83 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text.primary,
     marginBottom: 12,
+  },
+  liveTrackingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.error + '15',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.error + '30',
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.error,
+    marginRight: 6,
+  },
+  liveText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.error,
+    letterSpacing: 1,
+  },
+  mapContainer: {
+    height: 250,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
+  },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.background + 'CC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapOverlayText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    fontStyle: 'italic',
+  },
+  etaCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: 'space-around',
+    marginBottom: 12,
+  },
+  etaItem: {
+    alignItems: 'center',
+  },
+  etaLabel: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginBottom: 4,
+  },
+  etaValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  etaDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
   },
   providerCard: {
     flexDirection: 'row',

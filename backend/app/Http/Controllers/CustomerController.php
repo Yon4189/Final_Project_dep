@@ -211,6 +211,29 @@ class CustomerController extends Authenticatable
         ]);
     }
 
+    public function updatePushToken(Request $request)
+    {
+        $customer = Auth::guard('customer')->user();
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found'
+            ], 404);
+        }
+
+        $request->validate([
+            'push_token' => 'required|string'
+        ]);
+
+        $customer->update(['expo_push_token' => $request->push_token]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Push token updated successfully'
+        ]);
+    }
+
     public function getRequests(Request $request)
     {
         $customer = $this->resolveCustomer();

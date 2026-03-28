@@ -350,4 +350,20 @@ public function login(Request $request)
             'message' => 'Location updated'
         ]);
     }
+
+    public function updatePushToken(Request $request)
+    {
+        $provider = $request->user();
+        
+        $request->validate([
+            'push_token' => 'required|string'
+        ]);
+
+        $provider->update(['expo_push_token' => $request->push_token]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Push token updated successfully'
+        ]);
+    }
 }

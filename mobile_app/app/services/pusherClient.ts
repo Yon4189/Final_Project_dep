@@ -149,3 +149,34 @@ export async function disconnectPusher() {
   pusherInstance = null;
   console.log('[Reverb] Disconnected');
 }
+
+/** Subscribe to live provider location updates for a booking. */
+export async function subscribeToBookingTracking(
+  bookingId: string | number,
+  onLocationUpdate: (data: { latitude: number; longitude: number; speed?: number; heading?: number; tracked_at?: string }) => void,
+) {
+  const pusher = await getPusher();
+  const channelName = `private-booking.${bookingId}`;
+
+  const channel = pusher.subscribe(channelName);
+
+  channel.bind('location.updated', (data: any) => {
+    try {
+      const payload = typeof data === 'string' ? JSON.parse(data) : data;
+      onLocationUpdate(payload);
+    } catch (e) {
+      console.warn('[Reverb] Failed to parse tracking data:', e);
+    }
+  });
+
+  console.log(`[Reverb] Subscribed to booking tracking: ${channelName}`);
+  return channel;
+}
+
+/** Unsubscribe from booking live tracking channel. */
+export async function unsubscribeFromBookingTracking(bookingId: string | number) {
+  if (!pusherInstance) return;
+  const channelName = `private-booking.${bookingId}`;
+  pusherInstance.unsubscribe(channelName);
+  console.log(`[Reverb] Unsubscribed from booking tracking: ${channelName}`);
+}

@@ -16,8 +16,9 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '@/app/constants/Colors';
+import { Colors, ThemeColors } from '@/app/constants/Colors';
 import { useProviderStore } from '@/app/store/providerStore';
+import { useTheme } from '../context/ThemeContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { formatPhoneNumber } from '../utils/formatters';
 import type { WorkingHours } from '../types/provider.types';
@@ -42,6 +43,10 @@ const BADGES = [
 
 export default function ProviderProfile() {
   const router = useRouter();
+  const { isDark, setTheme, colors } = useTheme();
+  
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+
   const { profile, isLoading, updateProfile, loadProfile,stats, toggleAvailability } = useProviderStore();
   const [uploading, setUploading] = useState(false);
   const [editingHours, setEditingHours] = useState(false);
@@ -414,7 +419,22 @@ export default function ProviderProfile() {
 
   const renderSettings = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Settings</Text>
+      <Text style={styles.sectionTitle}>Appearance</Text>
+      
+      <View style={styles.settingRow}>
+        <View style={styles.settingLeft}>
+          <Ionicons name="moon-outline" size={20} color={colors.text.secondary} />
+          <Text style={styles.settingLabel}>Dark Mode</Text>
+        </View>
+        <Switch
+          value={isDark}
+          onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
+          trackColor={{ false: colors.border, true: colors.primary }}
+          thumbColor={colors.surface}
+        />
+      </View>
+
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Settings</Text>
       
       <TouchableOpacity 
         style={styles.settingRow}
@@ -498,16 +518,16 @@ export default function ProviderProfile() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
   },
   header: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingTop: 60,
     paddingBottom: 30,
     paddingHorizontal: 20,
@@ -525,13 +545,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: Colors.surface,
+    color: colors.surface,
   },
   editButton: {
     padding: 4,
   },
   profileCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     marginHorizontal: 20,
     marginTop: -30,
     borderRadius: 20,
@@ -553,30 +573,30 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 4,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
   },
   cameraButton: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
   },
   businessName: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 4,
   },
   profession: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     marginBottom: 12,
   },
   ratingContainer: {
@@ -588,12 +608,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   reviewCount: {
     marginLeft: 4,
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -602,7 +622,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginBottom: 16,
   },
   statItem: {
@@ -611,16 +631,16 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   statDivider: {
     width: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
   },
   availabilityContainer: {
     flexDirection: 'row',
@@ -641,7 +661,7 @@ const styles = StyleSheet.create({
   },
   availabilityText: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   section: {
     paddingHorizontal: 20,
@@ -656,12 +676,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 12,
   },
   editText: {
     fontSize: 14,
-    color: Colors.primary,
+    color: colors.primary,
     fontWeight: '500',
   },
   badgesContainer: {
@@ -687,7 +707,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   infoLeft: {
     flexDirection: 'row',
@@ -696,7 +716,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 15,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   infoRight: {
     flexDirection: 'row',
@@ -705,7 +725,7 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     maxWidth: 200,
   },
   bioContainer: {
@@ -714,12 +734,12 @@ const styles = StyleSheet.create({
   bioLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     marginBottom: 8,
   },
   bioText: {
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     lineHeight: 20,
   },
   serviceArea: {
@@ -728,15 +748,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   serviceAreaLabel: {
     fontSize: 15,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   serviceAreaValue: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   servicesButton: {
     flexDirection: 'row',
@@ -749,12 +769,12 @@ const styles = StyleSheet.create({
   },
   servicesButtonLabel: {
     fontSize: 15,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 2,
   },
   servicesButtonCount: {
     fontSize: 13,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   hoursRow: {
     flexDirection: 'row',
@@ -762,15 +782,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   hoursDay: {
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   hoursTime: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   hoursEdit: {
     flexDirection: 'row',
@@ -779,7 +799,7 @@ const styles = StyleSheet.create({
   },
   hoursEditText: {
     fontSize: 14,
-    color: Colors.primary,
+    color: colors.primary,
   },
   docRow: {
     flexDirection: 'row',
@@ -787,7 +807,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   docLeft: {
     flexDirection: 'row',
@@ -796,7 +816,7 @@ const styles = StyleSheet.create({
   },
   docLabel: {
     fontSize: 15,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   docRight: {
     flexDirection: 'row',
@@ -804,29 +824,29 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   pendingBadge: {
-    backgroundColor: Colors.warning + '20',
+    backgroundColor: colors.warning + '20',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   pendingText: {
     fontSize: 11,
-    color: Colors.warning,
+    color: colors.warning,
     fontWeight: '500',
   },
   docCount: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   bankCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   bankCardLeft: {
     flexDirection: 'row',
@@ -837,7 +857,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: Colors.primary + '20',
+    backgroundColor: colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -848,12 +868,12 @@ const styles = StyleSheet.create({
   bankName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 2,
   },
   bankAccount: {
     fontSize: 13,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -863,7 +883,7 @@ const styles = StyleSheet.create({
   },
   verifiedText: {
     fontSize: 13,
-    color: Colors.success,
+    color: colors.success,
   },
   settingRow: {
     flexDirection: 'row',
@@ -871,7 +891,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   settingLeft: {
     flexDirection: 'row',
@@ -880,24 +900,24 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 15,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.error + '10',
+    backgroundColor: colors.error + '10',
     marginHorizontal: 20,
     marginTop: 30,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.error + '30',
+    borderColor: colors.error + '30',
     gap: 8,
   },
   logoutText: {
     fontSize: 16,
-    color: Colors.error,
+    color: colors.error,
     fontWeight: '600',
   },
   bottomPadding: {
