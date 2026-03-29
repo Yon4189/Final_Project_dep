@@ -143,6 +143,7 @@ Route::group(['middleware' => 'auth:customer', 'prefix' => 'customer'], function
     
     // Search Suggestions
     Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
+    Route::post('/push-token', [CustomerController::class, 'updatePushToken']);
     
     // ========== PAYMENT ROUTES ==========
     Route::get('/payment/methods', [PaymentController::class, 'methods']);
@@ -182,6 +183,7 @@ Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function
     Route::get('/profile', [ServiceProviderAuthController::class, 'profile']);
     Route::post('/profile/update', [ServiceProviderAuthController::class, 'updateProfile']);
     Route::post('/location/update', [ServiceProviderAuthController::class, 'updateLocation']);
+    Route::post('/push-token', [ServiceProviderAuthController::class, 'updatePushToken']);
     
     // Dashboard
     Route::get('/dashboard/stats', [ProviderDashboardController::class, 'getStats']);

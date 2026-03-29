@@ -57,7 +57,8 @@ class ServiceProvider extends Authenticatable
         'telebir_number',        
         'telebir_holder_name',   
         'preferred_payout_method',
-        'last_withdrawal_at'      
+        'last_withdrawal_at',
+        'expo_push_token'
     ];
 
     protected $hidden = [

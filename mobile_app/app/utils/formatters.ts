@@ -11,7 +11,8 @@ export const formatCurrency = (amount: number | string | undefined | null, curre
 /**
  * Format date to readable string
  */
-export const formatDate = (date: string | Date): string => {
+export const formatDate = (date: string | Date | undefined | null): string => {
+  if (!date) return '';
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -23,7 +24,8 @@ export const formatDate = (date: string | Date): string => {
 /**
  * Format time to readable string
  */
-export const formatTime = (time: string | Date): string => {
+export const formatTime = (time: string | Date | undefined | null): string => {
+  if (!time) return '';
   const t = typeof time === 'string' ? new Date(`2000-01-01T${time}`) : time;
   return t.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -34,7 +36,8 @@ export const formatTime = (time: string | Date): string => {
 /**
  * Format datetime to readable string
  */
-export const formatDateTime = (datetime: string | Date): string => {
+export const formatDateTime = (datetime: string | Date | undefined | null): string => {
+  if (!datetime) return '';
   const dt = typeof datetime === 'string' ? new Date(datetime) : datetime;
   return dt.toLocaleString('en-US', {
     year: 'numeric',
@@ -48,7 +51,8 @@ export const formatDateTime = (datetime: string | Date): string => {
 /**
  * Format time ago (e.g., "2 hours ago")
  */
-export const formatTimeAgo = (timestamp: string | Date): string => {
+export const formatTimeAgo = (timestamp: string | Date | undefined | null): string => {
+  if (!timestamp) return '';
   const now = new Date();
   const past = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   const diffMs = now.getTime() - past.getTime();

@@ -56,3 +56,19 @@ export const Colors = {
     info: '#5AC8FA20',
   },
 } as const;
+
+export const darkColors = {
+  ...Colors, // inherit base colors like primary, success, etc.
+  background: '#121212',
+  surface: '#1E1E1E',
+  text: {
+    primary: '#FFFFFF',
+    secondary: '#A0A0A5',
+    light: '#FFFFFF',
+    disabled: '#5C5C60',
+  },
+  border: '#38383A',
+  skeleton: '#2C2C2E',
+} as const;
+
+export type ThemeColors = typeof Colors | typeof darkColors;

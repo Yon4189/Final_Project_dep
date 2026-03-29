@@ -62,7 +62,18 @@ class ProviderTrackingController extends Controller
             'heading' => $request->heading,
             'tracked_at' => now()
         ]);
-        Log::info('Tracking saved?', ['tracking' => $tracking ? 'yes' : 'no', 'id' => $tracking->trackingID ?? null]);
+        
+        // Broadcast location update
+        event(new \App\Events\ProviderLocationUpdated(
+            $request->bookingID,
+            $request->latitude,
+            $request->longitude,
+            $request->speed,
+            $request->heading,
+            $tracking->tracked_at->toDateTimeString()
+        ));
+
+        Log::info('Tracking saved and broadcasted', ['tracking' => $tracking ? 'yes' : 'no', 'id' => $tracking->trackingID ?? null]);
         $this->checkProximityAndNotify($tracking, $booking);
         // Clean up old tracking points (keep only last 100 per booking)
         ProviderTracking::where('bookingID', $request->bookingID)

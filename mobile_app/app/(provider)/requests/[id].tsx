@@ -25,8 +25,12 @@ import {
 import Map from "../../../components/Map/index";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderQueries, useProviderRequest } from "../../../hooks/useProviderQueries";
+import { useConfirmCompletion } from '../../../hooks/useCustomerQueries';
+import { PriceText } from '../../../components/common/PriceText';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from "@/app/services/api";
 import * as pusherClient from "@/app/services/pusherClient";
+import { useTracking } from "@/hooks/useTracking";
 
 const STATUS_COLORS = {
   pending: Colors.warning,
@@ -87,6 +91,9 @@ export default function RequestDetails() {
     startService,
     completeService,
   } = useProviderQueries();
+  
+  const isActiveStatus = request && ['accepted', 'confirmed', 'arrived', 'in_progress'].includes(request.status);
+  const { isTracking } = useTracking(id as string, !!isActiveStatus);
 
   // Use the data from useProviderRequest
   useEffect(() => {
@@ -190,13 +197,11 @@ export default function RequestDetails() {
 
   const handleOpenMaps = () => {
     if (request?.customerLatitude && request?.customerLongitude) {
-      const scheme = Platform.select({
-        ios: "maps:0,0?q=",
-        android: "geo:0,0?q=",
-      });
+      const lat = request.customerLatitude;
+      const lng = request.customerLongitude;
       const url = Platform.select({
-        ios: `${scheme}${request.customerLatitude},${request.customerLongitude}`,
-        android: `${scheme}${request.customerLatitude},${request.customerLongitude}`,
+        ios: `maps://app?daddr=${lat},${lng}&dirflg=d`,
+        android: `google.navigation:q=${lat},${lng}&mode=d`,
       });
       if (url) {
         Linking.openURL(url);
@@ -375,6 +380,12 @@ export default function RequestDetails() {
             {request?.status?.replace("_", " ").toUpperCase()}
           </Text>
         </View>
+        {isTracking && (
+          <View style={styles.trackingIndicator}>
+            <View style={styles.trackingDot} />
+            <Text style={styles.trackingText}>Live Tracking Active</Text>
+          </View>
+        )}
         <Text style={styles.requestNumber}>#{request?.requestNumber}</Text>
       </View>
     </View>
@@ -556,7 +567,7 @@ export default function RequestDetails() {
           onPress={handleOpenMaps}
         >
           <Ionicons name="navigate" size={20} color={Colors.surface} />
-          <Text style={styles.directionsButtonText}>Get Directions</Text>
+          <Text style={styles.directionsButtonText}>Start Navigation</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -568,25 +579,19 @@ export default function RequestDetails() {
       <View style={styles.paymentCard}>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Estimated Price</Text>
-          <Text style={styles.priceValue}>
-            {formatCurrency(request?.estimatedPrice || 0)}
-          </Text>
+          <PriceText style={styles.priceValue} amount={request?.estimatedPrice || 0} />
         </View>
 
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Service Fee</Text>
-          <Text style={styles.priceValue}>
-            -{formatCurrency((request?.estimatedPrice || 0) * 0.05)}
-          </Text>
+          <PriceText style={styles.priceValue} amount={(request?.estimatedPrice || 0) * 0.05} />
         </View>
 
         <View style={styles.priceDivider} />
 
         <View style={styles.priceRow}>
           <Text style={styles.totalLabel}>Your Earnings</Text>
-          <Text style={styles.totalValue}>
-            {formatCurrency((request?.estimatedPrice || 0) * 0.95)}
-          </Text>
+          <PriceText style={styles.totalValue} amount={(request?.estimatedPrice || 0) * 0.95} />
         </View>
 
         {(request?.status === "completed" || request?.status === "waiting_customer_confirmation") && (
@@ -1077,8 +1082,31 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statusText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
+    marginLeft: 6,
+  },
+  trackingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.success + '15',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.success + '30',
+  },
+  trackingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.success,
+    marginRight: 6,
+  },
+  trackingText: {
+    fontSize: 11,
+    color: Colors.success,
+    fontWeight: '600',
   },
   requestNumber: {
     fontSize: 12,
