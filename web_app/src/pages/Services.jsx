@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import {
   Plus, Edit2, Trash2, X, CheckCircle, Loader2,
@@ -8,6 +9,7 @@ import {
 import api from '../api/axios';
 
 const Services = () => {
+  const queryClient = useQueryClient();
   const location = useLocation();
 
   const getActiveTabFromPath = () => {
@@ -16,15 +18,53 @@ const Services = () => {
     return 'categories';
   };
 
-  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
-  const [categories, setCategories] = useState([]);
-  const [services, setServices] = useState([]);
-  const [providers, setProviders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dbStatus, setDbStatus] = useState('checking'); // 'checking', 'connected', 'disconnected'
-  const [apiError, setApiError] = useState(null);
+  const activeTab = getActiveTabFromPath();
 
+  // 🚀 HELPER: Extract array from API response (flexible)
+  const extractData = (response, expectedKey = null) => {
+    if (!response || !response.data) return [];
+    if (Array.isArray(response.data)) return response.data;
+
+    const obj = response.data.data ? response.data.data : response.data;
+    if (Array.isArray(obj)) return obj;
+
+    if (expectedKey && Array.isArray(obj[expectedKey])) return obj[expectedKey];
+    
+    // Fallback search
+    for (let key in obj) {
+      if (Array.isArray(obj[key])) return obj[key];
+    }
+    return [];
+  };
+
+  // 1. Data Fetching with TanStack Query
+  const { 
+    data: { categories = [], services = [], providers = [] } = {}, 
+    isLoading, 
+    error: apiError,
+    refetch 
+  } = useQuery({
+    queryKey: ['servicesSystem'],
+    queryFn: async () => {
+      const [catRes, svcRes, provRes] = await Promise.allSettled([
+        api.get('/admin/categories'),
+        api.get('/admin/services'),
+        api.get('/admin/providers')
+      ]);
+
+      const categories = catRes.status === 'fulfilled' ? extractData(catRes.value, 'categories') : [];
+      const services = svcRes.status === 'fulfilled' ? extractData(svcRes.value, 'services') : [];
+      const providers = provRes.status === 'fulfilled' ? extractData(provRes.value, 'providers') : [];
+
+      return { categories, services, providers };
+    },
+    staleTime: 60000,
+    refetchInterval: 30000,
+  });
+
+  const dbStatus = apiError ? 'disconnected' : (isLoading ? 'checking' : 'connected');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -36,97 +76,15 @@ const Services = () => {
   const [formData, setFormData] = useState({ name: '', description: '', status: 'Active' });
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 🚀 HELPER: Extract array from API response (flexible)
-  const extractData = (response, expectedKey = null) => {
-    console.log('API Response:', response);
-
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
-
-    const obj = response.data || {};
-    if (Array.isArray(obj.data)) return obj.data;
-    if (Array.isArray(obj.categories)) return obj.categories;
-    if (Array.isArray(obj.services)) return obj.services;
-    if (Array.isArray(obj.providers)) return obj.providers;
-    if (expectedKey && Array.isArray(obj[expectedKey])) return obj[expectedKey];
-
-    for (let key in obj) {
-      if (Array.isArray(obj[key])) {
-        console.warn(`Using fallback array from key: ${key}`);
-        return obj[key];
-      }
-    }
-
-    return [];
-  };
-
   const triggerToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
   };
 
-  // FETCH DATA (Categories, Services, and Providers)
-  const fetchData = async () => {
-    setIsLoading(true);
-    setApiError(null);
-    try {
-      const [catRes, svcRes, provRes] = await Promise.allSettled([
-        api.get('/admin/categories'),
-        api.get('/admin/services'),
-        api.get('/admin/providers')
-      ]);
-
-      if (catRes.status === 'fulfilled') {
-        const categoriesData = extractData(catRes.value, 'categories');
-        setCategories(categoriesData);
-      } else {
-        console.error('Categories fetch failed:', catRes.reason);
-      }
-
-      if (svcRes.status === 'fulfilled') {
-        const servicesData = extractData(svcRes.value, 'services');
-        setServices(servicesData);
-      } else {
-        console.error('Services fetch failed:', svcRes.reason);
-      }
-
-      if (provRes.status === 'fulfilled') {
-        const providersData = extractData(provRes.value, 'providers');
-        setProviders(providersData);
-      } else {
-        console.error('Providers fetch failed:', provRes.reason);
-      }
-
-      // Determine overall database connectivity
-      if (catRes.status === 'fulfilled' || svcRes.status === 'fulfilled' || provRes.status === 'fulfilled') {
-        setDbStatus('connected');
-      } else {
-        setDbStatus('disconnected');
-        setApiError({ message: 'All data fetches failed' });
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      setDbStatus('disconnected');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Update activeTab when route changes
-  useEffect(() => {
-    setActiveTab(getActiveTabFromPath());
-    setCurrentPage(1);
-    setSearchQuery('');
-  }, [location.pathname]);
-
+  // Reset page when tab or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [activeTab, searchQuery]);
 
   // Helper to get category name by ID
   const getCategoryName = (catagoryID) => {
@@ -175,7 +133,8 @@ const Services = () => {
         triggerToast('New Category added!');
       }
       setIsModalOpen(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
     } catch (err) {
       const msg = err.response?.data?.message || 'Error saving data';
       triggerToast(msg, 'error');
@@ -199,7 +158,8 @@ const Services = () => {
       await api.delete(`/admin/categories/${deleteConfirm.id}`);
       triggerToast('Deleted successfully');
       setDeleteConfirm({ show: false, id: null, name: '' });
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
     } catch (err) {
       const msg = err.response?.data?.message || 'Cannot delete due to database constraints.';
       triggerToast(msg, 'error');
@@ -261,7 +221,7 @@ const Services = () => {
 
           {/* Refresh Button */}
           <button
-            onClick={fetchData}
+            onClick={() => refetch()}
             className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm"
           >
             <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
@@ -301,7 +261,7 @@ const Services = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[450px] flex flex-col">
-        <div className="overflow-x-auto flex-1">
+        <div className="overflow-x-auto flex-1 hidden lg:block">
           {isLoading ? (
             <div className="p-40 text-center flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-blue-500" size={40} />
@@ -314,7 +274,7 @@ const Services = () => {
                 {apiError ? `Error: ${apiError.message}` : 'Database connection failed'}
               </p>
               <button
-                onClick={fetchData}
+                onClick={() => refetch()}
                 className="mt-2 text-xs bg-slate-100 px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition"
               >
                 Retry
@@ -396,6 +356,60 @@ const Services = () => {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden p-4 space-y-4">
+          {isLoading ? (
+            <div className="p-10 text-center flex flex-col items-center gap-3">
+              <Loader2 className="animate-spin text-blue-500" size={32} />
+              <p className="font-black text-slate-400 uppercase text-[10px]">Loading...</p>
+            </div>
+          ) : currentItems.length > 0 ? (
+            currentItems.map((item) => (
+              <div key={activeTab === 'categories' ? item.catagoryID : item.serviceID} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[9px] font-black text-slate-300">#{activeTab === 'categories' ? item.catagoryID : item.serviceID}</p>
+                    <p className="font-black text-slate-800 text-base leading-tight">
+                      {activeTab === 'categories' ? item.name : item.title}
+                    </p>
+                  </div>
+                  {activeTab === 'categories' && (
+                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border ${item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                      {item.status || 'Active'}
+                    </span>
+                  )}
+                </div>
+
+                {activeTab === 'services' && (
+                  <div className="flex items-center justify-between">
+                    <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase italic border border-blue-100">
+                      {getCategoryName(item.catagoryID)}
+                    </span>
+                    <span className="font-black text-slate-800 font-mono text-sm">{item.estimatedPrice} ETB</span>
+                  </div>
+                )}
+
+                {activeTab === 'categories' && item.description && (
+                  <p className="text-xs text-slate-500 italic leading-relaxed line-clamp-2">{item.description}</p>
+                )}
+
+                {activeTab === 'categories' && (
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={() => handleOpenModal(item)} className="flex-1 bg-amber-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 shadow-lg shadow-amber-100">
+                      <Edit2 size={14} /> Edit
+                    </button>
+                    <button onClick={() => handleDeleteClick(item)} className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 shadow-lg shadow-red-100">
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="py-10 text-center text-[10px] font-black text-slate-400 uppercase">No records found.</div>
           )}
         </div>
 

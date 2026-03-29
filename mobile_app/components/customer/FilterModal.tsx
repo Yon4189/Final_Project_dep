@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
@@ -101,7 +103,10 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContent}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filter Providers</Text>
             <TouchableOpacity onPress={onClose}>
@@ -217,7 +222,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               style={styles.applyButton}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

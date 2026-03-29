@@ -295,6 +295,7 @@ export type BookingStatus =
   | 'accepted'
   | 'confirmed'
   | 'in_progress'
+  | 'waiting_customer_confirmation'
   | 'completed'
   | 'cancelled'
   | 'disputed'
@@ -389,6 +390,7 @@ export interface ServiceRequest {
   cancellationReason?: string;
 
   // Relations
+  customer?: User;
   review?: Review;
 }
 
@@ -468,6 +470,7 @@ export interface Review {
   criteriaRatings?: ReviewCriteria;
   isRecommended: boolean;
   isAnonymous: boolean;
+  is_anonymous?: boolean;
   professionalResponse?: string;
   respondedAt?: Timestamp;
   isPublic: boolean;
@@ -551,7 +554,7 @@ export interface SearchFilters {
   };
   verifiedOnly?: boolean;
   availableNow?: boolean;
-  sortBy: 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews';
+  sortBy?: 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews';
   page?: number;
   perPage?: number;
 }
@@ -762,6 +765,7 @@ export const BookingStatuses: Record<BookingStatus, { label: string; color: stri
   accepted: { label: 'Accepted', color: '#3B82F6', icon: 'checkmark-circle-outline' },
   confirmed: { label: 'Confirmed', color: '#3B82F6', icon: 'checkmark-circle-outline' },
   in_progress: { label: 'In Progress', color: '#8B5CF6', icon: 'construct-outline' },
+  waiting_customer_confirmation: { label: 'Waiting Confirmation', color: '#3B82F6', icon: 'shield-checkmark-outline' },
   completed: { label: 'Completed', color: '#10B981', icon: 'checkmark-done-outline' },
   cancelled: { label: 'Cancelled', color: '#EF4444', icon: 'close-circle-outline' },
   disputed: { label: 'Disputed', color: '#F59E0B', icon: 'alert-circle-outline' },

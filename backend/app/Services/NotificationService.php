@@ -7,6 +7,7 @@ use App\Models\Notification;
 use App\Models\Customer;
 use App\Models\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use App\Events\BookingUpdated;
 
 class NotificationService
 {
@@ -104,8 +105,12 @@ class NotificationService
             $notification = Notification::create($data);
             Log::info('Notification created', ['id' => $notification->notificationID]);
             
-            // Here you would trigger push notification if needed
-            $this->sendPushNotification($notification);
+            // Trigger WebSocket broadcast
+            event(new BookingUpdated($notification));
+
+            // Mark as broadcasted (optional metadata)
+            $notification->broadcasted = true;
+            $notification->save();
             
             return $notification;
         } catch (\Exception $e) {

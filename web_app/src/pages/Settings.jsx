@@ -36,10 +36,10 @@ const Settings = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">Platform Settings</h1>
-          <p className="text-slate-500 text-sm">Control system-wide behavior and branding.</p>
+          <h1 className="text-2xl font-black text-slate-900 italic uppercase">Platform Settings</h1>
+          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest italic mt-1">Control system-wide behavior and branding.</p>
         </div>
       </div>
 

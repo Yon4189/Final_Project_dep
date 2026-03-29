@@ -12,11 +12,12 @@ interface InitializePaymentParams {
   bookingId: string;
   paymentMethod?: 'chapa' | 'cash';
   description?: string;
+  return_url?: string;
 }
 
 interface PaymentResponse {
-  checkoutUrl: string;
-  transactionId: string;
+  checkout_url: string;
+  payment_id: string;
   tx_ref: string;
 }
 
@@ -45,6 +46,7 @@ class PaymentService {
         booking_id: params.bookingId,
         payment_method: params.paymentMethod || 'chapa',
         description: params.description || `Payment for booking #${params.bookingId}`,
+        return_url: params.return_url,
       });
 
       if (!response.success || !response.data) {
@@ -151,7 +153,7 @@ class PaymentService {
   }
 
   async verifyChapaPayment(txRef: string): Promise<any> {
-    return api.get<any>(`${this.BASE_PATH}/verify/${txRef}`);
+    return api.get<any>(`${this.BASE_PATH}/verify?tx_ref=${txRef}`);
   }
 
   async initiateMobileMoneyPayment(data: any): Promise<any> {

@@ -76,8 +76,9 @@ export interface PaymentIntent {
   amount: number;
   currency: string;
   status: "pending" | "processing" | "completed" | "failed";
-  checkoutUrl: string;
-  transactionId: string;
+  checkout_url: string;
+  payment_id: string;
+  tx_ref: string;
   expiresAt: string;
 }
 
@@ -135,9 +136,12 @@ export interface WalletBalance {
 
 export interface PaymentVerificationResult {
   status: "success" | "failed" | "pending";
-  transactionId: string;
+  payment_id: string;
+  tx_ref: string;
   amount: number;
-  bookingId?: string;
+  booking_id?: string;
+  is_successful?: boolean;
+  message?: string;
 }
 
 export interface MobileMoneyInitiationResult {
@@ -159,8 +163,8 @@ export interface PaymentCallbackResult {
 
 export interface BookingPaymentResult {
   success: boolean;
-  transactionId?: string;
-  checkoutUrl?: string;
+  payment_id?: string;
+  checkout_url?: string;
   message?: string;
 }
 

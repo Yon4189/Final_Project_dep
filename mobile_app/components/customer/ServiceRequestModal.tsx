@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -355,6 +356,10 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         scheduledDate: scheduledDate,
         agreed_price: servicePrice,
         service_address: address,
+        full_address: address,
+        location_source: userLocation?.latitude ? 'gps' : 'new',
+        latitude: userLocation?.latitude || 0, // Fallback to 0 if missing but required
+        longitude: userLocation?.longitude || 0,
         notes: description,
       });
 
@@ -567,7 +572,10 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContent}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Request Service</Text>
             <TouchableOpacity onPress={onClose}>
@@ -749,7 +757,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               style={styles.confirmButton}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

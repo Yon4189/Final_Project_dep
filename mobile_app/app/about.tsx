@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
 import { api } from './services/api';
 import { Colors } from '@/app/constants/Colors';
 
@@ -297,16 +298,38 @@ export default function AboutScreen() {
         </TouchableOpacity>
 
         <View style={styles.socialLinks}>
-          <TouchableOpacity style={styles.socialButton}>
+          <TouchableOpacity 
+            style={styles.socialButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              console.log('Facebook pressed');
+              WebBrowser.openBrowserAsync('https://web.facebook.com/profile.php?id=100093903172015');
+            }}
+          >
             <Ionicons name="logo-facebook" size={24} color={Colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
-            <Ionicons name="logo-twitter" size={24} color={Colors.primary} />
+          <TouchableOpacity 
+            style={styles.socialButton}
+            activeOpacity={0.7}
+            onPress={() => WebBrowser.openBrowserAsync('https://t.me/yosibdu')}
+          >
+            <Ionicons name="paper-plane" size={24} color={Colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
+          <TouchableOpacity 
+            style={styles.socialButton}
+            activeOpacity={0.7}
+            onPress={() => WebBrowser.openBrowserAsync('https://www.instagram.com/yoseph3856/')}
+          >
             <Ionicons name="logo-instagram" size={24} color={Colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
+          <TouchableOpacity 
+            style={styles.socialButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              console.log('LinkedIn pressed');
+              WebBrowser.openBrowserAsync('https://www.linkedin.com/in/yosef-tilahun-238740371/');
+            }}
+          >
             <Ionicons name="logo-linkedin" size={24} color={Colors.primary} />
           </TouchableOpacity>
         </View>

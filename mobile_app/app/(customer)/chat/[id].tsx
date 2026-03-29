@@ -23,9 +23,11 @@ import { api } from '@/app/services/api';
 import { API_BASE_URL } from '@/app/config/api';
 import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
+import { subscribeToConversation, unsubscribeFromConversation } from '@/app/services/pusherClient';
 
 interface Message {
-  id: string;
+  id: string;               // unique client-side key (either "temp_..." or "msg_<id>")
+  messageID?: number;       // backend primary key (if real)
   message: string;
   sender_type: 'customer' | 'provider';
   sender_id: number;
@@ -53,21 +55,16 @@ interface ProviderInfo {
   profileImage?: string;
   email?: string;
   phone?: string;
-  phoneNumber?: string; // Add this for compatibility
-}
-
-interface Sender {
-  fullname: string;
-  profileImage?: string;
+  phoneNumber?: string;
 }
 
 export default function ChatScreen() {
   const router = useRouter();
   const { id: providerId } = useLocalSearchParams<{ id: string }>();
   const flatListRef = useRef<FlatList>(null);
-  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const appState = useRef(AppState.currentState);
   const isMounted = useRef(true);
+  const wsSubscribed = useRef(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -75,124 +72,132 @@ export default function ChatScreen() {
   const [isSending, setIsSending] = useState(false);
   const [provider, setProvider] = useState<ProviderInfo | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [conversationError, setConversationError] = useState(false);
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  // Load data when screen comes into focus
+  // Normalize a backend message: give it a stable client-side id.
+  const normalizeMessage = (m: any): Message => {
+    // If the backend already sent an 'id' field, use it; otherwise use messageID.
+    const rawId = m.id ?? m.messageID;
+    // Real messages get prefix 'msg_', optimistic ones already have 'temp_'
+    const id = rawId ? `msg_${rawId}` : `temp_${Date.now()}_${Math.random()}`;
+    return {
+      ...m,
+      id,
+      status: m.status ?? 'sent',
+    };
+  };
+
+  // Optional: detect duplicate keys (for debugging)
+  useEffect(() => {
+    const ids = messages.map(m => m.id);
+    const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+    if (duplicates.length > 0) {
+      console.warn('Duplicate message IDs:', [...new Set(duplicates)]);
+    }
+  }, [messages]);
+
   useFocusEffect(
     useCallback(() => {
       loadInitialData();
-
       return () => {
-        // Cleanup when screen loses focus
-        stopPolling();
         isMounted.current = false;
       };
     }, [providerId])
   );
 
+  // Subscribe to WebSocket once we have a real conversationID.
   useEffect(() => {
-    isMounted.current = true;
+    if (!conversation?.conversationID || wsSubscribed.current) return;
+    wsSubscribed.current = true;
 
-    // Start polling for new messages
-    startPolling();
+    subscribeToConversation(conversation.conversationID, (data: any) => {
+      if (!isMounted.current) return;
+      const incoming = normalizeMessage(data);
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === incoming.id);
+        if (exists) return prev;
+        return [...prev, incoming];
+      });
+      flatListRef.current?.scrollToEnd({ animated: true });
+      // Mark as read silently
+      markMessagesAsRead(conversation!.conversationID).catch(() => {});
+    });
 
-    // App state change listener
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        // App came to foreground, refresh messages
+    // Fallback AppState refresh when foregrounded
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
         refreshMessages();
       }
-      appState.current = nextAppState;
+      appState.current = nextState;
     });
 
     return () => {
-      stopPolling();
       subscription.remove();
-      isMounted.current = false;
+      if (conversation?.conversationID) {
+        unsubscribeFromConversation(conversation.conversationID);
+      }
+      wsSubscribed.current = false;
     };
   }, [conversation?.conversationID]);
-
-  const startPolling = () => {
-    // Poll for new messages every 3 seconds (faster for better UX)
-    if (pollingInterval.current) clearInterval(pollingInterval.current);
-
-    pollingInterval.current = setInterval(() => {
-      if (conversation?.conversationID && isMounted.current) {
-        fetchNewMessages();
-      }
-    }, 3000);
-  };
-
-  const stopPolling = () => {
-    if (pollingInterval.current) {
-      clearInterval(pollingInterval.current);
-      pollingInterval.current = null;
-    }
-  };
 
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
-
-      // Load customer info from secure store
       const userDataStr = await SecureStore.getItemAsync('user_data');
       if (userDataStr) {
         const userData = JSON.parse(userDataStr);
         setCustomerId(userData.customerID || userData.id);
       }
 
-      // Fetch provider details first (to show info while conversation loads)
+      // Guard against 'index' or invalid ID
+      if (!providerId || providerId === 'index' || isNaN(parseInt(providerId))) {
+        console.log('ChatScreen - Invalid providerId, skipping data load:', providerId);
+        setIsLoading(false);
+        return;
+      }
+
       await fetchProviderDetails();
-
-      // Then get or create conversation
       await getOrCreateConversation();
-
     } catch (error) {
       console.error('Error loading chat data:', error);
       if (isMounted.current) {
         Alert.alert('Error', 'Failed to load chat. Please try again.');
       }
     } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
+      if (isMounted.current) setIsLoading(false);
     }
   };
 
   const getOrCreateConversation = async () => {
     try {
-      // Fix: Use the correct endpoint from your routes
+      setConversationError(false);
       const response = await api.post<any>('/chat/conversations', {
         providerID: parseInt(providerId)
       });
-
       if (response.success) {
         const conversationData = response.data.conversation;
-        const initialMessages = response.data.messages || [];
-
+        const initialMessages = (response.data.messages || []).map(normalizeMessage);
         if (isMounted.current) {
           setConversation(conversationData);
-          setMessages([...initialMessages].reverse());
-
-          // Load messages for this conversation if not returned here
+          setMessages(initialMessages.reverse()); // backend returns newest first
           if (!initialMessages.length && conversationData.conversationID) {
             await fetchMessages(conversationData.conversationID);
           }
         }
       } else {
         if (isMounted.current) {
+          setConversationError(true);
           Alert.alert('Error', response.message || 'Failed to start conversation');
         }
       }
     } catch (error: any) {
       console.error('Error creating conversation:', error);
-
       if (!isMounted.current) return;
-
-      // Handle specific error cases
+      setConversationError(true);
       if (error.response?.status === 403) {
         Alert.alert('Access Denied', 'You do not have permission to chat with this provider');
       } else if (error.response?.status === 422) {
@@ -204,8 +209,8 @@ export default function ChatScreen() {
   };
 
   const fetchProviderDetails = async () => {
+    if (!providerId || providerId === 'index' || isNaN(parseInt(providerId))) return;
     try {
-      // Fix: Use correct endpoint from your routes
       const response = await api.get<any>(`/customer/providers/${providerId}`);
       if (response.success && response.data) {
         if (isMounted.current) {
@@ -215,7 +220,6 @@ export default function ChatScreen() {
             businessName: response.data.businessName,
             profileImage: response.data.profileImage || response.data.profilePicture,
           });
-
           if (response.data.profileImage || response.data.profilePicture) {
             const pic = response.data.profileImage || response.data.profilePicture;
             const fullPic = pic.startsWith('http')
@@ -232,33 +236,32 @@ export default function ChatScreen() {
 
   const fetchMessages = async (conversationId: number, pageNum: number = 1) => {
     try {
-      // Fix: The endpoint is /chat/conversations/{id} which returns { conversation, messages }
       const response = await api.get<any>(`/chat/conversations/${conversationId}?page=${pageNum}`);
-
       if (response.success && response.data?.messages?.data) {
         if (!isMounted.current) return;
 
-        const newMessages = response.data.messages.data;
-        // Backend returns DESC (newest first), reverse it for FlatList
+        const newMessages: Message[] = response.data.messages.data.map(normalizeMessage);
+        // Backend returns DESC (newest first). We store in ASC order (oldest first) for FlatList with inverted={false}
         const reversedNewMessages = [...newMessages].reverse();
 
         if (pageNum === 1) {
           setMessages(reversedNewMessages);
         } else {
-          setMessages(prev => [...reversedNewMessages, ...prev]);
+          // Append to the beginning (older messages) with deduplication
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const uniqueNew = reversedNewMessages.filter(m => !existingIds.has(m.id));
+            return [...uniqueNew, ...prev]; // older messages first
+          });
         }
 
         setHasMore(response.data.messages.current_page < response.data.messages.last_page);
         setPage(pageNum);
 
-        // Mark messages as read
         await markMessagesAsRead(conversationId);
 
-        // Scroll to bottom on first load
         if (pageNum === 1 && newMessages.length > 0) {
-          setTimeout(() => {
-            flatListRef.current?.scrollToEnd({ animated: false });
-          }, 200);
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 200);
         }
       }
     } catch (error) {
@@ -268,30 +271,23 @@ export default function ChatScreen() {
 
   const fetchNewMessages = async () => {
     if (!conversation?.conversationID || !isMounted.current) return;
-
     try {
-      // Fix: Use correct endpoint
-      const response = await api.get<any>(`/chat/conversations/${conversation.conversationID}?page=1&limit=20`);
-
+      const response = await api.get<any>(`/chat/conversations/${conversation.conversationID}?page=1`);
       if (response.success && response.data?.messages?.data && isMounted.current) {
-        const latestMessages = response.data.messages.data;
-        const reversedLatest = [...latestMessages].reverse();
+        const latestMessages: Message[] = response.data.messages.data.map(normalizeMessage);
+        const reversedLatest = [...latestMessages].reverse(); // now oldest to newest
 
-        // Check for new messages
-        if (latestMessages.length > messages.length) {
-          // Find messages that are not in current state
-          const existingIds = new Set(messages.map(m => m.id));
-          const newMessages = reversedLatest.filter((m: Message) => !existingIds.has(m.id));
+        let addedCount = 0;
+        setMessages(prev => {
+          const existingIds = new Set(prev.map(m => m.id));
+          const trulyNew = reversedLatest.filter(m => !existingIds.has(m.id));
+          addedCount = trulyNew.length;
+          return trulyNew.length > 0 ? [...prev, ...trulyNew] : prev;
+        });
 
-          if (newMessages.length > 0) {
-            setMessages(prev => [...prev, ...newMessages]);
-
-            // Mark new messages as read
-            await markMessagesAsRead(conversation.conversationID);
-
-            // Scroll to bottom if user is near bottom
-            flatListRef.current?.scrollToEnd({ animated: true });
-          }
+        if (addedCount > 0) {
+          await markMessagesAsRead(conversation.conversationID);
+          flatListRef.current?.scrollToEnd({ animated: true });
         }
       }
     } catch (error) {
@@ -301,7 +297,6 @@ export default function ChatScreen() {
 
   const markMessagesAsRead = async (conversationId: number) => {
     try {
-      // Fix: Use correct endpoint
       await api.post<any>(`/chat/conversations/${conversationId}/read`);
     } catch (error) {
       console.error('Error marking messages as read:', error);
@@ -310,12 +305,9 @@ export default function ChatScreen() {
 
   const refreshMessages = async () => {
     if (!conversation?.conversationID || !isMounted.current) return;
-
     setRefreshing(true);
     await fetchMessages(conversation.conversationID, 1);
-    if (isMounted.current) {
-      setRefreshing(false);
-    }
+    if (isMounted.current) setRefreshing(false);
   };
 
   const loadMoreMessages = () => {
@@ -325,15 +317,19 @@ export default function ChatScreen() {
   };
 
   const handleSend = async () => {
-    if (!inputText.trim() || isSending || !conversation?.conversationID || !isMounted.current) return;
+    if (!inputText.trim() || isSending || !isMounted.current) return;
+    if (!conversation?.conversationID) {
+      Alert.alert('Not Ready', 'The conversation is still loading. Please wait a moment and try again.');
+      return;
+    }
 
     const messageText = inputText.trim();
     setInputText('');
     setIsSending(true);
 
-    // Create optimistic message
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
     const optimisticMessage: Message = {
-      id: `temp_${Date.now()}`,
+      id: tempId,
       message: messageText,
       sender_type: 'customer',
       sender_id: customerId || 0,
@@ -342,42 +338,30 @@ export default function ChatScreen() {
     };
 
     setMessages(prev => [...prev, optimisticMessage]);
-
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      // Fix: The endpoint is /chat/messages
-      const response = await api.post<any>(`/chat/messages`, {
+      const response = await api.post<any>('/chat/messages', {
         conversationID: conversation.conversationID,
         message: messageText,
       });
 
       if (response.success && response.data?.message && isMounted.current) {
-        // Replace optimistic message with real one
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === optimisticMessage.id
-              ? { ...response.data.message, status: 'sent' }
-              : msg
-          )
-        );
+        const realMessage = normalizeMessage(response.data.message);
+        realMessage.status = 'sent';
+        // Replace optimistic with real
+        setMessages(prev => prev.map(msg => (msg.id === tempId ? realMessage : msg)));
       } else {
-        // Remove optimistic message on failure
+        // Remove optimistic on failure
         if (isMounted.current) {
-          setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+          setMessages(prev => prev.filter(msg => msg.id !== tempId));
           Alert.alert('Error', 'Failed to send message. Please try again.');
         }
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
-
       if (isMounted.current) {
-        // Remove optimistic message on error
-        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
         if (error.response?.status === 403) {
           Alert.alert('Access Denied', 'You do not have permission to send messages in this conversation');
         } else {
@@ -385,21 +369,17 @@ export default function ChatScreen() {
         }
       }
     } finally {
-      if (isMounted.current) {
-        setIsSending(false);
-      }
+      if (isMounted.current) setIsSending(false);
     }
   };
 
-  // NEW: Handle phone call
+  // ... (handleCall, handleShare, handleViewProfile, handleViewBooking remain the same) ...
   const handleCall = () => {
     const phoneNumber = provider?.phone || provider?.phoneNumber;
-
     if (!phoneNumber) {
       Alert.alert('Info', 'Phone number not available for this provider');
       return;
     }
-
     Alert.alert(
       'Call Provider',
       `Call ${provider?.businessName || provider?.fullname} at ${phoneNumber}?`,
@@ -408,50 +388,33 @@ export default function ChatScreen() {
         {
           text: 'Call',
           onPress: () => {
-            const url = Platform.OS === 'android'
-              ? `tel:${phoneNumber}`
-              : `telprompt:${phoneNumber}`;
-            Linking.openURL(url).catch(() => {
-              Alert.alert('Error', 'Could not initiate call');
-            });
+            const url = Platform.OS === 'android' ? `tel:${phoneNumber}` : `telprompt:${phoneNumber}`;
+            Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not initiate call'));
           }
         },
       ]
     );
   };
 
-  // NEW: Handle share
   const handleShare = async () => {
     try {
       const providerName = provider?.businessName || provider?.fullname || 'this provider';
-
       const shareContent = {
         title: `Chat with ${providerName}`,
         message: `I'm discussing a service with ${providerName} on HomeLink. Join the conversation!`,
-        url: `homelink://chat/${providerId}`, // Deep link to this chat
+        url: `homelink://chat/${providerId}`,
       };
-
-      const result = await Share.share(shareContent);
-
-      if (result.action === Share.sharedAction) {
-        console.log('Content shared successfully');
-      }
+      await Share.share(shareContent);
     } catch (error) {
       console.error('Error sharing:', error);
       Alert.alert('Error', 'Could not share content');
     }
   };
 
-  // NEW: Handle view profile
-  const handleViewProfile = () => {
-    router.push(`/(customer)/provider/${providerId}`);
-  };
+  const handleViewProfile = () => router.push(`/(customer)/provider/${providerId}`);
 
-  // NEW: Handle booking details if exists
   const handleViewBooking = () => {
-    if (conversation?.bookingID) {
-      router.push(`/(customer)/booking/${conversation.bookingID}`);
-    }
+    if (conversation?.bookingID) router.push(`/(customer)/booking/${conversation.bookingID}`);
   };
 
   const formatTime = (timestamp: string) => {
@@ -464,14 +427,9 @@ export default function ChatScreen() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString();
-    }
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString();
   };
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
@@ -486,64 +444,28 @@ export default function ChatScreen() {
             <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
           </View>
         )}
-        <View
-          style={[
-            styles.messageContainer,
-            isCustomer ? styles.customerMessage : styles.providerMessage,
-          ]}
-        >
-          <View
-            style={[
-              styles.messageBubble,
-              isCustomer ? styles.customerBubble : styles.providerBubble,
-            ]}
-          >
-            <Text style={[
-              styles.messageText,
-              isCustomer ? styles.customerMessageText : styles.providerMessageText,
-            ]}>
+        <View style={[styles.messageContainer, isCustomer ? styles.customerMessage : styles.providerMessage]}>
+          <View style={[styles.messageBubble, isCustomer ? styles.customerBubble : styles.providerBubble]}>
+            <Text style={[styles.messageText, isCustomer ? styles.customerMessageText : styles.providerMessageText]}>
               {item.message}
             </Text>
             <View style={styles.messageFooter}>
-              <Text style={[
-                styles.timestamp,
-                isCustomer ? styles.customerTimestamp : styles.providerTimestamp,
-              ]}>
+              <Text style={[styles.timestamp, isCustomer ? styles.customerTimestamp : styles.providerTimestamp]}>
                 {formatTime(item.created_at)}
               </Text>
               {isCustomer && (
                 <>
                   {item.status === 'sending' && (
-                    <Ionicons
-                      name="time-outline"
-                      size={14}
-                      color={Colors.text.secondary}
-                      style={styles.statusIcon}
-                    />
+                    <Ionicons name="time-outline" size={14} color={Colors.text.secondary} style={styles.statusIcon} />
                   )}
                   {item.status === 'sent' && (
-                    <Ionicons
-                      name="checkmark"
-                      size={14}
-                      color={Colors.text.secondary}
-                      style={styles.statusIcon}
-                    />
+                    <Ionicons name="checkmark" size={14} color={Colors.text.secondary} style={styles.statusIcon} />
                   )}
                   {item.status === 'delivered' && (
-                    <Ionicons
-                      name="checkmark-done"
-                      size={14}
-                      color={Colors.text.secondary}
-                      style={styles.statusIcon}
-                    />
+                    <Ionicons name="checkmark-done" size={14} color={Colors.text.secondary} style={styles.statusIcon} />
                   )}
                   {item.status === 'read' && (
-                    <Ionicons
-                      name="checkmark-done"
-                      size={14}
-                      color={Colors.primary}
-                      style={styles.statusIcon}
-                    />
+                    <Ionicons name="checkmark-done" size={14} color={Colors.primary} style={styles.statusIcon} />
                   )}
                 </>
               )}
@@ -559,11 +481,7 @@ export default function ChatScreen() {
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
       </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.profileContainer}
-        onPress={handleViewProfile}
-      >
+      <TouchableOpacity style={styles.profileContainer} onPress={handleViewProfile}>
         <View style={styles.avatarContainer}>
           {provider?.profileImage ? (
             <Image source={{ uri: provider.profileImage }} style={styles.avatar} />
@@ -575,7 +493,6 @@ export default function ChatScreen() {
             </View>
           )}
         </View>
-
         <View style={styles.profileInfo}>
           <Text style={styles.providerName} numberOfLines={1}>
             {provider?.businessName || provider?.fullname || 'Loading...'}
@@ -589,44 +506,22 @@ export default function ChatScreen() {
           )}
         </View>
       </TouchableOpacity>
-
       <View style={styles.headerActions}>
-        {/* Phone Call Button - NEW */}
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={handleCall}
-          disabled={!provider?.phone}
-        >
-          <Ionicons
-            name="call-outline"
-            size={22}
-            color={provider?.phone ? Colors.primary : Colors.text.secondary}
-          />
+        <TouchableOpacity style={styles.headerButton} onPress={handleCall} disabled={!provider?.phone}>
+          <Ionicons name="call-outline" size={22} color={provider?.phone ? Colors.primary : Colors.text.secondary} />
         </TouchableOpacity>
-
-        {/* Share Button - NEW */}
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={handleShare}
-        >
+        <TouchableOpacity style={styles.headerButton} onPress={handleShare}>
           <Ionicons name="share-outline" size={22} color={Colors.primary} />
         </TouchableOpacity>
-
-        {/* More Options Button */}
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => {
-            // Create buttons array properly without null values
             const buttons = [
               { text: 'View Provider Profile', onPress: handleViewProfile },
               ...(conversation?.bookingID ? [{ text: 'View Booking Details', onPress: handleViewBooking }] : []),
               { text: 'Cancel', style: 'cancel' },
             ];
-
-            Alert.alert(
-              'Chat Options',
-              'Choose an option',
-            );
+            Alert.alert('Chat Options', 'Choose an option');
           }}
         >
           <Ionicons name="ellipsis-vertical" size={20} color={Colors.text.primary} />
@@ -647,29 +542,46 @@ export default function ChatScreen() {
     );
   }
 
+  if (conversationError) {
+    return (
+      <View style={styles.container}>
+        {renderHeader()}
+        <View style={styles.loadingContainer}>
+          <Ionicons name="cloud-offline-outline" size={64} color={Colors.text.secondary} />
+          <Text style={[styles.loadingText, { marginTop: 16 }]}>Could not load conversation</Text>
+          <TouchableOpacity
+            style={{ marginTop: 20, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+            onPress={() => { setConversationError(false); getOrCreateConversation(); }}
+          >
+            <Text style={{ color: 'white', fontWeight: '600' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      {renderHeader()}
-
       <FlatList
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.messagesList}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        ListHeaderComponent={renderHeader}
+        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         onRefresh={refreshMessages}
         refreshing={refreshing}
         onEndReached={loadMoreMessages}
         onEndReachedThreshold={0.3}
-        inverted={false}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       />
-
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -682,10 +594,7 @@ export default function ChatScreen() {
           editable={!isSending}
         />
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            (!inputText.trim() || isSending) && styles.sendButtonDisabled,
-          ]}
+          style={[styles.sendButton, (!inputText.trim() || isSending) && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={!inputText.trim() || isSending}
         >
@@ -700,11 +609,9 @@ export default function ChatScreen() {
   );
 }
 
+// Styles remain exactly the same as before – no changes needed.
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -720,79 +627,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 4,
-  },
-  profileContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  avatarPlaceholder: {
-    backgroundColor: Colors.primary + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  providerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  bookingInfo: {
-    fontSize: 12,
-    color: Colors.primary,
-    textDecorationLine: 'underline',
-  },
-  onlineStatus: {
-    fontSize: 12,
-    color: '#22c55e',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerButton: {
-    padding: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  messagesList: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    flexGrow: 1,
-  },
-  dateDivider: {
-    alignItems: 'center',
-    marginVertical: 16,
-  },
+  backButton: { padding: 8, marginRight: 4 },
+  profileContainer: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  avatarContainer: { position: 'relative', marginRight: 12 },
+  avatar: { width: 44, height: 44, borderRadius: 22 },
+  avatarPlaceholder: { backgroundColor: Colors.primary + '20', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 18, fontWeight: '600', color: Colors.primary },
+  profileInfo: { flex: 1 },
+  providerName: { fontSize: 16, fontWeight: '600', color: Colors.text.primary, marginBottom: 2 },
+  bookingInfo: { fontSize: 12, color: Colors.primary, textDecorationLine: 'underline' },
+  onlineStatus: { fontSize: 12, color: '#22c55e' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerButton: { padding: 8 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, fontSize: 14, color: Colors.text.secondary },
+  messagesList: { paddingHorizontal: 16, paddingVertical: 20, flexGrow: 1 },
+  dateDivider: { alignItems: 'center', marginVertical: 16 },
   dateText: {
     fontSize: 12,
     color: Colors.text.secondary,
@@ -802,16 +652,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  messageContainer: {
-    marginBottom: 12,
-    maxWidth: '80%',
-  },
-  customerMessage: {
-    alignSelf: 'flex-end',
-  },
-  providerMessage: {
-    alignSelf: 'flex-start',
-  },
+  messageContainer: { marginBottom: 12, maxWidth: '80%' },
+  customerMessage: { alignSelf: 'flex-end' },
+  providerMessage: { alignSelf: 'flex-start' },
   messageBubble: {
     borderRadius: 18,
     paddingHorizontal: 14,
@@ -822,45 +665,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
-  customerBubble: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
-  },
+  customerBubble: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
   providerBubble: {
     backgroundColor: Colors.surface,
     borderBottomLeftRadius: 4,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  customerMessageText: {
-    color: Colors.surface,
-  },
-  providerMessageText: {
-    color: Colors.text.primary,
-  },
-  messageFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  timestamp: {
-    fontSize: 10,
-    marginRight: 4,
-  },
-  customerTimestamp: {
-    color: Colors.surface + 'CC',
-  },
-  providerTimestamp: {
-    color: Colors.text.secondary,
-  },
-  statusIcon: {
-    marginLeft: 2,
-  },
+  messageText: { fontSize: 15, lineHeight: 20, marginBottom: 4 },
+  customerMessageText: { color: Colors.surface },
+  providerMessageText: { color: Colors.text.primary },
+  messageFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  timestamp: { fontSize: 10, marginRight: 4 },
+  customerTimestamp: { color: Colors.surface + 'CC' },
+  providerTimestamp: { color: Colors.text.secondary },
+  statusIcon: { marginLeft: 2 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -893,7 +712,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginBottom: 0,
   },
-  sendButtonDisabled: {
-    backgroundColor: Colors.border,
-  },
+  sendButtonDisabled: { backgroundColor: Colors.border },
 });

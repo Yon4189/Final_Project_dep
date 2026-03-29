@@ -175,6 +175,7 @@ export default function ProviderNotifications() {
         }
         break;
       case 'payment_received':
+      case 'payment_released':
       case 'withdrawal':
         router.push('/(provider)/earnings');
         break;
@@ -182,6 +183,8 @@ export default function ProviderNotifications() {
         router.push('/(provider)/reviews');
         break;
       case 'system':
+      case 'provider_approved':
+      case 'provider_rejected':
         router.push('/(provider)/profile');
         break;
       default:
@@ -207,6 +210,7 @@ export default function ProviderNotifications() {
       case 'booking_completed':
         return <Ionicons name="briefcase" size={iconSize} color={iconColor} />;
       case 'payment_received':
+      case 'payment_released':
         return <Ionicons name="wallet" size={iconSize} color={iconColor} />;
       case 'withdrawal':
         return <Ionicons name="cash" size={iconSize} color={iconColor} />;
@@ -216,6 +220,10 @@ export default function ProviderNotifications() {
         return <Ionicons name="alarm" size={iconSize} color={iconColor} />;
       case 'system':
         return <Ionicons name="information-circle" size={iconSize} color={iconColor} />;
+      case 'provider_approved':
+        return <Ionicons name="ribbon" size={iconSize} color={Colors.success} />;
+      case 'provider_rejected':
+        return <Ionicons name="alert-circle" size={iconSize} color={Colors.error} />;
       default:
         return <Ionicons name="notifications" size={iconSize} color={iconColor} />;
     }

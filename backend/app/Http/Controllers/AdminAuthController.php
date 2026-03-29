@@ -136,7 +136,7 @@ class AdminAuthController extends Authenticatable
     /**
      * 4. Provider Verification Action (With Email)
      */
-    public function verifyProvider(Request $request, $id)
+    public function verifyProvider(Request $request, $id, \App\Services\NotificationService $notificationService)
     {
         // 1. Validate incoming request
         $request->validate([
@@ -166,6 +166,32 @@ class AdminAuthController extends Authenticatable
             $provider->verification_reason = $request->verification_reason;
         }
         $provider->save();
+
+        // Send In-App Notification using the injected service
+        $title = "";
+        $message = "";
+        $type = "";
+
+        if ($status === 'approved') {
+            $type = \App\Services\NotificationService::TYPE_PROVIDER_APPROVED;
+            $title = "Account Approved! 🎉";
+            $message = "Congratulations! Your provider account has been approved. You can now start receiving service requests.";
+        } elseif ($status === 'rejected') {
+            $type = \App\Services\NotificationService::TYPE_PROVIDER_REJECTED;
+            $title = "Account Update";
+            $message = "Your application was rejected. Reason: " . ($request->verification_reason ?? "The provided documents were not clear or valid.");
+        } elseif ($status === 'suspended') {
+            $type = \App\Services\NotificationService::TYPE_PROVIDER_REJECTED; // Or a specific suspended type if added
+            $title = "Account Suspended";
+            $message = "Your account has been suspended for further verification. Reason: " . ($request->verification_reason ?? "Administrative decision.");
+        }
+
+        if ($type) {
+            $notificationService->toProvider($provider->providerID, $type, $title, $message, [
+                'status' => $provider->status,
+                'reason' => $request->verification_reason
+            ]);
+        }
 
         // 3.5 Mark registration notifications as seen
         Notification::where('type', \App\Services\NotificationService::TYPE_NEW_PROVIDER_REGISTRATION)
@@ -406,15 +432,24 @@ class AdminAuthController extends Authenticatable
                 ->get()
                 ->map(function($b) {
                     return [
-                        'id' => $b->bookingID,
+                        // Old keys for safety
                         'customer' => $b->customer->fullname ?? 'Unknown',
                         'provider' => $b->provider->fullname ?? 'Unknown',
                         'service' => $b->service->title ?? 'Unknown',
-                        'status' => ucfirst($b->status),
                         'date' => $b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A',
                         'time' => $b->scheduledTime ?? 'N/A',
+                        'amount' => ($b->agreed_price ?? 0) . ' ETB',
+                        
+                        // New keys for modern Bookings.jsx
+                        'id' => $b->bookingID,
+                        'customer_name' => $b->customer->fullname ?? 'Unknown',
+                        'provider_name' => $b->provider->fullname ?? 'Unknown',
+                        'service_title' => $b->service->title ?? 'Unknown',
+                        'status' => ucfirst($b->status),
+                        'scheduled_at' => ($b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A'),
                         'location' => $b->service_address ?? 'Location pinned',
-                        'amount' => ($b->agreed_price ?? 0) . ' ETB'
+                        'price' => $b->agreed_price ?? 0,
+                        'notes' => $b->notes ?? null
                     ];
                 });
 

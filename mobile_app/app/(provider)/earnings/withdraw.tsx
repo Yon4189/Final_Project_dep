@@ -11,6 +11,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderEarnings } from "../../../hooks/useProviderEarnings";
@@ -498,7 +500,11 @@ export default function WithdrawScreen() {
     requestWithdrawal?.isPending || updateBankDetails?.isPending || false;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -557,7 +563,12 @@ export default function WithdrawScreen() {
       </View>
 
       {/* Step Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
@@ -594,7 +605,7 @@ export default function WithdrawScreen() {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -602,6 +613,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",

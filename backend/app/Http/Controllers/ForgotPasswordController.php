@@ -44,8 +44,8 @@ class ForgotPasswordController extends Controller
             ]);
         }
 
-        // Generate raw token
-        $rawToken = Str::random(60);
+        // Generate 6-digit numeric code
+        $rawToken = sprintf("%06d", mt_rand(1, 999999));
 
         // Store hashed token in password_resets
         DB::table('password_resets')->updateOrInsert(
@@ -58,37 +58,33 @@ class ForgotPasswordController extends Controller
             ]
         );
 
-        $resetLink = "http://localhost:5173/reset-password?email={$email}&token={$rawToken}";
-        // localhost:3000 will be replaced with real frontend URL. this is the link the user clicks when he receives the email
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $resetLink = rtrim($frontendUrl, '/') . "/reset-password?email={$email}&token={$rawToken}";
+        // frontend URL will be used to generate the link. this is the link the user clicks when he receives the email
 
         Mail::html("
-            <h2>Password Reset Request</h2>
-            <p>Hello,</p>
-            <p>Click the button below to reset your password:</p>
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;'>
+                <h2 style='color: #2563eb; text-align: center;'>Password Reset Request</h2>
+                <p>Hello,</p>
+                <p>We received a request to reset your password. Use the verification code below to proceed:</p>
 
-            <a href='{$resetLink}' 
-            style='
-                display:inline-block;
-                padding:12px 20px;
-                background-color:#2563eb;
-                color:white;
-                text-decoration:none;
-                border-radius:6px;
-                font-weight:bold;
-            '>
-            Reset Password
-            </a>
+                <div style='background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;'>
+                    <span style='font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;'>{$rawToken}</span>
+                </div>
 
-            <p style='margin-top:15px;'>This link expires in 30 minutes.</p>
+                <p style='color: #4b5563;'>This code will expire in 30 minutes.</p>
+                <p style='color: #4b5563;'>If you did not request a password reset, please ignore this email.</p>
+                <hr style='border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
+                <p style='font-size: 12px; color: #9ca3af; text-align: center;'>&copy; " . config('app.name') . ". All rights reserved.</p>
+            </div>
         ", function ($message) use ($email) {
             $message->to($email)
-                    ->subject('Reset Your Password');
+                    ->subject('Your Password Reset Verification Code');
             });
 
         return response()->json([
             'success' => true,
-            'message' => 'Reset token generated successfully',
-            'token' => $rawToken
+            'message' => 'Reset link sent to your email'
         ]);
     }
 
@@ -107,7 +103,7 @@ class ForgotPasswordController extends Controller
 
         // check if token exists & not expired
         $record = DB::table('password_resets')->where('email', $email)->first();
-        if (!$record ||!Hash::check($token, $record->token) || $record->expires_at < now()) {
+        if (!$record || !is_object($record) || !Hash::check($token, $record->token) || $record->expires_at < now()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid or expired token'

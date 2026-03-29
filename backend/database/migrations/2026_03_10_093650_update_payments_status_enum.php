@@ -21,7 +21,9 @@ return new class extends Migration
             'releasable', 
             'released', 
             'withdrawn', 
-            'refunded'
+            'refunded',
+            'failed',
+            'cancelled'
         ) NOT NULL DEFAULT 'pending'");
     }
 
@@ -36,7 +38,9 @@ return new class extends Migration
             'paid', 
             'held', 
             'released', 
-            'refunded'
+            'refunded',
+            'failed',
+            'cancelled'
         ) NOT NULL DEFAULT 'pending'");
     }
 };

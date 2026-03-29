@@ -78,10 +78,12 @@ class ChapaService
     public function verifyPayment($txRef)
     {
         try {
-            $response = $this->client->get('/transaction/verify/' . $txRef, [
+            $fullUrl = 'https://api.chapa.co/v1/transaction/verify/' . $txRef;
+            $response = $this->client->get($fullUrl, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->secretKey,
-                ]
+                ],
+                'verify' => false
             ]);
 
             $body = json_decode($response->getBody(), true);
@@ -126,6 +128,61 @@ class ChapaService
         } catch (\Exception $e) {
             Log::error('Chapa signature verification error: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Initiate a transfer via Chapa
+     * 
+     * @param array $data Transfer data (account_name, account_number, beneficiary_name, amount, currency, reference, bank_code)
+     * @return array Response from Chapa
+     */
+    public function initiateTransfer(array $data)
+    {
+        Log::info('Chapa Transfer Request', [
+            'payload' => $data
+        ]);
+
+        try {
+            $fullUrl = 'https://api.chapa.co/v1/transfers';
+            $response = $this->client->post($fullUrl, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $this->secretKey,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ],
+                'json' => $data,
+                'verify' => false
+            ]);
+
+            $body = json_decode($response->getBody(), true);
+
+            return [
+                'status' => 'success',
+                'data' => $body
+            ];
+
+        } catch (RequestException $e) {
+            $errorResponse = $e->getResponse();
+            $errorBody = $errorResponse ? json_decode($errorResponse->getBody(), true) : null;
+            
+            Log::error('Chapa transfer failed', [
+                'error' => $e->getMessage(),
+                'response' => $errorBody
+            ]);
+            
+            return [
+                'status' => 'error',
+                'message' => $errorBody['message'] ?? $e->getMessage(),
+                'data' => $errorBody
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Chapa transfer exception: ' . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => 'Could not connect to payment gateway for transfer'
+            ];
         }
     }
 }

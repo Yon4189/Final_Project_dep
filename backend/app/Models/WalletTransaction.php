@@ -9,7 +9,10 @@ class WalletTransaction extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'transactionID';
+
     protected $fillable = [
+        'transactionID',
         'walletID',
         'type',
         'amount',

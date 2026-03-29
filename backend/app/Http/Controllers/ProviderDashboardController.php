@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\ProviderAvailability;
+use Illuminate\Support\Facades\Validator;
 
 class ProviderDashboardController extends Controller
 {
@@ -20,14 +22,11 @@ class ProviderDashboardController extends Controller
     public function getStats(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-
-            if (!$providerID) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Provider ID is required'
-                ], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
             $provider = ServiceProvider::find($providerID);
             if (!$provider) {
@@ -99,10 +98,11 @@ class ProviderDashboardController extends Controller
     public function getTodaySchedule(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-            if (!$providerID) {
-                return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
             $today = Carbon::today();
             
@@ -142,10 +142,11 @@ class ProviderDashboardController extends Controller
     public function getEarningsSummary(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-            if (!$providerID) {
-                return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
             $currentMonth = Carbon::now()->month;
             $currentYear = Carbon::now()->year;
@@ -240,49 +241,149 @@ class ProviderDashboardController extends Controller
     public function getReviews(Request $request)
     {
         try {
-            $providerID = $request->query('providerID');
-            if (!$providerID) {
-                return response()->json(['success' => false, 'message' => 'Provider ID required'], 400);
+            $provider = $request->user();
+            if (!$provider) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
+            $providerID = $provider->providerID;
 
-            $perPage = $request->query('per_page', 10);
+            $perPage = $request->query('per_page', 100);
 
-            $reviews = Review::whereHas('booking', function($query) use ($providerID) {
-                    $query->where('providerID', $providerID);
-                })
+            $reviews = Review::where('providerID', $providerID)
                 ->with('booking.customer')
                 ->orderBy('created_at', 'desc')
                 ->paginate($perPage);
 
             $formattedReviews = collect($reviews->items())->map(function($review) {
+                $customer = $review->booking?->customer;
                 return [
-                    'id' => (string)$review->reviewID,
-                    'customerName' => $review->booking->customer->fullname ?? $review->booking->customer->name ?? 'Anonymous',
-                    'rating' => $review->rating,
-                    'comment' => $review->comment,
-                    'date' => $review->created_at->format('Y-m-d')
+                    'id'            => (string)$review->reviewID,
+                    'bookingId'     => (string)$review->bookingID,
+                    'customerId'    => (string)$review->customerID,
+                    'customerName'  => $customer->fullname ?? $customer->name ?? 'Anonymous',
+                    'customerImage' => $customer->profilePicture ?? $customer->profile_photo ?? null,
+                    'rating'        => (float)$review->rating,
+                    'comment'       => $review->comment ?? '',
+                    'createdAt'     => $review->created_at->toISOString(),
+                    'date'          => $review->created_at->format('Y-m-d'),
                 ];
             });
 
-            $averageRating = Review::whereHas('booking', function($query) use ($providerID) {
-                    $query->where('providerID', $providerID);
-                })->avg('rating');
+            // Calculate average and distribution
+            $allRatings = Review::where('providerID', $providerID)->pluck('rating');
+            $averageRating = $allRatings->count() ? round($allRatings->avg(), 1) : 0;
+
+            $distribution = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+            foreach ($allRatings as $r) {
+                $star = (int)round($r);
+                if ($star >= 1 && $star <= 5) {
+                    $distribution[$star]++;
+                }
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'reviews' => $formattedReviews,
-                    'averageRating' => round((float)$averageRating, 1) ?: 5.0,
-                    'total' => $reviews->total()
+                    'reviews'            => $formattedReviews,
+                    'averageRating'      => $averageRating,
+                    'total'              => $reviews->total(),
+                    'ratingDistribution' => $distribution,
                 ],
                 'pagination' => [
                     'current_page' => $reviews->currentPage(),
-                    'last_page' => $reviews->lastPage(),
-                    'per_page' => $reviews->perPage(),
-                    'total' => $reviews->total()
+                    'last_page'    => $reviews->lastPage(),
+                    'per_page'     => $reviews->perPage(),
+                    'total'        => $reviews->total(),
                 ]
             ]);
         } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get the provider's weekly schedule configuration.
+     */
+    public function getSchedule(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            if (!$provider) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+            $availabilities = ProviderAvailability::where('providerID', $provider->providerID)->get();
+
+            $schedule = [];
+            for ($day = 0; $day < 7; $day++) {
+                $dayRecord = $availabilities->firstWhere('day_of_week', $day);
+                
+                $schedule[] = [
+                    'day_of_week' => $day,
+                    // Strip the seconds from time strings for frontend (e.g. 08:00:00 -> 08:00)
+                    'start_time' => $dayRecord ? substr($dayRecord->start_time, 0, 5) : '08:00',
+                    'end_time' => $dayRecord ? substr($dayRecord->end_time, 0, 5) : '17:00',
+                    'is_active' => $dayRecord ? $dayRecord->is_active : false,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $schedule
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Update the provider's weekly schedule.
+     */
+    public function updateSchedule(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            if (!$provider) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+            $validator = Validator::make($request->all(), [
+                'schedule' => 'required|array|size:7',
+                'schedule.*.day_of_week' => 'required|integer|min:0|max:6',
+                'schedule.*.is_active' => 'required|boolean',
+                'schedule.*.start_time' => 'required|date_format:H:i',
+                'schedule.*.end_time' => 'required|date_format:H:i|after:schedule.*.start_time',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            foreach ($request->schedule as $day) {
+                ProviderAvailability::updateOrCreate(
+                    [
+                        'providerID' => $provider->providerID,
+                        'day_of_week' => $day['day_of_week']
+                    ],
+                    [
+                        'start_time' => $day['start_time'] . ':00',
+                        'end_time' => $day['end_time'] . ':00',
+                        'is_active' => $day['is_active']
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Schedule updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Schedule update error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

@@ -54,6 +54,14 @@ export default function ProviderLayout() {
               <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           ) : null,
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => router.replace('/(provider)/dashboard')}
+            style={{ marginRight: 16 }}
+          >
+            <Ionicons name="home-outline" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+        ),
       }}
     >
       {/* Main Dashboard */}
@@ -61,6 +69,7 @@ export default function ProviderLayout() {
         name="dashboard"
         options={{
           headerShown: false,
+          headerRight: () => null,
         }}
       />
 
@@ -86,9 +95,17 @@ export default function ProviderLayout() {
         options={{
           title: 'Service Requests',
           headerRight: () => (
-            <TouchableOpacity onPress={() => { }} style={{ marginRight: 16 }}>
-              <Ionicons name="filter-outline" size={22} color={Colors.text.primary} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => { }} style={{ marginRight: 16 }}>
+                <Ionicons name="filter-outline" size={22} color={Colors.text.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.replace('/(provider)/dashboard')}
+                style={{ marginRight: 16 }}
+              >
+                <Ionicons name="home-outline" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -106,23 +123,31 @@ export default function ProviderLayout() {
         options={{
           title: 'Earnings',
           headerRight: () => (
-            <TouchableOpacity
-              onPress={() => router.push('/(provider)/earnings/withdraw')}
-              style={{ marginRight: 16 }}
-            >
-              <View
-                style={{
-                  backgroundColor: Colors.primary,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 16,
-                }}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={() => router.push('/(provider)/earnings/withdraw')}
+                style={{ marginRight: 16 }}
               >
-                <Text style={{ color: Colors.surface, fontSize: 12, fontWeight: '600' }}>
-                  Withdraw
-                </Text>
-              </View>
-            </TouchableOpacity>
+                <View
+                  style={{
+                    backgroundColor: Colors.primary,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                  }}
+                >
+                  <Text style={{ color: Colors.surface, fontSize: 12, fontWeight: '600' }}>
+                    Withdraw
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.replace('/(provider)/dashboard')}
+                style={{ marginRight: 16 }}
+              >
+                <Ionicons name="home-outline" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -139,6 +164,14 @@ export default function ProviderLayout() {
         name="reviews/index"
         options={{
           title: 'Reviews & Ratings',
+        }}
+      />
+
+      {/* Schedule */}
+      <Stack.Screen
+        name="schedule"
+        options={{
+          title: 'My Schedule',
         }}
       />
 
@@ -161,14 +194,14 @@ export default function ProviderLayout() {
       <Stack.Screen
         name="chat/index"
         options={{
-          title: 'Messages',
+          headerShown: false,
         }}
       />
 
       <Stack.Screen
         name="chat/[id]"
         options={{
-          title: 'Chat',
+          headerShown: false,
         }}
       />
 

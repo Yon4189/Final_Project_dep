@@ -162,15 +162,7 @@ class ProviderSearchController extends Controller
             'data' => $providers->values()
         ]);
 
-        $customer = auth('customer')->user();
-        if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Not authenticated as customer',
-                'debug' => 'Auth check failed'
-            ], 401);
-        }
-            }
+    }
 
     
 }

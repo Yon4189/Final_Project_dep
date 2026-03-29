@@ -44,15 +44,31 @@ class Message extends Model
     }
 
     /**
-     * Get the sender (polymorphic)
+     * Get the customer sender (eager-loadable)
      */
-    public function sender()
+    public function customerSender()
+    {
+        return $this->belongsTo(Customer::class, 'sender_id', 'customerID');
+    }
+
+    /**
+     * Get the provider sender (eager-loadable)
+     */
+    public function providerSender()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'sender_id', 'providerID');
+    }
+
+    /**
+     * Get the actual sender based on sender_type (accessor)
+     * Works regardless of eager loading.
+     */
+    public function getSenderAttribute()
     {
         if ($this->sender_type === 'customer') {
-            return $this->belongsTo(Customer::class, 'sender_id', 'customerID');
-        } else {
-            return $this->belongsTo(ServiceProvider::class, 'sender_id', 'providerID');
+            return $this->customerSender;
         }
+        return $this->providerSender;
     }
 
     /**

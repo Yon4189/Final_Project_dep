@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   AlertCircle, CheckCircle, RefreshCcw, XCircle, 
   User, Wrench, MessageSquare, ExternalLink, Search,
@@ -7,9 +8,7 @@ import {
 import { disputeAPI } from '../api/dispute';
 
 const Disputes = () => {
-  const [disputes, setDisputes] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [resolutionData, setResolutionData] = useState({
@@ -21,30 +20,32 @@ const Disputes = () => {
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  const fetchDisputes = async () => {
-    try {
-      setLoading(true);
+  // 1. Data Fetching with TanStack Query
+  const { 
+    data: { disputes = [], stats = null } = {}, 
+    isLoading: loading, 
+    refetch 
+  } = useQuery({
+    queryKey: ['disputes'],
+    queryFn: async () => {
       const response = await disputeAPI.getAllDisputes();
+      let disputesData = [];
+      let statsData = null;
+
       if (response.success) {
-        setDisputes(response.data.data || []);
-        if (response.stats) {
-          setStats(response.stats);
-        } else {
-          // Fallback if stats not in index response
+        disputesData = response.data.data || [];
+        statsData = response.stats;
+        
+        if (!statsData) {
           const statsRes = await disputeAPI.getDisputeStats();
-          if (statsRes.success) setStats(statsRes.data);
+          if (statsRes.success) statsData = statsRes.data;
         }
       }
-    } catch (error) {
-      console.error('Failed to fetch disputes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDisputes();
-  }, []);
+      return { disputes: disputesData, stats: statsData };
+    },
+    staleTime: 30000,
+    refetchInterval: 20000,
+  });
 
   const handleReviewCase = async (disputeID) => {
     try {
@@ -81,7 +82,8 @@ const Disputes = () => {
       if (response.success) {
         alert('Dispute updated successfully');
         setSelectedDispute(null);
-        fetchDisputes();
+        queryClient.invalidateQueries({ queryKey: ['disputes'] });
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
       }
     } catch (error) {
       console.error('Failed to update dispute:', error);
@@ -156,108 +158,100 @@ const Disputes = () => {
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-500">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Dispute Resolution</h1>
-          <p className="text-slate-500 text-sm">Review complaints and manage refunds between users.</p>
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight italic">Dispute Resolution</h1>
+          <p className="text-slate-500 text-sm font-medium uppercase tracking-tighter">Review complaints and manage refunds</p>
         </div>
         
         {stats && (
-          <div className="flex gap-4">
+          <div className="flex gap-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm w-full sm:w-auto overflow-x-auto">
             <div className="text-right">
-              <p className="text-[10px] font-black text-slate-400 uppercase">Total Cases</p>
-              <p className="text-xl font-black text-slate-900">{stats.total || 0}</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total</p>
+              <p className="text-lg font-black text-slate-900">{stats.total || 0}</p>
             </div>
-            <div className="w-px h-8 bg-slate-200 mt-2"></div>
-            <div className="text-right">
-              <p className="text-[10px] font-black text-red-400 uppercase">Pending</p>
-              <p className="text-xl font-black text-red-600">{stats.pending || stats.by_status?.pending || 0}</p>
+            <div className="w-px h-6 bg-slate-200 mt-1"></div>
+            <div className="text-right min-w-fit">
+              <p className="text-[9px] font-black text-red-400 uppercase tracking-widest leading-none mb-1">Pending</p>
+              <p className="text-lg font-black text-red-600">{stats.pending || stats.by_status?.pending || 0}</p>
             </div>
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="h-64 flex flex-col items-center justify-center bg-white rounded-2xl border border-dashed border-slate-200">
+        <div className="h-64 flex flex-col items-center justify-center bg-white rounded-3xl border border-dashed border-slate-200">
           <Loader2 size={40} className="text-blue-500 animate-spin mb-4" />
-          <p className="text-slate-400 font-bold animate-pulse">Fetching cases...</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">Fetching cases...</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-             <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden min-h-[500px] flex flex-col">
+          <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+             <div className="relative flex-1 max-w-sm">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
                   type="text" 
-                  placeholder="Search disputes..." 
-                  className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none w-64 transition-all"
+                  placeholder="Search by ID or title..." 
+                  className="pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none w-full shadow-sm"
                 />
              </div>
-             <button className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-xs transition-colors">
-               <Filter size={16} /> Filter
+             <button className="flex items-center justify-center gap-2 bg-white border border-slate-200 px-5 py-3 rounded-2xl text-slate-500 hover:text-slate-900 font-black text-[10px] uppercase shadow-sm transition-all">
+               <Filter size={14} /> Filter Tools
              </button>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hidden lg:block">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4">Ref ID</th>
-                  <th className="px-6 py-4">Title / Category</th>
-                  <th className="px-6 py-4">Parties Involved</th>
-                  <th className="px-6 py-4">Priority</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Action</th>
+                  <th className="px-8 py-5">Ref ID</th>
+                  <th className="px-8 py-5">Title / Category</th>
+                  <th className="px-8 py-5">Parties Involved</th>
+                  <th className="px-8 py-5">Priority</th>
+                  <th className="px-8 py-5">Status</th>
+                  <th className="px-8 py-5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-50">
                 {disputes.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-20 text-center">
-                      <div className="flex flex-col items-center opacity-20">
-                        <AlertCircle size={48} />
-                        <p className="mt-2 font-black">No disputes found</p>
-                      </div>
+                    <td colSpan="6" className="px-8 py-20 text-center text-[10px] font-black text-slate-300 uppercase italic">
+                      No disputes found in database
                     </td>
                   </tr>
                 ) : (
                   disputes.map((dispute) => (
-                    <tr key={dispute.disputeID} className="hover:bg-slate-50/80 transition-colors group border-l-4 border-l-transparent hover:border-l-blue-500">
-                      <td className="px-6 py-4">
-                        <span className="font-mono text-xs font-bold text-slate-400 mr-2">#{dispute.disputeID}</span>
-                        <p className="text-[10px] text-slate-400">{new Date(dispute.created_at).toLocaleDateString()}</p>
-                      </td>
-                      <td className="px-6 py-4">
+                    <tr key={dispute.disputeID} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5 text-xs font-bold text-slate-400 font-mono">#{dispute.disputeID}</td>
+                      <td className="px-8 py-5">
                         <p className="font-bold text-slate-900 text-sm truncate max-w-[200px]">{dispute.title}</p>
-                        <span className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{dispute.category}</span>
+                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">{dispute.category}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5">
                         <div className="space-y-1">
                           <p className="text-xs font-bold text-slate-700 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                             {dispute.raised_by?.first_name} {dispute.raised_by?.last_name || dispute.raised_by?.business_name}
-                            <span className="text-[9px] text-slate-400 uppercase">({dispute.raised_by_type})</span>
                           </p>
-                          <p className="text-xs text-slate-400 flex items-center gap-1">
-                            <ChevronRight size={10} />
-                            {dispute.against?.first_name} {dispute.against?.last_name || dispute.against?.business_name}
+                          <p className="text-[9px] text-slate-400 font-bold flex items-center gap-1 uppercase italic ml-2.5">
+                            vs {dispute.against?.first_name} {dispute.against?.last_name || dispute.against?.business_name}
                           </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5">
                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${getPriorityStyle(dispute.priority)}`}>
                           {dispute.priority}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${getStatusStyle(dispute.status)}`}>
+                      <td className="px-8 py-5">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusStyle(dispute.status)}`}>
                           {dispute.status?.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-8 py-5 text-right">
                         <button 
                           onClick={() => handleReviewCase(dispute.disputeID)}
-                          className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-lg shadow-slate-200"
+                          className="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-slate-100 transition-all active:scale-90"
                         >
                           Review Case
                         </button>
@@ -267,6 +261,52 @@ const Disputes = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden flex-1 p-4 space-y-4">
+            {disputes.length > 0 ? (
+              disputes.map((dispute) => (
+                <div key={dispute.disputeID} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-mono text-[9px] font-black text-slate-300">#{dispute.disputeID}</span>
+                      <p className="font-bold text-slate-900 text-sm mt-0.5 leading-tight">{dispute.title}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase border ${getStatusStyle(dispute.status)}`}>
+                      {dispute.status?.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200 border-dashed">
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Parties</p>
+                      <p className="text-[10px] font-bold text-slate-700 truncate">{dispute.raised_by?.first_name || 'User'}</p>
+                      <p className="text-[10px] text-slate-400">vs {dispute.against?.first_name || 'Provider'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Priority</p>
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${getPriorityStyle(dispute.priority)}`}>
+                        {dispute.priority}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button 
+                      onClick={() => handleReviewCase(dispute.disputeID)}
+                      className="w-full bg-slate-900 text-white py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-slate-100"
+                    >
+                      Review & Resolve
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-20 text-center text-[10px] font-black text-slate-300 uppercase italic">
+                No active disputes
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
@@ -11,38 +12,29 @@ import {
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 
-const Sidebar = ({ width, onResizeStart, isOpen }) => {
-  const isMini = width < 160;
+const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
+  const isMini = width < 160 && !isMobile;
 
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const [stats, setStats] = useState({
+  // Fetch stats using TanStack Query
+  const { data: stats = {
     pending: 0,
     active: 0,
     rejected: 0,
     suspended: 0,
     customers: 0,
     providers: 0
+  } } = useQuery({
+    queryKey: ['adminStats'],
+    queryFn: async () => {
+      const response = await api.get('/admin/stats');
+      return response.data.success ? response.data.data : null;
+    },
+    refetchInterval: 30000, // Update every 30 seconds
   });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await api.get('/admin/stats');
-        if (response.data.success) {
-          setStats(response.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching sidebar stats:", error);
-      }
-    };
-
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
 
 
   const [isServicesOpen, setIsServicesOpen] = useState(false);
@@ -101,12 +93,23 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
             />
           </div>
         </Link>
+
+        {/* Mobile Close Button */}
+        {isMobile && (
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white lg:hidden"
+          >
+            <X size={24} />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 mt-4">
         {/* Dashboard */}
         <Link
           to="/"
+          onClick={() => isMobile && onClose()}
           className={`group flex items-center px-6 py-4 mx-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'gap-4' : 'justify-center'} ${location.pathname === '/'
             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40'
             : 'hover:bg-slate-800/50 hover:text-white'
@@ -150,10 +153,10 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isServicesOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/services/categories" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/services/categories' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/services/categories" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/services/categories' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Categories
                 </Link>
-                <Link to="/services/services" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/services/services' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/services/services" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/services/services' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Provider Services
                 </Link>
               </div>
@@ -187,7 +190,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isVerificationOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/verification/pending" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/pending' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/verification/pending" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/pending' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   <span>Pending Queue</span>
                   {stats.pending > 0 && (
                     <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -195,7 +198,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/verification/approved" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/approved' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/verification/approved" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/approved' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   <span>Approved</span>
                   {stats.active > 0 && (
                     <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -203,7 +206,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/verification/rejected" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/rejected' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/verification/rejected" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/rejected' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   <span>Rejected</span>
                   {stats.rejected > 0 && (
                     <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -211,7 +214,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/verification/suspended" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/suspended' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/verification/suspended" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/suspended' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   <span>Suspended</span>
                   {stats.suspended > 0 && (
                     <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -250,7 +253,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isUsersOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/users/customers" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/customers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/users/customers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/customers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   <span>Customers</span>
                   {stats.customers > 0 && (
                     <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -258,7 +261,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/users/providers" className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/providers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/users/providers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/providers' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   <span>Providers</span>
                   {(stats.active + stats.suspended) > 0 && (
                     <span className="bg-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -297,16 +300,16 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isBookingsOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/bookings/pending" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/pending' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/bookings/pending" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/pending' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Pending
                 </Link>
-                <Link to="/bookings/accepted" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/accepted' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/bookings/accepted" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/accepted' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Accepted
                 </Link>
-                <Link to="/bookings/completed" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/completed' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/bookings/completed" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/completed' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Completed
                 </Link>
-                <Link to="/bookings/cancelled" className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/cancelled' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                <Link to="/bookings/cancelled" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/cancelled' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Cancelled
                 </Link>
               </div>
@@ -323,6 +326,7 @@ const Sidebar = ({ width, onResizeStart, isOpen }) => {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => isMobile && onClose()}
                 className={`group flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'gap-4 px-6 py-3' : 'justify-center py-4'} ${isActive ? 'bg-slate-800/80 text-white' : 'hover:bg-slate-800/50 hover:text-white'
                   }`}
                 title={isMini ? item.name : ""}

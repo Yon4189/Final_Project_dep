@@ -19,10 +19,13 @@ import { Colors } from '../constants/Colors';
 import { useProviderStore } from '../store/providerStore';
 import { useProviderQueries } from '../../hooks/useProviderQueries';
 import { useProviderNotificationCount } from '../../hooks/useProviderNotifications';
+import * as pusherClient from '@/app/services/pusherClient';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatTimeAgo } from '../utils/formatters';
 import { API_BASE_URL } from '../config/api';
+import { useConversations } from '../../hooks/useChat';
+import { RecentMessagesModal } from '../../components/provider/RecentMessagesModal';
 import type { ServiceRequest } from '../types/provider.types';
 import type { RequestStatus } from '../types/provider.types';
 const { width } = Dimensions.get('window');
@@ -30,7 +33,9 @@ const STATUS_COLORS: Record<RequestStatus, string> = {
   pending: Colors.warning,
   accepted: Colors.info,
   confirmed: Colors.primary,
+  arrived: Colors.primary,
   in_progress: Colors.info,
+  waiting_customer_confirmation: Colors.warning,
   completed: Colors.success,
   cancelled: Colors.error,
   disputed: Colors.warning,
@@ -38,8 +43,10 @@ const STATUS_COLORS: Record<RequestStatus, string> = {
 const STATUS_ICONS: Record<RequestStatus, keyof typeof Ionicons.glyphMap> = {
   pending: 'time-outline',
   accepted: 'checkmark-circle-outline',
-  confirmed: 'checkmark-circle-outline',
+  confirmed: 'card-outline',
+  arrived: 'navigate-outline',
   in_progress: 'construct-outline',
+  waiting_customer_confirmation: 'hourglass-outline',
   completed: 'checkmark-done-outline',
   cancelled: 'close-circle-outline',
   disputed: 'alert-circle-outline',
@@ -50,6 +57,7 @@ export default function ProviderDashboard() {
   const { profile, toggleAvailability } = useProviderStore();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'pending' | 'today' | 'upcoming'>('today');
+  const [showRecentMessages, setShowRecentMessages] = useState(false);
 
   const {
     stats,
@@ -60,7 +68,11 @@ export default function ProviderDashboard() {
     refetch,
     acceptRequest,
     rejectRequest,
+    arriveRequest,
+    startService,
+    completeService,
   } = useProviderQueries();
+  const { data: conversations, isLoading: isChatsLoading } = useConversations();
   const notificationCountQuery = useProviderNotificationCount();
   const unreadNotificationCount = notificationCountQuery.data ?? 0;
 
@@ -82,6 +94,24 @@ export default function ProviderDashboard() {
     setRefreshing(false);
   };
 
+  // Real-time updates
+  useEffect(() => {
+    if (profile?.providerID) {
+      pusherClient.subscribeToUserUpdates(
+        "provider",
+        profile.providerID,
+        (data: any) => {
+          console.log("[Pusher] Dashboard update received:", data);
+          refetch(); // Refresh whole dashboard on any booking update
+        }
+      );
+
+      return () => {
+        pusherClient.unsubscribeFromUserUpdates("provider", profile.providerID);
+      };
+    }
+  }, [profile?.providerID]);
+
   const renderHeader = () => (
     <LinearGradient
       colors={[Colors.primary, Colors.primary]}
@@ -91,6 +121,25 @@ export default function ProviderDashboard() {
     >
 
       <View style={styles.headerTop}>
+        <TouchableOpacity
+          style={{ 
+            backgroundColor: Colors.surface, 
+            borderRadius: 22, 
+            width: 44, 
+            height: 44, 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+          }}
+          onPress={() => router.replace("/")}
+        >
+          <Ionicons name="home" size={26} color={Colors.primary} />
+        </TouchableOpacity>
+
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>Welcome back,</Text>
           <Text style={styles.profileName}>
@@ -101,9 +150,16 @@ export default function ProviderDashboard() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.notificationButton}
-            onPress={() => router.push('/(provider)/chat/index')}
+            onPress={() => setShowRecentMessages(true)}
           >
-            <Ionicons name="chatbubbles-outline" size={24} color={Colors.surface} />
+            <Ionicons name="chatbubble-ellipses-outline" size={24} color={Colors.surface} />
+            {conversations?.some((c: any) => c.unread_count > 0) && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {conversations.reduce((acc: number, c: any) => acc + (c.unread_count || 0), 0)}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -168,7 +224,7 @@ export default function ProviderDashboard() {
       <View style={styles.statsGrid}>
         <TouchableOpacity
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.today || 0)}</Text>
           <Text style={styles.statLabel}>Today</Text>
@@ -176,7 +232,7 @@ export default function ProviderDashboard() {
 
         <TouchableOpacity
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.week || 0)}</Text>
           <Text style={styles.statLabel}>This Week</Text>
@@ -184,7 +240,7 @@ export default function ProviderDashboard() {
 
         <TouchableOpacity
           style={styles.statCard}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <Text style={styles.statValue}>{formatCurrency(earnings?.month || 0)}</Text>
           <Text style={styles.statLabel}>This Month</Text>
@@ -194,7 +250,7 @@ export default function ProviderDashboard() {
       {/* Rating Card */}
       <TouchableOpacity
         style={styles.ratingCard}
-        onPress={() => router.push('/(provider)/reviews/index')}
+        onPress={() => router.push('/(provider)/reviews')}
       >
         <View style={styles.ratingLeft}>
           <Text style={styles.ratingValue}>{Number(profile?.rating || 0).toFixed(1) || '0.0'}</Text>
@@ -222,7 +278,7 @@ export default function ProviderDashboard() {
     <View style={styles.quickActions}>
       <TouchableOpacity
         style={styles.actionButton}
-        onPress={() => router.push('/(provider)/requests/index')}
+        onPress={() => router.push('/(provider)/requests')}
       >
         <View style={[styles.actionIcon, { backgroundColor: Colors.primary + '20' }]}>
           <Ionicons name="clipboard-outline" size={24} color={Colors.primary} />
@@ -247,7 +303,24 @@ export default function ProviderDashboard() {
 
       <TouchableOpacity
         style={styles.actionButton}
-        onPress={() => router.push('/(provider)/earnings/earnings')}
+        onPress={() => setShowRecentMessages(true)}
+      >
+        <View style={[styles.actionIcon, { backgroundColor: Colors.info + '20' }]}>
+          <Ionicons name="chatbubble-ellipses-outline" size={24} color={Colors.info} />
+        </View>
+        <Text style={styles.actionLabel}>Messages</Text>
+        {conversations?.some((c: any) => c.unread_count > 0) && (
+          <View style={styles.actionBadge}>
+            <Text style={styles.actionBadgeText}>
+              {conversations.reduce((acc: number, c: any) => acc + (c.unread_count || 0), 0)}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => router.push('/(provider)/earnings')}
       >
         <View style={[styles.actionIcon, { backgroundColor: Colors.warning + '20' }]}>
           <Ionicons name="wallet-outline" size={24} color={Colors.warning} />
@@ -256,6 +329,59 @@ export default function ProviderDashboard() {
       </TouchableOpacity>
     </View>
   );
+
+  const renderRecentChats = () => {
+    if (isChatsLoading || !conversations?.length) return null;
+
+    return (
+      <View style={styles.chatsSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Chats</Text>
+          <TouchableOpacity onPress={() => router.push('/(provider)/chat')}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chatsScroll}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+        >
+          {conversations.slice(0, 5).map((chat: any) => {
+            const customer = chat.other_party;
+            if (!customer) return null;
+
+            return (
+              <TouchableOpacity
+                key={chat.conversationID}
+                style={styles.chatCard}
+                onPress={() => router.push(`/(provider)/chat/${chat.conversationID}`)}
+              >
+                <View style={styles.chatAvatarContainer}>
+                  <Image
+                    source={{
+                      uri: customer.profilePicture
+                        ? (customer.profilePicture.startsWith('http')
+                          ? customer.profilePicture
+                          : `${API_BASE_URL.replace('/api', '')}/${customer.profilePicture}`)
+                        : 'https://via.placeholder.com/60',
+                    }}
+                    style={styles.chatAvatar}
+                  />
+                  {chat.unread_count > 0 && (
+                    <View style={styles.chatUnreadBadge} />
+                  )}
+                </View>
+                <Text style={styles.chatName} numberOfLines={1}>
+                  {customer.fullname || 'Customer'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
 
   const renderTabs = () => (
     <View style={styles.tabsContainer}>
@@ -301,15 +427,23 @@ export default function ProviderDashboard() {
           </View>
         </View>
 
-        <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] + '20' }]}>
-          <Ionicons
-            name={STATUS_ICONS[item.status]}
-            size={12}
-            color={STATUS_COLORS[item.status]}
-          />
-          <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}>
-            {item.status.replace('_', ' ')}
-          </Text>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          {item.payment && (item.status === 'confirmed' || item.payment.status === 'held' || item.payment.status === 'paid') && (
+            <View style={[styles.statusBadge, { backgroundColor: Colors.success + '20' }]}>
+              <Ionicons name="card" size={12} color={Colors.success} />
+              <Text style={[styles.statusText, { color: Colors.success }]}>PAID</Text>
+            </View>
+          )}
+          <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] + '20' }]}>
+            <Ionicons
+              name={STATUS_ICONS[item.status]}
+              size={12}
+              color={STATUS_COLORS[item.status]}
+            />
+            <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}>
+              {item.status.replace('_', ' ')}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -361,13 +495,57 @@ export default function ProviderDashboard() {
         </View>
       )}
 
-      {['accepted', 'confirmed'].includes(item.status) && (
+      {item.status === 'confirmed' && (
+        <View style={styles.requestActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: Colors.primary, flex: 1, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 }]}
+            onPress={() => arriveRequest.mutate(item.id)}
+          >
+            <Ionicons name="navigate-outline" size={18} color={Colors.surface} style={{ marginRight: 6 }} />
+            <Text style={{ color: Colors.surface, fontWeight: 'bold' }}>Mark Arrived</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {item.status === 'arrived' && (
+        <View style={styles.requestActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: Colors.success, flex: 1, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 }]}
+            onPress={() => startService.mutate(item.id)}
+          >
+            <Ionicons name="play-outline" size={18} color={Colors.surface} style={{ marginRight: 6 }} />
+            <Text style={{ color: Colors.surface, fontWeight: 'bold' }}>Start Service</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {item.status === 'in_progress' && (
+        <View style={styles.requestActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: Colors.info, flex: 1, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 }]}
+            onPress={() => completeService.mutate(item.id)}
+          >
+            <Ionicons name="checkmark-done-outline" size={18} color={Colors.surface} style={{ marginRight: 6 }} />
+            <Text style={{ color: Colors.surface, fontWeight: 'bold' }}>Complete Work</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {item.status === 'waiting_customer_confirmation' && (
+        <View style={[styles.statusBanner, { backgroundColor: Colors.warning + '20', marginTop: 10, padding: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: Colors.warning }]}>
+          <Text style={{ color: Colors.warning, fontSize: 12, fontWeight: '600' }}>
+            Awaiting customer confirmation to release payment.
+          </Text>
+        </View>
+      )}
+
+      {['accepted'].includes(item.status) && (
         <TouchableOpacity
           style={styles.directionsButton}
           onPress={() => router.push(`/(provider)/requests/${item.id}`)}
         >
           <Ionicons name="navigate" size={20} color={Colors.surface} />
-          <Text style={styles.directionsButtonText}>Get Directions</Text>
+          <Text style={styles.directionsButtonText}>View Details / Map</Text>
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -442,6 +620,7 @@ export default function ProviderDashboard() {
       >
         {renderHeader()}
         {renderQuickActions()}
+        {renderRecentChats()}
         {renderTabs()}
 
         <View style={styles.requestsSection}>
@@ -464,7 +643,7 @@ export default function ProviderDashboard() {
         {/* Recent Earnings Summary */}
         <TouchableOpacity
           style={styles.earningsSummary}
-          onPress={() => router.push('/(provider)/earnings/index')}
+          onPress={() => router.push('/(provider)/earnings')}
         >
           <View style={styles.earningsHeader}>
             <Text style={styles.earningsTitle}>Recent Earnings</Text>
@@ -501,6 +680,19 @@ export default function ProviderDashboard() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      <RecentMessagesModal
+        visible={showRecentMessages}
+        onClose={() => setShowRecentMessages(false)}
+        conversations={conversations || []}
+        onSelectConversation={(conversationId) => {
+          router.push(`/(provider)/chat/${conversationId}`);
+        }}
+        onSeeAll={() => {
+          setShowRecentMessages(false);
+          router.push('/(provider)/chat');
+        }}
+      />
     </View>
   );
 }
@@ -524,7 +716,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   welcomeSection: {
-    flex: 1,
+    marginRight: 10,
   },
   welcomeText: {
     fontSize: 14,
@@ -539,6 +731,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   notificationButton: {
     position: 'relative',
@@ -947,6 +1140,69 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  chatsSection: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  chatsScroll: {
+    paddingBottom: 4,
+  },
+  chatCard: {
+    alignItems: 'center',
+    marginRight: 20,
+    width: 70,
+  },
+  chatAvatarContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  chatAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chatUnreadBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  chatName: {
+    fontSize: 12,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  statusBanner: {
+    marginTop: 10,
+    padding: 8,
+    borderRadius: 8,
+    borderLeftWidth: 4,
   },
 });
 

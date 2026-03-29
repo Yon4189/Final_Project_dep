@@ -2,11 +2,13 @@
 import { Ionicons } from "@expo/vector-icons";
 export interface ProviderProfile {
   id: string;
+  providerID: string; // Add this
   userId: string;
   fullname: string; // Add this from database
   businessName: string; // Keep for backward compatibility
   bio: string;
   profilePicture?: string; // Change from profileImage to profilePicture
+  profile_picture?: string; // Add this
   profileImage?: string; // Keep for backward compatibility
   coverImage?: string;
   phone: string;
@@ -79,9 +81,12 @@ export type ProviderNotificationType =
   | "booking_cancelled"
   | "booking_completed"
   | "payment_received"
+  | "payment_released"
   | "withdrawal"
   | "review"
   | "reminder"
+  | "provider_approved"
+  | "provider_rejected"
   | "system";
 
 export interface ProviderNotificationPayload {
@@ -127,7 +132,9 @@ export type RequestStatus =
   | "pending"
   | "accepted"
   | "confirmed"
+  | "arrived"
   | "in_progress"
+  | "waiting_customer_confirmation"
   | "completed"
   | "cancelled"
   | "disputed";
@@ -157,12 +164,18 @@ export interface ServiceRequest {
   createdAt: string;
   updatedAt: string;
   confirmedAt?: string;
+  arrivedAt?: string;
   startedAt?: string;
   completedAt?: string;
   cancelledAt?: string;
   cancellationReason?: string;
   distance?: number; // in km
   travelTime?: number; // in minutes
+  payment?: {
+    status: string;
+    amount: number;
+    paid_at?: string;
+  };
 }
 
 // Earnings Types

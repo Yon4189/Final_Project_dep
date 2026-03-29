@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/PaymentController.php
 
 namespace App\Http\Controllers;
 
@@ -18,10 +17,6 @@ use Illuminate\Support\Facades\Http;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 
-
-
-
-
 class PaymentController extends Controller
 {
     protected $chapaService;
@@ -34,156 +29,203 @@ class PaymentController extends Controller
     }
 
     /**
-     * Initialize payment for booking
+     * Get available payment methods
      */
-    public function initialize(Request $request, $bookingId)
+    public function methods()
     {
-        $customer = $request->user();
-        
-        if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Not authenticated'
-            ], 401);
-        }
-        
-        $booking = Booking::where('bookingID', $bookingId)
-            ->where('customerID', $customer->customerID)
-            ->whereIn('status', ['pending', 'accepted'])
-            ->first();
-            
-        if (!$booking) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Booking not found or not ready for payment'
-            ], 404);
-        }
-        
-        // Check if payment already exists
-        $existingPayment = Payment::where('bookingID', $booking->bookingID)
-            ->whereIn('status', ['pending'])
-            ->first();
-
-        if ($existingPayment) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment already initialized',
-                'data' => [
-                    'payment_id' => $existingPayment->paymentID,
-                    'tx_ref' => $existingPayment->tx_ref,
-                    'checkout_url' => $existingPayment->checkout_url,
-                    'status' => $existingPayment->status
-                ]
-            ]);
-        }
-        
-        // Generate unique tx_ref
-        $txRef = 'BOOKING-' . $bookingId . '-' . time() . '-' . uniqid();
-        
-        // Calculate commission (10%)
-        $commission = $booking->agreed_price * 0.10;
-        $providerAmount = $booking->agreed_price - $commission;
-        
-        // Create payment record in database
-        $payment = Payment::create([
-            'tx_ref' => $txRef,
-            'bookingID' => $booking->bookingID,
-            'customerID' => $customer->customerID,
-            'providerID' => $booking->providerID,
-            'amount' => $booking->agreed_price,
-            'platform_commission' => $commission,
-            'provider_amount' => $providerAmount,
-            'status' => 'pending',
-            'currency' => 'ETB',
-            'callback_url' => route('payment.callback', ['tx_ref' => $txRef]),
-            'return_url' => $request->return_url ?? config('app.frontend_url') . '/payment/return',
-            'customer_email' => $customer->email,
-            'customer_first_name' => $customer->fullname,
-            'customer_last_name' => '', // or split fullname if needed
-            'customer_phone' => $customer->phone ?? '',
-            'meta_data' => json_encode([
-                'booking_reference' => $booking->bookingID,
-                'customer_name' => $customer->fullname,
-                'customer_email' => $customer->email
-            ])
-        ]);
-        
-        // Prepare Chapa payment data
-        $paymentData = [
-            'amount' => (string) $booking->agreed_price,
-            'currency' => 'ETB',
-            'email' => $customer->email,
-            'first_name' => $customer->fullname,
-            'last_name' => '',
-            'tx_ref' => $txRef,
-            'callback_url' => 'https://squiggly-raven-concussant.ngrok-free.dev/api/webhook/chapa',
-            // later replace the above url with the link from 'Forwarding' while ruiing ngrok online. if not installed install ngrok and run `ngrok http 8000` and copy the https url and paste it above and add /api/webhook/chapa at the end of the url
-            'return_url' => $request->return_url ?? 'https://www.google.com',
-            'customization' => [
-                'title' => 'Home Service',  //  Short (max 16 chars)
-                'description' => 'Payment for booking'  //  Short (max 30 chars)
-            ]
-        ];
-
-        // Call Chapa API
-        // Workaround: If keys are still placeholders, provide a mock response for testing navigation
-        $chapaSecretKey = config('services.chapa.secret_key');
-        if ($chapaSecretKey === 'your_chapa_secret_key_here' || empty($chapaSecretKey)) {
-            Log::info('Using mock payment response for placeholder keys', ['tx_ref' => $txRef]);
-            $chapaResponse = [
-                'status' => 'success',
-                'data' => [
-                    'data' => [
-                        'checkout_url' => 'https://mock-payment-url.com/pay/' . $txRef
-                    ]
-                ]
-            ];
-        } else {
-            $chapaResponse = $this->chapaService->initializePayment($paymentData);
-        }
-        
-
-        // Check if Chapa responded with error
-        if ($chapaResponse['status'] !== 'success') {
-            $payment->status = 'failed';
-            $payment->failure_reason = $chapaResponse['message'] ?? 'Chapa initialization failed';
-            $payment->save();
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment initialization failed',
-                'errors' => $chapaResponse
-            ], 400);
-        }
-
-        // Update payment with checkout URL from Chapa
-        $payment->status = 'pending';
-        $payment->checkout_url = $chapaResponse['data']['data']['checkout_url'];  // Adjust based on actual response structure
-        $payment->save();
-
-        // Log success
-        Log::info('Payment initialized successfully', [
-            'tx_ref' => $txRef,
-            'booking_id' => $booking->bookingID
-        ]);
-
-        // Return success response
         return response()->json([
             'success' => true,
-            'message' => 'Payment initialized successfully',
             'data' => [
-                'payment_id' => $payment->paymentID,
-                'tx_ref' => $txRef,
-                'checkout_url' => $payment->checkout_url,
-                'amount' => $payment->amount,
-                'status' => $payment->status
+                [
+                    'id' => 'chapa',
+                    'type' => 'chapa',
+                    'name' => 'Chapa (Card/Mobile Money)',
+                    'description' => 'Pay securely with Chapa',
+                    'icon' => 'card-outline',
+                    'enabled' => true
+                ],
+                [
+                    'id' => 'cash',
+                    'type' => 'cash',
+                    'name' => 'Cash on Service',
+                    'description' => 'Pay the provider directly after service',
+                    'icon' => 'cash-outline',
+                    'enabled' => true
+                ]
             ]
         ]);
     }
 
     /**
-     * Handle Chapa callback
+     * Initialize payment
      */
+    public function initialize(Request $request, $bookingId)
+    {
+        $customer = $request->user();
+
+        $booking = Booking::where('bookingID', $bookingId)
+            ->where('customerID', $customer->customerID)
+            ->first();
+
+        if (!$booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking not found'
+            ], 404);
+        }
+
+        // ✅ Generate tx_ref
+        $txRef = 'BOOKING-' . $bookingId . '-' . time();
+
+        // ✅ Encode mobile deep link
+        $appRedirect = $request->return_url ?? 'mobileapp://payment';
+        $encoded = base64_encode($appRedirect);
+        $safe = str_replace(['+', '/', '='], ['-', '_', ''], $encoded);
+
+        $baseUrl = $request->getSchemeAndHttpHost();
+
+        // ✅ 🔥 MAIN FIX: ALWAYS INCLUDE tx_ref
+        $backendReturnUrl = $baseUrl . '/api/payment/return/' . $safe . '?tx_ref=' . $txRef;
+
+        // ✅ Commission Calculation (10%)
+        $totalAmount = (float)$booking->agreed_price;
+        $commission = $totalAmount * 0.10;
+        $providerAmount = $totalAmount - $commission;
+
+        // ✅ Split Name
+        $nameParts = explode(' ', trim($customer->fullname), 2);
+        $firstName = $nameParts[0] ?? $customer->fullname ?? 'Customer';
+        $lastName = $nameParts[1] ?? 'User';
+
+        // ✅ Save payment
+        $payment = Payment::create([
+            'tx_ref' => $txRef,
+            'bookingID' => $booking->bookingID,
+            'customerID' => $customer->customerID,
+            'providerID' => $booking->providerID,
+            'amount' => $totalAmount,
+            'platform_commission' => $commission,
+            'provider_amount' => $providerAmount,
+            'status' => 'pending',
+            'currency' => 'ETB',
+
+            // ✅ FIXED
+            'return_url' => $backendReturnUrl,
+            'callback_url' => route('payment.callback', ['tx_ref' => $txRef]),
+
+            'customer_email' => $customer->email,
+            'customer_first_name' => $firstName,
+            'customer_last_name' => $lastName,
+        ]);
+
+        // ✅ Chapa request
+        $paymentData = [
+            'amount' => (string)$booking->agreed_price,
+            'currency' => 'ETB',
+            'email' => $customer->email,
+            'first_name' => $customer->fullname,
+            'tx_ref' => $txRef,
+            'callback_url' => route('payment.callback', ['tx_ref' => $txRef]),
+            'return_url' => $backendReturnUrl,
+        ];
+
+        Log::info('Chapa initialization intent', $paymentData);
+
+        $response = $this->chapaService->initializePayment($paymentData);
+
+        if ($response['status'] !== 'success') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment init failed'
+            ], 400);
+        }
+
+        $payment->checkout_url = $response['data']['data']['checkout_url'];
+        $payment->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'checkout_url' => $payment->checkout_url,
+                'tx_ref' => $txRef
+            ]
+        ]);
+    }
+
+    /**
+     * Handle return from Chapa
+     */
+    public function handleReturn(Request $request, $encoded_redirect = null)
+    {
+        Log::info('RETURN HIT', [
+            'full_url' => $request->fullUrl(),
+            'query' => $request->all()
+        ]);
+
+        // ✅ Decode app deep link
+        $appRedirect = 'mobileapp://payment';
+
+        if ($encoded_redirect) {
+            $base64 = str_replace(['-', '_'], ['+', '/'], $encoded_redirect);
+            $padding = strlen($base64) % 4;
+            if ($padding > 0) {
+                $base64 .= str_repeat('=', 4 - $padding);
+            }
+            $appRedirect = base64_decode($base64);
+        }
+
+        // ✅ Extract tx_ref (STRONG VERSION)
+        $txRef = $request->query('tx_ref') ?? $request->query('trx_ref') ?? '';
+
+        // 🔥 FALLBACK (CRITICAL)
+        if (!$txRef) {
+            $url = $request->fullUrl();
+            if (preg_match('/BOOKING-[A-Za-z0-9\-]+/', $url, $match)) {
+                $txRef = $match[0];
+                Log::info('Recovered tx_ref via regex', ['tx_ref' => $txRef]);
+            }
+        }
+
+        $status = $request->query('status', '');
+
+        // ✅ Check DB if needed
+        if ($txRef && $status !== 'success') {
+            $payment = Payment::where('tx_ref', $txRef)->first();
+            if ($payment && in_array($payment->status, ['held', 'paid', 'releasable', 'released'])) {
+                $status = 'success';
+            }
+        }
+
+        // ✅ Build redirect URL
+        $redirectUrl = $appRedirect;
+
+        if ($txRef) {
+            $separator = str_contains($redirectUrl, '?') ? '&' : '?';
+            $redirectUrl .= "{$separator}tx_ref={$txRef}&status={$status}";
+        }
+
+        Log::info('FINAL REDIRECT', [
+            'tx_ref' => $txRef,
+            'status' => $status,
+            'redirect' => $redirectUrl
+        ]);
+
+        // ✅ Return HTML redirect (reliable for mobile)
+        return response("
+        <html>
+            <head>
+                <meta http-equiv='refresh' content='0;url={$redirectUrl}'>
+            </head>
+            <body>
+                <a href='{$redirectUrl}'>Return to app</a>
+                <script>
+                    window.location.href = '{$redirectUrl}';
+                </script>
+            </body>
+        </html>
+        ");
+    }
+
     /**
      * Handle Chapa webhook/callback (tx_ref is the key)
      */
@@ -198,7 +240,7 @@ class PaymentController extends Controller
         $tx_ref = $payload['trx_ref'] ?? $payload['tx_ref'] ?? null;
         
         if (!$tx_ref) {
-            Log::error('No transaction reference in webhook');
+            Log::error('No transaction reference in Chapa webhook/callback', ['payload' => $payload]);
             return response()->json(['success' => false, 'message' => 'No transaction reference'], 400);
         }
         
@@ -215,33 +257,22 @@ class PaymentController extends Controller
         
         if ($status === 'success') {
             DB::transaction(function () use ($payment, $payload) {
-                // Update payment record
-                $payment->status = 'held';
-                $payment->chapa_tx_id = $payload['ref_id'] ?? null;
-                $payment->paid_at = now();
-                $payment->save();
+                $this->walletService->handlePaymentSuccess($payment, $payload);
                 
-                // Update booking record
-                $booking = Booking::find($payment->bookingID);
-                if ($booking) {
-                    $booking->payment_status = 'held';
-                    $booking->save();
-                    
-                    Log::info('Payment confirmed and booking updated', [
-                        'booking_id' => $booking->bookingID,
-                        'payment_id' => $payment->paymentID,
-                        'tx_ref' => $payment->tx_ref
-                    ]);
-                }
+                Log::info('Payment processed via callback (webhook)', [
+                    'payment_id' => $payment->paymentID,
+                    'tx_ref' => $payment->tx_ref
+                ]);
             });
             
             return response()->json(['success' => true, 'message' => 'Webhook processed successfully']);
         }
         
         // Handle failed payment
-        Log::warning('Payment not successful', ['status' => $status, 'tx_ref' => $tx_ref]);
+        Log::warning('Payment not successful in webhook', ['status' => $status, 'tx_ref' => $tx_ref]);
         return response()->json(['success' => false, 'message' => 'Payment not successful'], 400);
     }
+
     /**
      * Verify payment (called from frontend after return)
      */
@@ -259,9 +290,24 @@ class PaymentController extends Controller
                 'message' => 'Payment not found'
             ], 404);
         }
+        
+        // Fallback: If status is still pending (e.g. webhook failed or was delayed), verify directly with Chapa
+        if ($payment->status === 'pending') {
+            $chapaResponse = $this->chapaService->verifyPayment($payment->tx_ref);
+            
+            if ($chapaResponse['status'] === 'success' && isset($chapaResponse['data']['status']) && $chapaResponse['data']['status'] === 'success') {
+                $this->walletService->handlePaymentSuccess($payment, $chapaResponse['data']);
+                
+                // Refresh payment after update
+                $payment->refresh();
+            }
+        }
+        
+        $isSuccess = in_array($payment->status, ['held', 'paid', 'releasable', 'released']);
 
         return response()->json([
-            'success' => true,
+            'success' => $isSuccess,
+            'message' => $isSuccess ? 'Payment verified successfully' : 'Payment is still pending or failed',
             'data' => [
                 'payment_id' => $payment->paymentID,
                 'tx_ref' => $payment->tx_ref,
@@ -269,8 +315,8 @@ class PaymentController extends Controller
                 'amount' => $payment->amount,
                 'booking_id' => $payment->bookingID,
                 'booking_status' => $payment->booking->status ?? null,
-                'held_until' => $payment->held_until,
-                'paid_at' => $payment->paid_at
+                'paid_at' => $payment->paid_at,
+                'is_successful' => $isSuccess
             ]
         ]);
     }
@@ -355,7 +401,6 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        // Check authorization (customer or admin)
         $user = request()->user();
         if ($user && $user->customerID !== $payment->customerID && !$user->isAdmin()) {
             return response()->json([
@@ -386,7 +431,6 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        // Check authorization
         $user = $request->user();
         if ($user->customerID !== $payment->customerID) {
             return response()->json([
@@ -410,30 +454,17 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        // Admin authorization should be handled by middleware
         $query = Payment::with(['customer', 'booking', 'provider']);
 
-        // Filter by status
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by date range
         if ($request->has('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
         if ($request->has('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // Filter by provider
-        if ($request->has('provider_id')) {
-            $query->where('providerID', $request->provider_id);
-        }
-
-        // Filter by customer
-        if ($request->has('customer_id')) {
-            $query->where('customerID', $request->customer_id);
         }
 
         $payments = $query->orderBy('created_at', 'desc')->paginate(50);
@@ -456,24 +487,7 @@ class PaymentController extends Controller
             'pending_payments' => Payment::whereIn('status', ['pending', 'processing'])->count(),
             'held_payments' => Payment::where('status', 'held')->count(),
             'released_payments' => Payment::where('status', 'released')->count(),
-            
             'total_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('amount'),
-            'total_commission' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission'),
-            'total_provider_payout' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('provider_amount'),
-            
-            'today_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])
-                ->whereDate('paid_at', today())
-                ->sum('amount'),
-            
-            'monthly_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])
-                ->whereMonth('paid_at', now()->month)
-                ->whereYear('paid_at', now()->year)
-                ->sum('amount'),
-            
-            'released_this_month' => Payment::where('status', 'released')
-                ->whereMonth('released_at', now()->month)
-                ->whereYear('released_at', now()->year)
-                ->sum('provider_amount'),
         ];
 
         return response()->json([
@@ -499,34 +513,22 @@ class PaymentController extends Controller
     }
 
     /**
-     * Manual payment release (admin only - for disputes)
+     * Manual payment release (admin only)
      */
     public function manualRelease(Request $request, $paymentId)
     {
-        $request->validate([
-            'reason' => 'required|string|max:500'
-        ]);
+        $request->validate(['reason' => 'required|string|max:500']);
 
         $payment = Payment::where('paymentID', $paymentId)
             ->where('status', 'held')
             ->first();
 
         if (!$payment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment not found or not in held state'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
         }
 
         DB::transaction(function () use ($payment, $request) {
             $payment->status = 'releasable';
-            $payment->meta_data = array_merge($payment->meta_data ?? [], [
-                'manual_release' => [
-                    'released_by' => Auth::id(), // 👈 Change to Auth::id()
-                    'released_at' => now()->toDateTimeString(),
-                    'reason' => $request->reason
-                ]
-            ]);
             $payment->save();
 
             $booking = Booking::find($payment->bookingID);
@@ -536,14 +538,10 @@ class PaymentController extends Controller
                 $booking->save();
             }
 
-            // Call release method
-            $this->releasePayment($payment); //  Call internal method instead
+            $this->releasePayment($payment);
         });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Payment released manually'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Payment released manually']);
     }
 
     /**
@@ -551,40 +549,21 @@ class PaymentController extends Controller
      */
     public function refund(Request $request, $paymentId)
     {
-        $request->validate([
-            'reason' => 'required|string|max:500'
-        ]);
+        $request->validate(['reason' => 'required|string|max:500']);
 
         $payment = Payment::where('paymentID', $paymentId)
             ->whereIn('status', ['held', 'releasable', 'released'])
             ->first();
 
         if (!$payment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment not found or cannot be refunded'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
         }
 
         DB::transaction(function () use ($payment, $request) {
-            // If payment was already released, need to deduct from wallet
-            if ($payment->status === 'released' && $payment->is_withdrawn === false) {
-                // This would require deducting from wallet - complex
-                // For now, just mark as refunded
-            }
-
             $payment->status = 'refunded';
             $payment->refunded_at = now();
-            $payment->meta_data = array_merge($payment->meta_data ?? [], [
-                'refund' => [
-                    'refunded_by' => Auth::id(),
-                    'refunded_at' => now()->toDateTimeString(),
-                    'reason' => $request->reason
-                ]
-            ]);
             $payment->save();
 
-            // Update booking
             $booking = Booking::find($payment->bookingID);
             if ($booking) {
                 $booking->status = 'cancelled';
@@ -592,10 +571,7 @@ class PaymentController extends Controller
             }
         });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Payment refunded successfully'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Payment refunded successfully']);
     }
 
     /**
@@ -603,285 +579,78 @@ class PaymentController extends Controller
      */
     protected function releasePayment($payment)
     {
-        // Find provider's wallet
         $wallet = Wallet::firstOrCreate(
             ['providerID' => $payment->providerID],
             ['available_balance' => 0, 'pending_balance' => 0]
         );
 
-        // Add to available balance
         $wallet->available_balance += $payment->provider_amount;
         $wallet->save();
 
-        // Create transaction record
         WalletTransaction::create([
             'walletID' => $wallet->walletID,
             'type' => 'credit',
             'amount' => $payment->provider_amount,
             'description' => 'Payment released for booking #' . $payment->bookingID,
             'bookingID' => $payment->bookingID,
-            'withdrawalID' => null
         ]);
 
-        // Update payment status
         $payment->status = 'released';
         $payment->released_at = now();
         $payment->save();
-
-        Log::info('Payment released', [
-            'payment_id' => $payment->paymentID,
-            'booking_id' => $payment->bookingID,
-            'amount' => $payment->provider_amount
-        ]);
     }
 
     /**
- * Get list of banks from Chapa
- */
-public function getBanks()
-{
-    $client = new Client();
-    try {
-        $response = $client->get('https://api.chapa.co/v1/banks', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . config('services.chapa.secret_key'),
-                'Accept' => 'application/json',
-            ]
-        ]);
+     * Get list of banks from Chapa
+     */
+    public function getBanks()
+    {
+        $client = new Client();
+        try {
+            $response = $client->get('https://api.chapa.co/v1/banks', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . config('services.chapa.secret_key'),
+                    'Accept' => 'application/json',
+                ]
+            ]);
 
-        $data = json_decode($response->getBody(), true);
-        return response()->json([
-            'success' => true,
-            'data' => $data
-        ]);
-    } catch (RequestException $e) {
-        Log::error('Chapa banks error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch banks from Chapa'
-        ], 500);
-    }
-}
-
-/**
- * Initialize transfer to provider
- */
-public function initiateTransfer($withdrawal)
-{
-    Log::info('initiateTransfer CALLED', ['withdrawal_id' => $withdrawal->withdrawalID]);
-    $accountName = preg_replace('/[^\x20-\x7E]/', '', $withdrawal->provider_account_holder_name ?? 'User');
-    $accountName = trim($accountName);
-
-    // Ensure at least 3 characters
-    if (strlen($accountName) < 3) {
-        $accountName = 'User'; // Fallback
-}
-    // Validate required fields based on payment method
-if ($withdrawal->payment_method === 'bank') {
-    if (!$withdrawal->provider_account_number) {
-        Log::error('Missing account number for bank transfer', ['withdrawal_id' => $withdrawal->withdrawalID]);
-        return null;
-    }
-    if (!$withdrawal->provider_bank_name) {
-        Log::error('Missing bank name', ['withdrawal_id' => $withdrawal->withdrawalID]);
-        return null;
-    }
-    if (!$withdrawal->provider_account_holder_name) {
-        Log::error('Missing account holder name', ['withdrawal_id' => $withdrawal->withdrawalID]);
-        return null;
-    }
-    
-    // Check if it's CBEBirr (mobile money)
-    $bankName = $withdrawal->provider_bank_name;
-    if ($bankName === 'Commercial Bank of Ethiopia' || $bankName === 'CBEBirr') {
-        // CBEBirr uses phone number, not bank account
-        $payload['phone_number'] = $withdrawal->provider_account_number; // Treat account_number as phone
-        $payload['account_name'] = $accountName;
-        $payload['bank_code'] = $this->getBankCode($bankName);
-        Log::info('CBEBirr transfer detected', [
-            'phone' => $withdrawal->provider_account_number,
-            'bank_code' => $payload['bank_code']
-        ]);
-    } else {
-        // Regular bank transfer
-        $payload['account_name'] = $accountName;
-        $payload['account_number'] = $withdrawal->provider_account_number;
-        $payload['bank_code'] = $this->getBankCode($bankName);
-    }
-    
-} elseif ($withdrawal->payment_method === 'telebir') {
-    if (!$withdrawal->telebir_number) {
-        Log::error('Missing telebir number', ['withdrawal_id' => $withdrawal->withdrawalID]);
-        return null;
-    }
-    
-    // Telebir transfer
-    $payload['phone_number'] = $withdrawal->telebir_number;
-    $payload['account_name'] = $withdrawal->telebir_holder_name ?? 'User';
-    // No bank_code for telebir
-}
-
-    $client = new Client([
-        'verify' => app()->environment('local') ? false : true,
-    ]);
-    
-    $reference = 'TXF_' . uniqid() . '_' . time();
-
-    // Clean the account name - remove non-English characters
-    $accountName = preg_replace('/[^\x20-\x7E]/', '', $withdrawal->provider_account_holder_name ?? 'User');
-    $accountName = trim($accountName);
-    
-    // Ensure at least 3 characters
-    if (strlen($accountName) < 3) {
-        $accountName = 'User'; // Fallback
+            $data = json_decode($response->getBody(), true);
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (RequestException $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to fetch banks'], 500);
+        }
     }
 
-    $payload = [
-        'amount' => (float) $withdrawal->amount,
-        'currency' => $withdrawal->currency ?? 'ETB',
-        'reference' => $reference,
-    ];
+    /**
+     * Initiate a transfer for withdrawal (called by AdminWithdrawalController)
+     * 
+     * @param \App\Models\Withdrawal $withdrawal
+     * @return array|null
+     */
+    public function initiateTransfer($withdrawal)
+    {
+        $transferData = [
+            'account_name' => $withdrawal->provider_account_holder_name,
+            'account_number' => $withdrawal->provider_account_number,
+            'amount' => (string)$withdrawal->amount,
+            'currency' => 'ETB',
+            'reference' => 'WITHDRAWAL-' . $withdrawal->withdrawalID . '-' . time(),
+            'bank_code' => $withdrawal->provider_bank_name, // Assuming this is the bank code
+        ];
 
-    // Bank transfer
-    if ($withdrawal->payment_method === 'bank') {
-        $payload['account_name'] = $accountName;
-        $payload['account_number'] = $withdrawal->provider_account_number;
-        $payload['bank_code'] = $this->getBankCode($withdrawal->provider_bank_name);
-    }
-    // Telebir transfer
-    elseif ($withdrawal->payment_method === 'telebir') {
-        $payload['phone_number'] = $withdrawal->telebir_number;
-        // Telebir might need account_name as well
-        $payload['account_name'] = $accountName;
-    }
+        Log::info('Initiating Chapa Transfer', $transferData);
 
-    Log::info('Chapa transfer payload', $payload);
+        $response = $this->chapaService->initiateTransfer($transferData);
 
-    try {
-        $response = $client->post('https://api.chapa.co/v1/transfers', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . config('services.chapa.secret_key'),
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ],
-            'json' => $payload
-        ]);
-
-        $responseData = json_decode($response->getBody(), true);
-        Log::info('Chapa transfer response', $responseData);
-
-        if ($response->getStatusCode() === 200) {
-            $withdrawal->chapa_transfer_id = $responseData['data']['transfer_id'] ?? null;
-            $withdrawal->chapa_transfer_status = 'pending';
-            $withdrawal->save();
-            return $responseData;
+        if ($response['status'] === 'success') {
+            // Chapa returns transfer ID in response
+            // Adjust based on actual Chapa response structure
+            return [
+                'success' => true,
+                'data' => $response['data']['data']['id'] ?? $response['data']['id'] ?? null
+            ];
         }
 
-        Log::error('Chapa transfer failed', ['status' => $response->getStatusCode()]);
-        return null;
-
-    } catch (RequestException $e) {
-        Log::error('Chapa transfer exception: ' . $e->getMessage());
-        if ($e->hasResponse()) {
-            $errorBody = $e->getResponse()->getBody()->getContents();
-            Log::error('Chapa error response body: ' . $errorBody);
-            
-            $errorJson = json_decode($errorBody, true);
-            if ($errorJson) {
-                Log::error('Chapa error details', $errorJson);
-            }
-        }
         return null;
     }
-
-    if ($response->getStatusCode() === 200) {
-    $responseData = json_decode($response->getBody(), true);
-    
-    // The transfer ID is directly in 'data' as a string, not an array
-    $withdrawal->chapa_transfer_id = $responseData['data'] ?? null;  // Changed this line
-    $withdrawal->chapa_transfer_status = 'pending';
-    $withdrawal->save();
-    
-    Log::info('Chapa transfer saved', [
-        'withdrawal_id' => $withdrawal->withdrawalID,
-        'chapa_transfer_id' => $withdrawal->chapa_transfer_id
-    ]);
-    
-    return $responseData;
-}
-
-if ($response->getStatusCode() === 200) {
-    $responseData = json_decode($response->getBody(), true);
-    
-    // The transfer ID is directly in 'data' as a string, not an array
-    $withdrawal->chapa_transfer_id = $responseData['data'] ?? null;
-    $withdrawal->chapa_transfer_status = 'pending';
-    $withdrawal->save();
-    
-    Log::info('Chapa transfer saved', [
-        'withdrawal_id' => $withdrawal->withdrawalID,
-        'chapa_transfer_id' => $withdrawal->chapa_transfer_id,
-        'response' => $responseData
-    ]);
-    
-    return $responseData;
-}
-if ($response->getStatusCode() === 200) {
-    $responseData = json_decode($response->getBody(), true);
-    
-    // Save the transfer ID (it's a string in 'data')
-    $withdrawal->chapa_transfer_id = $responseData['data'] ?? null;
-    $withdrawal->chapa_transfer_status = 'pending';
-    $withdrawal->save();
-    
-    Log::info('Chapa transfer saved', [
-        'withdrawal_id' => $withdrawal->withdrawalID,
-        'chapa_transfer_id' => $withdrawal->chapa_transfer_id
-    ]);
-    
-    return $responseData;
-}
-}
-
-/**
- * Helper to get bank code from bank name
- */
-private function getBankCode($bankName)
-{
-    $banks = [
-        'Wegagen Bank' => 472,
-        'Enat Bank' => 1,
-        'Commercial Bank of Ethiopia' => 128,
-        'CBEBirr' => 128,
-        'telebirr' => 855,
-        'M-Pesa' => 266,
-        'Ahadu Bank' => 207,
-        'Berhan Bank' => 571,
-        'YaYaWallet' => 867,
-    ];
-    
-    // For banks not in the list, log and return null
-    if (!isset($banks[$bankName])) {
-        Log::warning('Bank code not found', ['bank_name' => $bankName]);
-        return null;
-    }
-    
-    $code = $banks[$bankName];
-    Log::info('Bank code mapping', ['bank_name' => $bankName, 'code' => $code]);
-    return $code;
-}
-
-public function debugBankCodes()
-{
-    $client = new Client(['verify' => false]);
-    $response = $client->get('https://api.chapa.co/v1/banks', [
-        'headers' => [
-            'Authorization' => 'Bearer ' . config('services.chapa.secret_key')
-        ]
-    ]);
-    
-    $data = json_decode($response->getBody(), true);
-    Log::info('Chapa banks list:', $data);
-    return $data;
-}
 }

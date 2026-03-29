@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import queryClient from './api/queryClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Layout & Auth
@@ -38,53 +40,55 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* ✅ 1. PUBLIC ROUTES - Anyone can see these */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/payment/:txRef" element={<Payment />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* ✅ 1. PUBLIC ROUTES - Anyone can see these */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/payment/:txRef" element={<Payment />} />
 
-          {/* 🔐 2. PROTECTED ROUTES - Only logged-in users */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="/verification" element={<Verification />} />
-            <Route path="/verification/pending" element={<Verification />} />
-            <Route path="/verification/approved" element={<Verification />} />
-            <Route path="/verification/rejected" element={<Verification />} />
-            <Route path="/verification/suspended" element={<Verification />} />
-            <Route path="/verification/all" element={<Verification />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/users/customers" element={<Users />} />
-            <Route path="/users/providers" element={<Users />} />
-            <Route path="services" element={<Services />} />
-            <Route path="/services/categories" element={<Services />} />
-            <Route path="/services/services" element={<Services />} />
-            <Route path="/bookings" element={<Bookings />} />
-            <Route path="/bookings/pending" element={<Bookings />} />
-            <Route path="/bookings/accepted" element={<Bookings />} />
-            <Route path="/bookings/completed" element={<Bookings />} />
-            <Route path="/bookings/cancelled" element={<Bookings />} />
-            <Route path="disputes" element={<Disputes />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="profile" element={<Profile />} />
+            {/* 🔐 2. PROTECTED ROUTES - Only logged-in users */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="/verification" element={<Verification />} />
+              <Route path="/verification/pending" element={<Verification />} />
+              <Route path="/verification/approved" element={<Verification />} />
+              <Route path="/verification/rejected" element={<Verification />} />
+              <Route path="/verification/suspended" element={<Verification />} />
+              <Route path="/verification/all" element={<Verification />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/users/customers" element={<Users />} />
+              <Route path="/users/providers" element={<Users />} />
+              <Route path="services" element={<Services />} />
+              <Route path="/services/categories" element={<Services />} />
+              <Route path="/services/services" element={<Services />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/bookings/pending" element={<Bookings />} />
+              <Route path="/bookings/accepted" element={<Bookings />} />
+              <Route path="/bookings/completed" element={<Bookings />} />
+              <Route path="/bookings/cancelled" element={<Bookings />} />
+              <Route path="disputes" element={<Disputes />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="profile" element={<Profile />} />
 
-            {/* Remove the /reset-password line from here! */}
+              {/* Remove the /reset-password line from here! */}
 
-            <Route path="*" element={<div className="p-10 text-center font-bold">404 - Page Not Found</div>} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+              <Route path="*" element={<div className="p-10 text-center font-bold">404 - Page Not Found</div>} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

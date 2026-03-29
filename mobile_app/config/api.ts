@@ -9,32 +9,35 @@ const DEFAULT_PORT = '8000';
 // Function to get local IP address automatically
 export const getLocalIpAddress = async (): Promise<string> => {
   try {
-    // For physical devices, get the network IP
+    // 1. Try to get IP from Expo Constants (most reliable in dev)
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        console.log('📍 Detected server IP from hostUri:', host);
+        return host;
+      }
+    }
+
+    // 2. Fallback to network interface (for physical devices)
     if (Platform.OS !== 'web') {
-      // Get the device's IP address
       const ipAddress = await Network.getIpAddressAsync();
       
       if (ipAddress && ipAddress !== '0.0.0.0') {
-        // If we're on a device, we need to use the computer's IP
-        // The device IP is usually in the same subnet as your computer
-        // For example, if device IP is 192.168.1.5, your computer might be 192.168.1.x
-        const ipParts = ipAddress.split('.');
-        if (ipParts.length === 4) {
-          // Try common gateway IPs (usually .1 or .254)
-          // You might need to adjust this based on your network
-          const baseIp = `${ipParts[0]}.${ipParts[1]}.${ipParts[2]}`;
-          
-          // Most common gateway IPs are .1 or .254
-          // You can modify this logic based on your network setup
-          return `${baseIp}.1`; // Assuming your computer is at .1
-        }
+        // If we're on a device, try common Android emulator bridge or subnet guess
+        if (ipAddress.startsWith('10.0.2.')) return '10.0.2.2'; // Android Emulator
+        
+        // For physical devices, we still often need to find the host computer
+        // If hostUri failed, we can try to assume the computer is a common gateway 
+        // but it's better to log the current device IP for troubleshooting
+        console.log('📱 Device IP:', ipAddress);
       }
     }
     
-    // For web or fallback, try to get from environment or use default
+    // 3. Environment or default fallbacks
     return process.env.EXPO_PUBLIC_API_IP || DEFAULT_IP;
   } catch (error) {
-    console.warn('Failed to get local IP address:', error);
+    console.warn('⚠️ Failed to get local IP address:', error);
     return process.env.EXPO_PUBLIC_API_IP || DEFAULT_IP;
   }
 };

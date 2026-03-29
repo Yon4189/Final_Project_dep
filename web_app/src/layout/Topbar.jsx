@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import NotificationDropdown from '../components/NotificationDropdown';
 
-const Topbar = ({ onToggleSidebar }) => {
+const Topbar = ({ onToggleSidebar, isMobile }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +17,7 @@ const Topbar = ({ onToggleSidebar }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef(null);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   const getBackendUrl = (path) => {
     if (!path) return '';
@@ -30,6 +31,7 @@ const Topbar = ({ onToggleSidebar }) => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowResults(false);
+        if (isMobile) setIsSearchExpanded(false);
       }
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setIsNotificationOpen(false);
@@ -37,7 +39,7 @@ const Topbar = ({ onToggleSidebar }) => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isMobile]);
 
   // Debounced search logic
   useEffect(() => {
@@ -67,6 +69,7 @@ const Topbar = ({ onToggleSidebar }) => {
     setSearchQuery('');
     setSearchResults(null);
     setShowResults(false);
+    if (isMobile) setIsSearchExpanded(false);
 
     switch (type) {
       case 'categories':
@@ -87,46 +90,53 @@ const Topbar = ({ onToggleSidebar }) => {
   };
 
   return (
-    <header className="h-16 bg-white flex items-center justify-between px-8 shadow-sm border-b border-slate-200 sticky top-0 z-10 transition-all duration-300">
+    <header className={`h-16 bg-white flex items-center justify-between ${isMobile ? 'px-4' : 'px-8'} shadow-sm border-b border-slate-200 sticky top-0 z-10 transition-all duration-300`}>
 
       {/* LEFT: Toggle & Search Section */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={onToggleSidebar}
-          className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500 hover:text-admin-accent active:scale-90"
-          title="Toggle Sidebar"
-        >
-          <Menu size={20} />
-        </button>
+      <div className="flex-1 flex items-center gap-2 md:gap-4 overflow-hidden">
+        {!isSearchExpanded && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500 hover:text-admin-accent active:scale-95 shrink-0"
+            title="Toggle Sidebar"
+          >
+            <Menu size={20} />
+          </button>
+        )}
 
-        <div className="relative" ref={searchRef}>
-          <div className={`flex items-center bg-slate-100 px-4 py-2 rounded-xl border transition-all shadow-inner w-96 group ${showResults ? 'border-admin-accent bg-white ring-4 ring-admin-accent/5' : 'border-slate-200'}`}>
-            <Search size={18} className={`${showResults ? 'text-admin-accent' : 'text-slate-400'}`} />
-            <input
-              type="text"
-              placeholder="Search categoris, services, users..."
-              className="bg-transparent border-none outline-none ml-2 text-sm w-full text-slate-700 placeholder:text-slate-400"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
-            />
-            {searchQuery && (
+        <div className={`relative ${isSearchExpanded ? 'flex-1' : 'flex-initial'}`} ref={searchRef}>
+          <div className={`flex items-center bg-slate-100 rounded-xl border transition-all duration-300 shadow-inner group ${showResults ? 'border-admin-accent bg-white ring-4 ring-admin-accent/5' : 'border-slate-200'} ${isMobile ? (isSearchExpanded ? 'w-full px-4 py-2' : 'w-10 h-10 justify-center cursor-pointer') : 'w-64 lg:w-96 px-4 py-2'}`}
+            onClick={() => isMobile && !isSearchExpanded && setIsSearchExpanded(true)}
+          >
+            <Search size={18} className={`${showResults ? 'text-admin-accent' : 'text-slate-400'} shrink-0`} />
+            {(isSearchExpanded || !isMobile) && (
+              <input
+                type="text"
+                placeholder={isMobile ? "Search..." : "Search categories, services, users..."}
+                className="bg-transparent border-none outline-none ml-2 text-sm w-full text-slate-700 placeholder:text-slate-400"
+                value={searchQuery}
+                autoFocus={isMobile && isSearchExpanded}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
+              />
+            )}
+            {searchQuery && (isSearchExpanded || !isMobile) && (
               <button
-                onClick={() => { setSearchQuery(''); setShowResults(false); }}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setSearchQuery(''); setShowResults(false); if (isMobile) setIsSearchExpanded(false); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors shrink-0"
               >
                 <X size={16} />
               </button>
             )}
             {isSearching && (
-              <Loader2 size={16} className="text-admin-accent animate-spin ml-2" />
+              <Loader2 size={16} className="text-admin-accent animate-spin ml-2 shrink-0" />
             )}
           </div>
 
           {/* Search Results Dropdown */}
           {showResults && (
-            <div className="absolute top-14 left-0 w-[30rem] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200 z-50">
-              <div className="max-h-[32rem] overflow-y-auto p-2 custom-scrollbar">
+            <div className={`absolute top-14 left-0 ${isMobile ? 'w-[calc(100vw-2rem)] fixed left-4 right-4' : 'w-[30rem]'} bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200 z-50`}>
+              <div className="max-h-[70vh] md:max-h-[32rem] overflow-y-auto p-2 custom-scrollbar">
 
                 {/* No Results State */}
                 {!isSearching && searchResults &&

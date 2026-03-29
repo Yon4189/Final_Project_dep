@@ -11,6 +11,8 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -160,132 +162,143 @@ export default function CustomerProfile() {
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Profile Header */}
-      <View style={styles.header}>
-        <View style={styles.profileImageContainer}>
-          <Image
-            source={{ uri: profile?.profileImage || 'https://via.placeholder.com/120' }}
-            style={styles.profileImage}
-          />
-          <TouchableOpacity style={styles.editImageButton} onPress={handlePickImage}>
-            {uploadingImage ? (
-              <ActivityIndicator size="small" color={Colors.surface} />
-            ) : (
-              <Ionicons name="camera" size={20} color={Colors.surface} />
-            )}
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.headerActions}>
-          {isEditing ? (
-            <>
-              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.saveButton} 
-                onPress={handleSave}
-                disabled={updateProfile.isPending}
-              >
-                {updateProfile.isPending ? (
-                  <ActivityIndicator size="small" color={Colors.surface} />
-                ) : (
-                  <Text style={styles.saveButtonText}>Save</Text>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-              <Ionicons name="pencil" size={18} color={Colors.surface} />
-              <Text style={styles.editButtonText}>Edit Profile</Text>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Profile Header */}
+        <View style={styles.header}>
+          <View style={styles.profileImageContainer}>
+            <Image
+              source={{ uri: profile?.profileImage || 'https://via.placeholder.com/120' }}
+              style={styles.profileImage}
+            />
+            <TouchableOpacity style={styles.editImageButton} onPress={handlePickImage}>
+              {uploadingImage ? (
+                <ActivityIndicator size="small" color={Colors.surface} />
+              ) : (
+                <Ionicons name="camera" size={20} color={Colors.surface} />
+              )}
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Personal Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Personal Information</Text>
-        <View style={styles.sectionContent}>
-          {fields.map(renderEditableField)}
-        </View>
-      </View>
-
-      {/* Account Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Settings</Text>
-        <View style={styles.sectionContent}>
-          {renderSettingItem('lock-closed-outline', 'Change Password', handleChangePassword)}
-          {renderSettingItem('location-outline', 'Manage Addresses', handleManageLocations)}
-          {renderSettingItem('card-outline', 'Payment Methods', () => Alert.alert('Coming Soon', 'Payment methods are not available yet.'))}
-        </View>
-      </View>
-
-      {/* Notifications */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.sectionContent}>
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="mail-outline" size={22} color={Colors.text.secondary} />
-              <Text style={styles.settingLabel}>Email Notifications</Text>
-            </View>
-            <Switch
-              value={notifications.email}
-              onValueChange={(value) => setNotifications({ ...notifications, email: value })}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor={Colors.surface}
-            />
           </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
-              <Text style={styles.settingLabel}>Push Notifications</Text>
-            </View>
-            <Switch
-              value={notifications.push}
-              onValueChange={(value) => setNotifications({ ...notifications, push: value })}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor={Colors.surface}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="chatbubble-outline" size={22} color={Colors.text.secondary} />
-              <Text style={styles.settingLabel}>SMS Notifications</Text>
-            </View>
-            <Switch
-              value={notifications.sms}
-              onValueChange={(value) => setNotifications({ ...notifications, sms: value })}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor={Colors.surface}
-            />
+          
+          <View style={styles.headerActions}>
+            {isEditing ? (
+              <>
+                <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.saveButton} 
+                  onPress={handleSave}
+                  disabled={updateProfile.isPending}
+                >
+                  {updateProfile.isPending ? (
+                    <ActivityIndicator size="small" color={Colors.surface} />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                <Ionicons name="pencil" size={18} color={Colors.surface} />
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
-      </View>
 
-      {/* Support */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Support</Text>
-        <View style={styles.sectionContent}>
-          {renderSettingItem('help-circle-outline', 'Help Center', () => Alert.alert('Coming Soon', 'Help center is not available yet.'))}
-          {renderSettingItem('chatbubble-outline', 'Contact Support', () => Alert.alert('Coming Soon', 'Support chat is not available yet.'))}
-          {renderSettingItem('document-text-outline', 'Terms & Conditions', () => Alert.alert('Coming Soon', 'Terms page is not available yet.'))}
-          {renderSettingItem('shield-outline', 'Privacy Policy', () => Alert.alert('Coming Soon', 'Privacy policy page is not available yet.'))}
+        {/* Personal Information */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={styles.sectionContent}>
+            {fields.map(renderEditableField)}
+          </View>
         </View>
-      </View>
 
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={22} color={Colors.error} />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+        {/* Account Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account Settings</Text>
+          <View style={styles.sectionContent}>
+            {renderSettingItem('lock-closed-outline', 'Change Password', handleChangePassword)}
+            {renderSettingItem('location-outline', 'Manage Addresses', handleManageLocations)}
+            {renderSettingItem('card-outline', 'Payment Methods', () => Alert.alert('Coming Soon', 'Payment methods are not available yet.'))}
+          </View>
+        </View>
 
-      <View style={styles.bottomPadding} />
-    </ScrollView>
+        {/* Notifications */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          <View style={styles.sectionContent}>
+            <View style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="mail-outline" size={22} color={Colors.text.secondary} />
+                <Text style={styles.settingLabel}>Email Notifications</Text>
+              </View>
+              <Switch
+                value={notifications.email}
+                onValueChange={(value) => setNotifications({ ...notifications, email: value })}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.surface}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
+                <Text style={styles.settingLabel}>Push Notifications</Text>
+              </View>
+              <Switch
+                value={notifications.push}
+                onValueChange={(value) => setNotifications({ ...notifications, push: value })}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.surface}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="chatbubble-outline" size={22} color={Colors.text.secondary} />
+                <Text style={styles.settingLabel}>SMS Notifications</Text>
+              </View>
+              <Switch
+                value={notifications.sms}
+                onValueChange={(value) => setNotifications({ ...notifications, sms: value })}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.surface}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Support */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Support</Text>
+          <View style={styles.sectionContent}>
+            {renderSettingItem('help-circle-outline', 'Help Center', () => Alert.alert('Coming Soon', 'Help center is not available yet.'))}
+            {renderSettingItem('chatbubble-outline', 'Contact Support', () => Alert.alert('Coming Soon', 'Support chat is not available yet.'))}
+            {renderSettingItem('document-text-outline', 'Terms & Conditions', () => Alert.alert('Coming Soon', 'Terms page is not available yet.'))}
+            {renderSettingItem('shield-outline', 'Privacy Policy', () => Alert.alert('Coming Soon', 'Privacy policy page is not available yet.'))}
+          </View>
+        </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -293,6 +306,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     backgroundColor: Colors.surface,

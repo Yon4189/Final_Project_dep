@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Users, UserCheck, Clock, Banknote, Layers, Wrench,
   CheckCircle, XCircle, Loader2, Image as ImageIcon, RefreshCw,
@@ -9,18 +10,38 @@ import api from '../api/axios';
 import StatCard from '../components/StatCard';
 
 const Dashboard = () => {
-  const [verificationQueue, setVerificationQueue] = useState([]);
-  const [counts, setCounts] = useState({
+  const queryClient = useQueryClient();
+  const [processingId, setProcessingId] = useState(null);
+
+  // 1. Fetch Stats (shared with Sidebar)
+  const { data: counts = {
     providers: 0,
     customers: 0,
     pending: 0,
     categories: 0,
     services: 0,
     revenue: 0
+  }, isLoading: isStatsLoading, isError: isStatsError } = useQuery({
+    queryKey: ['adminStats'],
+    queryFn: async () => {
+      const response = await api.get('/admin/stats');
+      return response.data.success ? response.data.data : null;
+    },
+    refetchInterval: 30000,
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
-  const [dbStatus, setDbStatus] = useState('checking');
+
+  // 2. Fetch Pending Queue
+  const { data: verificationQueue = [], isLoading: isQueueLoading, isError: isQueueError } = useQuery({
+    queryKey: ['pendingProviders'],
+    queryFn: async () => {
+      const response = await api.get('/admin/providers/pending');
+      return response.data.success ? (response.data.data || []) : [];
+    },
+    refetchInterval: 10000,
+  });
+
+  const isLoading = isStatsLoading || isQueueLoading;
+  const dbStatus = (isStatsError || isQueueError) ? 'disconnected' : 'connected';
 
   // State for description modal
   const [descriptionModal, setDescriptionModal] = useState({
@@ -38,54 +59,11 @@ const Dashboard = () => {
     inputReason: ''
   });
 
-  const fetchData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    try {
-      // create headers with token if needed
-      // const headers = { ... };
-      // If you need auth, uncomment and use headers in requests
-      // const [queueRes, statsRes] = await Promise.all([
-      //   api.get('/providers/pending', { headers }),
-      //   api.get('/dashboard/stats', { headers })
-      // ]);
-      const [queueRes, statsRes] = await Promise.all([
-        api.get('/admin/providers/pending'),
-        api.get('/admin/stats')
-      ]);
-      console.log('Queue response:', queueRes.data);
-      console.log('Stats response:', statsRes.data);
-      if (queueRes.data && queueRes.data.success) {
-        setVerificationQueue(queueRes.data.data || []);
-      }
-      if (statsRes.data && statsRes.data.success) {
-        setCounts(statsRes.data.data || {
-          providers: 0,
-          customers: 0,
-          pending: 0,
-          categories: 0,
-          services: 0,
-          revenue: 0
-        });
-      }
-      setDbStatus('connected');
-    } catch (err) {
-      setDbStatus('disconnected');
-      console.error("Fetch Error:", err);
-      if (err.response && err.response.status === 401) {
-        console.log("Authentication failed - token may be expired");
-      }
-    } finally {
-      if (showLoading) setIsLoading(false);
-    }
+  // Refetch helper for the refresh button
+  const handleManualRefresh = () => {
+    queryClient.invalidateQueries(['adminStats']);
+    queryClient.invalidateQueries(['pendingProviders']);
   };
-
-  useEffect(() => {
-    fetchData(true);
-    const interval = setInterval(() => {
-      fetchData(false);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Modal-based verify action
   const handleVerifyAction = (id, name, approve) => {
@@ -112,9 +90,9 @@ const Dashboard = () => {
         verification_reason: reason
       });
       if (response.data.success) {
-        setVerificationQueue(prev => prev.filter(item => item.id !== id));
+        queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        queryClient.invalidateQueries({ queryKey: ['pendingProviders'] });
         alert(status === 'approved' ? "Account & Service Approved!" : "Provider Rejected.");
-        fetchData();
       }
     } catch {
       alert("Action failed. Ensure backend mail server is active.");
@@ -243,7 +221,7 @@ const Dashboard = () => {
             </span>
           </div>
           <button
-            onClick={fetchData}
+            onClick={handleManualRefresh}
             className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm active:scale-95"
           >
             <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
@@ -273,7 +251,7 @@ const Dashboard = () => {
           <span className="text-[10px] font-bold text-slate-400 italic underline underline-offset-4">Review service details before approval</span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hidden lg:block">
           {isLoading ? (
             <div className="p-20 text-center flex flex-col items-center gap-3 italic">
               <Loader2 className="animate-spin text-blue-600" size={32} />
@@ -287,7 +265,7 @@ const Dashboard = () => {
                   <th className="px-6 py-5">Category</th>
                   <th className="px-6 py-5">Service</th>
                   <th className="px-6 py-5">Service Description</th>
-                  <th className="px-6 py-5">Est. Cost</th>
+                  <th className="px-6 py-5 text-center">Est. Cost</th>
                   <th className="px-6 py-5 text-center">Verification Files</th>
                   <th className="px-6 py-5 text-center">Submission</th>
                   <th className="px-8 py-5 text-center">Action</th>
@@ -425,6 +403,78 @@ const Dashboard = () => {
               </div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Verification Queue is Empty</p>
             </div>
+          )}
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden p-4 space-y-4">
+          {isLoading ? (
+            <div className="p-10 text-center flex flex-col items-center gap-3">
+              <Loader2 className="animate-spin text-blue-600" size={24} />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading...</span>
+            </div>
+          ) : verificationQueue.length > 0 ? (
+            verificationQueue.map((item) => (
+              <div key={item.id} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0">
+                    {item.profilePicture ? (
+                      <img src={getBackendUrl(item.profilePicture)} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white font-bold">{item.name?.charAt(0)}</div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 text-sm truncate">{item.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{item.email}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Service</p>
+                    <p className="text-xs font-bold text-blue-600 truncate">{item.service_title || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Est. Cost</p>
+                    <p className="text-xs font-mono font-bold text-emerald-600 italic">
+                      {item.estimated_cost != null ? `${item.estimated_cost} ETB` : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Documents</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => viewFile(item.idPhoto)} className="flex-1 bg-slate-900 text-white py-2 rounded-xl text-[9px] font-black uppercase text-center">ID DOC</button>
+                    <button onClick={() => viewFile(item.credentialPhoto)} className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-[9px] font-black uppercase text-center">LICENCE</button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  {processingId === item.id ? (
+                    <Loader2 className="animate-spin text-blue-600" size={20} />
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleVerifyAction(item.id, item.name, false)}
+                        className="px-4 py-2 border border-red-200 text-red-500 rounded-xl text-[10px] font-black uppercase"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleVerifyAction(item.id, item.name, true)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100"
+                      >
+                        Approve
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="py-10 text-center text-[10px] font-black text-slate-400 uppercase">Queue is empty</div>
           )}
         </div>
       </div>

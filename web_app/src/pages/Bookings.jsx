@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import {
   Calendar, User, Wrench, MapPin,
@@ -9,6 +10,7 @@ import {
 import api from '../api/axios';
 
 const Bookings = () => {
+  const queryClient = useQueryClient();
   const location = useLocation();
 
   // 1. Determine status from URL path (driven by Sidebar)
@@ -21,48 +23,30 @@ const Bookings = () => {
     return 'All'; // Default fallback
   };
 
-  // --- DATA STATE ---
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dbStatus, setDbStatus] = useState('checking');
-  const [statusFilter, setStatusFilter] = useState(getStatusFromPath());
+  const statusFilter = getStatusFromPath();
+
+  // 2. Data Fetching with TanStack Query
+  const { 
+    data: bookings = [], 
+    isLoading: loading, 
+    error: apiError,
+    refetch 
+  } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: async () => {
+      const response = await api.get('/admin/bookings');
+      return response.data.success ? (response.data.data || []) : [];
+    },
+    staleTime: 60000,
+    refetchInterval: 30000,
+  });
+
+  const dbStatus = apiError ? 'disconnected' : (loading ? 'checking' : 'connected');
+  const error = apiError ? 'Failed to sync bookings table.' : null;
 
   // --- UI STATE ---
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
-
-  // Update filter when Sidebar link is clicked
-  useEffect(() => {
-    setStatusFilter(getStatusFromPath());
-  }, [location.pathname]);
-
-  // 🚀 2. FETCH REAL DATA FROM LARAVEL
-  const fetchBookings = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
-      // Hits Route::get('/admin/bookings')
-      const response = await api.get('/admin/bookings');
-      if (response.data.success) {
-        setBookings(response.data.data);
-        setDbStatus('connected');
-      }
-    } catch (err) {
-      console.error("Fetch Error:", err);
-      setError('Failed to sync bookings table.');
-      setDbStatus('disconnected');
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
-
-  // Initial load + Polling every 30 seconds for live updates
-  useEffect(() => {
-    fetchBookings(true);
-    const interval = setInterval(() => fetchBookings(false), 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   // 🚀 3. FILTERING LOGIC (Status + Search)
   const filteredBookings = bookings.filter(b => {
@@ -110,8 +94,8 @@ const Bookings = () => {
             {dbStatus === 'connected' ? <CheckCircle size={14} className="text-green-500" /> : <XCircle size={14} className="text-red-500" />}
           </div>
 
-          <button onClick={() => fetchBookings(true)} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm active:scale-90">
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+          <button onClick={() => refetch()} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm active:scale-90">
+            <RefreshCw size={20} className={loading && bookings.length === 0 ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -139,48 +123,82 @@ const Bookings = () => {
             <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">{error}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
-                <tr>
-                  <th className="px-8 py-5">ID</th>
-                  <th className="px-8 py-5">Client & Specialist</th>
-                  <th className="px-8 py-5">Service Type</th>
-                  <th className="px-8 py-5">Current Status</th>
-                  <th className="px-8 py-5 text-right">Review</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredBookings.map((b) => (
-                  <tr key={b.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-5">
-                      <span className="font-mono text-[10px] font-black text-slate-300 bg-slate-50 px-2 py-1 rounded border">#{b.id}</span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="text-sm font-bold text-slate-900">{b.customer_name}</div>
-                      <div className="text-[10px] text-slate-400 font-bold uppercase italic">Provider: {b.provider_name}</div>
-                    </td>
-                    <td className="px-8 py-5 text-xs font-bold text-blue-500 uppercase tracking-tighter">{b.service_title}</td>
-                    <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusStyle(b.status)}`}>
+          <>
+            <div className="overflow-x-auto hidden lg:block">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
+                  <tr>
+                    <th className="px-8 py-5">ID</th>
+                    <th className="px-8 py-5">Client & Specialist</th>
+                    <th className="px-8 py-5">Service Type</th>
+                    <th className="px-8 py-5">Current Status</th>
+                    <th className="px-8 py-5 text-right">Review</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredBookings.map((b) => (
+                    <tr key={b.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5">
+                        <span className="font-mono text-[10px] font-black text-slate-300 bg-slate-50 px-2 py-1 rounded border">#{b.id}</span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="text-sm font-bold text-slate-900">{b.customer_name}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase italic">Provider: {b.provider_name}</div>
+                      </td>
+                      <td className="px-8 py-5 text-xs font-bold text-blue-500 uppercase tracking-tighter">{b.service_title}</td>
+                      <td className="px-8 py-5">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusStyle(b.status)}`}>
+                          {b.status}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <button onClick={() => setSelectedBooking(b)} className="p-2 bg-slate-900 text-white rounded-xl hover:bg-black transition-all shadow-md active:scale-90">
+                          <Eye size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredBookings.length === 0 && (
+                <div className="p-20 text-center text-slate-300 font-black uppercase text-xs tracking-widest italic">
+                  No {statusFilter.toLowerCase()} entries found.
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden p-4 space-y-4">
+              {filteredBookings.length > 0 ? (
+                filteredBookings.map((b) => (
+                  <div key={b.id} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="font-mono text-[9px] font-black text-slate-300">#{b.id}</span>
+                        <p className="font-bold text-slate-900 text-sm mt-0.5">{b.customer_name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase italic mt-1">to: {b.provider_name}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase border ${getStatusStyle(b.status)}`}>
                         {b.status}
                       </span>
-                    </td>
-                    <td className="px-8 py-5 text-right">
-                      <button onClick={() => setSelectedBooking(b)} className="p-2 bg-slate-900 text-white rounded-xl hover:bg-black transition-all shadow-md active:scale-90">
-                        <Eye size={16} />
+                    </div>
+
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-200 border-dashed">
+                      <p className="text-xs font-black text-blue-500 uppercase tracking-tighter">{b.service_title}</p>
+                      <button
+                        onClick={() => setSelectedBooking(b)}
+                        className="flex items-center gap-1 text-[10px] font-black text-slate-900 uppercase bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm"
+                      >
+                        <Eye size={12} /> View
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredBookings.length === 0 && (
-              <div className="p-20 text-center text-slate-300 font-black uppercase text-xs tracking-widest italic">
-                No {statusFilter.toLowerCase()} entries found.
-              </div>
-            )}
-          </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-10 text-center text-[10px] font-black text-slate-400 uppercase">No bookings found.</div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
