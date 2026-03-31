@@ -801,24 +801,37 @@ class CustomerController extends Authenticatable
     {
         $customer = Auth::guard('customer')->user();
         
+        // Handle both camelCase and snake_case for bookingId
+        if (!$request->has('booking_id') && $request->has('bookingId')) {
+            $request->merge(['booking_id' => $request->bookingId]);
+        }
+
+        // Handle type field mapping
+        if (!$request->has('type') && $request->has('issueType')) {
+            $request->merge(['type' => $request->issueType]);
+        }
+
         $validated = $request->validate([
-            'provider_id' => 'required|exists:service_providers,providerID',
             'booking_id' => 'required|exists:bookings,bookingID',
-            'type' => 'required|in:service_quality,behavior,payment,other',
-            'description' => 'required|string|max:2000',
+            'type' => 'required|string|max:50',
+            'description' => 'required|string|max:5000',
+            'provider_id' => 'sometimes|numeric',
             'priority' => 'sometimes|in:low,medium,high,urgent',
             'attachments' => 'sometimes|array'
         ]);
 
-        $booking = Booking::find($request->booking_id);
+        $booking = Booking::findOrFail($request->booking_id);
+
+        // Auto-resolve provider_id if missing
+        $against_id = $request->provider_id ?? $booking->providerID;
 
         $complaint = Dispute::create([
             'bookingID' => $request->booking_id,
-            'raised_by_id' => $customer->customerID,
+            'raised_by_id' => $customer ? $customer->customerID : $booking->customerID,
             'raised_by_type' => 'customer',
-            'against_id' => $booking->providerID,
+            'against_id' => $against_id,
             'against_type' => 'provider',
-            'title' => $request->type . ' - ' . substr($request->description, 0, 30) . '...',
+            'title' => ucwords(str_replace('_', ' ', $request->type)) . ' - ' . substr($request->description, 0, 50) . '...',
             'description' => $request->description,
             'category' => $request->type,
             'priority' => $request->priority ?? 'medium',

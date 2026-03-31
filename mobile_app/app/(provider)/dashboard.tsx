@@ -11,6 +11,7 @@ import {
   FlatList,
   Dimensions,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,6 +60,7 @@ export default function ProviderDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'pending' | 'today' | 'upcoming'>('today');
   const [showRecentMessages, setShowRecentMessages] = useState(false);
+  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
 
   const {
     stats,
@@ -118,38 +120,45 @@ export default function ProviderDashboard() {
       colors={[Colors.primary, Colors.primary]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.header}
+      style={[styles.header, { flexDirection: 'column' }]}
     >
 
-      <View style={styles.headerTop}>
-        <TouchableOpacity
-          style={{ 
-            backgroundColor: Colors.surface, 
-            borderRadius: 22, 
-            width: 44, 
-            height: 44, 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            elevation: 4,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-          }}
-          onPress={() => router.replace("/")}
-        >
-          <Ionicons name="home" size={26} color={Colors.primary} />
-        </TouchableOpacity>
-
+      {/* Row 1: Greeting Only */}
+      <View style={{ justifyContent: 'center', marginBottom: 16, alignItems: 'center' }}>
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.profileName}>
+          <Text style={[styles.welcomeText, { textAlign: 'center', marginRight: 0 }]}>Welcome back,</Text>
+          <Text style={[styles.profileName, { textAlign: 'center', marginRight: 0 }]}>
             {profile?.fullname || profile?.businessName || 'Provider'}
           </Text>
         </View>
+      </View>
 
-        <View style={styles.headerActions}>
+        {/* Row 2: Hamburger (Left) and Utilities (Right) */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 }}>
+          {/* Left Side: Hamburger */}
           <TouchableOpacity
+            style={{ 
+              backgroundColor: Colors.surface, 
+              borderRadius: 14, 
+              width: 44, 
+              height: 44, 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              elevation: 4,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+            }}
+            onPress={() => setShowHamburgerMenu(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="menu" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+
+          {/* Right Side: Notifications & Profile */}
+          <View style={[styles.headerActions, { position: 'relative', right: 0 }]}>
+            <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => setShowRecentMessages(true)}
           >
@@ -597,14 +606,79 @@ export default function ProviderDashboard() {
   const getCurrentRequests = () => {
     switch (selectedTab) {
       case 'today':
-        return todaySchedule;
+        return todaySchedule || [];
       case 'pending':
-        return pendingRequests;
+        return pendingRequests || [];
       case 'upcoming':
         return []; // Fetch upcoming requests
       default:
         return [];
     }
+  };
+
+  const renderHamburgerMenu = () => {
+    const menuItems = [
+      {
+        label: 'Home',
+        icon: 'home' as const,
+        color: Colors.primary,
+        onPress: () => { setShowHamburgerMenu(false); router.replace('/'); },
+      },
+      {
+        label: 'Requests',
+        icon: 'clipboard-outline' as const,
+        color: Colors.primary,
+        onPress: () => { setShowHamburgerMenu(false); router.push('/(provider)/requests'); },
+      },
+      {
+        label: 'Schedule',
+        icon: 'calendar-outline' as const,
+        color: Colors.success,
+        onPress: () => { setShowHamburgerMenu(false); router.push('/(provider)/schedule'); },
+      },
+      {
+        label: 'Messages',
+        icon: 'chatbubble-ellipses-outline' as const,
+        color: Colors.info,
+        onPress: () => { setShowHamburgerMenu(false); setShowRecentMessages(true); },
+      },
+      {
+        label: 'Earnings & Withdraw',
+        icon: 'wallet-outline' as const,
+        color: Colors.warning,
+        onPress: () => { setShowHamburgerMenu(false); router.push('/(provider)/earnings'); },
+      },
+      {
+        label: 'Reviews',
+        icon: 'star-outline' as const,
+        color: Colors.warning || '#FF9500',
+        onPress: () => { setShowHamburgerMenu(false); router.push('/(provider)/reviews'); },
+      },
+    ];
+
+    return (
+      <Modal visible={showHamburgerMenu} transparent animationType="fade" onRequestClose={() => setShowHamburgerMenu(false)}>
+        <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setShowHamburgerMenu(false)}>
+          <View style={styles.menuDropdown}>
+            <View style={styles.menuHeader}>
+              <Text style={styles.menuTitle}>Menu</Text>
+              <TouchableOpacity onPress={() => setShowHamburgerMenu(false)}>
+                <Ionicons name="close" size={22} color={(Colors.text as any)?.primary || '#222'} />
+              </TouchableOpacity>
+            </View>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity key={item.label} style={[styles.menuItem, index < menuItems.length - 1 && styles.menuItemBorder]} onPress={item.onPress} activeOpacity={0.7}>
+                <View style={[styles.menuItemIcon, { backgroundColor: item.color + '18' }]}>
+                  <Ionicons name={item.icon} size={22} color={item.color} />
+                </View>
+                <Text style={styles.menuItemLabel}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={(Colors.text as any)?.secondary || '#888'} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
   };
 
   if (isLoading && !refreshing) {
@@ -620,7 +694,6 @@ export default function ProviderDashboard() {
         }
       >
         {renderHeader()}
-        {renderQuickActions()}
         {renderRecentChats()}
         {renderTabs()}
 
@@ -641,43 +714,7 @@ export default function ProviderDashboard() {
           />
         </View>
 
-        {/* Recent Earnings Summary */}
-        <TouchableOpacity
-          style={styles.earningsSummary}
-          onPress={() => router.push('/(provider)/earnings')}
-        >
-          <View style={styles.earningsHeader}>
-            <Text style={styles.earningsTitle}>Recent Earnings</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
-          </View>
 
-          <View style={styles.earningsGrid}>
-            <View style={styles.earningsItem}>
-              <PriceText style={styles.earningsAmount} amount={earnings?.today || 0} />
-              <Text style={styles.earningsLabel}>Today</Text>
-            </View>
-            <View style={styles.earningsItem}>
-              <PriceText style={styles.earningsAmount} amount={earnings?.week || 0} />
-              <Text style={styles.earningsLabel}>This Week</Text>
-            </View>
-            <View style={styles.earningsItem}>
-              <PriceText style={styles.earningsAmount} amount={earnings?.month || 0} />
-              <Text style={styles.earningsLabel}>This Month</Text>
-            </View>
-          </View>
-
-          <View style={styles.withdrawSection}>
-            <Text style={styles.availableBalance}>
-              Available for withdrawal: <PriceText amount={earnings?.available || 0} />
-            </Text>
-            <TouchableOpacity
-              style={styles.withdrawButton}
-              onPress={() => router.push('/(provider)/earnings/withdraw')}
-            >
-              <Text style={styles.withdrawButtonText}>Withdraw</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -694,6 +731,7 @@ export default function ProviderDashboard() {
           router.push('/(provider)/chat');
         }}
       />
+      {renderHamburgerMenu()}
     </View>
   );
 }
@@ -709,6 +747,64 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  menuDropdown: {
+    marginTop: 140,
+    marginLeft: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    paddingVertical: 8,
+    width: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    marginBottom: 4,
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 12,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  menuItemIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuItemLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#222',
   },
   headerTop: {
     flexDirection: 'row',

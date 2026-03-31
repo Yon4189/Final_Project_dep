@@ -1,378 +1,583 @@
-// mobile_app/services/api.ts
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+// services/api.ts
+/*import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { Platform, Alert } from 'react-native';
-import Constants from 'expo-constants';
-import { API_BASE_URL, refreshApiBaseUrl, getNetworkState } from '../config/api';
+import { Platform } from 'react-native';
 import * as Network from 'expo-network';
+import Constants from 'expo-constants';
+import type { ApiResponse } from '@/app/types/customer.types';
+import { API_BASE_URL as CONFIG_BASE_URL } from '../config/api';
+const API_BASE_URL = CONFIG_BASE_URL;
+const API_TIMEOUT = 30000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
 
-console.log('Initial API_BASE_URL:', API_BASE_URL);
+const PROVIDER_TOKEN_KEY = 'provider_token';
+const CUSTOMER_TOKEN_KEY = 'customer_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const USER_TYPE_KEY = 'user_type';
+const USER_KEY = 'user_data';
 
-// Token key
-const TOKEN_KEY = 'user_token';
+type ApiEventType = 'token_refreshed' | 'unauthorized' | 'network_error' | 'server_error';
+type ApiEventListener = (event: ApiEventType, data?: any) => void;
 
-// Platform-specific storage
 const storage = {
-    async getItem(key: string): Promise<string | null> {
-        if (Platform.OS === 'web') return localStorage.getItem(key);
-        return SecureStore.getItemAsync(key);
-    },
-    async setItem(key: string, value: string): Promise<void> {
-        if (Platform.OS === 'web') return localStorage.setItem(key, value);
-        return SecureStore.setItemAsync(key, value);
-    },
-    async removeItem(key: string): Promise<void> {
-        if (Platform.OS === 'web') return localStorage.removeItem(key);
-        return SecureStore.deleteItemAsync(key);
-    },
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    } else {
+      try {
+        return await SecureStore.getItemAsync(key);
+      } catch (error) {
+        console.warn(`Failed to get item ${key} from SecureStore:`, error);
+        return null;
+      }
+    }
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      try {
+        await SecureStore.setItemAsync(key, value);
+      } catch (error) {
+        console.warn(`Failed to set item ${key} in SecureStore:`, error);
+      }
+    }
+  },
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+    } else {
+      try {
+        await SecureStore.deleteItemAsync(key);
+      } catch (error) {
+        console.warn(`Failed to remove item ${key} from SecureStore:`, error);
+      }
+    }
+  }
 };
 
-// Custom error class for validation errors
-export class ValidationError extends Error {
-    public validationErrors: Record<string, string[]>;
-    public status: number;
-    public data: any;
-
-    constructor(message: string, validationErrors: Record<string, string[]>, status: number, data: any) {
-        super(message);
-        this.name = 'ValidationError';
-        this.validationErrors = validationErrors;
-        this.status = status;
-        this.data = data;
-    }
-}
-
 class ApiService {
-    private api: AxiosInstance;
-    private token: string | null = null;
-    private currentBaseURL: string = API_BASE_URL;
-    private refreshInProgress: boolean = false;
-    private userData: any = null;
+  private api: AxiosInstance;
+  private providerToken: string | null = null;
+  private customerToken: string | null = null;
+  private refreshToken: string | null = null;
+  private userType: 'provider' | 'customer' | null = null;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value: unknown) => void;
+    reject: (reason?: any) => void;
+    config: AxiosRequestConfig;
+  }> = [];
+  private listeners: ApiEventListener[] = [];
 
-    constructor() {
-        this.api = axios.create({
-            baseURL: this.currentBaseURL,
-            timeout: 30000,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Platform': Platform.OS,
-                'X-App-Version': Constants.expoConfig?.version || '1.0.0',
-            },
-        });
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: API_TIMEOUT,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Platform': Platform.OS,
+        'X-App-Version': Constants.expoConfig?.version || '1.0.0',
+        'X-App-Build': Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode || '1',
+      },
+      withCredentials: false,
+    });
 
-        // Attach token automatically to requests
-        this.api.interceptors.request.use(async (config) => {
-            const token = this.token || (await storage.getItem(TOKEN_KEY));
-            if (token && config.headers) {
-                config.headers.Authorization = `Bearer ${token}`;
-            }
+    this.setupInterceptors();
+    this.loadStoredToken().then(() => {
+      console.log('Token loaded on initialization:', this.isAuthenticated());
+    });
+  }
 
-            // Attach user type header
-            if (this.userData?.user_type && config.headers) {
-                config.headers['X-User-Type'] = this.userData.user_type;
-            }
+  public addEventListener(listener: ApiEventListener): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
 
-            // Log request data for debugging (optional, remove in production)
-            if (config.data) {
-                console.log(`📤 ${config.method?.toUpperCase()} ${config.url}:`,
-                    typeof config.data === 'string' ? JSON.parse(config.data) : config.data);
-            }
+  private emitEvent(event: ApiEventType, data?: any): void {
+    this.listeners.forEach(listener => listener(event, data));
+  }
 
-            return config;
-        });
+  private async loadStoredToken(): Promise<void> {
+    try {
+      const [providerToken, customerToken, refreshToken, userTypeStr] = await Promise.all([
+        storage.getItem(PROVIDER_TOKEN_KEY),
+        storage.getItem(CUSTOMER_TOKEN_KEY),
+        storage.getItem(REFRESH_TOKEN_KEY),
+        storage.getItem(USER_TYPE_KEY)
+      ]);
 
-        // Add response interceptor for handling errors
-        this.api.interceptors.response.use(
-            (response) => {
-                // Log success response for debugging
-                console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url}:`,
-                    response.status);
-                return response;
-            },
-            async (error) => {
-                // Log the full error for debugging
-                console.error('❌ API Error:', {
-                    status: error.response?.status,
-                    statusText: error.response?.statusText,
-                    url: error.config?.url,
-                    method: error.config?.method,
-                    data: error.response?.data,
-                    requestData: error.config?.data ?
-                        (typeof error.config.data === 'string' ?
-                            JSON.parse(error.config.data) : error.config.data) : null
-                });
+      this.providerToken = providerToken;
+      this.customerToken = customerToken;
+      this.refreshToken = refreshToken;
+      this.userType = userTypeStr as 'provider' | 'customer' | null;
 
-                // Handle validation errors (422)
-                if (error.response?.status === 422) {
-                    const responseData = error.response.data;
+      console.log('Tokens loaded:', {
+        hasProviderToken: !!this.providerToken,
+        hasCustomerToken: !!this.customerToken,
+        hasRefreshToken: !!this.refreshToken,
+        userType: this.userType,
+        isAuthenticated: this.isAuthenticated()
+      });
+    } catch (error) {
+      console.warn('Failed to load stored token:', error);
+    }
+  }
 
-                    // Log validation errors in a readable format
-                    if (responseData.errors) {
-                        console.error('📋 VALIDATION ERRORS:');
-                        Object.keys(responseData.errors).forEach(field => {
-                            console.error(`   ${field}: ${responseData.errors[field].join(', ')}`);
-                        });
-                    }
+  public async setProviderToken(token: string, refreshToken?: string): Promise<void> {
+    this.providerToken = token;
+    this.customerToken = null;
+    this.userType = 'provider';
 
-                    // Create a custom validation error
-                    const validationError = new ValidationError(
-                        responseData.message || 'Validation failed',
-                        responseData.errors || {},
-                        error.response.status,
-                        responseData
-                    );
-
-                    return Promise.reject(validationError);
-                }
-
-                // Check if it's a network error
-                if (this.isNetworkError(error)) {
-                    console.log('🌐 Network error detected, attempting to refresh base URL...');
-
-                    // Prevent multiple simultaneous refresh attempts
-                    if (!this.refreshInProgress) {
-                        this.refreshInProgress = true;
-                        try {
-                            const newBaseUrl = await refreshApiBaseUrl();
-                            if (newBaseUrl !== this.currentBaseURL) {
-                                console.log(`🔄 Updating API base URL to ${newBaseUrl}`);
-                                this.currentBaseURL = newBaseUrl;
-                                this.api.defaults.baseURL = newBaseUrl;
-                            }
-
-                            // Retry the original request with new baseURL
-                            if (error.config) {
-                                error.config.baseURL = this.currentBaseURL;
-                                console.log('🔄 Retrying request with new base URL...');
-                                return this.api.request(error.config);
-                            }
-                        } catch (refreshError) {
-                            console.warn('⚠️ Failed to refresh base URL:', refreshError);
-                        } finally {
-                            this.refreshInProgress = false;
-                        }
-                    }
-                }
-
-                return Promise.reject(error);
-            }
-        );
-
-        this.loadToken();
-        // Try to get the correct IP on startup
-        this.initializeConnection();
+    if (refreshToken) {
+      this.refreshToken = refreshToken;
     }
 
-    // Initialize connection and check network status
-    private async initializeConnection() {
-        try {
-            const networkState = await getNetworkState();
-            console.log('📡 Network state:', networkState);
+    try {
+      await storage.setItem(PROVIDER_TOKEN_KEY, token);
+      await storage.setItem(USER_TYPE_KEY, 'provider');
+      await storage.removeItem(CUSTOMER_TOKEN_KEY);
+      if (refreshToken) {
+        await storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      }
+      console.log('Provider token stored successfully');
+    } catch (error) {
+      console.warn('Failed to store provider token:', error);
+    }
+  }
 
-            if (!networkState.isConnected) {
-                console.warn('⚠️ Device is not connected to any network');
+  public async setCustomerToken(token: string, refreshToken?: string): Promise<void> {
+    this.customerToken = token;
+    this.providerToken = null;
+    this.userType = 'customer';
+
+    if (refreshToken) {
+      this.refreshToken = refreshToken;
+    }
+
+    try {
+      await storage.setItem(CUSTOMER_TOKEN_KEY, token);
+      await storage.setItem(USER_TYPE_KEY, 'customer');
+      await storage.removeItem(PROVIDER_TOKEN_KEY);
+      if (refreshToken) {
+        await storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      }
+      console.log('Customer token stored successfully');
+    } catch (error) {
+      console.warn('Failed to store customer token:', error);
+    }
+  }
+
+  public async removeToken(): Promise<void> {
+    this.providerToken = null;
+    this.customerToken = null;
+    this.refreshToken = null;
+    this.userType = null;
+
+    try {
+      await storage.removeItem(PROVIDER_TOKEN_KEY);
+      await storage.removeItem(CUSTOMER_TOKEN_KEY);
+      await storage.removeItem(REFRESH_TOKEN_KEY);
+      await storage.removeItem(USER_TYPE_KEY);
+    } catch (error) {
+      console.warn('Failed to remove token:', error);
+    }
+  }
+
+  public getToken(): string | null {
+    if (this.userType === 'provider') {
+      return this.providerToken;
+    }
+    return this.customerToken;
+  }
+
+  public getUserType(): string | null {
+    return this.userType;
+  }
+
+  public async setUserData(userData: any): Promise<void> {
+    try {
+      await storage.setItem(USER_KEY, JSON.stringify(userData));
+      console.log('User data stored successfully');
+    } catch (error) {
+      console.warn('Failed to store user data:', error);
+    }
+  }
+
+  public async getUserData(): Promise<any | null> {
+    try {
+      const data = await storage.getItem(USER_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.warn('Failed to load user data:', error);
+      return null;
+    }
+  }
+
+  public async removeUserData(): Promise<void> {
+    try {
+      await storage.removeItem(USER_KEY);
+    } catch (error) {
+      console.warn('Failed to remove user data:', error);
+    }
+  }
+
+  private async checkNetwork(): Promise<boolean> {
+    try {
+      const networkState = await Network.getNetworkStateAsync();
+      return networkState.isConnected ?? false;
+    } catch {
+      return false;
+    }
+  }
+
+  private async refreshAccessToken(): Promise<string | null> {
+    if (!this.refreshToken) {
+      console.log('No refresh token available');
+      return null;
+    }
+
+    try {
+      const endpoint = this.userType === 'provider'
+        ? '/auth/provider/refresh'
+        : '/auth/customer/refresh';
+
+      console.log('Attempting to refresh token at:', endpoint);
+
+      const response = await axios.post(`${API_BASE_URL}${endpoint}`, {
+        refresh_token: this.refreshToken,
+      });
+
+      console.log('Refresh response:', response.data);
+
+      if (response.data?.success && response.data?.data?.token) {
+        const { token, refresh_token } = response.data.data;
+
+        if (this.userType === 'provider') {
+          await this.setProviderToken(token, refresh_token);
+        } else {
+          await this.setCustomerToken(token, refresh_token);
+        }
+
+        return token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      await this.removeToken();
+      return null;
+    }
+  }
+
+  private processQueue(error: Error | null, token: string | null = null): void {
+    this.failedQueue.forEach(({ resolve, reject, config }) => {
+      if (error) {
+        reject(error);
+      } else if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+        resolve(this.api(config));
+      }
+    });
+
+    this.failedQueue = [];
+    this.isRefreshing = false;
+  }
+
+  private setupInterceptors(): void {
+    this.api.interceptors.request.use(
+      async (config) => {
+        const token = this.getToken();
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log(` Token attached to request: ${config.url}`, {
+            hasToken: true,
+            tokenPreview: `${token.substring(0, 15)}...`
+          });
+        } else {
+          console.log(` No token for request: ${config.url}`);
+        }
+
+        config.headers['X-Request-ID'] = this.generateRequestId();
+
+        const userType = this.userType || (await storage.getItem(USER_TYPE_KEY));
+        if (userType && config.headers) {
+          config.headers['X-User-Type'] = userType;
+        }
+
+        if (__DEV__) {
+          console.log('API Request:', {
+            method: config.method?.toUpperCase(),
+            url: `${API_BASE_URL}${config.url}`,
+            hasToken: !!token,
+            userType: this.userType,
+          });
+        }
+
+        return config;
+      },
+      (error) => {
+        console.error('Request interceptor error:', error);
+        return Promise.reject(error);
+      }
+    );
+
+    this.api.interceptors.response.use(
+      (response) => {
+        if (__DEV__) {
+          console.log('API Response:', {
+            url: response.config.url,
+            status: response.status,
+            success: response.data?.success,
+          });
+        }
+        return response;
+      },
+      async (error: AxiosError) => {
+        const originalConfig = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+        if (__DEV__) {
+          console.error(' API Error Details:', {
+            url: originalConfig?.url,
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            message: error.message,
+          });
+        }
+
+        if (!error.response) {
+          const isConnected = await this.checkNetwork();
+          if (!isConnected) {
+            this.emitEvent('network_error');
+            const networkError: any = new Error('No internet connection');
+            networkError.statusCode = 0;
+            networkError.isNetworkError = true;
+            return Promise.reject(networkError);
+          }
+          this.emitEvent('server_error');
+          const serverError: any = new Error('Network error. Please try again.');
+          serverError.statusCode = 0;
+          serverError.isNetworkError = true;
+          return Promise.reject(serverError);
+        }
+
+        const { status, data } = error.response;
+
+        if (status === 400 || status === 422) {
+          const validationError: any = new Error((data as any)?.message || (status === 400 ? 'Bad request.' : 'Validation failed.'));
+          validationError.response = error.response;
+          validationError.statusCode = status;
+          validationError.errors = (data as any)?.errors;
+          return Promise.reject(validationError);
+        }
+
+        if (status === 401 && originalConfig && !originalConfig._retry) {
+          console.log('Handling 401 error, token refresh needed');
+
+          if (this.isRefreshing) {
+            console.log('Token refresh in progress, queueing request');
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject, config: originalConfig });
+            });
+          }
+
+          originalConfig._retry = true;
+          this.isRefreshing = true;
+          this.emitEvent('unauthorized', { url: originalConfig.url });
+
+          try {
+            const newToken = await this.refreshAccessToken();
+
+            if (newToken) {
+              console.log('Token refreshed successfully, retrying queued requests');
+              this.processQueue(null, newToken);
+              this.emitEvent('token_refreshed');
+
+              if (originalConfig.headers) {
+                originalConfig.headers.Authorization = `Bearer ${newToken}`;
+              }
+              return this.api(originalConfig);
             } else {
-                await this.refreshBaseUrl();
+              console.log('Token refresh failed, clearing tokens');
+              this.processQueue(new Error('Refresh failed'));
+              await this.removeToken();
+              await this.removeUserData();
+
+              const sessionError: any = new Error('Session expired. Please login again.');
+              sessionError.statusCode = 401;
+              sessionError.requiresLogin = true;
+              return Promise.reject(sessionError);
             }
-        } catch (error) {
-            console.warn('⚠️ Failed to initialize connection:', error);
-        }
-    }
+          } catch (refreshError) {
+            console.error('Token refresh error:', refreshError);
+            this.processQueue(refreshError as Error);
+            await this.removeToken();
+            await this.removeUserData();
 
-    // New method to refresh the base URL
-    private async refreshBaseUrl() {
-        try {
-            const newBaseUrl = await refreshApiBaseUrl();
-            if (newBaseUrl !== this.currentBaseURL) {
-                console.log(`🔄 Updating API base URL from ${this.currentBaseURL} to ${newBaseUrl}`);
-                this.currentBaseURL = newBaseUrl;
-                this.api.defaults.baseURL = newBaseUrl;
-            }
-        } catch (error) {
-            console.warn('⚠️ Failed to refresh base URL:', error);
-        }
-    }
-
-    private async loadToken() {
-        this.token = await storage.getItem(TOKEN_KEY);
-        const storedUserData = await storage.getItem('user_data');
-        if (storedUserData) {
-            try {
-                this.userData = typeof storedUserData === 'string' ? JSON.parse(storedUserData) : storedUserData;
-            } catch (e) {
-                this.userData = storedUserData;
-            }
-        }
-        if (this.token) {
-            console.log('🔑 Token loaded');
-        }
-    }
-
-    public async setUserData(data: any) {
-        this.userData = data;
-        await storage.setItem('user_data', JSON.stringify(data));
-        console.log('👤 User data updated in ApiService');
-    }
-
-    public async getUserData() {
-        if (!this.userData) {
-            const stored = await storage.getItem('user_data');
-            if (stored) {
-                try {
-                    this.userData = typeof stored === 'string' ? JSON.parse(stored) : stored;
-                } catch (e) {
-                    this.userData = stored;
-                }
-            }
-        }
-        return this.userData;
-    }
-
-    public async setToken(token: string) {
-        this.token = token;
-        await storage.setItem(TOKEN_KEY, token);
-        console.log('🔑 Token set');
-    }
-
-    public async removeToken() {
-        this.token = null;
-        await storage.removeItem(TOKEN_KEY);
-        console.log('🔑 Token removed');
-    }
-
-    // Method to manually refresh the connection
-    public async refreshConnection() {
-        await this.refreshBaseUrl();
-    }
-
-    // Helper method to check if it's a network error
-    private isNetworkError(error: any): boolean {
-        return !error.response &&
-            (error.code === 'ECONNABORTED' ||
-                error.message?.includes('Network Error') ||
-                error.code === 'ERR_NETWORK' ||
-                error.message?.includes('timeout') ||
-                error.message?.includes('Failed to fetch') ||
-                error.message?.includes('Network request failed') ||
-                error.message?.includes('Could not connect'));
-    }
-
-    // Generic request method with retry logic
-    private async requestWithRetry<T>(
-        method: 'get' | 'post' | 'put' | 'delete',
-        url: string,
-        data?: any,
-        config?: AxiosRequestConfig
-    ): Promise<T> {
-        const maxRetries = 2;
-        let lastError: any;
-
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-                let response: AxiosResponse<T>;
-
-                switch (method) {
-                    case 'get':
-                        response = await this.api.get(url, config);
-                        break;
-                    case 'post':
-                        response = await this.api.post(url, data, config);
-                        break;
-                    case 'put':
-                        response = await this.api.put(url, data, config);
-                        break;
-                    case 'delete':
-                        response = await this.api.delete(url, config);
-                        break;
-                }
-
-                return response.data;
-            } catch (error) {
-                lastError = error;
-
-                // Don't retry validation errors (422)
-                if ((error as any)?.response?.status === 422) {
-                    console.log('⛔ Validation error, not retrying');
-                    throw error;
-                }
-
-                // If it's a network error and we haven't exceeded retries
-                if (this.isNetworkError(error) && attempt < maxRetries) {
-                    console.log(`🔄 Request failed (attempt ${attempt + 1}/${maxRetries + 1}), refreshing base URL and retrying...`);
-
-                    // Refresh base URL before retry
-                    if (!this.refreshInProgress) {
-                        this.refreshInProgress = true;
-                        try {
-                            await this.refreshBaseUrl();
-                        } finally {
-                            this.refreshInProgress = false;
-                        }
-                    }
-
-                    // Wait a bit before retrying (exponential backoff)
-                    await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
-                } else {
-                    // Don't retry for other types of errors
-                    break;
-                }
-            }
+            const sessionError: any = new Error('Session expired. Please login again.');
+            sessionError.statusCode = 401;
+            sessionError.requiresLogin = true;
+            return Promise.reject(sessionError);
+          } finally {
+            this.isRefreshing = false;
+          }
         }
 
-        throw lastError;
-    }
-
-    // GET with automatic IP refresh on failure
-    public async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-        return this.requestWithRetry<T>('get', url, undefined, config);
-    }
-
-    // POST with automatic IP refresh on failure
-    public async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-        return this.requestWithRetry<T>('post', url, data, config);
-    }
-
-    // PUT with automatic IP refresh on failure
-    public async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-        return this.requestWithRetry<T>('put', url, data, config);
-    }
-
-    // DELETE with automatic IP refresh on failure
-    public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-        return this.requestWithRetry<T>('delete', url, undefined, config);
-    }
-
-    // Test connection to current base URL
-    public async testConnection(): Promise<boolean> {
-        try {
-            await this.api.get('/health', { timeout: 5000 });
-            return true;
-        } catch {
-            return false;
+        if (status === 403) {
+          const serverMessage = (data as any)?.message || 'You do not have permission to access this resource.';
+          const forbiddenError: any = new Error(serverMessage);
+          forbiddenError.response = error.response;
+          forbiddenError.statusCode = status;
+          forbiddenError.data = data;
+          return Promise.reject(forbiddenError);
         }
-    }
 
-    // Get current network status using the correct method
-    public async getNetworkStatus(): Promise<{ isConnected: boolean; ipAddress?: string; networkType?: string }> {
-        try {
-            const [ipAddress, networkState] = await Promise.all([
-                Network.getIpAddressAsync(),
-                Network.getNetworkStateAsync()
-            ]);
-
-            return {
-                isConnected: networkState.isConnected || false,
-                ipAddress: ipAddress !== '0.0.0.0' ? ipAddress : undefined,
-                networkType: networkState.type
-            };
-        } catch (error) {
-            console.warn('⚠️ Failed to get network status:', error);
-            return { isConnected: false };
+        if (status === 404) {
+          const notFoundError: any = new Error('The requested resource was not found.');
+          notFoundError.statusCode = 404;
+          return Promise.reject(notFoundError);
         }
+
+        const errorMessage = this.getErrorMessage(error);
+        const richError: any = new Error(errorMessage);
+        richError.responseData = error.response?.data;
+        richError.statusCode = error.response?.status;
+        return Promise.reject(richError);
+      }
+    );
+  }
+
+  private generateRequestId(): string {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private getErrorMessage(error: AxiosError): string {
+    if (error.response?.data && typeof error.response.data === 'object') {
+      const data = error.response.data as any;
+      if (data.message) return data.message;
+      if (data.error) return data.error;
     }
+
+    switch (error.response?.status) {
+      case 400:
+        return 'Bad request. Please check your input.';
+      case 401:
+        return 'Unauthorized. Please login again.';
+      case 403:
+        return 'You do not have permission to perform this action.';
+      case 404:
+        return 'The requested resource was not found.';
+      case 422:
+        return 'Validation error. Please check your input.';
+      case 429:
+        return 'Too many requests. Please try again later.';
+      case 500:
+        return 'Server error. Please try again later.';
+      case 502:
+      case 503:
+      case 504:
+        return 'Service unavailable. Please try again later.';
+      default:
+        return error.message || 'An unexpected error occurred.';
+    }
+  }
+
+  private async requestWithRetry<T>(
+    requestFn: () => Promise<AxiosResponse<ApiResponse<T>>>,
+    retries = MAX_RETRIES
+  ): Promise<ApiResponse<T>> {
+    try {
+      const response = await requestFn();
+      return response.data;
+    } catch (error: any) {
+      if (error.statusCode === 401 || error.statusCode === 403) {
+        throw error;
+      }
+
+      if (error.response?.status === 400 || error.response?.status === 422) {
+        throw error;
+      }
+
+      if (retries > 0 && this.shouldRetry(error)) {
+        console.log(`Retrying request, ${retries} attempts left`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return this.requestWithRetry(requestFn, retries - 1);
+      }
+      throw error;
+    }
+  }
+
+  private shouldRetry(error: any): boolean {
+    return !error.response ||
+      (error.response?.status >= 500 && error.response?.status <= 599) ||
+      error.isNetworkError;
+  }
+
+  public async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`GET request to: ${url}`);
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.get<ApiResponse<T>>(url, updatedConfig));
+  }
+
+  public async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`POST request to: ${url}`);
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.post<ApiResponse<T>>(url, data, updatedConfig));
+  }
+
+  public async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`PUT request to: ${url}`);
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.put<ApiResponse<T>>(url, data, updatedConfig));
+  }
+
+  public async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`PATCH request to: ${url}`);
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.patch<ApiResponse<T>>(url, data, updatedConfig));
+  }
+
+  public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`DELETE request to: ${url}`);
+    const updatedConfig = { ...config, withCredentials: false };
+    return this.requestWithRetry(() => this.api.delete<ApiResponse<T>>(url, updatedConfig));
+  }
+
+  public async upload<T>(url: string, formData: FormData, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> {
+    console.log(`UPLOAD request to: ${url}`);
+    const config: AxiosRequestConfig = {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && onProgress) {
+          const progress = (progressEvent.loaded * 100) / progressEvent.total;
+          onProgress(Math.round(progress));
+        }
+      },
+      withCredentials: false,
+    };
+    return this.post<T>(url, formData, config);
+  }
+
+  public async clearAll(): Promise<void> {
+    await this.removeToken();
+    await this.removeUserData();
+    console.log('All auth data cleared');
+  }
+
+  public isAuthenticated(): boolean {
+    return !!(this.providerToken || this.customerToken);
+  }
+
+  public getAuthHeaders(): Record<string, string> {
+    const token = this.getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
 }
 
-// Export a single instance
 export const api = new ApiService();
-export default api;
+export const setupApi = () => { };
+export default api;*/

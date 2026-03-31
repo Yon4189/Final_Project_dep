@@ -72,6 +72,7 @@ export default function CustomerNotifications() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -109,7 +110,7 @@ export default function CustomerNotifications() {
   const markAsRead = async (notificationId: string) => {
     try {
       console.log('📖 Marking notification as read:', notificationId);
-      await api.post<any>(`/customer/notifications/${notificationId}/read`);
+      await api.patch<any>(`/customer/notifications/${notificationId}/read`);
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
@@ -122,7 +123,7 @@ export default function CustomerNotifications() {
   const markAllAsRead = async () => {
     try {
       console.log('📖 Marking all notifications as read');
-      await api.post<any>('/customer/notifications/read-all');
+      await api.patch<any>('/customer/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -257,19 +258,56 @@ export default function CustomerNotifications() {
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>Notifications</Text>
-      {unreadCount > 0 && (
-        <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
-          <Text style={styles.markAllText}>Mark all read</Text>
+    <View style={styles.headerContainer}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-      )}
-      {unreadCount === 0 && <View style={{ width: 80 }} />}
+        <Text style={styles.headerTitle}>Notifications</Text>
+        {unreadCount > 0 && (
+          <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </TouchableOpacity>
+        )}
+        {unreadCount === 0 && <View style={{ width: 80 }} />}
+      </View>
+      
+      {/* Filter tabs */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterTab, filter === 'all' && styles.activeFilterTab]}
+          onPress={() => setFilter('all')}
+        >
+          <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterTab, filter === 'unread' && styles.activeFilterTab]}
+          onPress={() => setFilter('unread')}
+        >
+          <Text style={[styles.filterText, filter === 'unread' && styles.activeFilterText]}>
+            Unread {unreadCount > 0 ? `(${unreadCount})` : ''}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterTab, filter === 'read' && styles.activeFilterTab]}
+          onPress={() => setFilter('read')}
+        >
+          <Text style={[styles.filterText, filter === 'read' && styles.activeFilterText]}>
+            Read
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
+
+  // Filter notifications based on selected filter
+  const filteredNotifications = notifications.filter(n => {
+    if (filter === 'unread') return !n.read;
+    if (filter === 'read') return n.read;
+    return true;
+  });
 
   if (loading) return <LoadingSpinner fullScreen />;
 
@@ -283,7 +321,7 @@ export default function CustomerNotifications() {
         </View>
       )}
       <FlatList
-        data={notifications}
+        data={filteredNotifications}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
         refreshControl={
@@ -308,6 +346,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  headerContainer: {
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -315,9 +358,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  filterTab: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+  },
+  activeFilterTab: {
+    backgroundColor: Colors.primary + '15',
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text.secondary,
+  },
+  activeFilterText: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
   backButton: { padding: 4 },
   headerTitle: {

@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +26,8 @@ import type {
   ServiceProvider, 
   ProfessionalService, 
   AvailabilitySlot,
-  TimeSlot 
+  TimeSlot,
+  Location as UserLocation
 } from '@/app/types/customer.types';
 
 interface ServiceRequestModalProps {
@@ -73,9 +75,19 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   // Form fields
   const [address, setAddress] = useState(userLocation?.address || '');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // New Address selection state
+  const [addressOption, setAddressOption] = useState<'current' | 'saved' | 'new'>('current');
+  const [savedAddresses, setSavedAddresses] = useState<UserLocation[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('');
+  const [isSavingNewAddress, setIsSavingNewAddress] = useState(false);
+  const [addressLabel, setAddressLabel] = useState<'home' | 'office' | 'other'>('home');
+  const [customLabel, setCustomLabel] = useState('');
+  const [showSavedAddressPicker, setShowSavedAddressPicker] = useState(false);
 
   // Get provider's services
   const providerServices = provider?.services || [];
@@ -84,6 +96,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   useEffect(() => {
     if (visible) {
       checkAuthAndLoadUser();
+      fetchSavedAddresses();
     }
   }, [visible]);
 
@@ -112,10 +125,28 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   }, [selectedDate, provider]);
 
   useEffect(() => {
-    if (userLocation?.address) {
+    if (userLocation?.address && addressOption === 'current') {
       setAddress(userLocation.address);
     }
-  }, [userLocation]);
+  }, [userLocation, addressOption]);
+
+  const handleOptionChange = (option: 'current' | 'saved' | 'new') => {
+    setAddressOption(option);
+    if (option === 'current') {
+      setAddress(userLocation?.address || '');
+    } else if (option === 'saved') {
+      const saved = savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId);
+      setAddress(saved?.addressLine1 || '');
+    } else {
+      setAddress('');
+    }
+  };
+
+  const handleSavedAddressSelect = (loc: UserLocation) => {
+    setSelectedSavedAddressId(loc.id.toString());
+    setAddress(loc.addressLine1 || '');
+    setShowSavedAddressPicker(false);
+  };
 
   const checkAuthAndLoadUser = async () => {
     try {
@@ -167,6 +198,28 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
+    }
+  };
+
+  const fetchSavedAddresses = async () => {
+    setLoadingAddresses(true);
+    try {
+      const response = await customerService.getLocations();
+      if (response.success && response.data) {
+        setSavedAddresses(response.data);
+        // If there are saved addresses, default to the first one or primary
+        const primary = response.data.find(loc => loc.isPrimary);
+        if (primary) {
+          setSelectedSavedAddressId(primary.id.toString());
+          if (addressOption === 'saved') {
+            setAddress(primary.addressLine1 || '');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load saved addresses:', error);
+    } finally {
+      setLoadingAddresses(false);
     }
   };
 
@@ -276,9 +329,28 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       Alert.alert('Error', 'Please select a service');
       return false;
     }
-    if (!address.trim()) {
-      Alert.alert('Error', 'Please enter your address');
-      return false;
+    
+    // Validate location differently based on selection source
+    if (addressOption === 'current') {
+      if (!userLocation?.latitude || !userLocation?.longitude) {
+        Alert.alert('Location Required', 'We could not detect your GPS coordinates. Please ensure location services are enabled or manually enter a new address below.');
+        return false;
+      }
+    } else if (addressOption === 'saved') {
+      if (!selectedSavedAddressId) {
+        Alert.alert('Error', 'Please select a saved address');
+        return false;
+      }
+    } else if (addressOption === 'new') {
+      if (!address.trim()) {
+        Alert.alert('Error', 'Please enter your complete address details');
+        return false;
+      }
+    } else {
+      if (!address.trim()) {
+        Alert.alert('Error', 'Please provide an address');
+        return false;
+      }
     }
     
     // Validate selected time is in the future
@@ -303,22 +375,6 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     }
     
     return true;
-  };
-
-  const extractCheckoutUrl = (response: any): string | null => {
-    if (!response) return null;
-    
-    if (response.checkoutUrl) return response.checkoutUrl;
-    if (response.checkout_url) return response.checkout_url;
-    if (response.data) {
-      if (response.data.checkoutUrl) return response.data.checkoutUrl;
-      if (response.data.checkout_url) return response.data.checkout_url;
-    }
-    if (typeof response === 'string' && response.startsWith('http')) {
-      return response;
-    }
-    
-    return null;
   };
 
   const handleSendRequest = async () => {
@@ -350,16 +406,53 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     try {
       const scheduledDate = selectedDate.toISOString().split('T')[0];
 
+      // 1. If saving new address, do it first
+      let locationSource: 'gps' | 'saved' | 'new' = addressOption === 'current' ? 'gps' : (addressOption === 'saved' ? 'saved' : 'new');
+      let savedAddressId = addressOption === 'saved' ? selectedSavedAddressId : undefined;
+      let finalAddress = address;
+
+      if (addressOption === 'current' && !address.trim()) {
+        finalAddress = 'GPS Coordinates Used';
+      }
+
+      if (addressOption === 'new' && isSavingNewAddress) {
+        try {
+          const label = addressLabel === 'other' ? customLabel : addressLabel;
+          const saveResponse = await customerService.addLocation({
+            addressLine1: address,
+            city: '', // Backend might derive this or require it
+            state: '',
+            postalCode: '',
+            country: '',
+            latitude: 0, // Should ideally get coordinates for new address
+            longitude: 0,
+            label: label,
+            isPrimary: false,
+            userId: 0, // Placeholder, backend handles this
+            createdAt: '',
+            updatedAt: ''
+          } as any);
+          if (saveResponse.success && saveResponse.data) {
+            savedAddressId = saveResponse.data.id.toString();
+            locationSource = 'saved';
+          }
+        } catch (saveError) {
+          console.error('Failed to save address:', saveError);
+          // Continue with booking even if save fails
+        }
+      }
+
       const bookingResponse = await createBooking.mutateAsync({
         providerID: Number(provider.id),
         serviceID: Number(selectedServiceId),
         scheduledDate: scheduledDate,
         agreed_price: servicePrice,
-        service_address: address,
-        full_address: address,
-        location_source: userLocation?.latitude ? 'gps' : 'new',
-        latitude: userLocation?.latitude || 0, // Fallback to 0 if missing but required
-        longitude: userLocation?.longitude || 0,
+        service_address: finalAddress,
+        full_address: finalAddress,
+        location_source: locationSource,
+        saved_address_id: savedAddressId ? Number(savedAddressId) : undefined,
+        latitude: locationSource === 'gps' ? (userLocation?.latitude || 0) : 0,
+        longitude: locationSource === 'gps' ? (userLocation?.longitude || 0) : 0,
         notes: description,
       });
 
@@ -701,17 +794,156 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               )}
             </View>
 
-            {/* Address - ALWAYS ACTIVE */}
+            {/* Address Selection Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Service Address *</Text>
-              <TextInput
-                style={styles.addressInput}
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter your address"
-                placeholderTextColor={Colors.text.secondary}
-                multiline
-              />
+              <Text style={styles.sectionTitle}>📍 Where should we send the provider?</Text>
+              
+              <View style={styles.optionsContainer}>
+                {/* Current Location */}
+                <TouchableOpacity 
+                  style={styles.optionRow} 
+                  onPress={() => handleOptionChange('current')}
+                >
+                  <Ionicons 
+                    name={addressOption === 'current' ? 'radio-button-on' : 'radio-button-off'} 
+                    size={20} 
+                    color={addressOption === 'current' ? Colors.primary : Colors.text.secondary} 
+                  />
+                  <Text style={styles.optionText}>Use my current location</Text>
+                </TouchableOpacity>
+
+                {/* Saved Addresses */}
+                <TouchableOpacity 
+                  style={styles.optionRow} 
+                  onPress={() => handleOptionChange('saved')}
+                >
+                  <Ionicons 
+                    name={addressOption === 'saved' ? 'radio-button-on' : 'radio-button-off'} 
+                    size={20} 
+                    color={addressOption === 'saved' ? Colors.primary : Colors.text.secondary} 
+                  />
+                  <Text style={styles.optionText}>Choose from my saved addresses</Text>
+                </TouchableOpacity>
+
+                {addressOption === 'saved' && (
+                  <View style={styles.savedAddressesContainer}>
+                    {loadingAddresses ? (
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    ) : savedAddresses.length > 0 ? (
+                      <>
+                        <TouchableOpacity
+                          style={styles.addressSelector}
+                          onPress={() => setShowSavedAddressPicker(!showSavedAddressPicker)}
+                        >
+                          <Text style={styles.addressSelectorText}>
+                            {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.label?.toUpperCase() || 'Select address'}: {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.addressLine1}
+                          </Text>
+                          <Ionicons name="chevron-down" size={16} color={Colors.text.secondary} />
+                        </TouchableOpacity>
+                        
+                        {showSavedAddressPicker && (
+                          <View style={styles.savedAddressList}>
+                            {savedAddresses.map((loc) => (
+                              <TouchableOpacity
+                                key={loc.id}
+                                style={styles.savedAddressItem}
+                                onPress={() => handleSavedAddressSelect(loc)}
+                              >
+                                <Ionicons 
+                                  name={loc.label === 'home' ? 'home' : (loc.label === 'office' ? 'business' : 'location')} 
+                                  size={18} 
+                                  color={Colors.primary} 
+                                />
+                                <View style={styles.savedAddressInfo}>
+                                  <Text style={styles.savedAddressLabel}>{loc.label?.toUpperCase()}</Text>
+                                  <Text style={styles.savedAddressText}>{loc.addressLine1}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+                      </>
+                    ) : (
+                      <Text style={styles.noAddressesText}>No saved addresses found.</Text>
+                    )}
+                  </View>
+                )}
+
+                {/* New Address */}
+                <TouchableOpacity 
+                  style={styles.optionRow} 
+                  onPress={() => handleOptionChange('new')}
+                >
+                  <Ionicons 
+                    name={addressOption === 'new' ? 'radio-button-on' : 'radio-button-off'} 
+                    size={20} 
+                    color={addressOption === 'new' ? Colors.primary : Colors.text.secondary} 
+                  />
+                  <Text style={styles.optionText}>Enter new address</Text>
+                </TouchableOpacity>
+
+                {addressOption === 'new' && (
+                  <View style={styles.newAddressContainer}>
+                    <TextInput
+                      style={styles.addressInput}
+                      value={address}
+                      onChangeText={setAddress}
+                      placeholder="Start typing - we'll suggest"
+                      placeholderTextColor={Colors.text.secondary}
+                      multiline
+                    />
+                    
+                    {/* Save for later sub-form */}
+                    <View style={styles.saveAddressForm}>
+                      <Text style={styles.saveAddressTitle}>Save this address for later?</Text>
+                      <View style={styles.saveOptionsRow}>
+                        <TouchableOpacity 
+                          style={styles.saveToggle} 
+                          onPress={() => setIsSavingNewAddress(!isSavingNewAddress)}
+                        >
+                          <Ionicons 
+                            name={isSavingNewAddress ? 'checkbox' : 'square-outline'} 
+                            size={20} 
+                            color={Colors.primary} 
+                          />
+                          <Text style={styles.saveToggleText}>Yes, save this address</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {isSavingNewAddress && (
+                        <View style={styles.labelSelection}>
+                          <Text style={styles.labelTitle}>Save as:</Text>
+                          <View style={styles.labelOptions}>
+                            {['home', 'office', 'other'].map((label) => (
+                              <TouchableOpacity
+                                key={label}
+                                style={styles.labelOption}
+                                onPress={() => setAddressLabel(label as any)}
+                              >
+                                <Ionicons 
+                                  name={addressLabel === label ? 'radio-button-on' : 'radio-button-off'} 
+                                  size={16} 
+                                  color={addressLabel === label ? Colors.primary : Colors.text.secondary} 
+                                />
+                                <Text style={styles.labelOptionText}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          {addressLabel === 'other' && (
+                            <TextInput
+                              style={styles.customLabelInput}
+                              value={customLabel}
+                              onChangeText={setCustomLabel}
+                              placeholder="Specify label (e.g., Mom's house)"
+                              placeholderTextColor={Colors.text.secondary}
+                            />
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
 
             {/* Description - ALWAYS ACTIVE */}
@@ -1024,5 +1256,143 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 2,
+    borderRadius: 10,
+  },
+  // New Styles
+  optionsContainer: {
+    marginTop: 10,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  optionText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    marginLeft: 10,
+  },
+  savedAddressesContainer: {
+    marginLeft: 30,
+    marginBottom: 10,
+  },
+  addressSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  addressSelectorText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    flex: 1,
+    marginRight: 8,
+  },
+  savedAddressList: {
+    marginTop: 4,
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  savedAddressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  savedAddressInfo: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  savedAddressLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.text.secondary,
+  },
+  savedAddressText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+  },
+  noAddressesText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    fontStyle: 'italic',
+  },
+  newAddressContainer: {
+    marginLeft: 30,
+  },
+  saveAddressForm: {
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  saveAddressTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 10,
+  },
+  saveOptionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  saveToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  saveToggleText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    marginLeft: 8,
+  },
+  labelSelection: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 10,
+  },
+  labelTitle: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginBottom: 8,
+  },
+  labelOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  labelOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  labelOptionText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    marginLeft: 6,
+  },
+  customLabelInput: {
+    padding: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    fontSize: 14,
+    color: Colors.text.primary,
   },
 });

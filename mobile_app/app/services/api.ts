@@ -312,16 +312,16 @@ class ApiService {
         const token = this.getToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
-          console.log(`🔑 Token attached to request: ${config.url}`, {
+          console.log(` Token attached to request: ${config.url}`, {
             hasToken: true,
             tokenPreview: `${token.substring(0, 15)}...`
           });
         } else {
-          console.log(`⚠️ No token for request: ${config.url}`);
+          console.log(` No token for request: ${config.url}`);
         }
 
         config.headers['X-Request-ID'] = this.generateRequestId();
-        
+
         // Attach user type header
         const userType = this.userType || (await storage.getItem(USER_TYPE_KEY));
         if (userType && config.headers) {
@@ -329,7 +329,7 @@ class ApiService {
         }
 
         if (__DEV__) {
-          console.log('🚀 API Request:', {
+          console.log(' API Request:', {
             method: config.method?.toUpperCase(),
             url: `${API_BASE_URL}${config.url}`,
             hasToken: !!token,
@@ -349,7 +349,7 @@ class ApiService {
     this.api.interceptors.response.use(
       (response) => {
         if (__DEV__) {
-          console.log('✅ API Response:', {
+          console.log('API Response:', {
             url: response.config.url,
             status: response.status,
             success: response.data?.success,
@@ -361,7 +361,7 @@ class ApiService {
         const originalConfig = error.config as AxiosRequestConfig & { _retry?: boolean };
 
         if (__DEV__) {
-          console.error('❌ API Error Details:', {
+          console.error(' API Error Details:', {
             url: originalConfig?.url,
             status: error.response?.status,
             statusText: error.response?.statusText,

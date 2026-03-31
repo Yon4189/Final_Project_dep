@@ -368,10 +368,9 @@ class BookingController extends Controller
                 'notes' => $booking->notes,
                 'created_at' => $booking->created_at,
                 'expires_at' => $booking->expires_at,
-                'service_city' => $booking->service_address ?? [
-                    'latitude' => $booking->service_latitude,
-                    'longitude' => $booking->service_longitude
-                ],
+                'service_address' => $booking->service_address,
+                'service_latitude' => $booking->service_latitude,
+                'service_longitude' => $booking->service_longitude,
                 'customer' => $userType === 'provider' ? [
                     'id' => $booking->customer->customerID,
                     'name' => $booking->customer->fullname,

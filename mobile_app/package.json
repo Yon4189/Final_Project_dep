@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
+    "update-ip": "powershell -ExecutionPolicy Bypass -File ../set-ip.ps1",
+    "prestart": "npm run update-ip",
+    "preandroid": "npm run update-ip",
+    "preios": "npm run update-ip",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",

@@ -15,6 +15,8 @@ import {
   Share,
   Linking,
   Dimensions,
+  Modal,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -80,6 +82,7 @@ export default function CustomerDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showRecentMessages, setShowRecentMessages] = useState(false);
+  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -299,6 +302,97 @@ export default function CustomerDashboard() {
     setRefreshing(false);
   };
 
+  const renderHamburgerMenu = () => {
+    const menuItems = [
+      {
+        label: 'Home',
+        icon: 'home' as const,
+        color: Colors.primary,
+        onPress: () => {
+          setShowHamburgerMenu(false);
+          router.replace('/');
+        },
+      },
+      {
+        label: 'Messages',
+        icon: 'chatbubble-ellipses-outline' as const,
+        color: Colors.info || '#007AFF',
+        onPress: () => {
+          setShowHamburgerMenu(false);
+          setShowRecentMessages(true);
+        },
+      },
+      {
+        label: 'Bookings',
+        icon: 'calendar-outline' as const,
+        color: Colors.primary,
+        onPress: () => {
+          setShowHamburgerMenu(false);
+          router.push('/(customer)/bookings');
+        },
+      },
+      {
+        label: 'Wallet',
+        icon: 'wallet-outline' as const,
+        color: Colors.success || '#34C759',
+        onPress: () => {
+          setShowHamburgerMenu(false);
+          router.push('/(customer)/wallet');
+        },
+      },
+      {
+        label: 'Support',
+        icon: 'shield-checkmark-outline' as const,
+        color: Colors.warning || '#FF9500',
+        onPress: () => {
+          setShowHamburgerMenu(false);
+          router.push('/(customer)/complaints');
+        },
+      },
+    ];
+
+    return (
+      <Modal
+        visible={showHamburgerMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHamburgerMenu(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowHamburgerMenu(false)}
+        >
+          <View style={styles.menuDropdown}>
+            <View style={styles.menuHeader}>
+              <Text style={styles.menuTitle}>Menu</Text>
+              <TouchableOpacity onPress={() => setShowHamburgerMenu(false)}>
+                <Ionicons name="close" size={22} color={Colors.text?.primary || '#222'} />
+              </TouchableOpacity>
+            </View>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={item.label}
+                style={[
+                  styles.menuItem,
+                  index < menuItems.length - 1 && styles.menuItemBorder,
+                ]}
+                onPress={item.onPress}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuItemIcon, { backgroundColor: item.color + '18' }]}>
+                  <Ionicons name={item.icon} size={22} color={item.color} />
+                </View>
+                <Text style={styles.menuItemLabel}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.text?.secondary || '#888'} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   const renderHeader = () => {
     // Get user's first name from fullname
     let displayName = "User";
@@ -309,85 +403,80 @@ export default function CustomerDashboard() {
     }
 
     return (
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.iconButton, {
-            backgroundColor: Colors.primary + '15',
-            borderRadius: 20,
-            padding: 8,
-            marginRight: 12
-          }]}
-          onPress={() => router.replace("/")}
-        >
-          <Ionicons name="home" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>
-            Welcome back, {loadingUser ? "👋" : displayName}
-          </Text>
-          <Text style={styles.subtitle}>Find trusted service providers</Text>
+      <View style={[styles.header, { flexDirection: 'column' }]}>
+        {/* Row 1: Greeting Only */}
+        <View style={[styles.headerTopRow, { justifyContent: 'center', marginBottom: 12 }]}>
+          <View style={styles.greetingContainer}>
+            <Text style={styles.greeting}>
+              Welcome back, {loadingUser ? "👋" : displayName}
+            </Text>
+            <Text style={styles.subtitle}>Find trusted service providers</Text>
+          </View>
         </View>
 
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => setShowRecentMessages(true)}
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={24}
-              color={Colors.primary}
-            />
-          </TouchableOpacity>
+        {/* Row 2: Hamburger (Left) and Utilities (Right) */}
+        <View style={[styles.navigationRow, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 0 }]}>
+          {/* Left Side: Hamburger */}
+          <View style={styles.leftIconColumn}>
+            <TouchableOpacity
+              style={styles.hamburgerButton}
+              onPress={() => setShowHamburgerMenu(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="menu" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/(customer)/notifications")}
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={Colors.primary}
-            />
-            {unreadNotifications > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {unreadNotifications}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => router.push("/(customer)/profile")}
-          >
-            {(() => {
-              const pic = user?.profilePicture || user?.profile_picture;
-              if (pic) {
-                return (
-                  <Image
-                    source={{
-                      uri: pic.startsWith("http")
-                        ? pic
-                        : `${API_BASE_URL.replace("/api", "")}/${pic}`,
-                    }}
-                    style={styles.profileImage}
-                  />
-                );
-              }
-              return (
-                <View style={styles.profilePlaceholder}>
-                  <Ionicons
-                    name="person-outline"
-                    size={24}
-                    color={Colors.primary}
-                  />
+          {/* Right Side: Notifications & Profile */}
+          <View style={[styles.headerActions, { position: 'relative', right: 0 }]}>
+            <TouchableOpacity
+              style={[styles.iconButton, { marginRight: 4 }]}
+              onPress={() => router.push("/(customer)/notifications")}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={24}
+                color={Colors.primary}
+              />
+              {unreadNotifications > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotifications}
+                  </Text>
                 </View>
-              );
-            })()}
-          </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => router.push("/(customer)/profile")}
+            >
+              {(() => {
+                const pic = user?.profilePicture || user?.profile_picture;
+                if (pic) {
+                  return (
+                    <Image
+                      source={{
+                        uri: pic.startsWith("http")
+                          ? pic
+                          : `${API_BASE_URL.replace("/api", "")}/${pic}`,
+                      }}
+                      style={styles.profileImage}
+                    />
+                  );
+                }
+                return (
+                  <View style={styles.profilePlaceholder}>
+                    <Ionicons
+                      name="person-outline"
+                      size={24}
+                      color={Colors.primary}
+                    />
+                  </View>
+                );
+              })()}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -511,52 +600,6 @@ export default function CustomerDashboard() {
     );
   };
 
-  const renderQuickActions = () => (
-    <View style={styles.quickActionsContainer}>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.quickActionsGrid}>
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => router.push('/(customer)/bookings')}
-        >
-          <View style={[styles.actionIconContainer, { backgroundColor: Colors.primary + '10' }]}>
-            <Ionicons name="calendar-outline" size={26} color={Colors.primary} />
-          </View>
-          <Text style={styles.actionCardLabel}>Bookings</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => router.push('/(customer)/wallet')}
-        >
-          <View style={[styles.actionIconContainer, { backgroundColor: Colors.success + '10' }]}>
-            <Ionicons name="card-outline" size={26} color={Colors.success} />
-          </View>
-          <Text style={styles.actionCardLabel}>Wallet</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => setShowRecentMessages(true)}
-        >
-          <View style={[styles.actionIconContainer, { backgroundColor: Colors.info + '10' }]}>
-            <Ionicons name="chatbubble-ellipses-outline" size={26} color={Colors.info} />
-          </View>
-          <Text style={styles.actionCardLabel}>Messages</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => router.push('/(customer)/complaints')}
-        >
-          <View style={[styles.actionIconContainer, { backgroundColor: Colors.warning + '10' }]}>
-            <Ionicons name="shield-outline" size={26} color={Colors.warning} />
-          </View>
-          <Text style={styles.actionCardLabel}>Support</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   const renderTopRated = () => {
     if (topRatedLoading) {
@@ -776,7 +819,6 @@ export default function CustomerDashboard() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            {renderQuickActions()}
             {renderRecentChats()}
             {renderTopRated()}
             {renderViewToggle()}
@@ -836,7 +878,6 @@ export default function CustomerDashboard() {
             )}
             ListHeaderComponent={
               <>
-                {renderQuickActions()}
                 {renderRecentChats()}
                 {renderTopRated()}
                 {!query && !filters.categoryId && (
@@ -930,6 +971,8 @@ export default function CustomerDashboard() {
           router.push("/(customer)/chat/index");
         }}
       />
+
+      {renderHamburgerMenu()}
     </SafeAreaView>
   );
 }
@@ -955,20 +998,56 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    marginBottom: 20,
+    position: 'relative',
+  },
+  greetingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   greeting: {
     fontSize: 20,
     fontWeight: "bold",
     color: Colors.text.primary,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 12,
     color: Colors.text.secondary,
     marginTop: 2,
+    textAlign: 'center',
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    position: 'absolute',
+    right: 0,
+  },
+  navigationRow: {
+    width: '100%',
+    alignItems: 'flex-start',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  leftIconColumn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  hamburgerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '15',
+    justifyContent: "center",
+    alignItems: "center",
   },
   iconButton: {
     width: 44,
@@ -982,6 +1061,65 @@ const styles = StyleSheet.create({
   notificationButton: {
     position: "relative",
     padding: 4,
+  },
+  // Hamburger menu styles
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  menuDropdown: {
+    marginTop: Platform.OS === 'ios' ? 140 : 120,
+    marginLeft: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    paddingVertical: 8,
+    width: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    marginBottom: 4,
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text?.primary || '#111',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 12,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  menuItemIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuItemLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.text?.primary || '#222',
   },
   headerButton: {
     position: "relative",
@@ -1035,11 +1173,12 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     zIndex: 10,
+    alignItems: 'flex-start',
   },
   content: {
     flex: 1,

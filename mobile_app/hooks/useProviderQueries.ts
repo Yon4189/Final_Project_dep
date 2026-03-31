@@ -540,6 +540,18 @@ export function useProviderQueries() {
     pendingRequestsQuery.isLoading ||
     earningsSummaryQuery.isLoading;
 
+  const acceptRequest = useAcceptRequest();
+  const rejectRequest = useRejectRequest();
+  const rescheduleRequest = useRescheduleRequest();
+  const arriveRequest = useArriveRequest();
+  const startService = useStartService();
+  const completeService = useCompleteService();
+  const updateAvailability = useUpdateAvailability();
+  const respondToReview = useRespondToReview();
+  const createDispute = useCreateDispute();
+  const updateProfile = useUpdateProfile();
+  const uploadProfileImage = useUploadProfileImage();
+
   const refetch = async () => {
     await Promise.all([
       profileQuery.refetch(),
@@ -580,14 +592,16 @@ export function useProviderQueries() {
     refetch,
 
     // Mutations
-    acceptRequest: useAcceptRequest(),
-    rejectRequest: useRejectRequest(),
-    rescheduleRequest: useRescheduleRequest(),
-    arriveRequest: useArriveRequest(),
-    startService: useStartService(),
-    completeService: useCompleteService(),
-    updateAvailability: useUpdateAvailability(),
-    respondToReview: useRespondToReview(),
-    createDispute: useCreateDispute(),
+    acceptRequest,
+    rejectRequest,
+    rescheduleRequest,
+    arriveRequest,
+    startService,
+    completeService,
+    updateAvailability,
+    respondToReview,
+    createDispute,
+    updateProfile,
+    uploadProfileImage,
   };
 }

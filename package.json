@@ -1,0 +1,14 @@
+{
+  "name": "final-project-root",
+  "version": "1.0.0",
+  "description": "Root directory for Final Project",
+  "scripts": {
+    "update-ip": "powershell -ExecutionPolicy Bypass -File ./set-ip.ps1",
+    "dev:backend": "cd backend && php artisan serve --host=0.0.0.0 --port=8000",
+    "dev:mobile": "npm run update-ip && cd mobile_app && npm start",
+    "dev": "npm run update-ip && npx concurrently \"npm run dev:backend\" \"npm run dev:mobile\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

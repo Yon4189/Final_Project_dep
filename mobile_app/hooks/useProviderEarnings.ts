@@ -88,7 +88,12 @@ export function useWithdrawalHistory(options?: UseQueryOptions<WithdrawalRequest
 }
 type WithdrawalVariables = {
   amount: number;
-  bankDetailsId?: string;
+  payment_method: 'bank' | 'telebir';
+  bank_name?: string;
+  account_number?: string;
+  account_holder_name?: string;
+  telebir_number?: string;
+  telebir_holder_name?: string;
 };
 
 export function useRequestWithdrawal(options?: UseMutationOptions<WithdrawalRequest, Error, WithdrawalVariables>) {
@@ -198,6 +203,9 @@ export function useProviderEarnings(period: 'week' | 'month' | 'year' = 'month')
     ]);
   };
 
+  const requestWithdrawal = useRequestWithdrawal();
+  const updateBankDetails = useUpdateBankDetails();
+
   // Flatten transactions from infinite query
   const transactions = transactionsQuery.data?.pages.flatMap(page => page?.transactions || []) || [];
 
@@ -236,8 +244,8 @@ export function useProviderEarnings(period: 'week' | 'month' | 'year' = 'month')
     refetch,
     
     // Mutations
-    requestWithdrawal: useRequestWithdrawal(),
-    updateBankDetails: useUpdateBankDetails(),
+    requestWithdrawal,
+    updateBankDetails,
   };
 }
 
