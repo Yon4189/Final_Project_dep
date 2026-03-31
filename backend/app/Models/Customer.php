@@ -29,6 +29,7 @@ class Customer extends Authenticatable
         'service_city',
         'service_latitude',
         'service_longitude',
+        'service_address',
         'location',
         'expo_push_token'
     ];
