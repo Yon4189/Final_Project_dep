@@ -25,8 +25,8 @@ export default function Map({
   markers = []
 }: MapProps) {
   const initialRegion = center ? {
-    latitude: center[0],
-    longitude: center[1],
+    latitude: Number(center[0]) || 9.03,
+    longitude: Number(center[1]) || 38.74,
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   } : {
@@ -46,8 +46,8 @@ export default function Map({
         {userLocation && (
           <Marker
             coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude
+              latitude: Number(userLocation.latitude) || 9.03,
+              longitude: Number(userLocation.longitude) || 38.74
             }}
             title="Your Location"
             pinColor="blue"
@@ -59,8 +59,8 @@ export default function Map({
           <Marker
             key={`provider-${index}`}
             coordinate={{
-              latitude: provider.latitude,
-              longitude: provider.longitude
+              latitude: Number(provider.latitude) || 0,
+              longitude: Number(provider.longitude) || 0
             }}
             title={provider.name}
             onPress={() => onProviderSelect(provider)}
@@ -72,8 +72,8 @@ export default function Map({
           <Marker
             key={`marker-${index}`}
             coordinate={{
-              latitude: marker.position[0],
-              longitude: marker.position[1]
+              latitude: Number(marker.position[0]) || 0,
+              longitude: Number(marker.position[1]) || 0
             }}
             title={marker.title}
             description={marker.description}

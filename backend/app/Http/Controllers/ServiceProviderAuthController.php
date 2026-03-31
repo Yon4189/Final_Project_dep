@@ -366,4 +366,74 @@ public function login(Request $request)
             'message' => 'Push token updated successfully'
         ]);
     }
+
+    /**
+     * Get provider bank details
+     */
+    public function getBankDetails(Request $request)
+    {
+        $provider = $request->user();
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'bankName' => $provider->bank_name,
+                'accountNumber' => $provider->account_number,
+                'accountName' => $provider->account_holder_name,
+                'telebirNumber' => $provider->telebir_number,
+                'telebirHolderName' => $provider->telebir_holder_name,
+                'preferredPayoutMethod' => $provider->preferred_payout_method ?? 'bank',
+                'isVerified' => (bool) ($provider->bank_name && $provider->account_number),
+            ]
+        ]);
+    }
+
+    /**
+     * Update provider bank details
+     */
+    public function updateBankDetails(Request $request)
+    {
+        $provider = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'bankName' => 'nullable|string|max:255',
+            'accountNumber' => 'nullable|string|max:50',
+            'accountName' => 'nullable|string|max:255',
+            'telebirNumber' => 'nullable|string|max:20',
+            'telebirHolderName' => 'nullable|string|max:255',
+            'preferredPayoutMethod' => 'nullable|string|in:bank,telebir',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Map frontend camelCase to backend snake_case
+        $mapping = [
+            'bankName' => 'bank_name',
+            'accountNumber' => 'account_number',
+            'accountName' => 'account_holder_name',
+            'telebirNumber' => 'telebir_number',
+            'telebirHolderName' => 'telebir_holder_name',
+            'preferredPayoutMethod' => 'preferred_payout_method'
+        ];
+
+        foreach ($mapping as $frontend => $backend) {
+            if ($request->has($frontend)) {
+                $provider->$backend = $request->$frontend;
+            }
+        }
+
+        $provider->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bank details updated successfully',
+            'data' => $this->getBankDetails($request)->original['data']
+        ]);
+    }
 }

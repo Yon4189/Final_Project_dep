@@ -24,6 +24,9 @@ const normalizeServiceRequest = (data: any): ServiceRequest => {
   return {
     ...data,
     id: data.id?.toString() || data.bookingID?.toString() || data.id,
+    customerLatitude: data.customerLatitude || data.service_latitude || (data.service_city && typeof data.service_city === 'object' ? data.service_city.latitude : null),
+    customerLongitude: data.customerLongitude || data.service_longitude || (data.service_city && typeof data.service_city === 'object' ? data.service_city.longitude : null),
+    customerAddress: data.customerAddress || data.service_address || (typeof data.service_city === 'string' ? data.service_city : null),
   };
 };
 
@@ -221,9 +224,14 @@ class ProviderService {
 
   async requestWithdrawal(data: {
     amount: number;
-    bankDetailsId?: string;
+    payment_method: 'bank' | 'telebir';
+    bank_name?: string;
+    account_number?: string;
+    account_holder_name?: string;
+    telebir_number?: string;
+    telebir_holder_name?: string;
   }): Promise<ApiResponse<WithdrawalRequest>> {
-    const response = await api.post<WithdrawalRequest>(`${this.BASE_PATH}/withdrawals`, data);
+    const response = await api.post<WithdrawalRequest>(`${this.BASE_PATH}/wallet/withdraw`, data);
     return response;
   }
 

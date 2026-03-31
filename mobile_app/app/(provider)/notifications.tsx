@@ -58,7 +58,7 @@ export default function ProviderNotifications() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [notifications, setNotifications] = useState<ProviderNotification[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -116,9 +116,11 @@ export default function ProviderNotifications() {
   };
 
   // Filter notifications based on selected filter
-  const filteredNotifications = filter === 'all' 
-    ? notifications 
-    : notifications.filter(n => !n.read);
+  const filteredNotifications = notifications.filter(n => {
+    if (filter === 'unread') return !n.read;
+    if (filter === 'read') return n.read;
+    return true;
+  });
 
   // Count unread notifications
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -153,44 +155,47 @@ export default function ProviderNotifications() {
   };
 
   const handleNotificationPress = (notification: ProviderNotification) => {
-    // Mark as read
+    // Mark as read immediately to update UI
     void markAsRead(notification.id);
 
-    // Navigate based on notification type
-    switch (notification.type) {
-      case 'new_request':
-      case 'booking_request':
-      case 'request_accepted':
-      case 'booking_accepted':
-      case 'request_cancelled':
-      case 'booking_cancelled':
-      case 'booking_completed':
-      case 'reminder':
-        if (notification.relatedBookingId) {
-          router.push(`/(provider)/requests/${notification.relatedBookingId}`);
-        } else if (notification.data?.requestId) {
-          router.push(`/(provider)/requests/${notification.data.requestId}`);
-        } else {
-          router.push('/(provider)/requests');
-        }
-        break;
-      case 'payment_received':
-      case 'payment_released':
-      case 'withdrawal':
-        router.push('/(provider)/earnings');
-        break;
-      case 'review':
-        router.push('/(provider)/reviews');
-        break;
-      case 'system':
-      case 'provider_approved':
-      case 'provider_rejected':
-        router.push('/(provider)/profile');
-        break;
-      default:
-        // Stay on current page
-        break;
-    }
+    // Prevent navigation transit crash by giving state time to settle
+    setTimeout(() => {
+      // Navigate based on notification type
+      switch (notification.type) {
+        case 'new_request':
+        case 'booking_request':
+        case 'request_accepted':
+        case 'booking_accepted':
+        case 'request_cancelled':
+        case 'booking_cancelled':
+        case 'booking_completed':
+        case 'reminder':
+          if (notification.relatedBookingId) {
+            router.push(`/(provider)/requests/${notification.relatedBookingId}`);
+          } else if (notification.data?.requestId) {
+            router.push(`/(provider)/requests/${notification.data.requestId}`);
+          } else {
+            router.push('/(provider)/requests');
+          }
+          break;
+        case 'payment_received':
+        case 'payment_released':
+        case 'withdrawal':
+          router.push('/(provider)/earnings');
+          break;
+        case 'review':
+          router.push('/(provider)/reviews');
+          break;
+        case 'system':
+        case 'provider_approved':
+        case 'provider_rejected':
+          router.push('/(provider)/profile');
+          break;
+        default:
+          // Stay on current page
+          break;
+      }
+    }, 100);
   };
 
   const getNotificationIcon = (type: string, read: boolean) => {
@@ -301,6 +306,14 @@ export default function ProviderNotifications() {
         >
           <Text style={[styles.filterText, filter === 'unread' && styles.activeFilterText]}>
             Unread ({unreadCount})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterTab, filter === 'read' && styles.activeFilterTab]}
+          onPress={() => setFilter('read')}
+        >
+          <Text style={[styles.filterText, filter === 'read' && styles.activeFilterText]}>
+            Read
           </Text>
         </TouchableOpacity>
       </View>
