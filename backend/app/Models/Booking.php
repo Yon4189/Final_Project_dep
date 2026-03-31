@@ -44,7 +44,8 @@ class Booking extends Model
         'payment_status',
         'customer_confirmed_at',
         'auto_release_at',
-        'released_at'
+        'released_at',
+        'address_text'
     ];
 
     protected $casts = [

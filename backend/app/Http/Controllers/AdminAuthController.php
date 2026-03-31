@@ -116,6 +116,7 @@ class AdminAuthController extends Authenticatable
                     'catagoryID'   => $provider->catagoryID,
                     'category'     => $provider->category->name ?? null,
                     'status'       => $provider->status,
+                    'address_text' => $provider->address_text,
                     'created_at'   => $provider->created_at ? $provider->created_at->format('Y-m-d H:i:s') : null,
                 ];
             });
@@ -427,29 +428,33 @@ class AdminAuthController extends Authenticatable
     public function getAllBookings()
     {
         try {
-            $bookings = Booking::with(['customer', 'provider', 'service'])
+            $bookings = Booking::with(['customer', 'provider', 'service.category'])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function($b) {
                     return [
-                        // Old keys for safety
-                        'customer' => $b->customer->fullname ?? 'Unknown',
-                        'provider' => $b->provider->fullname ?? 'Unknown',
-                        'service' => $b->service->title ?? 'Unknown',
-                        'date' => $b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A',
-                        'time' => $b->scheduledTime ?? 'N/A',
-                        'amount' => ($b->agreed_price ?? 0) . ' ETB',
-                        
-                        // New keys for modern Bookings.jsx
+                        // Requested columns
                         'id' => $b->bookingID,
                         'customer_name' => $b->customer->fullname ?? 'Unknown',
                         'provider_name' => $b->provider->fullname ?? 'Unknown',
+                        'service_type' => $b->service->title ?? 'Unknown',
                         'service_title' => $b->service->title ?? 'Unknown',
                         'status' => ucfirst($b->status),
+                        'payment_status' => ucfirst($b->payment_status ?? 'Unpaid'),
                         'scheduled_at' => ($b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A'),
-                        'location' => $b->service_address ?? 'Location pinned',
+                        'location' => $b->customer->service_address ?? $b->customer->location ?? 'Addis Ababa',
+                        'address_text' => $b->address_text, // Keep for raw detail if needed
                         'price' => $b->agreed_price ?? 0,
-                        'notes' => $b->notes ?? null
+                        'commission' => $b->platform_commission ?? ($b->agreed_price * 0.1),
+                        'payout' => $b->provider_payout ?? ($b->agreed_price * 0.9),
+                        'notes' => $b->notes ?? null,
+                        
+                        // Timestamps for "View More"
+                        'accepted_at' => $b->accepted_at ? $b->accepted_at->format('M d, Y H:i') : 'Pending',
+                        'provider_started_at' => $b->provider_started_at ? $b->provider_started_at->format('M d, Y H:i') : 'Pending',
+                        'provider_arrived_at' => $b->provider_arrived_at ? $b->provider_arrived_at->format('M d, Y H:i') : 'Pending',
+                        'completed_at' => $b->completed_at ? $b->completed_at->format('M d, Y H:i') : 'Pending',
+                        'paid_at' => $b->paid_at ? $b->paid_at->format('M d, Y H:i') : 'Unpaid'
                     ];
                 });
 
