@@ -309,6 +309,12 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 <Link to="/bookings/completed" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/completed' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Completed
                 </Link>
+                <Link to="/bookings/rejected" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/rejected' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  Rejected
+                </Link>
+                <Link to="/bookings/expired" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/expired' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
+                  Expired
+                </Link>
                 <Link to="/bookings/cancelled" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/cancelled' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'}`}>
                   Cancelled
                 </Link>
