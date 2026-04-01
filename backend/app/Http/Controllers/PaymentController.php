@@ -61,7 +61,14 @@ class PaymentController extends Controller
      */
     public function initialize(Request $request, $bookingId)
     {
-        $customer = $request->user();
+        $customer = auth()->guard('customer')->user();
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
 
         $booking = Booking::where('bookingID', $bookingId)
             ->where('customerID', $customer->customerID)
@@ -256,16 +263,40 @@ class PaymentController extends Controller
         $status = $payload['status'] ?? '';
         
         if ($status === 'success') {
-            DB::transaction(function () use ($payment, $payload) {
-                $this->walletService->handlePaymentSuccess($payment, $payload);
+            try {
+                DB::transaction(function () use ($payment, $payload) {
+                    // Lock the payment row to prevent race conditions
+                    $lockedPayment = Payment::where('paymentID', $payment->paymentID)
+                        ->lockForUpdate()
+                        ->first();
+                    
+                    // Check again after lock - prevent duplicate processing
+                    if (in_array($lockedPayment->status, ['held', 'paid', 'releasable', 'released'])) {
+                        Log::info('Payment already processed (after lock), skipping', [
+                            'payment_id' => $lockedPayment->paymentID,
+                            'status' => $lockedPayment->status
+                        ]);
+                        return;
+                    }
+                    
+                    $this->walletService->handlePaymentSuccess($lockedPayment, $payload);
+                    
+                    Log::info('Payment processed via callback (webhook)', [
+                        'payment_id' => $lockedPayment->paymentID,
+                        'tx_ref' => $lockedPayment->tx_ref
+                    ]);
+                });
                 
-                Log::info('Payment processed via callback (webhook)', [
-                    'payment_id' => $payment->paymentID,
-                    'tx_ref' => $payment->tx_ref
+                return response()->json(['success' => true, 'message' => 'Webhook processed successfully']);
+                
+            } catch (\Exception $e) {
+                Log::error('Webhook processing failed', [
+                    'tx_ref' => $tx_ref,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
-            });
-            
-            return response()->json(['success' => true, 'message' => 'Webhook processed successfully']);
+                return response()->json(['success' => false, 'message' => 'Processing failed'], 500);
+            }
         }
         
         // Handle failed payment
@@ -326,7 +357,15 @@ class PaymentController extends Controller
      */
     public function confirmCompletion(Request $request, $bookingId)
     {
-        $customer = $request->user();
+        $customer = auth()->guard('customer')->user();
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+        
         $booking = Booking::where('bookingID', $bookingId)
             ->where('customerID', $customer->customerID)
             ->where('status', 'waiting_customer_confirmation')
@@ -339,32 +378,44 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        DB::transaction(function () use ($booking) {
-            $payment = Payment::where('bookingID', $booking->bookingID)->first();
+        try {
+            DB::transaction(function () use ($booking) {
+                $payment = Payment::where('bookingID', $booking->bookingID)->first();
+                
+                if (!$payment || $payment->status !== 'held') {
+                    throw new \Exception('Payment not in held state');
+                }
+
+                $payment->status = 'releasable';
+                $payment->save();
+
+                $booking->status = 'completed';
+                $booking->customer_confirmed_at = now();
+                $booking->save();
+
+                // Release payment to provider wallet using WalletService
+                $this->walletService->releasePayment($payment);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service confirmed successfully',
+                'data' => [
+                    'booking_id' => $booking->bookingID,
+                    'status' => 'completed'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Booking confirmation failed', [
+                'booking_id' => $bookingId,
+                'error' => $e->getMessage()
+            ]);
             
-            if (!$payment || $payment->status !== 'held') {
-                throw new \Exception('Payment not in held state');
-            }
-
-            $payment->status = 'releasable';
-            $payment->save();
-
-            $booking->status = 'completed';
-            $booking->customer_confirmed_at = now();
-            $booking->save();
-
-            // Release payment to provider wallet
-            $this->walletService->releasePayment($payment);
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Service confirmed successfully',
-            'data' => [
-                'booking_id' => $booking->bookingID,
-                'status' => 'completed'
-            ]
-        ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to confirm completion: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -372,7 +423,14 @@ class PaymentController extends Controller
      */
     public function history(Request $request)
     {
-        $customer = $request->user();
+        $customer = auth()->guard('customer')->user();
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
         
         $payments = Payment::where('customerID', $customer->customerID)
             ->with(['booking', 'booking.provider'])
@@ -420,6 +478,15 @@ class PaymentController extends Controller
      */
     public function cancel(Request $request, $tx_ref)
     {
+        $customer = auth()->guard('customer')->user();
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+        
         $payment = Payment::where('tx_ref', $tx_ref)
             ->whereIn('status', ['pending', 'processing'])
             ->first();
@@ -431,8 +498,7 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        $user = $request->user();
-        if ($user->customerID !== $payment->customerID) {
+        if ($customer->customerID !== $payment->customerID) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized'
@@ -527,21 +593,34 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
         }
 
-        DB::transaction(function () use ($payment, $request) {
-            $payment->status = 'releasable';
-            $payment->save();
+        try {
+            DB::transaction(function () use ($payment, $request) {
+                $payment->status = 'releasable';
+                $payment->save();
 
-            $booking = Booking::find($payment->bookingID);
-            if ($booking) {
-                $booking->status = 'completed';
-                $booking->customer_confirmed_at = now();
-                $booking->save();
-            }
+                $booking = Booking::find($payment->bookingID);
+                if ($booking) {
+                    $booking->status = 'completed';
+                    $booking->customer_confirmed_at = now();
+                    $booking->save();
+                }
 
-            $this->releasePayment($payment);
-        });
+                // Use WalletService instead of duplicate logic
+                $this->walletService->releasePayment($payment);
+            });
 
-        return response()->json(['success' => true, 'message' => 'Payment released manually']);
+            return response()->json(['success' => true, 'message' => 'Payment released manually']);
+        } catch (\Exception $e) {
+            Log::error('Manual payment release failed', [
+                'payment_id' => $paymentId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to release payment: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -572,32 +651,6 @@ class PaymentController extends Controller
         });
 
         return response()->json(['success' => true, 'message' => 'Payment refunded successfully']);
-    }
-
-    /**
-     * Release payment to provider wallet
-     */
-    protected function releasePayment($payment)
-    {
-        $wallet = Wallet::firstOrCreate(
-            ['providerID' => $payment->providerID],
-            ['available_balance' => 0, 'pending_balance' => 0]
-        );
-
-        $wallet->available_balance += $payment->provider_amount;
-        $wallet->save();
-
-        WalletTransaction::create([
-            'walletID' => $wallet->walletID,
-            'type' => 'credit',
-            'amount' => $payment->provider_amount,
-            'description' => 'Payment released for booking #' . $payment->bookingID,
-            'bookingID' => $payment->bookingID,
-        ]);
-
-        $payment->status = 'released';
-        $payment->released_at = now();
-        $payment->save();
     }
 
     /**

@@ -301,7 +301,7 @@ const UsersTable = ({
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      user.status === 'Active'
+                      ['active', 'approved'].includes(user.status?.toLowerCase())
                         ? 'bg-green-100 text-green-700'
                         : 'bg-amber-100 text-amber-700'
                     }`}>
@@ -317,7 +317,7 @@ const UsersTable = ({
                         </div>
                       ) : (
                         <>
-                          {user.status === 'Suspended' ? (
+                          {['suspended'].includes(user.status?.toLowerCase()) ? (
                             <button
                               onClick={() => onToggleStatus(user.id, user.status)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-semibold hover:bg-green-600 transition"
@@ -366,7 +366,7 @@ const UsersTable = ({
                   <p className="text-xs text-slate-500">ID: {user.id}</p>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  user.status === 'Active'
+                  ['active', 'approved'].includes(user.status?.toLowerCase())
                     ? 'bg-green-100 text-green-700'
                     : 'bg-amber-100 text-amber-700'
                 }`}>
@@ -387,7 +387,7 @@ const UsersTable = ({
                   </div>
                 ) : (
                   <>
-                    {user.status === 'Suspended' ? (
+                    {['suspended'].includes(user.status?.toLowerCase()) ? (
                       <button
                         onClick={() => onToggleStatus(user.id, user.status)}
                         className="flex-1 bg-green-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"

@@ -38,7 +38,6 @@ export default function RegisterCustomerScreen() {
     email: "",
     phone: "",
     location: "",
-    service_city: "",
     password: "",
     password_confirmation: "",
     profilePicture: null as any,
@@ -46,7 +45,6 @@ export default function RegisterCustomerScreen() {
 
   const [loading, setLoading] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [showCityModal, setShowCityModal] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [cities, setCities] = useState<City[]>([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
@@ -168,10 +166,6 @@ export default function RegisterCustomerScreen() {
       errors.location = "Please select your location";
     }
 
-    if (!formData.service_city) {
-      errors.service_city = "Please select your service city";
-    }
-
     if (!formData.password) {
       errors.password = "Password is required";
     } else if (formData.password.length < 8) {
@@ -208,7 +202,6 @@ export default function RegisterCustomerScreen() {
       formDataToSend.append('password', formData.password);
       formDataToSend.append('password_confirmation', formData.password_confirmation);
       formDataToSend.append('location', formData.location);
-      formDataToSend.append('service_city', formData.service_city);
 
       if (formData.profilePicture?.uri) {
         const filename = formData.profilePicture.uri.split('/').pop() || 'photo.jpg';
@@ -235,7 +228,6 @@ export default function RegisterCustomerScreen() {
           email: formData.email,
           phone: cleanedPhone,
           location: formData.location,
-          service_city: formData.service_city,
           hasProfilePicture: !!formData.profilePicture?.uri
         });
       }
@@ -319,10 +311,6 @@ export default function RegisterCustomerScreen() {
             if (serverErrors.location) {
               newValidationErrors.location = serverErrors.location[0];
               errorMessages.push(`📍 ${serverErrors.location[0]}`);
-            }
-            if (serverErrors.service_city) {
-              newValidationErrors.service_city = serverErrors.service_city[0];
-              errorMessages.push(`🏙️ ${serverErrors.service_city[0]}`);
             }
 
             setValidationErrors(newValidationErrors);
@@ -474,38 +462,6 @@ export default function RegisterCustomerScreen() {
           ) : null}
         </View>
 
-        {/* Service City Dropdown */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>
-            <Text>Service City </Text><Text style={styles.required}>*</Text>
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.dropdown,
-              validationErrors.service_city && styles.dropdownError
-            ]}
-            onPress={() => setShowCityModal(true)}
-          >
-            <Text
-              style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}
-            >
-              <Text>{formData.service_city || "Select city for services"}</Text>
-            </Text>
-            <Ionicons name="chevron-down" size={20} color={Colors.text.secondary} />
-          </TouchableOpacity>
-          {validationErrors.service_city ? (
-            <Text style={styles.errorText}>{validationErrors.service_city}</Text>
-          ) : null}
-          {citiesLoading && (
-            <View style={styles.loadingIndicator}>
-              <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.loadingText}>
-                <Text>Loading cities...</Text>
-              </Text>
-            </View>
-          )}
-        </View>
-
         {/* Password Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
@@ -650,63 +606,6 @@ export default function RegisterCustomerScreen() {
               style={styles.modalList}
               showsVerticalScrollIndicator={false}
             />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Service City Selection Modal */}
-      <Modal
-        visible={showCityModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowCityModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                <Text>Select Service City</Text>
-              </Text>
-              <TouchableOpacity onPress={() => setShowCityModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-
-            {citiesLoading ? (
-              <View style={styles.modalLoadingContainer}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.modalLoadingText}>
-                  <Text>Loading cities...</Text>
-                </Text>
-              </View>
-            ) : cities.length === 0 ? (
-              <View style={styles.modalEmptyContainer}>
-                <Ionicons name="location-outline" size={48} color={Colors.text.secondary} />
-                <Text style={styles.modalEmptyText}>
-                  <Text>No cities available</Text>
-                </Text>
-                <TouchableOpacity onPress={fetchCities} style={styles.retryButton}>
-                  <Text style={styles.retryText}>
-                    <Text>Retry</Text>
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <FlatList
-                data={cities}
-                keyExtractor={(item) => item.id?.toString() || item.cityID?.toString() || Math.random().toString()}
-                renderItem={({ item }) => {
-                  const cityName = item.name || (typeof item === 'string' ? item : "");
-                  return renderModalItem(item, () => {
-                    setFormData({ ...formData, service_city: cityName });
-                    setValidationErrors(prev => ({ ...prev, service_city: '' }));
-                    setShowCityModal(false);
-                  });
-                }}
-                style={styles.modalList}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
           </View>
         </View>
       </Modal>

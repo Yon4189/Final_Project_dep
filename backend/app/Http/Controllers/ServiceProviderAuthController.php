@@ -210,14 +210,9 @@ class ServiceProviderAuthController extends Controller
             ], 401);
         }
 
-        // Check account status - pending
-        if (strtolower($provider->status) === 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account is pending admin approval. You will be notified once approved'
-            ], 403);
-        }
-
+        // Only block rejected and suspended accounts from logging in
+        // Pending accounts CAN login to complete their profile
+        
         // Check account status - rejected
         if (in_array(strtolower($provider->status), ['rejected'])) {
             return response()->json([
@@ -253,7 +248,10 @@ class ServiceProviderAuthController extends Controller
                 'user' => $provider,
                 'token' => $token,
                 'token_type' => 'Bearer',
-                'expires_in' => config('sanctum.expiration', 1440)
+                'expires_in' => config('sanctum.expiration', 1440),
+                'status' => $provider->status, // Include status for frontend
+                'is_approved' => in_array(strtolower($provider->status), ['active', 'approved']),
+                'is_pending' => strtolower($provider->status) === 'pending'
             ]
         ]);
     }

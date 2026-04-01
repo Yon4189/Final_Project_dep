@@ -16,14 +16,21 @@ const Users = () => {
   const dbStatus = isError ? 'disconnected' : (isLoading ? 'checking' : 'connected');
 
   const handleToggleStatus = async (id, currentStatus) => {
-    const action = currentStatus === 'Active' ? 'suspend' : 'activate';
+    // Normalize status to lowercase for comparison
+    const normalizedStatus = currentStatus?.toLowerCase();
+    const isActive = normalizedStatus === 'active' || normalizedStatus === 'approved';
+    const action = isActive ? 'suspend' : 'activate';
+    
     if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
     setProcessingId(id);
     try {
       const url = userType === 'Provider'
         ? `/admin/providers/${id}/status`
         : `/admin/customers/${id}/status`;
-      await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
+      
+      // Backend now returns lowercase status values
+      await api.patch(url);
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
     } catch (err) {
