@@ -1,7 +1,7 @@
 // app/(provider)/earnings/withdraw.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -60,15 +60,15 @@ export default function WithdrawScreen() {
   };
 
   // Convert savedBankDetails to array format for display with proper typing
-  const bankAccounts: BankAccount[] = savedBankDetails
+  const bankAccounts: BankAccount[] = useMemo(() => savedBankDetails
     ? [{ ...savedBankDetails, id: "saved-bank-1" }]
-    : [];
+    : [], [savedBankDetails]);
 
   useEffect(() => {
-    if (bankAccounts.length > 0) {
+    if (bankAccounts.length > 0 && !selectedBank) {
       setSelectedBank(bankAccounts[0]);
     }
-  }, [bankAccounts]);
+  }, [bankAccounts, selectedBank]);
 
   const handleAmountChange = (text: string) => {
     // Only allow numbers and decimal point
@@ -147,29 +147,28 @@ export default function WithdrawScreen() {
     }
 
     try {
-      let bankId: string | undefined = selectedBank?.id;
-
-      // If new bank details and user wants to save them
-      if (!selectedBank && bankDetails.bankName && saveBank) {
-        const newBank = await handleSaveBankDetails();
-        if (newBank) {
-          bankId = newBank.id;
-          await refetch?.(); // Refresh to get new bank details
-        }
-      }
-
-      // Check if we have a bankId before proceeding
-      if (!bankId) {
-        Alert.alert("Error", "Please select or add a bank account");
+      console.log("🚀 Starting withdrawal process...");
+      
+      const bank = selectedBank || bankDetails;
+      
+      // Strict frontend validation to prevent 422
+      if (!bank.bankName || !bank.accountNumber || !bank.accountName) {
+        Alert.alert("Missing Information", "Please ensure Bank Name, Account Number, and Account Holder Name are all filled in.");
         return;
       }
 
-      // Request withdrawal
+      // Request withdrawal with full details normalized to snake_case for backend
       if (requestWithdrawal) {
-        await requestWithdrawal.mutateAsync({
+        const withdrawalData: any = {
           amount: parseFloat(amount),
-          bankDetailsId: bankId,
-        });
+          payment_method: selectedBank ? (selectedBank as any).preferredPayoutMethod || 'bank' : 'bank',
+          bank_name: bank.bankName || "",
+          account_number: bank.accountNumber || "",
+          account_holder_name: bank.accountName || "",
+        };
+
+        console.log("📡 Sending withdrawal payload:", JSON.stringify(withdrawalData, null, 2));
+        await requestWithdrawal.mutateAsync(withdrawalData);
       }
 
       Alert.alert("Success", "Withdrawal request submitted successfully", [
@@ -266,145 +265,147 @@ export default function WithdrawScreen() {
     );
   };
 
-  const renderStep2 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Select Bank Account</Text>
-      <Text style={styles.stepSubtitle}>
-        Choose where you want to receive your money
-      </Text>
+  const renderStep2 = () => {
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={styles.stepTitle}>Select Bank Account</Text>
+        <Text style={styles.stepSubtitle}>
+          Choose where you want to receive your money
+        </Text>
 
-      {bankAccounts.length > 0 && (
-        <View style={styles.savedBanks}>
-          <Text style={styles.sectionLabel}>Saved Accounts</Text>
-          {bankAccounts.map((bank) => (
-            <TouchableOpacity
-              key={bank.id}
-              style={[
-                styles.bankCard,
-                selectedBank?.id === bank.id && styles.bankCardSelected,
-              ]}
-              onPress={() => setSelectedBank(bank)}
-            >
-              <View style={styles.bankCardLeft}>
-                <View style={styles.bankIcon}>
-                  <Ionicons name="business" size={24} color={Colors.primary} />
+        {bankAccounts.length > 0 && (
+          <View style={styles.savedBanks}>
+            <Text style={styles.sectionLabel}>Saved Accounts</Text>
+            {bankAccounts.map((bank) => (
+              <TouchableOpacity
+                key={bank.id}
+                style={[
+                  styles.bankCard,
+                  selectedBank?.id === bank.id && styles.bankCardSelected,
+                ]}
+                onPress={() => setSelectedBank(bank)}
+              >
+                <View style={styles.bankCardLeft}>
+                  <View style={styles.bankIcon}>
+                    <Ionicons name="business" size={24} color={Colors.primary} />
+                  </View>
+                  <View style={styles.bankInfo}>
+                    <Text style={styles.bankName}>{bank.bankName || ""}</Text>
+                    <Text style={styles.bankAccount}>
+                      {bank.accountName || ""} ••••{" "}
+                      {(bank.accountNumber || "").slice(-4)}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.bankInfo}>
-                  <Text style={styles.bankName}>{bank.bankName || ""}</Text>
-                  <Text style={styles.bankAccount}>
-                    {bank.accountName || ""} ••••{" "}
-                    {(bank.accountNumber || "").slice(-4)}
-                  </Text>
+                <View style={styles.radioButton}>
+                  {selectedBank?.id === bank.id && (
+                    <View style={styles.radioSelected} />
+                  )}
                 </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={styles.addBankButton}
+          onPress={() => setSelectedBank(null)}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+          <Text style={styles.addBankText}>Add New Bank Account</Text>
+        </TouchableOpacity>
+
+        {!selectedBank && (
+          <View style={styles.newBankForm}>
+            <Text style={styles.sectionLabel}>New Bank Account</Text>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Bank Name</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g., Commercial Bank of Ethiopia"
+                placeholderTextColor={Colors.text.secondary}
+                value={bankDetails.bankName}
+                onChangeText={(text) =>
+                  setBankDetails({ ...bankDetails, bankName: text })
+                }
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Account Holder Name</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Name as it appears on account"
+                placeholderTextColor={Colors.text.secondary}
+                value={bankDetails.accountName}
+                onChangeText={(text) =>
+                  setBankDetails({ ...bankDetails, accountName: text })
+                }
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Account Number</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Enter account number"
+                placeholderTextColor={Colors.text.secondary}
+                value={bankDetails.accountNumber}
+                onChangeText={(text) =>
+                  setBankDetails({ ...bankDetails, accountNumber: text })
+                }
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                <Text style={styles.formLabel}>Branch (Optional)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Branch name"
+                  placeholderTextColor={Colors.text.secondary}
+                  value={bankDetails.branch}
+                  onChangeText={(text) =>
+                    setBankDetails({ ...bankDetails, branch: text })
+                  }
+                />
               </View>
-              <View style={styles.radioButton}>
-                {selectedBank?.id === bank.id && (
-                  <View style={styles.radioSelected} />
+
+              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                <Text style={styles.formLabel}>SWIFT Code (Optional)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="SWIFT"
+                  placeholderTextColor={Colors.text.secondary}
+                  value={bankDetails.swiftCode}
+                  onChangeText={(text) =>
+                    setBankDetails({ ...bankDetails, swiftCode: text })
+                  }
+                  autoCapitalize="characters"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.saveBankCheckbox}
+              onPress={() => setSaveBank(!saveBank)}
+            >
+              <View style={[styles.checkbox, saveBank && styles.checkboxChecked]}>
+                {saveBank && (
+                  <Ionicons name="checkmark" size={16} color={Colors.surface} />
                 )}
               </View>
+              <Text style={styles.checkboxLabel}>
+                Save this account for future withdrawals
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={styles.addBankButton}
-        onPress={() => setSelectedBank(null)}
-      >
-        <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
-        <Text style={styles.addBankText}>Add New Bank Account</Text>
-      </TouchableOpacity>
-
-      {!selectedBank && (
-        <View style={styles.newBankForm}>
-          <Text style={styles.sectionLabel}>New Bank Account</Text>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Bank Name</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g., Commercial Bank of Ethiopia"
-              placeholderTextColor={Colors.text.secondary}
-              value={bankDetails.bankName}
-              onChangeText={(text) =>
-                setBankDetails({ ...bankDetails, bankName: text })
-              }
-            />
           </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Account Holder Name</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="Name as it appears on account"
-              placeholderTextColor={Colors.text.secondary}
-              value={bankDetails.accountName}
-              onChangeText={(text) =>
-                setBankDetails({ ...bankDetails, accountName: text })
-              }
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Account Number</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="Enter account number"
-              placeholderTextColor={Colors.text.secondary}
-              value={bankDetails.accountNumber}
-              onChangeText={(text) =>
-                setBankDetails({ ...bankDetails, accountNumber: text })
-              }
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.formLabel}>Branch (Optional)</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Branch name"
-                placeholderTextColor={Colors.text.secondary}
-                value={bankDetails.branch}
-                onChangeText={(text) =>
-                  setBankDetails({ ...bankDetails, branch: text })
-                }
-              />
-            </View>
-
-            <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.formLabel}>SWIFT Code (Optional)</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="SWIFT"
-                placeholderTextColor={Colors.text.secondary}
-                value={bankDetails.swiftCode}
-                onChangeText={(text) =>
-                  setBankDetails({ ...bankDetails, swiftCode: text })
-                }
-                autoCapitalize="characters"
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.saveBankCheckbox}
-            onPress={() => setSaveBank(!saveBank)}
-          >
-            <View style={[styles.checkbox, saveBank && styles.checkboxChecked]}>
-              {saveBank && (
-                <Ionicons name="checkmark" size={16} color={Colors.surface} />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>
-              Save this account for future withdrawals
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
+        )}
+      </View>
+    );
+  };
 
   const renderStep3 = () => {
     const { fee, net } = calculateFee();

@@ -185,6 +185,10 @@ Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function
     Route::post('/location/update', [ServiceProviderAuthController::class, 'updateLocation']);
     Route::post('/push-token', [ServiceProviderAuthController::class, 'updatePushToken']);
     
+    // Bank Details
+    Route::get('/bank-details', [ServiceProviderAuthController::class, 'getBankDetails']);
+    Route::put('/bank-details', [ServiceProviderAuthController::class, 'updateBankDetails']);
+    
     // Dashboard
     Route::get('/dashboard/stats', [ProviderDashboardController::class, 'getStats']);
     Route::get('/schedule', [ProviderDashboardController::class, 'getSchedule']);

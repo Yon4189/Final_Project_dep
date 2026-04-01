@@ -10,15 +10,8 @@ export default function ProviderLayout() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
-  // Safely access store with default values
-  let store;
-  try {
-    store = useProviderStore();
-  } catch (error) {
-    console.error('Provider store not available:', error);
-  }
-
-  const loadProfile = store?.loadProfile;
+  // Use selector to avoid unnecessary re-renders on every store change
+  const loadProfile = useProviderStore(state => state.loadProfile);
 
   useEffect(() => {
     setIsMounted(true);
@@ -86,6 +79,20 @@ export default function ProviderLayout() {
         name="profile"
         options={{
           title: 'My Profile',
+        }}
+      />
+
+      <Stack.Screen
+        name="profile/edit"
+        options={{
+          title: 'Edit Profile',
+        }}
+      />
+
+      <Stack.Screen
+        name="profile/bank"
+        options={{
+          title: 'Bank Details',
         }}
       />
 

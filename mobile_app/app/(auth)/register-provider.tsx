@@ -22,8 +22,6 @@ import AppInput from '../../components/AppInput';
 import { Colors } from '../constants/Colors';
 import { api } from '../services/api';
 
-// Ignore specific warnings if needed
-
 const ID_PHOTO_TYPES = ['Passport', 'Driver License', 'National ID', 'Kebele ID'];
 
 // Interface for service category from database

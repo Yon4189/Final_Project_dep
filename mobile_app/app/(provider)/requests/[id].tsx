@@ -105,8 +105,8 @@ export default function RequestDetails() {
   useEffect(() => {
     if (request?.customerLatitude && request?.customerLongitude) {
       setMapRegion({
-        latitude: request.customerLatitude,
-        longitude: request.customerLongitude,
+        latitude: Number(request.customerLatitude),
+        longitude: Number(request.customerLongitude),
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
@@ -196,16 +196,26 @@ export default function RequestDetails() {
   };
 
   const handleOpenMaps = () => {
+    let url = '';
     if (request?.customerLatitude && request?.customerLongitude) {
       const lat = request.customerLatitude;
       const lng = request.customerLongitude;
-      const url = Platform.select({
+      url = Platform.select({
         ios: `maps://app?daddr=${lat},${lng}&dirflg=d`,
         android: `google.navigation:q=${lat},${lng}&mode=d`,
-      });
-      if (url) {
-        Linking.openURL(url);
-      }
+      }) || '';
+    } else if (request?.customerAddress) {
+      const encodedAddress = encodeURIComponent(request.customerAddress);
+      url = Platform.select({
+        ios: `maps://app?daddr=${encodedAddress}&dirflg=d`,
+        android: `google.navigation:q=${encodedAddress}&mode=d`,
+      }) || '';
+    }
+
+    if (url) {
+      Linking.openURL(url);
+    } else {
+      Alert.alert("Error", "Location information not available for navigation.");
     }
   };
 
@@ -377,7 +387,7 @@ export default function RequestDetails() {
               { color: getStatusColor(request?.status || "pending") },
             ]}
           >
-            {request?.status?.replace("_", " ").toUpperCase()}
+            {(request?.status || "pending").replace("_", " ").toUpperCase()}
           </Text>
         </View>
         {isTracking && (

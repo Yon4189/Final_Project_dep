@@ -373,9 +373,9 @@ export default function EarningsScreen() {
                 styles.transactionStatus,
                 {
                   backgroundColor:
-                    item.status === "completed"
+                    (item.status || "completed") === "completed"
                       ? Colors.success + "20"
-                      : item.status === "pending"
+                      : (item.status || "completed") === "pending"
                         ? Colors.warning + "20"
                         : Colors.error + "20",
                 },
@@ -386,15 +386,15 @@ export default function EarningsScreen() {
                   styles.transactionStatusText,
                   {
                     color:
-                      item.status === "completed"
+                      (item.status || "completed") === "completed"
                         ? Colors.success
-                        : item.status === "pending"
+                        : (item.status || "completed") === "pending"
                           ? Colors.warning
                           : Colors.error,
                   },
                 ]}
               >
-                {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                {(item.status || "completed").charAt(0).toUpperCase() + (item.status || "completed").slice(1)}
               </Text>
             </View>
           </View>

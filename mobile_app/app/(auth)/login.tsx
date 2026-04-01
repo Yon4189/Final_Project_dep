@@ -64,7 +64,11 @@ export default function LoginScreen() {
         password: formData.password,
       });
 
+<<<<<<< HEAD
       console.log(' Login response received:', JSON.stringify(response, null, 2));
+=======
+      console.log('Login response received:', JSON.stringify(response, null, 2));
+>>>>>>> b42a4ed89f2496f181c6cca8b5c1a4377dd6a8d5
 
       // Check if login was successful
       if (response && response.success === true) {
@@ -80,7 +84,7 @@ export default function LoginScreen() {
             console.log(' Provider token stored');
           } else {
             await api.setCustomerToken(token, responseData.refresh_token);
-            console.log(' Customer token stored');
+            console.log('Customer token stored');
           }
 
           // Store user data
@@ -96,7 +100,7 @@ export default function LoginScreen() {
           };
 
           await api.setUserData(userData);
-          console.log('👤 User data stored:', userData.email);
+          console.log(' User data stored:', userData.email);
 
           // Navigate to appropriate dashboard
           if (userType === "provider") {
@@ -117,7 +121,7 @@ export default function LoginScreen() {
         Alert.alert("Login Failed", errorMessage);
       }
     } catch (error: any) {
-      console.error('❌ Login error details:', {
+      console.error(' Login error details:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
@@ -208,7 +212,7 @@ export default function LoginScreen() {
 
   // Rest of your component remains the same...
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1 }}
     >
@@ -217,148 +221,148 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.contentContainer}
       >
-      <View style={styles.header}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        {/* User Type Selection */}
-        <View style={styles.userTypeContainer}>
-          <TouchableOpacity
-            style={[
-              styles.userTypeBtn,
-              userType === "customer" && styles.userTypeBtnActive,
-            ]}
-            onPress={() => setUserType("customer")}
-            disabled={loading}
-          >
-            <Ionicons
-              name="person-outline"
-              size={24}
-              color={userType === "customer" ? "#FFFFFF" : Colors.primary}
-            />
-            <Text
-              style={[
-                styles.userTypeText,
-                userType === "customer" && styles.userTypeTextActive,
-              ]}
-            >
-              Customer
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.userTypeBtn,
-              userType === "provider" && styles.userTypeBtnActive,
-            ]}
-            onPress={() => setUserType("provider")}
-            disabled={loading}
-          >
-            <Ionicons
-              name="construct-outline"
-              size={24}
-              color={userType === "provider" ? "#FFFFFF" : Colors.primary}
-            />
-            <Text
-              style={[
-                styles.userTypeText,
-                userType === "provider" && styles.userTypeTextActive,
-              ]}
-            >
-              Provider
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.header}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
 
-        {/* Email Input */}
-        <View style={styles.inputWrapper}>
-          <View style={styles.inputWithIcon}>
-            <Ionicons name="mail-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
-            <View style={{ flex: 1 }}>
-              <AppInput
-                label="Email"
-                value={formData.email}
-                onChangeText={(text: string) => setFormData({ ...formData, email: text })}
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                required
-              //  editable={!loading}
+        <View style={styles.formContainer}>
+          {/* User Type Selection */}
+          <View style={styles.userTypeContainer}>
+            <TouchableOpacity
+              style={[
+                styles.userTypeBtn,
+                userType === "customer" && styles.userTypeBtnActive,
+              ]}
+              onPress={() => setUserType("customer")}
+              disabled={loading}
+            >
+              <Ionicons
+                name="person-outline"
+                size={24}
+                color={userType === "customer" ? "#FFFFFF" : Colors.primary}
               />
+              <Text
+                style={[
+                  styles.userTypeText,
+                  userType === "customer" && styles.userTypeTextActive,
+                ]}
+              >
+                Customer
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.userTypeBtn,
+                userType === "provider" && styles.userTypeBtnActive,
+              ]}
+              onPress={() => setUserType("provider")}
+              disabled={loading}
+            >
+              <Ionicons
+                name="construct-outline"
+                size={24}
+                color={userType === "provider" ? "#FFFFFF" : Colors.primary}
+              />
+              <Text
+                style={[
+                  styles.userTypeText,
+                  userType === "provider" && styles.userTypeTextActive,
+                ]}
+              >
+                Provider
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Email Input */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputWithIcon}>
+              <Ionicons name="mail-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
+              <View style={{ flex: 1 }}>
+                <AppInput
+                  label="Email"
+                  value={formData.email}
+                  onChangeText={(text: string) => setFormData({ ...formData, email: text })}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  required
+                //  editable={!loading}
+                />
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Password Input */}
-        <View style={styles.inputWrapper}>
-          <View style={styles.inputWithIcon}>
-            <Ionicons name="lock-closed-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
-            <View style={{ flex: 1 }}>
-              <AppInput
-                label="Password"
-                value={formData.password}
-                onChangeText={(text: string) => setFormData({ ...formData, password: text })}
-                placeholder="Enter your password"
-                secureTextEntry
-                showPasswordToggle={true}
-                required
-              //editable={!loading}
-              />
+          {/* Password Input */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputWithIcon}>
+              <Ionicons name="lock-closed-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
+              <View style={{ flex: 1 }}>
+                <AppInput
+                  label="Password"
+                  value={formData.password}
+                  onChangeText={(text: string) => setFormData({ ...formData, password: text })}
+                  placeholder="Enter your password"
+                  secureTextEntry
+                  showPasswordToggle={true}
+                  required
+                //editable={!loading}
+                />
+              </View>
             </View>
           </View>
-        </View>
 
-        <TouchableOpacity
-          style={styles.forgotPassword}
-          onPress={() => router.push("/(auth)/forgot-password")}
-          disabled={loading}
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => router.push("/(auth)/forgot-password")}
+            disabled={loading}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
 
-        <AppButton
-          title={loading ? "Signing In..." : "Sign In"}
-          onPress={handleLogin}
-          loading={loading}
-          fullWidth
-          disabled={loading}
-        />
+          <AppButton
+            title={loading ? "Signing In..." : "Sign In"}
+            onPress={handleLogin}
+            loading={loading}
+            fullWidth
+            disabled={loading}
+          />
 
-        {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Authenticating...</Text>
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.loadingText}>Authenticating...</Text>
+            </View>
+          )}
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
           </View>
-        )}
 
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.dividerLine} />
+          <Text style={styles.registerTitle}>Don't have an account?</Text>
+
+          <AppButton
+            title="Register as Customer"
+            onPress={() => router.push("/(auth)/register-customer")}
+            variant="outline"
+            fullWidth
+            style={styles.registerButton}
+            disabled={loading}
+          />
+
+          <AppButton
+            title="Register as Service Provider"
+            onPress={() => router.push("/(auth)/register-provider")}
+            variant="outline"
+            fullWidth
+            style={styles.registerButton}
+            disabled={loading}
+          />
         </View>
-
-        <Text style={styles.registerTitle}>Don't have an account?</Text>
-
-        <AppButton
-          title="Register as Customer"
-          onPress={() => router.push("/(auth)/register-customer")}
-          variant="outline"
-          fullWidth
-          style={styles.registerButton}
-          disabled={loading}
-        />
-
-        <AppButton
-          title="Register as Service Provider"
-          onPress={() => router.push("/(auth)/register-provider")}
-          variant="outline"
-          fullWidth
-          style={styles.registerButton}
-          disabled={loading}
-        />
-      </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

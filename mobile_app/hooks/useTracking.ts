@@ -63,27 +63,29 @@ export const useTracking = (bookingID: string | null, active: boolean = false) =
         return;
       }
 
-      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-      if (backgroundStatus !== 'granted') {
-        Alert.alert('Background Location Denied', 'To track your progress while driving, please allow "Always" location access in settings.');
+      try {
+        const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (backgroundStatus === 'granted') {
+          // Start background location tracking only if permitted
+          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 5000,
+            distanceInterval: 5,
+            showsBackgroundLocationIndicator: true,
+            foregroundService: {
+              notificationTitle: 'Live Tracking Active',
+              notificationBody: 'Sharing your location with the customer.',
+            },
+          });
+        }
+      } catch (bgError) {
+        console.warn('Background tracking not supported or denied, falling back to foreground only:', bgError);
       }
 
       setIsTracking(true);
       global.activeTrackingBookingId = bookingID;
 
-      // Start background location tracking instead of just foreground
-      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 5000,
-        distanceInterval: 5,
-        showsBackgroundLocationIndicator: true,
-        foregroundService: {
-          notificationTitle: 'Live Tracking Active',
-          notificationBody: 'Sharing your location with the customer.',
-        },
-      });
-
-      // Also watch position for the local UI state
+      // Always watch position for the local UI state (Foreground)
       subscription.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
@@ -92,6 +94,20 @@ export const useTracking = (bookingID: string | null, active: boolean = false) =
         },
         async (newLocation) => {
           setLocation(newLocation);
+          // Sync location to backend if background tracking failed but we have foreground
+          if (bookingID) {
+            try {
+              await providerService.updateLocation({
+                bookingID,
+                latitude: newLocation.coords.latitude,
+                longitude: newLocation.coords.longitude,
+                speed: newLocation.coords.speed || 0,
+                heading: newLocation.coords.heading || 0,
+              });
+            } catch (err) {
+              // sliently ignore sync errors
+            }
+          }
         }
       );
     } catch (err) {

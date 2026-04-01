@@ -188,9 +188,13 @@ public function requestWithdrawal(Request $request)
             $wallet->available_balance -= $amount;
             $wallet->save();
             
+            // Generate unique withdrawal reference
+            $withdrawalRef = 'WDR_' . strtoupper(Str::random(8)) . '_' . time();
+            
             // Base withdrawal data
             $withdrawalData = [
                 'providerID' => $provider->providerID,
+                'withdrawal_ref' => $withdrawalRef,
                 'amount' => $amount,
                 'currency' => 'ETB',
                 'status' => 'pending',
@@ -226,7 +230,7 @@ public function requestWithdrawal(Request $request)
                 'walletID' => $wallet->walletID,
                 'type' => 'debit',
                 'amount' => $amount,
-                'description' => 'Withdrawal request #' . $withdrawal->withdrawalID . ' (' . $request->payment_method . ')',
+                'description' => 'Withdrawal request #' . $withdrawalRef . ' (' . $request->payment_method . ')',
                 'bookingID' => null,
                 'withdrawalID' => $withdrawal->withdrawalID
             ]);

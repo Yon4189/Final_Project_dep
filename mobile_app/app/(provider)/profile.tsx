@@ -438,7 +438,7 @@ export default function ProviderProfile() {
       
       <TouchableOpacity 
         style={styles.settingRow}
-        onPress={() => router.push('/(provider)/profile/notifications')}
+        onPress={() => router.push('/(provider)/notifications')}
       >
         <View style={styles.settingLeft}>
           <Ionicons name="notifications-outline" size={20} color={Colors.text.primary} />
@@ -449,7 +449,7 @@ export default function ProviderProfile() {
 
       <TouchableOpacity 
         style={styles.settingRow}
-        onPress={() => router.push('/(provider)/profile/privacy')}
+        onPress={() => Alert.alert('Coming Soon', 'Privacy settings will be available in the next update.')}
       >
         <View style={styles.settingLeft}>
           <Ionicons name="lock-closed-outline" size={20} color={Colors.text.primary} />
@@ -460,7 +460,7 @@ export default function ProviderProfile() {
 
       <TouchableOpacity 
         style={styles.settingRow}
-        onPress={() => router.push('/(provider)/profile/help')}
+        onPress={() => Alert.alert('Help & Support', 'Our support team is currently active on Telegram: @handyman_support')}
       >
         <View style={styles.settingLeft}>
           <Ionicons name="help-circle-outline" size={20} color={Colors.text.primary} />
@@ -471,7 +471,7 @@ export default function ProviderProfile() {
 
       <TouchableOpacity 
         style={styles.settingRow}
-        onPress={() => router.push('/(provider)/profile/terms')}
+        onPress={() => router.push('/about')}
       >
         <View style={styles.settingLeft}>
           <Ionicons name="document-text-outline" size={20} color={Colors.text.primary} />
