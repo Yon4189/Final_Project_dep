@@ -44,9 +44,9 @@ class ServiceProviderAuthController extends Controller
             'service_city' => 'required|string|max:255',
             'catagoryID' => 'required|exists:catagories,catagoryID',
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048', // ID photo is REQUIRED
             'credentialPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
-            'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
+            'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID', // ID type is REQUIRED
             'current_latitude' => 'nullable|numeric|between:-90,90',
             'current_longitude' => 'nullable|numeric|between:-180,180',
         ]);

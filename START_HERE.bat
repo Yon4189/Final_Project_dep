@@ -4,7 +4,7 @@ echo ========================================
 echo   MOBILE APP BACKEND STARTUP
 echo ========================================
 echo.
-echo Your Computer IP: 10.161.161.31
+echo Your Computer IP: 192.168.1.5
 echo.
 echo Starting services...
 echo.
@@ -29,8 +29,8 @@ echo ========================================
 echo   ALL SERVICES STARTED!
 echo ========================================
 echo.
-echo Backend API: http://10.161.161.31:8000
-echo WebSocket: ws://10.161.161.31:8080
+echo Backend API: http://192.168.1.5:8000
+echo WebSocket: ws://192.168.1.5:8080
 echo.
 echo NEXT STEPS:
 echo 1. Wait for Expo to show QR code
