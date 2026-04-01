@@ -448,7 +448,6 @@ class AdminAuthController extends Authenticatable
                         'service_title' => $b->service->title ?? 'Unknown',
                         'status' => ucfirst($b->status),
                         'payment_status' => ucfirst($b->payment_status ?? 'Unpaid'),
-                        'scheduled_at' => ($b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A'),
                         'location' => $b->customer->service_address ?? $b->customer->location ?? 'Addis Ababa',
                         'address_text' => $b->address_text, // Keep for raw detail if needed
                         'price' => $b->agreed_price ?? 0,
@@ -456,12 +455,19 @@ class AdminAuthController extends Authenticatable
                         'payout' => $b->provider_payout ?? ($b->agreed_price * 0.9),
                         'notes' => $b->notes ?? null,
                         
-                        // Timestamps for "View More"
+                        // Timestamps for Dynamic Timeline
+                        'created_at' => $b->created_at ? $b->created_at->format('M d, Y H:i') : 'N/A',
+                        'scheduled_at' => ($b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y H:i') : 'N/A'),
                         'accepted_at' => $b->accepted_at ? $b->accepted_at->format('M d, Y H:i') : 'Pending',
+                        'rejected_at' => $b->rejected_at ? $b->rejected_at->format('M d, Y H:i') : 'N/A',
                         'provider_started_at' => $b->provider_started_at ? $b->provider_started_at->format('M d, Y H:i') : 'Pending',
                         'provider_arrived_at' => $b->provider_arrived_at ? $b->provider_arrived_at->format('M d, Y H:i') : 'Pending',
                         'completed_at' => $b->completed_at ? $b->completed_at->format('M d, Y H:i') : 'Pending',
-                        'paid_at' => $b->paid_at ? $b->paid_at->format('M d, Y H:i') : 'Unpaid'
+                        'expires_at' => $b->expires_at ? $b->expires_at->format('M d, Y H:i') : 'N/A',
+                        'customer_confirmed_at' => $b->customer_confirmed_at ? $b->customer_confirmed_at->format('M d, Y H:i') : 'Pending',
+                        'paid_at' => $b->paid_at ? $b->paid_at->format('M d, Y H:i') : 'Unpaid',
+                        'released_at' => $b->released_at ? $b->released_at->format('M d, Y H:i') : 'Pending',
+                        'cancelled_at' => $b->cancelled_at ? $b->cancelled_at->format('M d, Y H:i') : 'N/A'
                     ];
                 });
 
