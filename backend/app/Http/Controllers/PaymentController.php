@@ -81,30 +81,30 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        // ✅ Generate tx_ref
+        // Generate tx_ref
         $txRef = 'BOOKING-' . $bookingId . '-' . time();
 
-        // ✅ Encode mobile deep link
+        // Encode mobile deep link
         $appRedirect = $request->return_url ?? 'mobileapp://payment';
         $encoded = base64_encode($appRedirect);
         $safe = str_replace(['+', '/', '='], ['-', '_', ''], $encoded);
 
         $baseUrl = $request->getSchemeAndHttpHost();
 
-        // ✅ 🔥 MAIN FIX: ALWAYS INCLUDE tx_ref
+        // MAIN FIX: ALWAYS INCLUDE tx_ref
         $backendReturnUrl = $baseUrl . '/api/payment/return/' . $safe . '?tx_ref=' . $txRef;
 
-        // ✅ Commission Calculation (10%)
+        // Commission Calculation (10%)
         $totalAmount = (float)$booking->agreed_price;
         $commission = $totalAmount * 0.10;
         $providerAmount = $totalAmount - $commission;
 
-        // ✅ Split Name
+        // Split Name
         $nameParts = explode(' ', trim($customer->fullname), 2);
         $firstName = $nameParts[0] ?? $customer->fullname ?? 'Customer';
         $lastName = $nameParts[1] ?? 'User';
 
-        // ✅ Save payment
+        // Save payment
         $payment = Payment::create([
             'tx_ref' => $txRef,
             'bookingID' => $booking->bookingID,
@@ -116,7 +116,7 @@ class PaymentController extends Controller
             'status' => 'pending',
             'currency' => 'ETB',
 
-            // ✅ FIXED
+            // FIXED
             'return_url' => $backendReturnUrl,
             'callback_url' => route('payment.callback', ['tx_ref' => $txRef]),
 
@@ -125,7 +125,7 @@ class PaymentController extends Controller
             'customer_last_name' => $lastName,
         ]);
 
-        // ✅ Chapa request
+        // Chapa request
         $paymentData = [
             'amount' => (string)$booking->agreed_price,
             'currency' => 'ETB',
@@ -169,7 +169,7 @@ class PaymentController extends Controller
             'query' => $request->all()
         ]);
 
-        // ✅ Decode app deep link
+        // Decode app deep link
         $appRedirect = 'mobileapp://payment';
 
         if ($encoded_redirect) {
@@ -181,10 +181,10 @@ class PaymentController extends Controller
             $appRedirect = base64_decode($base64);
         }
 
-        // ✅ Extract tx_ref (STRONG VERSION)
+        // Extract tx_ref (STRONG VERSION)
         $txRef = $request->query('tx_ref') ?? $request->query('trx_ref') ?? '';
 
-        // 🔥 FALLBACK (CRITICAL)
+        // FALLBACK (CRITICAL)
         if (!$txRef) {
             $url = $request->fullUrl();
             if (preg_match('/BOOKING-[A-Za-z0-9\-]+/', $url, $match)) {
@@ -195,7 +195,7 @@ class PaymentController extends Controller
 
         $status = $request->query('status', '');
 
-        // ✅ Check DB if needed
+        // Check DB if needed
         if ($txRef && $status !== 'success') {
             $payment = Payment::where('tx_ref', $txRef)->first();
             if ($payment && in_array($payment->status, ['held', 'paid', 'releasable', 'released'])) {
@@ -203,7 +203,7 @@ class PaymentController extends Controller
             }
         }
 
-        // ✅ Build redirect URL
+        // Build redirect URL
         $redirectUrl = $appRedirect;
 
         if ($txRef) {
@@ -217,7 +217,7 @@ class PaymentController extends Controller
             'redirect' => $redirectUrl
         ]);
 
-        // ✅ Return HTML redirect (reliable for mobile)
+        // Return HTML redirect (reliable for mobile)
         return response("
         <html>
             <head>

@@ -182,7 +182,7 @@ class AdminAuthController extends Authenticatable
 
         if ($status === 'approved') {
             $type = \App\Services\NotificationService::TYPE_PROVIDER_APPROVED;
-            $title = "Account Approved! 🎉";
+            $title = "Account Approved!";
             $message = "Congratulations! Your provider account has been approved. You can now start receiving service requests.";
         } elseif ($status === 'rejected') {
             $type = \App\Services\NotificationService::TYPE_PROVIDER_REJECTED;

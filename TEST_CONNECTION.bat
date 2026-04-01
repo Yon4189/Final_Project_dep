@@ -6,7 +6,7 @@ echo ========================================
 echo.
 
 echo Testing if Laravel is running...
-curl -s http://10.161.161.31:8000/api/health
+curl -s http://192.168.1.5:8000/api/health
 if %errorlevel% neq 0 (
     echo.
     echo ERROR: Cannot connect to Laravel!
