@@ -64,11 +64,7 @@ export default function LoginScreen() {
         password: formData.password,
       });
 
-<<<<<<< HEAD
-      console.log(' Login response received:', JSON.stringify(response, null, 2));
-=======
       console.log('Login response received:', JSON.stringify(response, null, 2));
->>>>>>> b42a4ed89f2496f181c6cca8b5c1a4377dd6a8d5
 
       // Check if login was successful
       if (response && response.success === true) {

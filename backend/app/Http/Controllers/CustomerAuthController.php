@@ -30,7 +30,11 @@ class CustomerAuthController extends Controller
         // Step 1: Validate input with more flexible phone validation
         $validator = Validator::make($request->all(), [
             'fullname' => 'required|string|max:255',
-            'email' => 'required|email|unique:customers,email',
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'unique:customers,email'
+            ],
             'phone' => [
                 'required',
                 'unique:customers,phone',
@@ -45,7 +49,7 @@ class CustomerAuthController extends Controller
                 },
             ],
             'password' => 'required|string|min:8|confirmed',
-            'profilePicture' => 'sometimes|image|max:2048',
+            'profilePicture' => 'nullable|image|max:2048',
             'location' => 'sometimes|string|max:255',
             'service_city' => 'sometimes|string|max:255',
         ]);
@@ -108,30 +112,48 @@ class CustomerAuthController extends Controller
 
     public function login(Request $request)
     {
+        // Validate input
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => 'required|email:rfc,dns',
             'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation errors',
+                'message' => 'Please provide valid email and password',
                 'errors' => $validator->errors()
             ], 422);
         }
 
-        // Find customer
+        // Find customer by email
         $customer = Customer::where('email', $request->email)->first();
 
-        if (!$customer || !Hash::check($request->password, $customer->password)) {
+        // Check if customer exists
+        if (!$customer) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid email or password'
+                'message' => 'No account found with this email address'
             ], 401);
         }
 
-        // SET ONLINE STATUS
+        // Verify password
+        if (!Hash::check($request->password, $customer->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect password. Please try again'
+            ], 401);
+        }
+
+        // Check if account is suspended
+        if (isset($customer->status) && strtolower($customer->status) === 'suspended') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account has been suspended. Please contact support'
+            ], 403);
+        }
+
+        // Set online status
         Cache::put("customer_online_{$customer->customerID}", true, now()->addMinutes(2));
         Customer::where('customerID', $customer->customerID)
             ->update([
@@ -142,7 +164,7 @@ class CustomerAuthController extends Controller
         // Remove password from response
         unset($customer->password);
         
-        // Create a Sanctum token
+        // Create authentication token
         $token = $customer->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
         
         return response()->json([

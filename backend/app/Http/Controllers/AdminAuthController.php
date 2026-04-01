@@ -29,7 +29,7 @@ class AdminAuthController extends Authenticatable
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => 'required|email:rfc,dns',
             'password' => 'required|string',
         ]);
 
@@ -43,10 +43,17 @@ class AdminAuthController extends Authenticatable
 
         $admin = Admin::where('email', $request->email)->first();
 
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
+        if (!$admin) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials'
+                'message' => 'No admin account found with this email address'
+            ], 401);
+        }
+
+        if (!Hash::check($request->password, $admin->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect password. Please try again'
             ], 401);
         }
 
@@ -507,7 +514,7 @@ class AdminAuthController extends Authenticatable
 
         $validator = Validator::make($request->all(), [
             'fullname' => 'required|string|max:255',
-            'email'    => 'required|email|unique:admins,email,' . $admin->adminID . ',adminID',
+            'email'    => 'required|email:rfc,dns|unique:admins,email,' . $admin->adminID . ',adminID',
             'phone'    => 'nullable|string|max:20',
         ]);
 
