@@ -82,7 +82,7 @@ const VerificationQueueTable = ({
             <th className="px-6 py-5 text-center">Verification Files</th>
             <th className="px-6 py-5 text-center">Submission</th>
             <th className="px-8 py-5 text-center">Action</th>
-           </tr>
+          </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
           {[...Array(3)].map((_, i) => (
@@ -155,7 +155,7 @@ const VerificationQueueTable = ({
       <div className="p-8 border-b border-slate-100 bg-white/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
-            Verification Queue
+            Provider Verification
             <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-[9px] font-black">
               {filteredAndSortedQueue.length}
             </span>
@@ -189,11 +189,10 @@ const VerificationQueueTable = ({
             </select>
             <button
               onClick={() => toggleSort('name')}
-              className={`px-3 py-2 border rounded-xl text-xs flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                sortBy === 'name'
+              className={`px-3 py-2 border rounded-xl text-xs flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${sortBy === 'name'
                   ? 'bg-blue-50 border-blue-300 text-blue-700'
                   : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+                }`}
               aria-label={`Sort by name ${sortBy === 'name' && sortOrder === 'asc' ? 'ascending' : 'descending'}`}
             >
               Name
@@ -201,11 +200,10 @@ const VerificationQueueTable = ({
             </button>
             <button
               onClick={() => toggleSort('date')}
-              className={`px-3 py-2 border rounded-xl text-xs flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                sortBy === 'date'
+              className={`px-3 py-2 border rounded-xl text-xs flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${sortBy === 'date'
                   ? 'bg-blue-50 border-blue-300 text-blue-700'
                   : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+                }`}
               aria-label={`Sort by submission date ${sortBy === 'date' && sortOrder === 'asc' ? 'ascending' : 'descending'}`}
             >
               Date
@@ -271,9 +269,8 @@ const VerificationQueueTable = ({
                               />
                             ) : null}
                             <div
-                              className={`w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm ${
-                                hasProfilePhoto ? 'fallback-placeholder hidden' : ''
-                              }`}
+                              className={`w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm ${hasProfilePhoto ? 'fallback-placeholder hidden' : ''
+                                }`}
                               style={{ display: hasProfilePhoto ? 'none' : 'flex' }}
                             >
                               {item.name?.charAt(0)?.toUpperCase()}
@@ -329,11 +326,10 @@ const VerificationQueueTable = ({
                           <button
                             onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')}
                             disabled={!hasIdPhoto}
-                            className={`w-28 py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                              hasIdPhoto
+                            className={`w-28 py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasIdPhoto
                                 ? 'bg-slate-900 text-white hover:bg-black focus:ring-slate-500'
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            }`}
+                              }`}
                             aria-label={hasIdPhoto ? `View ID document for ${item.name}` : `No ID document available for ${item.name}`}
                             aria-disabled={!hasIdPhoto}
                           >
@@ -343,11 +339,10 @@ const VerificationQueueTable = ({
                           <button
                             onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
                             disabled={!hasCredential}
-                            className={`w-28 py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                              hasCredential
+                            className={`w-28 py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasCredential
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            }`}
+                              }`}
                             aria-label={hasCredential ? `View licence for ${item.name}` : `No licence available for ${item.name}`}
                             aria-disabled={!hasCredential}
                           >
@@ -422,9 +417,8 @@ const VerificationQueueTable = ({
                         />
                       ) : null}
                       <div
-                        className={`w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold ${
-                          hasProfilePhoto ? 'fallback-placeholder hidden' : ''
-                        }`}
+                        className={`w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold ${hasProfilePhoto ? 'fallback-placeholder hidden' : ''
+                          }`}
                         style={{ display: hasProfilePhoto ? 'none' : 'flex' }}
                       >
                         {item.name?.charAt(0)?.toUpperCase()}
@@ -455,11 +449,10 @@ const VerificationQueueTable = ({
                       <button
                         onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')}
                         disabled={!hasIdPhoto}
-                        className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase text-center focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          hasIdPhoto
+                        className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase text-center focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasIdPhoto
                             ? 'bg-slate-900 text-white hover:bg-black focus:ring-slate-500'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                        }`}
+                          }`}
                         aria-label={hasIdPhoto ? `View ID document for ${item.name}` : `No ID document available for ${item.name}`}
                         aria-disabled={!hasIdPhoto}
                       >
@@ -468,11 +461,10 @@ const VerificationQueueTable = ({
                       <button
                         onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
                         disabled={!hasCredential}
-                        className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase text-center focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          hasCredential
+                        className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase text-center focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasCredential
                             ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                        }`}
+                          }`}
                         aria-label={hasCredential ? `View licence for ${item.name}` : `No licence available for ${item.name}`}
                         aria-disabled={!hasCredential}
                       >

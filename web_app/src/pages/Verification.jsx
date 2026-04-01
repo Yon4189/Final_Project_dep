@@ -152,7 +152,7 @@ const Verification = () => {
             )}
           </div>
           <p className="text-slate-500 text-sm font-medium uppercase tracking-wider mt-1">
-            Verification Management System
+            Verification Management
           </p>
         </div>
 
@@ -161,8 +161,8 @@ const Verification = () => {
             <Database size={14} className={dbStatus === 'connected' ? 'text-green-500' : 'text-red-500'} />
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {dbStatus === 'connected' ? 'Database Connected' :
-               dbStatus === 'disconnected' ? 'Database Disconnected' :
-               'Checking Database...'}
+                dbStatus === 'disconnected' ? 'Database Disconnected' :
+                  'Checking Database...'}
             </span>
           </div>
           <button
