@@ -22,19 +22,27 @@ class ForgotPasswordController extends Controller
 
         $email = $request->email;
 
-        // Check all three tables
+        // Check all three tables based on requested role
         $userTable = null;
-        $user = DB::table('customers')->where('email', $email)->first();
-        if ($user) $userTable = 'customers';
-
-        if (!$user) {
-            $user = DB::table('service_providers')->where('email', $email)->first();
-            if ($user) $userTable = 'service_providers';
-        }
-
-        if (!$user) {
+        
+        // If request comes from the admin web app, only check the admins table
+        if ($request->has('role') && $request->role === 'admin') {
             $user = DB::table('admins')->where('email', $email)->first();
             if ($user) $userTable = 'admins';
+        } else {
+            // Default logic for mobile app (Customers -> Service Providers -> Admins)
+            $user = DB::table('customers')->where('email', $email)->first();
+            if ($user) $userTable = 'customers';
+
+            if (!$user) {
+                $user = DB::table('service_providers')->where('email', $email)->first();
+                if ($user) $userTable = 'service_providers';
+            }
+
+            if (!$user) {
+                $user = DB::table('admins')->where('email', $email)->first();
+                if ($user) $userTable = 'admins';
+            }
         }
 
         if (!$user) {
@@ -110,11 +118,18 @@ class ForgotPasswordController extends Controller
             ]);
         }
 
-        // find which table the user is in
+        // find which table the user is in based on role
         $userTable = null;
-        if (DB::table('customers')->where('email', $email)->exists()) $userTable = 'customers';
-        elseif (DB::table('service_providers')->where('email', $email)->exists()) $userTable = 'service_providers';
-        elseif (DB::table('admins')->where('email', $email)->exists()) $userTable = 'admins';
+        
+        // If request comes from the admin web app, focus only on the admins table
+        if ($request->has('role') && $request->role === 'admin') {
+            if (DB::table('admins')->where('email', $email)->exists()) $userTable = 'admins';
+        } else {
+            // Default logic for mobile app (Customers -> Service Providers -> Admins)
+            if (DB::table('customers')->where('email', $email)->exists()) $userTable = 'customers';
+            elseif (DB::table('service_providers')->where('email', $email)->exists()) $userTable = 'service_providers';
+            elseif (DB::table('admins')->where('email', $email)->exists()) $userTable = 'admins';
+        }
 
         if (!$userTable) {
             return response()->json([

@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, CheckCircle, Hash } from 'lucide-react';
 import api from '../api/axios';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Get data from the URL (e.g., ?email=...&token=...)
-  const email = searchParams.get('email');
-  const token = searchParams.get('token');
+  // Get data from the URL (e.g., ?email=...)
+  const email = searchParams.get('email') || '';
 
+  const [tokenInput, setTokenInput] = useState('');
   const [password, setPassword] = useState('');
   const [password_confirmation, setPasswordConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,9 +30,10 @@ const ResetPassword = () => {
     try {
       const response = await api.post('/reset-password', {
         email,
-        token,
+        token: tokenInput,
         password,
-        password_confirmation
+        password_confirmation,
+        role: 'admin'
       });
 
       if (response.data.success) {
@@ -73,6 +74,17 @@ const ResetPassword = () => {
         )}
 
         <form onSubmit={handleReset} className="space-y-6">
+          <div className="relative">
+            <input 
+              type="text" 
+              required placeholder="6-digit Verification Code"
+              className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 tracking-widest font-bold"
+              value={tokenInput} onChange={(e) => setTokenInput(e.target.value)}
+              maxLength={6}
+            />
+            <Hash className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
+          </div>
+
           <div className="relative">
             <input 
               type={showPassword ? "text" : "password"} 
