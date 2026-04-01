@@ -114,7 +114,7 @@ const Services = () => {
             {activeTab === 'categories' ? 'Categories' : 'Services'}
           </h1>
           <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">
-            {activeTab === 'categories' ? 'Manage service categories' : 'View marketplace services'}
+            {activeTab === 'categories' ? 'Manage service categories' : 'View system services'}
           </p>
         </div>
 
@@ -122,7 +122,7 @@ const Services = () => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Database size={14} className={
               dbStatus === 'connected' ? 'text-green-500' :
-              dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
+                dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-semibold uppercase tracking-wider">
               {dbStatus === 'connected' && 'Database Connected'}
@@ -142,7 +142,7 @@ const Services = () => {
               onClick={() => openModal()}
               className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <Plus size={18} /> New Category
+              <Plus size={18} /> Add Category
             </button>
           )}
         </div>
