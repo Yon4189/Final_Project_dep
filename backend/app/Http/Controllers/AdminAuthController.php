@@ -85,9 +85,9 @@ class AdminAuthController extends Authenticatable
                     'providers'  => ServiceProvider::count(),
                     'customers'  => Customer::count(),
                     'pending'    => ServiceProvider::where('status', 'pending')->count(),
-                    'active'     => ServiceProvider::where('status', 'Active')->count(),
-                    'suspended'  => ServiceProvider::where('status', 'Suspended')->count(),
-                    'rejected'   => ServiceProvider::where('status', 'Rejected')->count(),
+                    'active'     => ServiceProvider::whereIn('status', ['Active', 'approved'])->count(), // Support both old and new
+                    'suspended'  => ServiceProvider::whereIn('status', ['Suspended', 'suspended'])->count(), // Support both old and new
+                    'rejected'   => ServiceProvider::whereIn('status', ['Rejected', 'rejected'])->count(), // Support both old and new
                     'categories' => Category::count(),
                     'services'   => Service::count(),
                     'revenue'    => Transaction::sum('platformFee') ?? 0
@@ -148,7 +148,7 @@ class AdminAuthController extends Authenticatable
     {
         // 1. Validate incoming request
         $request->validate([
-            'status' => 'required|string|in:approved,rejected,suspended,Active,Suspended',
+            'status' => 'required|string|in:approved,rejected,suspended',
             'verification_reason' => 'nullable|string|max:255',
         ]);
 
@@ -165,12 +165,12 @@ class AdminAuthController extends Authenticatable
             $provider->approved_at = now();
             $provider->rejected_at = null;
         } elseif ($status === 'rejected') {
-            $provider->status = 'Rejected';
+            $provider->status = 'rejected'; // Use lowercase consistently
             $provider->rejected_at = now();
             $provider->approved_at = null;
             $provider->verification_reason = $request->verification_reason;
         } elseif ($status === 'suspended') {
-            $provider->status = 'Suspended';
+            $provider->status = 'suspended'; // Use lowercase consistently
             $provider->verification_reason = $request->verification_reason;
         }
         $provider->save();
@@ -284,7 +284,7 @@ class AdminAuthController extends Authenticatable
      */
     public function approvedProviders()
     {
-        $approved = ServiceProvider::where('status', 'approved','Active')
+        $approved = ServiceProvider::whereIn('status', ['approved', 'Active']) // Support both old and new
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -298,7 +298,7 @@ class AdminAuthController extends Authenticatable
      */
     public function rejectedProviders()
     {
-        $rejected = ServiceProvider::where('status', 'rejected')
+        $rejected = ServiceProvider::whereIn('status', ['rejected', 'Rejected']) // Support both old and new
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -312,7 +312,7 @@ class AdminAuthController extends Authenticatable
      */
     public function suspendedProviders()
     {
-        $suspended = ServiceProvider::where('status', 'Suspended')
+        $suspended = ServiceProvider::whereIn('status', ['Suspended', 'suspended']) // Support both old and new
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -353,7 +353,7 @@ class AdminAuthController extends Authenticatable
     {
         return response()->json([
             'success' => true,
-            'data' => ServiceProvider::whereIn('status', ['Active', 'Suspended'])->get()
+            'data' => ServiceProvider::whereIn('status', ['Active', 'approved', 'Suspended', 'suspended'])->get() // Support both old and new
         ]);
     }
 
@@ -404,9 +404,15 @@ class AdminAuthController extends Authenticatable
             return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
         }
         
-        // Ensure accurate state toggling for customers (Active <-> Suspended)
-        // Default DB value is 'Active', so we toggle against it case-insensitively
-        $customer->status = strtolower($customer->status) === 'approved' ? 'Suspended' : 'Active';
+        // Toggle between approved and suspended (use lowercase consistently)
+        $currentStatus = strtolower($customer->status);
+        
+        if (in_array($currentStatus, ['active', 'approved'])) {
+            $customer->status = 'suspended'; // Use lowercase
+        } else {
+            $customer->status = 'approved'; // Use lowercase
+        }
+        
         $customer->save();
         
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $customer->status]);
@@ -422,8 +428,15 @@ class AdminAuthController extends Authenticatable
             return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
         }
         
-        // Ensure accurate state toggling for providers (Active <-> Suspended)
-        $provider->status = strtolower($provider->status) === 'active' ? 'Suspended' : 'Active';
+        // Toggle between approved and suspended (use lowercase consistently)
+        $currentStatus = strtolower($provider->status);
+        
+        if (in_array($currentStatus, ['active', 'approved'])) {
+            $provider->status = 'suspended'; // Use lowercase
+        } else {
+            $provider->status = 'approved'; // Use lowercase
+        }
+        
         $provider->save();
         
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $provider->status]);

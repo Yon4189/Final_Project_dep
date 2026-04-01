@@ -50,8 +50,8 @@ class CustomerAuthController extends Controller
             ],
             'password' => 'required|string|min:8|confirmed',
             'profilePicture' => 'nullable|image|max:2048',
-            'location' => 'sometimes|string|max:255',
-            'service_city' => 'sometimes|string|max:255',
+            'location' => 'required|string|max:255',
+            'service_city' => 'nullable|string|max:255', // Optional, will use location if not provided
         ]);
 
         if ($validator->fails()) {
@@ -94,7 +94,7 @@ class CustomerAuthController extends Controller
             'password' => Hash::make($request->password),
             'profilePicture' => $profilePath,
             'location' => $request->location,
-            'service_city' => $request->service_city,
+            'service_city' => $request->service_city ?? $request->location, // Use location if service_city not provided
         ]);
 
         Log::info('Customer registered successfully:', ['id' => $customer->customerID]);
