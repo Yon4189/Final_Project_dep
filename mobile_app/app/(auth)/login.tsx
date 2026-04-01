@@ -55,8 +55,8 @@ export default function LoginScreen() {
     try {
       const endpoint = userType === "customer" ? "/customer/login" : "/provider/login";
 
-      console.log(`🔐 Attempting ${userType} login at ${endpoint}`);
-      console.log(`📧 Email: ${formData.email}`);
+      console.log(` Attempting ${userType} login at ${endpoint}`);
+      console.log(` Email: ${formData.email}`);
 
       // Make the API request
       const response = await api.post<any>(endpoint, {
@@ -64,7 +64,7 @@ export default function LoginScreen() {
         password: formData.password,
       });
 
-      console.log('✅ Login response received:', JSON.stringify(response, null, 2));
+      console.log(' Login response received:', JSON.stringify(response, null, 2));
 
       // Check if login was successful
       if (response && response.success === true) {
@@ -72,15 +72,15 @@ export default function LoginScreen() {
         const token = responseData.token;
 
         if (token) {
-          console.log('🔑 Token received, storing securely...');
+          console.log(' Token received, storing securely...');
 
           // Store tokens based on user type
           if (userType === 'provider') {
             await api.setProviderToken(token, responseData.refresh_token);
-            console.log('✔ Provider token stored');
+            console.log(' Provider token stored');
           } else {
             await api.setCustomerToken(token, responseData.refresh_token);
-            console.log('✔ Customer token stored');
+            console.log(' Customer token stored');
           }
 
           // Store user data
@@ -100,20 +100,20 @@ export default function LoginScreen() {
 
           // Navigate to appropriate dashboard
           if (userType === "provider") {
-            console.log('🚀 Navigating to provider dashboard');
+            console.log(' Navigating to provider dashboard');
             router.replace("/(provider)/dashboard");
           } else {
-            console.log('🚀 Navigating to customer dashboard');
+            console.log(' Navigating to customer dashboard');
             router.replace("/(customer)/dashboard");
           }
         } else {
-          console.error('❌ No token in response');
+          console.error(' No token in response');
           Alert.alert("Error", "Invalid server response: No token received");
         }
       } else {
         // Handle unsuccessful login
         const errorMessage = response?.message || "Login failed. Please try again.";
-        console.error('❌ Login failed:', errorMessage);
+        console.error(' Login failed:', errorMessage);
         Alert.alert("Login Failed", errorMessage);
       }
     } catch (error: any) {

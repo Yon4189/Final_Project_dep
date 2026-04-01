@@ -75,7 +75,7 @@ class ApiService {
 
             // Log request data for debugging (optional, remove in production)
             if (config.data) {
-                console.log(`📤 ${config.method?.toUpperCase()} ${config.url}:`,
+                console.log(`${config.method?.toUpperCase()} ${config.url}:`,
                     typeof config.data === 'string' ? JSON.parse(config.data) : config.data);
             }
 
@@ -86,13 +86,13 @@ class ApiService {
         this.api.interceptors.response.use(
             (response) => {
                 // Log success response for debugging
-                console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url}:`,
+                console.log(`${response.config.method?.toUpperCase()} ${response.config.url}:`,
                     response.status);
                 return response;
             },
             async (error) => {
                 // Log the full error for debugging
-                console.error('❌ API Error:', {
+                console.error('API Error:', {
                     status: error.response?.status,
                     statusText: error.response?.statusText,
                     url: error.config?.url,
@@ -109,7 +109,7 @@ class ApiService {
 
                     // Log validation errors in a readable format
                     if (responseData.errors) {
-                        console.error('📋 VALIDATION ERRORS:');
+                        console.error('VALIDATION ERRORS:');
                         Object.keys(responseData.errors).forEach(field => {
                             console.error(`   ${field}: ${responseData.errors[field].join(', ')}`);
                         });
@@ -128,7 +128,7 @@ class ApiService {
 
                 // Check if it's a network error
                 if (this.isNetworkError(error)) {
-                    console.log('🌐 Network error detected, attempting to refresh base URL...');
+                    console.log('Network error detected, attempting to refresh base URL...');
 
                     // Prevent multiple simultaneous refresh attempts
                     if (!this.refreshInProgress) {
@@ -136,7 +136,7 @@ class ApiService {
                         try {
                             const newBaseUrl = await refreshApiBaseUrl();
                             if (newBaseUrl !== this.currentBaseURL) {
-                                console.log(`🔄 Updating API base URL to ${newBaseUrl}`);
+                                console.log(` Updating API base URL to ${newBaseUrl}`);
                                 this.currentBaseURL = newBaseUrl;
                                 this.api.defaults.baseURL = newBaseUrl;
                             }
@@ -148,7 +148,7 @@ class ApiService {
                                 return this.api.request(error.config);
                             }
                         } catch (refreshError) {
-                            console.warn('⚠️ Failed to refresh base URL:', refreshError);
+                            console.warn(' Failed to refresh base URL:', refreshError);
                         } finally {
                             this.refreshInProgress = false;
                         }

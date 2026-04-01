@@ -79,15 +79,8 @@ const Users = () => {
       const url = userType === "Provider" ? "/admin/providers" : "/admin/customers";
       const apiResponse = await api.get(url);
       const responseData = apiResponse.data.data || [];
-<<<<<<< HEAD
-
-      // mapping backend fields with frontend fields
-      const mappedUsers = responseData.map(u => {
-        // 1. Normalize status to Title Case (active -> Active)
-=======
       
       return responseData.map(u => {
->>>>>>> b39d87455d389898344c47413c0bfe011ba7fb78
         const rawStatus = (u.status || "Active").toLowerCase();
         let normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
 
@@ -113,12 +106,7 @@ const Users = () => {
     refetchInterval: 10000, // 10 seconds polling
   });
 
-<<<<<<< HEAD
-
-      setUsers(mappedUsers);
-=======
   const dbStatus = error ? 'disconnected' : (loading ? 'checking' : 'connected');
->>>>>>> b39d87455d389898344c47413c0bfe011ba7fb78
 
   // 2. UI State
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,41 +119,32 @@ const Users = () => {
   }, [userType, searchQuery]);
 
   // 4. Action Handlers
-const toggleUserStatus = async (id, currentStatus) => {
-  // 1. Correctly identify if they are "active" in any form
-  const isActiveOrApproved = currentStatus === 'Active' || currentStatus === 'approved';
-  const action = 'isActiveOrApproved' ? 'SUSPEND' : 'ACTIVATE';
-  
-  if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
+  const toggleUserStatus = async (id, currentStatus) => {
+    // 1. Correctly identify if they are "active" in any form
+    const isActiveOrApproved = currentStatus === 'Active' || currentStatus === 'approved';
+    const action = isActiveOrApproved ? 'SUSPEND' : 'ACTIVATE';
+    
+    if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
 
-  // 2. Determine the exact string to send to the backend/state
-  const nextStatus = isActiveOrApproved ? 'Suspended' : 'Active';
+    // 2. Determine the exact string to send to the backend/state
+    const nextStatus = isActiveOrApproved ? 'Suspended' : 'Active';
 
-  try {
-    const url = userType === "Provider"
-      ? `/admin/providers/${id}/status`
-      : `/admin/customers/${id}/status`;
+    try {
+      const url = userType === "Provider"
+        ? `/admin/providers/${id}/status`
+        : `/admin/customers/${id}/status`;
 
-<<<<<<< HEAD
-    // 3. Use 'nextStatus' here so "Approved" correctly becomes "Suspended"
-    await api.patch(url, { status: nextStatus });
+      await api.patch(url);
 
-    // 4. Update frontend state using 'nextStatus'
-    setUsers(prev => prev.map(u =>
-      u.id === id ? { ...u, status: nextStatus } : u
-    ));
-
-  } catch (err) {
-    console.error(err);
-    alert('Failed to update status');
-  }
-};
-=======
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
->>>>>>> b39d87455d389898344c47413c0bfe011ba7fb78
 
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update user status');
+    }
+  };
 
   const deleteUser = async (id, name) => {
     if (!window.confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;

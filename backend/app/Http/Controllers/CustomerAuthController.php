@@ -131,7 +131,7 @@ class CustomerAuthController extends Controller
             ], 401);
         }
 
-        // ✅ SET ONLINE STATUS - ADD THESE LINES
+        // SET ONLINE STATUS
         Cache::put("customer_online_{$customer->customerID}", true, now()->addMinutes(2));
         Customer::where('customerID', $customer->customerID)
             ->update([
@@ -158,7 +158,6 @@ class CustomerAuthController extends Controller
                 'phone' => $customer->phone,
                 'service_city' => $customer->service_city,
                 'location' => $customer->location,
-                // ✅ OPTIONAL: Include online status in response
                 'is_online' => true
             ]
         ]);
@@ -168,8 +167,6 @@ class CustomerAuthController extends Controller
     $customer = auth()->guard('customer')->user();
     
     if ($customer) {
-        $customer->token()->revoke(); // If using Passport
-        // or if using Sanctum:
         $request->user()->currentAccessToken()->delete();
     }
     
