@@ -15,6 +15,8 @@ const Bookings = () => {
     if (path.includes('/bookings/accepted')) return 'Accepted';
     if (path.includes('/bookings/completed')) return 'Completed';
     if (path.includes('/bookings/cancelled')) return 'Cancelled';
+    if (path.includes('/bookings/rejected')) return 'Rejected';
+    if (path.includes('/bookings/expired')) return 'Expired';
     return 'All';
   };
   const statusFilter = getStatusFromPath();

@@ -2,21 +2,30 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, X, Eye, Calendar, MapPin, DollarSign, Clock, Wrench,
   CheckCircle, XCircle, Loader2, AlertCircle, Filter, XCircle as XCircleIcon,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, UserCheck
 } from 'lucide-react';
 
 const getStatusStyle = (status) => {
   switch (status?.toLowerCase()) {
     case 'pending': return 'bg-amber-50 text-amber-600 border-amber-200';
-    case 'accepted': return 'bg-blue-50 text-blue-600 border-blue-200';
+    case 'accepted': 
+    case 'arrived':
+    case 'in_progress':
+    case 'started':
+    case 'confirmed':
+    case 'waiting_customer_confirmation':
+      return 'bg-blue-50 text-blue-600 border-blue-200';
     case 'completed': return 'bg-green-50 text-green-600 border-green-200';
     case 'cancelled': return 'bg-red-50 text-red-600 border-red-200';
+    case 'rejected': return 'bg-rose-50 text-rose-600 border-rose-200';
+    case 'expired': return 'bg-slate-50 text-slate-500 border-slate-200';
     default: return 'bg-slate-50 text-slate-600 border-slate-200';
   }
 };
 
-const TimelineStep = ({ label, date, icon: Icon, isComplete, isCurrent }) => {
+const TimelineStep = ({ label, date, icon: Icon, isComplete, isCurrent, bookingStatus }) => {
   const stepStatus = isComplete ? 'complete' : (isCurrent ? 'current' : 'pending');
+  const isTerminal = ['cancelled', 'rejected', 'expired'].includes(bookingStatus?.toLowerCase());
   
   return (
     <div className="flex gap-4 relative">
@@ -31,8 +40,8 @@ const TimelineStep = ({ label, date, icon: Icon, isComplete, isCurrent }) => {
       </div>
       <div className="flex-1">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-        <p className={`text-sm font-medium ${date !== 'Pending' ? 'text-slate-800' : 'text-slate-300'}`}>
-          {date !== 'Pending' ? date : '—'}
+        <p className={`text-sm font-medium ${date !== 'Pending' ? 'text-slate-800' : 'text-slate-300 italic'}`}>
+          {date !== 'Pending' ? date : (isTerminal ? bookingStatus : '—')}
         </p>
       </div>
     </div>
@@ -58,7 +67,13 @@ const BookingsTable = ({
     let result = [...bookings];
 
     if (statusFilter !== 'All') {
-      result = result.filter(b => b.status?.toLowerCase() === statusFilter.toLowerCase());
+      const filter = statusFilter.toLowerCase();
+      if (filter === 'accepted') {
+        const operationalStates = ['accepted', 'arrived', 'in_progress', 'started', 'confirmed', 'waiting_customer_confirmation'];
+        result = result.filter(b => operationalStates.includes(b.status?.toLowerCase()));
+      } else {
+        result = result.filter(b => b.status?.toLowerCase() === filter);
+      }
     }
 
     if (searchQuery.trim()) {
@@ -436,41 +451,73 @@ const BookingsTable = ({
                   <Clock size={14} /> Operational Timeline
                 </p>
                 <div className="space-y-6 relative before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
-                  <TimelineStep
-                    label="Request Accepted"
-                    date={selectedBooking.accepted_at !== 'Pending' ? selectedBooking.accepted_at : 'Pending'}
-                    icon={CheckCircle}
-                    isComplete={selectedBooking.accepted_at !== 'Pending'}
-                    isCurrent={selectedBooking.accepted_at === 'Pending' && selectedBooking.status === 'accepted'}
-                  />
-                  <TimelineStep
-                    label="Job Initiated"
-                    date={selectedBooking.provider_started_at !== 'Pending' ? selectedBooking.provider_started_at : 'Pending'}
-                    icon={Wrench}
-                    isComplete={selectedBooking.provider_started_at !== 'Pending'}
-                    isCurrent={selectedBooking.provider_started_at === 'Pending' && selectedBooking.status === 'accepted'}
-                  />
-                  <TimelineStep
-                    label="Arrived On-Site"
-                    date={selectedBooking.provider_arrived_at !== 'Pending' ? selectedBooking.provider_arrived_at : 'Pending'}
-                    icon={MapPin}
-                    isComplete={selectedBooking.provider_arrived_at !== 'Pending'}
-                    isCurrent={selectedBooking.provider_arrived_at === 'Pending' && selectedBooking.status === 'accepted'}
-                  />
-                  <TimelineStep
-                    label="Task Finalized"
-                    date={selectedBooking.completed_at !== 'Pending' ? selectedBooking.completed_at : 'Pending'}
-                    icon={CheckCircle}
-                    isComplete={selectedBooking.completed_at !== 'Pending'}
-                    isCurrent={selectedBooking.completed_at === 'Pending' && selectedBooking.status === 'completed'}
-                  />
-                  <TimelineStep
-                    label="Payment Settled"
-                    date={selectedBooking.paid_at !== 'Unpaid' ? selectedBooking.paid_at : 'Unpaid'}
-                    icon={DollarSign}
-                    isComplete={selectedBooking.paid_at !== 'Unpaid'}
-                    isCurrent={selectedBooking.paid_at === 'Unpaid' && selectedBooking.payment_status === 'pending'}
-                  />
+                  {(() => {
+                    const status = selectedBooking.status?.toLowerCase();
+                    const operationalStates = ['accepted', 'arrived', 'in_progress', 'started', 'confirmed', 'waiting_customer_confirmation'];
+                    
+                    const steps = [];
+                    
+                    // 9. Created_at (for all states)
+                    steps.push({ label: 'Order Created', date: selectedBooking.created_at, icon: Clock, isComplete: true });
+
+                    // 1. Scheduled_for (for all six states)
+                    steps.push({ label: 'Scheduled For', date: selectedBooking.scheduled_at, icon: Calendar, isComplete: true });
+
+                    // 10. Paid_at (for all states)
+                    steps.push({ label: 'Payment Settled', date: selectedBooking.paid_at, icon: DollarSign, isComplete: selectedBooking.paid_at !== 'Unpaid' });
+
+                    // 2. Accepted_at (for all states except pending and expired)
+                    if (status !== 'pending' && status !== 'expired') {
+                      steps.push({ 
+                        label: 'Request Accepted', 
+                        date: selectedBooking.accepted_at, 
+                        icon: CheckCircle, 
+                        isComplete: selectedBooking.accepted_at !== 'Pending',
+                        isCurrent: selectedBooking.accepted_at === 'Pending' && status === 'accepted'
+                      });
+                    }
+
+                    // 3. Rejected_at (for Rejected state only)
+                    if (status === 'rejected') {
+                      steps.push({ label: 'Request Rejected', date: selectedBooking.rejected_at, icon: XCircle, isComplete: true });
+                    }
+
+                    // 7. Expired_at (for Expired state only)
+                    if (status === 'expired') {
+                      steps.push({ label: 'Request Expired', date: selectedBooking.expires_at, icon: AlertCircle, isComplete: true });
+                    }
+
+                    // 8. Customer Confirm_at (for Accepted state and completed states)
+                    if (status === 'completed' || operationalStates.includes(status)) {
+                      steps.push({ 
+                        label: 'Customer Confirmation', 
+                        date: selectedBooking.customer_confirmed_at, 
+                        icon: UserCheck, 
+                        isComplete: selectedBooking.customer_confirmed_at !== 'Pending',
+                        isCurrent: selectedBooking.customer_confirmed_at === 'Pending' && status === 'waiting_customer_confirmation'
+                      });
+                    }
+
+                    // Completed Only Steps (4, 5, 6, 11)
+                    if (status === 'completed') {
+                      steps.push({ label: 'Provider Arrived', date: selectedBooking.provider_arrived_at, icon: MapPin, isComplete: selectedBooking.provider_arrived_at !== 'Pending' });
+                      steps.push({ label: 'Job Started', date: selectedBooking.provider_started_at, icon: Wrench, isComplete: selectedBooking.provider_started_at !== 'Pending' });
+                      steps.push({ label: 'Job Completed', date: selectedBooking.completed_at, icon: CheckCircle, isComplete: selectedBooking.completed_at !== 'Pending' });
+                      steps.push({ label: 'Revenue Released', date: selectedBooking.released_at, icon: DollarSign, isComplete: selectedBooking.released_at !== 'Pending' });
+                    }
+
+                    return steps.map((step, idx) => (
+                      <TimelineStep
+                        key={idx}
+                        label={step.label}
+                        date={step.date}
+                        icon={step.icon}
+                        isComplete={step.isComplete}
+                        isCurrent={step.isCurrent}
+                        bookingStatus={selectedBooking.status}
+                      />
+                    ));
+                  })()}
                 </div>
               </div>
 
