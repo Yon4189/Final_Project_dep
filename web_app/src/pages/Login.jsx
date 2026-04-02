@@ -73,12 +73,15 @@ const Login = () => {
 
     try {
       // Hits the multi-table route we discussed earlier
-      const response = await api.post('/forgot-password', { email });
+      const response = await api.post('/forgot-password', { email, role: 'admin' });
       if (response.data.success) {
-        setSuccessMsg("Reset link sent! Please check your email inbox.");
+        setSuccessMsg("Verification code sent! Redirecting...");
+        setTimeout(() => {
+          navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+        }, 1500);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Error sending reset link.");
+      setError(err.response?.data?.message || "Error sending verification code.");
     } finally {
       setIsLoading(false);
     }

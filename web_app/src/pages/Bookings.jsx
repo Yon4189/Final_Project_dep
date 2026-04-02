@@ -30,7 +30,7 @@ const Bookings = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Booking Oversight</h1>
           <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">
-            Viewing <span className="text-blue-600 font-bold">{statusFilter}</span> transactions
+            Booking Management
           </p>
         </div>
 
@@ -38,7 +38,7 @@ const Bookings = () => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Database size={14} className={
               dbStatus === 'connected' ? 'text-green-500' :
-              dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
+                dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {dbStatus === 'connected' && 'Database Connected'}

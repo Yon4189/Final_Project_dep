@@ -135,9 +135,6 @@ const Dashboard = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Admin Dashboard</h1>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest italic">
-            Service Connected Oversight
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">

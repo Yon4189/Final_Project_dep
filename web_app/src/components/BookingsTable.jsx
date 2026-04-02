@@ -263,7 +263,7 @@ const BookingsTable = ({
                 <th className="px-6 py-4 text-right">Price</th>
                 <th className="px-6 py-4 text-center">Payment</th>
                 <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-4 text-right">View</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

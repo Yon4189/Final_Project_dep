@@ -10,7 +10,7 @@ import {
   Folder, Clock, CheckCircle, XCircle,
   User, Check, X, AlertCircle
 } from 'lucide-react';
-import logo from '../assets/logo.png';
+import logo from '../assets/logo.jpg';
 
 const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
   const isMini = width < 160 && !isMobile;
