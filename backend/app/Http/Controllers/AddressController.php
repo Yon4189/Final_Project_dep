@@ -70,6 +70,15 @@ class AddressController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
         
+        // Check address count limit (maximum 5 addresses per customer)
+        $addressCount = CustomerAddress::where('customerID', $customer->customerID)->count();
+        if ($addressCount >= 5) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only save up to 5 addresses. Please delete an existing address first.'
+            ], 422);
+        }
+        
         $validator = Validator::make($request->all(), [
             'full_address' => 'required|string',
             'latitude' => 'required|numeric',

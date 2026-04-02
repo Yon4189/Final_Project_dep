@@ -57,6 +57,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const [selectedServiceName, setSelectedServiceName] = useState<string>('');
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [servicePrice, setServicePrice] = useState<number>(0);
+  const [agreedPrice, setAgreedPrice] = useState<string>(''); // User-entered agreed price
   const [serviceDuration, setServiceDuration] = useState<string>('');
 
   // Date/Time state
@@ -294,6 +295,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     // Get price - check multiple possible locations
     const price = service.price || service.basePrice || service.customPrice || service.service?.basePrice || 0;
     setServicePrice(price);
+    setAgreedPrice(price.toString()); // Initialize agreed price with service price
     
     // Get duration if available
     if (service.estimatedDuration && typeof service.estimatedDuration === 'number') {
@@ -327,6 +329,18 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const validateForm = () => {
     if (!selectedServiceId) {
       Alert.alert('Error', 'Please select a service');
+      return false;
+    }
+
+    // Validate agreed price
+    if (!agreedPrice || agreedPrice.trim() === '') {
+      Alert.alert('Error', 'Please enter the agreed price');
+      return false;
+    }
+
+    const priceValue = parseFloat(agreedPrice);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      Alert.alert('Error', 'Please enter a valid price (numbers only)');
       return false;
     }
     
@@ -446,7 +460,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         providerID: Number(provider.id),
         serviceID: Number(selectedServiceId),
         scheduledDate: scheduledDate,
-        agreed_price: servicePrice,
+        agreed_price: parseFloat(agreedPrice), // Use the agreed price entered by customer
         service_address: finalAddress,
         full_address: finalAddress,
         location_source: locationSource,
@@ -946,6 +960,47 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               </View>
             </View>
 
+            {/* Agreed Price - Shows after service is selected */}
+            {selectedServiceId && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Agreed Price (ETB) *</Text>
+                <Text style={styles.priceHint}>
+                  Enter the price you discussed with the provider
+                  {servicePrice > 0 && ` (Base price: ETB ${servicePrice})`}
+                </Text>
+                <TextInput
+                  style={styles.priceInput}
+                  value={agreedPrice}
+                  onChangeText={(text) => {
+                    // Only allow numbers and decimal point
+                    const filtered = text.replace(/[^0-9.]/g, '');
+                    // Ensure only one decimal point
+                    const parts = filtered.split('.');
+                    if (parts.length > 2) {
+                      setAgreedPrice(parts[0] + '.' + parts.slice(1).join(''));
+                    } else {
+                      setAgreedPrice(filtered);
+                    }
+                  }}
+                  placeholder="0.00"
+                  placeholderTextColor={Colors.text.secondary}
+                  keyboardType="decimal-pad"
+                />
+                {agreedPrice && parseFloat(agreedPrice) > 0 && (
+                  <View style={styles.pricePreview}>
+                    <Text style={styles.pricePreviewLabel}>You will pay:</Text>
+                    <Text style={styles.pricePreviewValue}>ETB {parseFloat(agreedPrice).toFixed(2)}</Text>
+                    {serviceDuration && (
+                      <Text style={styles.priceNote}>Estimated duration: {serviceDuration}</Text>
+                    )}
+                    <Text style={styles.priceNote}>
+                      Platform fee will be added at checkout
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Description - ALWAYS ACTIVE */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Description (Optional)</Text>
@@ -959,20 +1014,6 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                 numberOfLines={3}
               />
             </View>
-
-            {/* Price Estimate - Shows after service is selected */}
-            {servicePrice > 0 && (
-              <View style={styles.priceSection}>
-                <Text style={styles.priceLabel}>Total Price</Text>
-                <Text style={styles.priceValue}>ETB {servicePrice}</Text>
-                {serviceDuration ? (
-                  <Text style={styles.priceNote}>Estimated duration: {serviceDuration}</Text>
-                ) : null}
-                <Text style={styles.priceNote}>
-                  Platform fee will be added at checkout
-                </Text>
-              </View>
-            )}
           </ScrollView>
 
           {/* Action Buttons */}
@@ -985,7 +1026,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               title="Send Request"
               onPress={handleSendRequest}
               loading={loading || createBooking.isPending}
-              disabled={loading || createBooking.isPending || !selectedServiceId}
+              disabled={loading || createBooking.isPending || !selectedServiceId || !agreedPrice || parseFloat(agreedPrice) <= 0}
               style={styles.confirmButton}
             />
           </View>
@@ -1207,30 +1248,46 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: 'top',
   },
-  priceSection: {
-    backgroundColor: Colors.primary + '10',
+  priceHint: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  priceInput: {
+    backgroundColor: Colors.background,
     padding: 16,
     borderRadius: 10,
-    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  pricePreview: {
+    backgroundColor: Colors.primary + '10',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: Colors.primary + '20',
   },
-  priceLabel: {
-    fontSize: 14,
+  pricePreviewLabel: {
+    fontSize: 12,
     color: Colors.text.secondary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  priceValue: {
-    fontSize: 24,
+  pricePreviewValue: {
+    fontSize: 22,
     fontWeight: 'bold',
     color: Colors.primary,
     marginBottom: 4,
   },
   priceNote: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.text.secondary,
     fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: 2,
   },
   actionButtons: {
     flexDirection: 'row',

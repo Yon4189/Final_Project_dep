@@ -1,4 +1,5 @@
 // app/(provider)/requests/index.tsx
+// Last modified: 2026-04-02 10:30:00
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -19,7 +20,7 @@ import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderQueries, useProviderRequests } from "../../../hooks/useProviderQueries";
 import { Colors } from "../../constants/Colors";
 import type { ServiceRequest } from "../../types/provider.types";
-import { formatCurrency, formatTimeAgo } from "../../utils/formatters";
+import { formatCurrency, formatTimeAgo, formatDate, formatTime } from "../../utils/formatters";
 import { ScheduleModal } from "../components/ScheduleModal";
 
 type FilterType =
@@ -359,7 +360,7 @@ export default function ProviderRequests() {
             style={styles.customerImage}
           />
           <View style={styles.customerDetails}>
-            <Text style={styles.customerName}>{item.customerName || ""}</Text>
+            <Text style={styles.customerName}>{item.customerName || ""} TEST</Text>
             <Text style={styles.requestNumber}>
               #{item.requestNumber || ""}
             </Text>
@@ -393,16 +394,28 @@ export default function ProviderRequests() {
         </View>
       </View>
 
-      <View style={styles.serviceInfo}>
-        <Text style={styles.serviceName}>{item.serviceName || ""}</Text>
-        <View style={styles.priceTag}>
-          <Text style={styles.priceText}>
-            {formatCurrency(item.estimatedPrice || 0)}
-          </Text>
-        </View>
-      </View>
-
       <View style={styles.detailsContainer}>
+        <View style={styles.detailRow}>
+          <Ionicons
+            name="construct-outline"
+            size={14}
+            color={Colors.text.secondary}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.detailText, { fontSize: 11, color: Colors.text.secondary, marginBottom: 2 }]}>
+              Requested Service:
+            </Text>
+            <Text style={[styles.detailText, { fontWeight: '600', color: Colors.text.primary }]}>
+              {item.serviceName || ""}
+            </Text>
+          </View>
+          <View style={styles.priceTag}>
+            <Text style={styles.priceText}>
+              {formatCurrency(item.estimatedPrice || 0)}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.detailRow}>
           <Ionicons
             name="calendar-outline"
@@ -410,7 +423,7 @@ export default function ProviderRequests() {
             color={Colors.text.secondary}
           />
           <Text style={styles.detailText}>
-            {item.scheduledDate || ""} at {item.scheduledTime || ""}
+            {item.scheduledDate ? formatDate(item.scheduledDate) : ""} at {item.scheduledTime ? formatTime(item.scheduledTime) : ""}
           </Text>
         </View>
 

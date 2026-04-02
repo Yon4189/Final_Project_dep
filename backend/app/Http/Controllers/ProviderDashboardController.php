@@ -203,9 +203,9 @@ class ProviderDashboardController extends Controller
             }
 
             $providerID = $provider->providerID;
-            $status = $request->query('status', 'pending');
+            $status = $request->query('status');
 
-            $bookings = Booking::with(['customer', 'service'])
+            $bookings = Booking::with(['customer', 'service', 'service.category', 'payment'])
                 ->where('providerID', $providerID)
                 ->when($status, function($query) use ($status) {
                     $query->where('status', $status);
@@ -215,22 +215,96 @@ class ProviderDashboardController extends Controller
 
             $formattedRequests = $bookings->map(function($booking) {
                 return [
-                    'id' => (string)$booking->bookingID,
-                    'customerName' => $booking->customer->fullname ?? $booking->customer->name ?? 'Customer',
-                    'serviceName' => $booking->service->title ?? 'Service',
+                    'bookingID' => $booking->bookingID,
+                    'id' => $booking->bookingID,
+                    'requestNumber' => 'REQ-' . str_pad($booking->bookingID, 6, '0', STR_PAD_LEFT),
                     'status' => $booking->status,
+                    
+                    // Date and Time
                     'scheduledDate' => $booking->scheduledDate ? $booking->scheduledDate->format('Y-m-d') : null,
-                    'scheduledTime' => $booking->scheduledDate ? $booking->scheduledDate->format('h:i A') : null,
-                    'description' => $booking->notes ?? '',
-                    'address' => $booking->notes ? explode("\n", $booking->notes)[0] : 'No address provided'
+                    'scheduledTime' => $booking->scheduledDate ? $booking->scheduledDate->format('H:i') : null,
+                    'scheduledDateTime' => $booking->scheduledDate ? $booking->scheduledDate->toISOString() : null,
+                    
+                    // Price
+                    'agreed_price' => (float)$booking->agreed_price,
+                    'estimatedPrice' => (float)$booking->agreed_price,
+                    
+                    // Location
+                    'service_address' => $booking->service_address,
+                    'customerAddress' => $booking->service_address ?? $booking->address_text,
+                    'address_text' => $booking->address_text ?? $booking->service_address,
+                    'service_latitude' => $booking->service_latitude ? (float)$booking->service_latitude : null,
+                    'service_longitude' => $booking->service_longitude ? (float)$booking->service_longitude : null,
+                    'customerLatitude' => $booking->service_latitude ? (float)$booking->service_latitude : null,
+                    'customerLongitude' => $booking->service_longitude ? (float)$booking->service_longitude : null,
+                    
+                    // Notes
+                    'notes' => $booking->notes,
+                    'description' => $booking->notes,
+                    'specialInstructions' => $booking->notes,
+                    
+                    // Customer Info
+                    'customerID' => $booking->customer->customerID ?? null,
+                    'customerId' => $booking->customer->customerID ?? null,
+                    'customerName' => $booking->customer->fullname ?? 'Unknown',
+                    'customerPhone' => $booking->customer->phone ?? null,
+                    'customerImage' => $booking->customer->profilePicture ?? null,
+                    
+                    // Service Info
+                    'serviceID' => $booking->service->serviceID ?? null,
+                    'serviceName' => $booking->service->title ?? 'Unknown Service',
+                    'serviceDescription' => $booking->service->description ?? null,
+                    
+                    // Timestamps
+                    'created_at' => $booking->created_at,
+                    'createdAt' => $booking->created_at,
+                    'expires_at' => $booking->expires_at,
+                    'accepted_at' => $booking->accepted_at,
+                    'provider_started_at' => $booking->provider_started_at,
+                    'provider_arrived_at' => $booking->provider_arrived_at,
+                    'completed_at' => $booking->completed_at,
+                    'cancelled_at' => $booking->cancelled_at,
+                    
+                    // Nested objects for compatibility
+                    'customer' => [
+                        'id' => $booking->customer->customerID ?? null,
+                        'customerId' => $booking->customer->customerID ?? null,
+                        'name' => $booking->customer->fullname ?? 'Unknown',
+                        'customerName' => $booking->customer->fullname ?? 'Unknown',
+                        'phone' => $booking->customer->phone ?? null,
+                        'customerPhone' => $booking->customer->phone ?? null,
+                        'profilePicture' => $booking->customer->profilePicture ?? null,
+                        'customerImage' => $booking->customer->profilePicture ?? null,
+                    ],
+                    'service' => [
+                        'id' => $booking->service->serviceID ?? null,
+                        'title' => $booking->service->title ?? 'Unknown Service',
+                        'serviceName' => $booking->service->title ?? 'Unknown Service',
+                        'description' => $booking->service->description ?? null,
+                        'estimatedPrice' => $booking->service->estimatedPrice ?? $booking->agreed_price,
+                    ],
+                    'payment' => $booking->payment ? [
+                        'status' => $booking->payment->status,
+                        'amount' => $booking->payment->amount,
+                        'paymentID' => $booking->payment->paymentID,
+                    ] : null,
                 ];
             });
+
+            \Log::info('Provider requests formatted:', [
+                'count' => $formattedRequests->count(),
+                'sample' => $formattedRequests->first()
+            ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $formattedRequests
             ]);
         } catch (\Exception $e) {
+            \Log::error('Provider getRequests error:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
