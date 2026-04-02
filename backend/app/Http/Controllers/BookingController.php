@@ -33,23 +33,39 @@ class BookingController extends Controller
     }
     public function store(Request $request)
     {
+        // Log the incoming request for debugging
+        Log::info('Booking creation attempt:', $request->all());
+
         // Validate input
         $validator = Validator::make($request->all(), [
-            'providerID' => 'required|exists:service_providers,providerID,status,approved',
-            'serviceID' => 'required|exists:services,serviceID,providerID,' . $request->providerID,
+            'providerID' => 'required|exists:service_providers,providerID',
+            'serviceID' => 'required|exists:services,serviceID',
             'scheduledDate' => 'required|date|after:now',
             'agreed_price' => 'required|numeric|min:1',
             'service_address' => 'nullable|string|max:255',
-            'service_latitude' => 'required_without:service_address|nullable|numeric|between:-90,90',
-            'service_longitude' => 'required_with:service_latitude|nullable|numeric|between:-180,180',
+            'service_latitude' => 'nullable|numeric|between:-90,90',
+            'service_longitude' => 'nullable|numeric|between:-180,180',
             'notes' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
+            Log::warning('Booking validation failed:', $validator->errors()->toArray());
             return response()->json([
                 'success' => false,
                 'message' => 'Validation errors',
                 'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check if provider is approved (support both old and new status values)
+        $provider = \App\Models\ServiceProvider::where('providerID', $request->providerID)
+            ->whereIn('status', ['approved', 'Active'])
+            ->first();
+
+        if (!$provider) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Provider is not available or not approved'
             ], 422);
         }
 
@@ -70,6 +86,16 @@ class BookingController extends Controller
 
             // Create the booking
             $customer = auth()->guard('customer')->user();
+            
+            if (!$customer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer authentication required'
+                ], 401);
+            }
+
+            Log::info('Creating booking for customer:', ['customerID' => $customer->customerID]);
+
             $booking = Booking::create([
                 'customerID' => $customer->customerID,
                 'providerID' => $request->providerID,
@@ -81,14 +107,15 @@ class BookingController extends Controller
                 'service_longitude' => $request->service_longitude,
                 'notes' => $request->notes,
                 'status' => 'pending',
-                'expires_at' => now()->addHours(24), // 24 hours to respond
+                'expires_at' => now()->addHours(24),
             ]);
 
+            Log::info('Booking created successfully:', ['bookingID' => $booking->bookingID]);
+
             // Create notification for provider
-            // Create notification for provider using service
             $this->notificationService->toProvider(
                 $request->providerID,
-                'booking_request',  // or NotificationService::TYPE_BOOKING_REQUEST
+                'booking_request',
                 'New Booking Request',
                 'You have a new booking request from ' . $customer->fullname,
                 [
@@ -104,7 +131,7 @@ class BookingController extends Controller
             DB::commit();
 
             // Load relationships for response
-            $booking->load(['customer', 'service']);
+            $booking->load(['customer', 'service', 'provider']);
 
             return response()->json([
                 'success' => true,
@@ -132,8 +159,11 @@ class BookingController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Booking creation failed:', ['error' => $e->getMessage()]);
-
+            Log::error('Booking creation failed:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create booking: ' . $e->getMessage()
@@ -375,20 +405,33 @@ class BookingController extends Controller
             'success' => true,
             'data' => [
                 'bookingID' => $booking->bookingID,
+                'id' => $booking->bookingID, // Add id for frontend compatibility
+                'requestNumber' => 'REQ-' . str_pad($booking->bookingID, 6, '0', STR_PAD_LEFT),
                 'status' => $booking->status,
-                'scheduledDate' => $booking->scheduledDate,
+                'scheduledDate' => $booking->scheduledDate ? $booking->scheduledDate->format('Y-m-d') : null,
+                'scheduledTime' => $booking->scheduledDate ? $booking->scheduledDate->format('H:i') : null,
                 'agreed_price' => $booking->agreed_price,
+                'estimatedPrice' => $booking->agreed_price, // Add for frontend compatibility
                 'notes' => $booking->notes,
+                'description' => $booking->notes, // Add for frontend compatibility
+                'specialInstructions' => $booking->notes, // Add for frontend compatibility
                 'created_at' => $booking->created_at,
                 'expires_at' => $booking->expires_at,
                 'service_address' => $booking->service_address,
                 'service_latitude' => $booking->service_latitude,
                 'service_longitude' => $booking->service_longitude,
+                'customerAddress' => $booking->service_address, // Add for frontend compatibility
+                'customerLatitude' => $booking->service_latitude, // Add for frontend compatibility
+                'customerLongitude' => $booking->service_longitude, // Add for frontend compatibility
                 'customer' => $userType === 'provider' ? [
                     'id' => $booking->customer->customerID,
+                    'customerId' => $booking->customer->customerID, // Add for frontend compatibility
                     'name' => $booking->customer->fullname,
+                    'customerName' => $booking->customer->fullname, // Add for frontend compatibility
                     'phone' => $booking->customer->phone,
-                    'profilePicture' => $booking->customer->profilePicture
+                    'customerPhone' => $booking->customer->phone, // Add for frontend compatibility
+                    'profilePicture' => $booking->customer->profilePicture,
+                    'customerImage' => $booking->customer->profilePicture // Add for frontend compatibility
                 ] : null,
                 'provider' => $userType === 'customer' ? [
                     'id' => $booking->provider->providerID,
@@ -400,12 +443,17 @@ class BookingController extends Controller
                 'service' => [
                     'id' => $booking->service->serviceID,
                     'title' => $booking->service->title,
-                    'description' => $booking->service->description
+                    'serviceName' => $booking->service->title, // Add for frontend compatibility
+                    'description' => $booking->service->description,
+                    'estimatedPrice' => $booking->service->estimatedPrice ?? $booking->agreed_price
                 ],
                 'timeline' => [
                     'accepted_at' => $booking->accepted_at,
+                    'provider_started_at' => $booking->provider_started_at,
+                    'provider_arrived_at' => $booking->provider_arrived_at,
                     'completed_at' => $booking->completed_at,
-                    'cancelled_at' => $booking->cancelled_at
+                    'cancelled_at' => $booking->cancelled_at,
+                    'startedAt' => $booking->provider_started_at, // Add for frontend compatibility
                 ],
                 'payment' => $booking->payment ? [
                     'status' => $booking->payment->status,
@@ -455,7 +503,7 @@ class BookingController extends Controller
         }
 
         $query = Booking::where('providerID', $provider->providerID)
-            ->with(['customer', 'service']);
+                 ->with(['customer', 'service', 'service.category', 'payment']);
 
         // Filter by status if requested
         if ($request->has('status')) {
@@ -473,9 +521,93 @@ class BookingController extends Controller
         $bookings = $query->orderBy('created_at', 'desc')
             ->paginate(20);
 
+        // Format the bookings data for frontend
+        $formattedBookings = $bookings->map(function($booking) {
+            return [
+                'bookingID' => $booking->bookingID,
+                'id' => $booking->bookingID,
+                'requestNumber' => 'REQ-' . str_pad($booking->bookingID, 6, '0', STR_PAD_LEFT),
+                'status' => $booking->status,
+                
+                // Date and Time
+                'scheduledDate' => $booking->scheduledDate ? $booking->scheduledDate->format('Y-m-d') : null,
+                'scheduledTime' => $booking->scheduledDate ? $booking->scheduledDate->format('H:i') : null,
+                
+                // Price
+                'agreed_price' => $booking->agreed_price,
+                'estimatedPrice' => $booking->agreed_price,
+                
+                // Location
+                'service_address' => $booking->service_address,
+                'customerAddress' => $booking->service_address,
+                'address_text' => $booking->address_text ?? $booking->service_address,
+                'service_latitude' => $booking->service_latitude,
+                'service_longitude' => $booking->service_longitude,
+                'customerLatitude' => $booking->service_latitude,
+                'customerLongitude' => $booking->service_longitude,
+                
+                // Notes
+                'notes' => $booking->notes,
+                'description' => $booking->notes,
+                'specialInstructions' => $booking->notes,
+                
+                // Customer Info
+                'customerID' => $booking->customer->customerID ?? null,
+                'customerId' => $booking->customer->customerID ?? null,
+                'customerName' => $booking->customer->fullname ?? 'Unknown',
+                'customerPhone' => $booking->customer->phone ?? null,
+                'customerImage' => $booking->customer->profilePicture ?? null,
+                
+                // Service Info
+                'serviceID' => $booking->service->serviceID ?? null,
+                'serviceName' => $booking->service->title ?? 'Unknown Service',
+                'serviceDescription' => $booking->service->description ?? null,
+                
+                // Timestamps
+                'created_at' => $booking->created_at,
+                'createdAt' => $booking->created_at, // Add for frontend compatibility
+                'expires_at' => $booking->expires_at,
+                'accepted_at' => $booking->accepted_at,
+                'provider_started_at' => $booking->provider_started_at,
+                'provider_arrived_at' => $booking->provider_arrived_at,
+                'completed_at' => $booking->completed_at,
+                'cancelled_at' => $booking->cancelled_at,
+                
+                // Nested objects for compatibility
+                'customer' => [
+                    'id' => $booking->customer->customerID ?? null,
+                    'customerId' => $booking->customer->customerID ?? null,
+                    'name' => $booking->customer->fullname ?? 'Unknown',
+                    'customerName' => $booking->customer->fullname ?? 'Unknown',
+                    'phone' => $booking->customer->phone ?? null,
+                    'customerPhone' => $booking->customer->phone ?? null,
+                    'profilePicture' => $booking->customer->profilePicture ?? null,
+                    'customerImage' => $booking->customer->profilePicture ?? null,
+                ],
+                'service' => [
+                    'id' => $booking->service->serviceID ?? null,
+                    'title' => $booking->service->title ?? 'Unknown Service',
+                    'serviceName' => $booking->service->title ?? 'Unknown Service',
+                    'description' => $booking->service->description ?? null,
+                    'estimatedPrice' => $booking->service->estimatedPrice ?? $booking->agreed_price,
+                ],
+                'payment' => $booking->payment ? [
+                    'status' => $booking->payment->status,
+                    'amount' => $booking->payment->amount,
+                    'paymentID' => $booking->payment->paymentID,
+                ] : null,
+            ];
+        });
+
         return response()->json([
             'success' => true,
-            'data' => $bookings
+            'data' => $formattedBookings,
+            'meta' => [
+                'current_page' => $bookings->currentPage(),
+                'last_page' => $bookings->lastPage(),
+                'per_page' => $bookings->perPage(),
+                'total' => $bookings->total(),
+            ]
         ]);
     }
 

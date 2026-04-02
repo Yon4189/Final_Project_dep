@@ -264,8 +264,15 @@ class CustomerController extends Authenticatable
     public function createBooking(Request $request)
     {
         try {
+            // Log incoming request for debugging
+            Log::info('Booking creation attempt:', [
+                'data' => $request->all(),
+                'user_type' => 'customer'
+            ]);
+
             $customer = $this->resolveCustomer();
             if (!$customer) {
+                Log::warning('Customer not found during booking creation');
                 return response()->json([
                     'success' => false,
                     'message' => 'Customer not found. Please login again.'
@@ -279,16 +286,15 @@ class CustomerController extends Authenticatable
                 'scheduledDate' => 'required|date|after_or_equal:today',
                 'agreed_price' => 'required|numeric|min:0',
                 
-                // New location fields
-                'location_source' => 'required|in:gps,saved,new',
-                'saved_address_id' => 'required_if:location_source,saved|exists:customer_addresses,addressID',
-                'full_address' => 'required_if:location_source,new|string|max:255',
-                'latitude' => 'required_if:location_source,gps,new|numeric',
-                'longitude' => 'required_if:location_source,gps,new|numeric',
+                // Location fields - make them more flexible
+                'location_source' => 'nullable|in:gps,saved,new',
+                'saved_address_id' => 'nullable|exists:customer_addresses,addressID',
+                'full_address' => 'nullable|string|max:255',
+                'service_address' => 'nullable|string|max:255',
+                'latitude' => 'nullable|numeric',
+                'longitude' => 'nullable|numeric',
                 'place_id' => 'nullable|string',
                 
-                // Keep old field for backward compatibility? Or remove?
-                'service_address' => 'sometimes|string|max:255',
                 'notes' => 'nullable|string|max:1000'
             ], [
                 'providerID.required' => 'please select a provider',
@@ -297,16 +303,7 @@ class CustomerController extends Authenticatable
                 'scheduledDate.after_or_equal' => 'scheduled date must be today or in the future',
                 'agreed_price.required' => 'please enter the agreed price',
                 'agreed_price.min' => 'price cannot be negative',
-                
-                // New error messages
-                'location_source.required' => 'please select how to provide your location',
-                'location_source.in' => 'invalid location source',
-                'saved_address_id.required_if' => 'please select a saved address',
-                'saved_address_id.exists' => 'selected address not found',
-                'full_address.required_if' => 'please enter your address',
-                'latitude.required_if' => 'location coordinates are required',
-                'longitude.required_if' => 'location coordinates are required'
-            ], );
+            ]);
 
             $validated = $validator->validated();
 
@@ -353,7 +350,9 @@ class CustomerController extends Authenticatable
             }
 
             // Process location data based on source
-            if ($validated['location_source'] === 'saved') {
+            $locationSource = $validated['location_source'] ?? 'new';
+            
+            if ($locationSource === 'saved' && !empty($validated['saved_address_id'])) {
                 $address = CustomerAddress::find($validated['saved_address_id']);
                 if (!$address) {
                     return response()->json([
@@ -372,13 +371,16 @@ class CustomerController extends Authenticatable
                     'saved_address_id' => $address->addressID
                 ];
             } else {
+                // Use provided address or fall back to service_address
+                $address = $validated['full_address'] ?? $validated['service_address'] ?? null;
+                
                 $locationData = [
-                    'service_address' => $validated['full_address'] ?? $validated['service_address'],
-                    'address_text' => $validated['full_address'] ?? $validated['service_address'],
+                    'service_address' => $address,
+                    'address_text' => $address,
                     'service_latitude' => $validated['latitude'] ?? null,
                     'service_longitude' => $validated['longitude'] ?? null,
                     'place_id' => $validated['place_id'] ?? null,
-                    'location_source' => $validated['location_source'],
+                    'location_source' => $locationSource,
                     'saved_address_id' => null
                 ];
             }
