@@ -22,6 +22,7 @@ export interface ProviderProfile {
   rating: number;
   reviewCount: number;
   completedJobs: number;
+  status: string;
   verificationStatus: "pending" | "verified" | "rejected";
   isAvailable: boolean;
   workingHours: WorkingHours;

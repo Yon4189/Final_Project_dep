@@ -147,13 +147,8 @@ class BookingController extends Controller
     public function accept(Request $request, $bookingId)
     {
         // Ensure provider is authenticated
-<<<<<<< ours
-        $provider = $request->user();
-
-=======
         $provider = auth()->guard('provider')->user();
-        
->>>>>>> theirs
+
         if (!$provider) {
             return response()->json([
                 'success' => false,
