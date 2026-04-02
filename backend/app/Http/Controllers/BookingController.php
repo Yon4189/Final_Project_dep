@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Service;
 use App\Models\ServiceProvider;
 use App\Models\Notification;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -22,13 +23,13 @@ class BookingController extends Controller
      * Customer creates a new booking
      */
 
-    
+
 
     protected $notificationService;
 
     public function __construct(NotificationService $notificationService)
     {
-    $this->notificationService = $notificationService;
+        $this->notificationService = $notificationService;
     }
     public function store(Request $request)
     {
@@ -54,8 +55,8 @@ class BookingController extends Controller
 
         // Verify the service belongs to the provider
         $service = Service::where('serviceID', $request->serviceID)
-                         ->where('providerID', $request->providerID)
-                         ->first();
+            ->where('providerID', $request->providerID)
+            ->first();
 
         if (!$service) {
             return response()->json([
@@ -132,7 +133,7 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Booking creation failed:', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create booking: ' . $e->getMessage()
@@ -147,7 +148,7 @@ class BookingController extends Controller
     {
         // Ensure provider is authenticated
         $provider = auth()->guard('provider')->user();
-        
+
         if (!$provider) {
             return response()->json([
                 'success' => false,
@@ -161,10 +162,10 @@ class BookingController extends Controller
 
             // Lock the booking row for update to prevent race conditions
             $booking = Booking::where('bookingID', $bookingId)
-                        ->where('providerID', $provider->providerID)
-                        ->where('status', 'pending')
-                        ->lockForUpdate()
-                        ->first();
+                ->where('providerID', $provider->providerID)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
 
             if (!$booking) {
                 DB::rollBack();
@@ -179,7 +180,7 @@ class BookingController extends Controller
                 $booking->status = 'expired';
                 $booking->save();
                 DB::commit();
-                
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Booking has expired'
@@ -223,7 +224,7 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Booking acceptance failed:', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to accept booking: ' . $e->getMessage()
@@ -253,9 +254,9 @@ class BookingController extends Controller
             DB::beginTransaction();
 
             $booking = Booking::where('bookingID', $bookingId)
-                        ->where('providerID', $provider->providerID)
-                        ->where('status', 'pending')
-                        ->first();
+                ->where('providerID', $provider->providerID)
+                ->where('status', 'pending')
+                ->first();
 
             if (!$booking) {
                 DB::rollBack();
@@ -270,7 +271,7 @@ class BookingController extends Controller
                 $booking->status = 'expired';
                 $booking->save();
                 DB::commit();
-                
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Booking has already expired'
@@ -311,7 +312,7 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Booking rejection failed:', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to reject booking: ' . $e->getMessage()
@@ -322,7 +323,7 @@ class BookingController extends Controller
 
 
 
-        /**
+    /**
      * Customer confirms service completion
      * 
      * @param Request $request
@@ -350,9 +351,9 @@ class BookingController extends Controller
         
         // Determine if user is customer or provider
         $userType = $customer ? 'customer' : 'provider';
-        
+
         $query = Booking::where('bookingID', $bookingId)
-                 ->with(['customer', 'provider', 'service', 'payment']);
+            ->with(['customer', 'provider', 'service', 'payment']);
 
         // Ensure user can only view their own bookings
         if ($userType === 'customer') {
@@ -427,11 +428,11 @@ class BookingController extends Controller
                 'message' => 'Unauthorized'
             ], 401);
         }
-        
+
         $bookings = Booking::where('customerID', $customer->customerID)
-                    ->with(['provider', 'service'])
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(20);
+            ->with(['provider', 'service'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
         return response()->json([
             'success' => true,
@@ -452,9 +453,9 @@ class BookingController extends Controller
                 'message' => 'Unauthorized'
             ], 401);
         }
-        
+
         $query = Booking::where('providerID', $provider->providerID)
-                 ->with(['customer', 'service']);
+            ->with(['customer', 'service']);
 
         // Filter by status if requested
         if ($request->has('status')) {
@@ -470,7 +471,7 @@ class BookingController extends Controller
         }
 
         $bookings = $query->orderBy('created_at', 'desc')
-                    ->paginate(20);
+            ->paginate(20);
 
         return response()->json([
             'success' => true,
@@ -507,9 +508,9 @@ class BookingController extends Controller
             DB::beginTransaction();
 
             $booking = Booking::where('bookingID', $bookingId)
-                        ->where('customerID', $customer->customerID)
-                        ->whereIn('status', ['pending', 'accepted'])
-                        ->first();
+                ->where('customerID', $customer->customerID)
+                ->whereIn('status', ['pending', 'accepted'])
+                ->first();
 
             if (!$booking) {
                 DB::rollBack();
@@ -529,7 +530,7 @@ class BookingController extends Controller
             } elseif ($booking->status === 'accepted') {
                 // Check if cancellation is on service day
                 $serviceDate = $booking->scheduledDate;
-                
+
                 if ($cancellationDate->format('Y-m-d') < $serviceDate->format('Y-m-d')) {
                     // Before service day: 100% refund
                     $refundAmount = $booking->agreed_price;
@@ -584,10 +585,10 @@ class BookingController extends Controller
                     'bookingID' => $booking->bookingID,
                     'status' => 'cancelled',
                     'refund_amount' => $refundAmount,
-                    'refund_message' => $refundAmount > 0 ? 
-                        ($refundAmount == $booking->agreed_price ? 
-                            'Full refund processed' : 
-                            '50% refund processed') : 
+                    'refund_message' => $refundAmount > 0 ?
+                        ($refundAmount == $booking->agreed_price ?
+                            'Full refund processed' :
+                            '50% refund processed') :
                         'No refund applicable'
                 ]
             ]);
@@ -595,7 +596,7 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Booking cancellation failed:', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to cancel booking: ' . $e->getMessage()
@@ -621,9 +622,9 @@ class BookingController extends Controller
             DB::beginTransaction();
 
             $booking = Booking::where('bookingID', $bookingId)
-                        ->where('providerID', $provider->providerID)
-                        ->where('status', 'in_progress')
-                        ->first();
+                ->where('providerID', $provider->providerID)
+                ->where('status', 'in_progress')
+                ->first();
 
             if (!$booking) {
                 DB::rollBack();
@@ -666,7 +667,7 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Booking completion failed:', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to complete booking: ' . $e->getMessage()
@@ -674,7 +675,7 @@ class BookingController extends Controller
         }
     }
 
-        /**
+    /**
      * Get pending bookings for the authenticated provider
      * 
      * GET /api/provider/bookings/pending
@@ -683,7 +684,7 @@ class BookingController extends Controller
     {
         try {
             $provider = auth()->guard('provider')->user();
-            
+
             if (!$provider) {
                 return response()->json([
                     'success' => false,
@@ -704,7 +705,7 @@ class BookingController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error fetching pending bookings: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch pending bookings'
@@ -722,7 +723,7 @@ class BookingController extends Controller
     {
         try {
             $provider = auth()->guard('provider')->user();
-            
+
             if (!$provider) {
                 return response()->json([
                     'success' => false,
@@ -766,7 +767,7 @@ class BookingController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error starting job: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to start job'
@@ -774,32 +775,32 @@ class BookingController extends Controller
         }
     }
 
-        public function arrive($id)
+    public function arrive($id)
     {
         $provider = auth()->guard('provider')->user();
-        
+
         if (!$provider) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-        
+
         $booking = Booking::where('bookingID', $id)
             ->where('providerID', $provider->providerID)
             ->whereIn('status', ['accepted', 'confirmed', 'in_progress', 'started'])
             ->first();
-            
+
         if (!$booking) {
             return response()->json([
                 'success' => false,
                 'message' => 'Booking not found or not active'
             ], 404);
         }
-        
+
         $booking->status = 'arrived';
         $booking->provider_arrived_at = now();
         $booking->save();
-        
+
         // Notify customer that provider has arrived
-        $notification = new \App\Models\Notification();
+        $notification = new Notification();
         $notification->notifiable_type = 'customer';
         $notification->notifiable_id = $booking->customerID;
         $notification->type = 'provider_arrived';
@@ -808,7 +809,7 @@ class BookingController extends Controller
         $notification->data = json_encode(['booking_id' => $booking->bookingID]);
         $notification->related_booking_id = $booking->bookingID;
         $notification->save();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Arrival confirmed'

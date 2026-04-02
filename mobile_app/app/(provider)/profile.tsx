@@ -337,7 +337,7 @@ export default function ProviderProfile() {
           <Text style={styles.docLabel}>Business License</Text>
         </View>
         <View style={styles.docRight}>
-          {profile?.verificationStatus === 'verified' ? (
+          {(profile?.status === 'approved' || profile?.verificationStatus === 'verified') ? (
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
           ) : (
             <View style={styles.pendingBadge}>
@@ -357,7 +357,7 @@ export default function ProviderProfile() {
           <Text style={styles.docLabel}>Insurance Certificate</Text>
         </View>
         <View style={styles.docRight}>
-          {profile?.verificationStatus === 'verified' ? (
+          {(profile?.status === 'approved' || profile?.verificationStatus === 'verified') ? (
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
           ) : (
             <View style={styles.pendingBadge}>
