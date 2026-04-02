@@ -1,450 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
-import {
-  Search, UserMinus, ShieldAlert, ShieldCheck,
-  Mail, Phone, MapPin, Database,
-  CheckCircle, AlertCircle, RefreshCw, Loader2,
-  ChevronLeft, ChevronRight
-} from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import api from '../api/axios';
-
-// Sub-component for rendering the user avatar
-const UserAvatar = ({ user }) => {
-  const [imgError, setImgError] = useState(false);
-  const baseUrl = `http://${window.location.hostname}:8000`;
-
-  if (user.profilePicture && !imgError) {
-    // If the image is a full URL (e.g., from Google auth)
-    const isFullUrl = user.profilePicture.startsWith('http');
-
-    // Check for common public directories
-    const hasStoragePrefix = user.profilePicture.startsWith('storage/');
-    const hasProfilesPrefix = user.profilePicture.startsWith('profiles/');
-    const hasProfilePicsPrefix = user.profilePicture.startsWith('profilepics/');
-
-    let imageUrl = user.profilePicture;
-    if (!isFullUrl) {
-      if (hasStoragePrefix || hasProfilesPrefix || hasProfilePicsPrefix) {
-        // Remove leading slash if any to avoid double slashes
-        const cleanPath = user.profilePicture.replace(/^\//, '');
-        imageUrl = `${baseUrl}/${cleanPath}`;
-      } else {
-        const cleanPath = user.profilePicture.replace(/^\//, '');
-        imageUrl = `${baseUrl}/storage/${cleanPath}`;
-      }
-    }
-
-    return (
-      <img
-        src={imageUrl}
-        alt={user.name}
-        className="w-10 h-10 rounded-full object-cover border border-slate-200 flex-shrink-0"
-        onError={() => setImgError(true)}
-      />
-    );
-  }
-  return (
-    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 uppercase flex-shrink-0">
-      {user.name?.charAt(0)}
-    </div>
-  );
-};
-
-
-console.log("loaded file: Users.jsx");
+import { useUsersData } from '../hooks/useUsersData';
+import UsersTable from '../components/UsersTable';
 
 const Users = () => {
   const queryClient = useQueryClient();
   const location = useLocation();
+  const userType = location.pathname.includes('/users/providers') ? 'Provider' : 'Customer';
+  const { users, isLoading, isError, error, refetch } = useUsersData(userType);
+  const [processingId, setProcessingId] = useState(null);
 
-  // Determine user type from URL
-  const getUserTypeFromPath = () => {
-    if (location.pathname.includes('/users/customers')) return 'Customer';
-    if (location.pathname.includes('/users/providers')) return 'Provider';
-    return 'Customer'; // default
-  };
+  const dbStatus = isError ? 'disconnected' : (isLoading ? 'checking' : 'connected');
 
-  const userType = getUserTypeFromPath();
-
-  // 1. Data Fetching with TanStack Query
-  const { 
-    data: users = [], 
-    isLoading: loading, 
-    error,
-    refetch 
-  } = useQuery({
-    queryKey: ['users', userType],
-    queryFn: async () => {
-      const url = userType === "Provider" ? "/admin/providers" : "/admin/customers";
-      const apiResponse = await api.get(url);
-      const responseData = apiResponse.data.data || [];
-      
-      return responseData.map(u => {
-        const rawStatus = (u.status || "Active").toLowerCase();
-        let normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
-
-        return {
-          id: u.customerID || u.providerID,
-          name: u.fullname,
-          email: u.email,
-          phone: u.phone,
-          type: userType,
-          status: normalizedStatus,
-          location: u.location || u.service_city || "Not Provided",
-          profilePicture: u.profilePicture || null,
-          joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : ""
-        };
-      });
-    },
-    staleTime: 60000, // 1 minute
-    refetchInterval: 10000, // 10 seconds polling
-  });
-
-  const dbStatus = error ? 'disconnected' : (loading ? 'checking' : 'connected');
-
-  // 2. UI State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  // Reset page when userType changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [userType, searchQuery]);
-
-  // 4. Action Handlers
-  const toggleUserStatus = async (id, currentStatus) => {
-    const action = currentStatus === 'Active' ? 'SUSPEND' : 'ACTIVATE';
+  const handleToggleStatus = async (id, currentStatus) => {
+    // Normalize status to lowercase for comparison
+    const normalizedStatus = currentStatus?.toLowerCase();
+    const isActive = normalizedStatus === 'active' || normalizedStatus === 'approved';
+    const action = isActive ? 'suspend' : 'activate';
+    
     if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
-
+    setProcessingId(id);
     try {
-      const url = userType === "Provider"
+      const url = userType === 'Provider'
         ? `/admin/providers/${id}/status`
         : `/admin/customers/${id}/status`;
-
-      // call backend to update status
-      await api.patch(url, { status: currentStatus === 'Active' ? 'Suspended' : 'Active' });
-
-      // Invalidate queries to refresh data
+      
+      // Backend now returns lowercase status values
+      await api.patch(url);
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
-
     } catch (err) {
       console.error(err);
       alert('Failed to update status');
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  const deleteUser = async (id, name) => {
+  const handleDelete = async (id, name) => {
     if (!window.confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;
-
+    setProcessingId(id);
     try {
-      const url = userType === "Provider"
+      const url = userType === 'Provider'
         ? `/admin/providers/${id}`
         : `/admin/customers/${id}`;
-
-      // call backend to delete user
       await api.delete(url);
-
-      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
-
     } catch (err) {
       console.error(err);
       alert('Failed to delete user');
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  // 5. Filtering Logic
-  // 5. Filtering Logic
-  const filteredUsers = users.filter(u => {
-    const matchesType = u.type === userType;
-    // Ensure u.name and u.email are strings before calling toLowerCase()
-    const userName = u.name ? String(u.name).toLowerCase() : '';
-    const userEmail = u.email ? String(u.email).toLowerCase() : '';
-    const userId = u.id ? String(u.id) : '';
-    const searchLower = searchQuery.toLowerCase();
-
-    const matchesSearch = userName.includes(searchLower) ||
-      userEmail.includes(searchLower) ||
-      userId.includes(searchLower);
-    return matchesType && matchesSearch;
-  });
-
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      {/* Header with Database Status */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               {userType} Management
             </h1>
             {users.length > 0 && (
-              <span className="bg-blue-600 text-white text-[12px] px-3 py-1 rounded-full font-black shadow-lg shadow-blue-200 animate-in zoom-in duration-300">
+              <span className="bg-blue-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-sm">
                 {users.length}
               </span>
             )}
           </div>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest italic mt-1">
+          <p className="text-slate-500 text-sm font-medium uppercase tracking-wider mt-1">
             Manage {userType.toLowerCase()} accounts and permissions.
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <Database size={16} className={
+            <Database size={14} className={
               dbStatus === 'connected' ? 'text-green-500' :
-                dbStatus === 'disconnected' ? 'text-red-500' :
-                  'text-yellow-500 animate-pulse'
+              dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
-            <span className="text-xs font-black uppercase tracking-wider">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {dbStatus === 'connected' && 'Database Connected'}
               {dbStatus === 'disconnected' && 'Database Disconnected'}
               {dbStatus === 'checking' && 'Checking Database...'}
             </span>
-            {dbStatus === 'connected' && <CheckCircle size={14} className="text-green-500" />}
-            {dbStatus === 'disconnected' && <AlertCircle size={14} className="text-red-500" />}
           </div>
-
           <button
             onClick={() => refetch()}
-            className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm"
+            className="p-2.5 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Refresh data"
           >
-            <RefreshCw size={20} className={loading && users.length === 0 ? 'animate-spin' : ''} />
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* Search Bar (tabs removed – now controlled by sidebar) */}
-      <div className="relative w-full md:w-80">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-        <input
-          type="text"
-          placeholder={`Search ${userType.toLowerCase()} by name or email...`}
-          className="pl-10 pr-4 py-3 border border-slate-200 rounded-2xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {/* User Table */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden min-h-[400px] flex flex-col">
-        {loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-20">
-            <Loader2 className="animate-spin text-blue-500" size={40} />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Loading users...</p>
-          </div>
-        ) : error ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-20">
-            <AlertCircle className="text-red-500" size={40} />
-            <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.3em]">{error}</p>
-            <button
-              onClick={() => refetch()}
-              className="mt-2 text-xs bg-slate-100 px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition"
-            >
-              Retry
-            </button>
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-20">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No {userType.toLowerCase()}s found.</p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto hidden lg:block">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
-                  <tr>
-                    <th className="px-8 py-5">User Details</th>
-                    <th className="px-8 py-5">Contact</th>
-                    <th className="px-8 py-5">Location</th>
-                    <th className="px-8 py-5">Joined</th>
-                    <th className="px-8 py-5">Status</th>
-                    <th className="px-8 py-5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {currentItems.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <UserAvatar user={u} />
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-900 leading-none">{u.name}</span>
-                            <span className="text-[10px] text-slate-400 font-medium mt-1 truncate max-w-[120px] uppercase tracking-tighter italic">
-                              ID: {u.id}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Mail size={12} className="shrink-0" />
-                            <span className="text-xs font-medium truncate max-w-[150px]">{u.email}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Phone size={12} className="shrink-0" />
-                            <span className="text-xs font-medium tracking-tighter">{u.phone || 'N/A'}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2">
-                          <div className="bg-slate-100 p-2 rounded-lg">
-                            <MapPin size={14} className="text-slate-400" />
-                          </div>
-                          <span className="text-xs font-bold text-slate-600 truncate max-w-[150px] italic">
-                            {u.location}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                          {u.joined}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-[0.1em] italic ${u.status === 'Active' ? 'bg-green-50 text-green-600 border-green-200' :
-                          u.status === 'Suspended' ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' :
-                            'bg-red-50 text-red-600 border-red-200'
-                          }`}>
-                          {u.status}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex justify-end gap-3 transition-all">
-                          {u.status === 'Suspended' ? (
-                            <button
-                              onClick={() => toggleUserStatus(u.id, u.status)}
-                              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90"
-                              title="Reactivate User"
-                            >
-                              <ShieldCheck size={14} /> Reactivate
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => toggleUserStatus(u.id, u.status)}
-                              className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-amber-100 transition-all active:scale-90"
-                              title="Suspend User"
-                            >
-                              <ShieldAlert size={14} /> Suspend
-                            </button>
-                          )}
-                          <button
-                            onClick={() => deleteUser(u.id, u.name)}
-                            className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-100 transition-all active:scale-90"
-                            title="Permanent Delete"
-                          >
-                            <UserMinus size={14} /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="lg:hidden flex-1 p-4 space-y-4">
-              {currentItems.map((u) => (
-                <div key={u.id} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <UserAvatar user={u} />
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 text-sm truncate">{u.name}</p>
-                        <p className="text-[10px] text-slate-400 italic">ID: {u.id}</p>
-                      </div>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${u.status === 'Active' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                      {u.status}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 text-xs text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <Mail size={12} className="text-slate-400" />
-                      <span className="truncate">{u.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone size={12} className="text-slate-400" />
-                      <span>{u.phone || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin size={12} className="text-slate-400" />
-                      <span className="truncate">{u.location}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
-                    <button
-                      onClick={() => toggleUserStatus(u.id, u.status)}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase ${u.status === 'Suspended' ? 'bg-green-500 text-white' : 'bg-amber-600 text-white'}`}
-                    >
-                      {u.status === 'Suspended' ? 'Activate' : 'Suspend'}
-                    </button>
-                    <button
-                      onClick={() => deleteUser(u.id, u.name)}
-                      className="px-4 py-2 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Pagination Footer */}
-        {!loading && dbStatus === 'connected' && filteredUsers.length > itemsPerPage && (
-          <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-              Entries {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredUsers.length)} of {filteredUsers.length}
-            </span>
-            <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => paginate(currentPage - 1)}
-                className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all text-slate-600"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => paginate(i + 1)}
-                  className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => paginate(currentPage + 1)}
-                className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-20 transition-all text-slate-600"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Users Table */}
+      <UsersTable
+        users={users}
+        userType={userType}
+        isLoading={isLoading}
+        processingId={processingId}
+        dbStatus={dbStatus}
+        error={error}
+        onRefresh={refetch}
+        onToggleStatus={handleToggleStatus}
+        onDelete={handleDelete}
+      />
     </div>
   );
 };
+
 export default Users;

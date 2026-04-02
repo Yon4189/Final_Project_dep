@@ -783,6 +783,29 @@ export default function ProviderDashboard() {
         }
       >
         {renderHeader()}
+        
+        {/* Pending Approval Banner */}
+        {profile?.status && profile.status.toLowerCase() === 'pending' && (
+          <View style={styles.pendingBanner}>
+            <View style={styles.pendingBannerContent}>
+              <Ionicons name="time-outline" size={24} color={Colors.warning} />
+              <View style={styles.pendingBannerText}>
+                <Text style={styles.pendingBannerTitle}>Account Pending Approval</Text>
+                <Text style={styles.pendingBannerMessage}>
+                  Your account is under review. You can complete your profile, but you won't appear in customer searches until approved by admin.
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={styles.pendingBannerButton}
+              onPress={() => router.push('/(provider)/profile')}
+            >
+              <Text style={styles.pendingBannerButtonText}>Complete Profile</Text>
+              <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
+        
         {renderRecentChats()}
         {renderTabs()}
 
@@ -1402,5 +1425,51 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderLeftWidth: 4,
   },
+  pendingBanner: {
+    backgroundColor: Colors.warning + '15',
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.warning,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+    padding: 16,
+    borderRadius: 12,
+  },
+  pendingBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  pendingBannerText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  pendingBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  pendingBannerMessage: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+  },
+  pendingBannerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  pendingBannerButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginRight: 6,
+  },
 });
-

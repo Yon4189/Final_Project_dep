@@ -76,6 +76,8 @@ function App() {
               <Route path="/bookings/accepted" element={<Bookings />} />
               <Route path="/bookings/completed" element={<Bookings />} />
               <Route path="/bookings/cancelled" element={<Bookings />} />
+              <Route path="/bookings/rejected" element={<Bookings />} />
+              <Route path="/bookings/expired" element={<Bookings />} />
               <Route path="disputes" element={<Disputes />} />
               <Route path="payments" element={<Payments />} />
               <Route path="settings" element={<Settings />} />

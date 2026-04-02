@@ -35,7 +35,7 @@ class ProviderSearchController extends Controller
             ], 404);
         }
 
-        if (!$customer->service_city) {
+        if (!$customer->service_city && !$customer->location) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer city is not set'
@@ -43,10 +43,13 @@ class ProviderSearchController extends Controller
         }
 
         $searchText = $request->search_text;
+        
+        // Use service_city if available, otherwise use location
+        $customerCity = $customer->service_city ?? $customer->location;
 
         //  Get Providers in same city with matched services
         $providers = ServiceProvider::where('status', 'approved')
-            ->where('service_city', $customer->service_city)
+            ->where('service_city', $customerCity)
             ->whereHas('services', function ($query) use ($searchText) {
                 $query->where('title', 'LIKE', "%{$searchText}%");
             })

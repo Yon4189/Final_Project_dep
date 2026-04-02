@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Service;
 use App\Models\ServiceProvider;
 use App\Models\Notification;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -68,8 +69,9 @@ class BookingController extends Controller
             DB::beginTransaction();
 
             // Create the booking
+            $customer = auth()->guard('customer')->user();
             $booking = Booking::create([
-                'customerID' => auth('customer')->user()->customerID, // Assuming customer is logged in
+                'customerID' => $customer->customerID,
                 'providerID' => $request->providerID,
                 'serviceID' => $request->serviceID,
                 'scheduledDate' => $request->scheduledDate,
@@ -88,9 +90,9 @@ class BookingController extends Controller
                 $request->providerID,
                 'booking_request',  // or NotificationService::TYPE_BOOKING_REQUEST
                 'New Booking Request',
-                'You have a new booking request from ' . auth('customer')->user()->fullname,
+                'You have a new booking request from ' . $customer->fullname,
                 [
-                    'customer_name' => auth('customer')->user()->fullname,
+                    'customer_name' => $customer->fullname,
                     'service_name' => $service->title,
                     'scheduled_date' => $booking->scheduledDate->format('Y-m-d H:i'),
                     'agreed_price' => $booking->agreed_price,
@@ -145,8 +147,13 @@ class BookingController extends Controller
     public function accept(Request $request, $bookingId)
     {
         // Ensure provider is authenticated
+<<<<<<< ours
         $provider = $request->user();
 
+=======
+        $provider = auth()->guard('provider')->user();
+        
+>>>>>>> theirs
         if (!$provider) {
             return response()->json([
                 'success' => false,
@@ -235,7 +242,7 @@ class BookingController extends Controller
      */
     public function reject(Request $request, $bookingId)
     {
-        $provider = $request->user();
+        $provider = auth()->guard('provider')->user();
 
         $validator = Validator::make($request->all(), [
             'reason' => 'nullable|string|max:255' // Optional reason
@@ -334,19 +341,30 @@ class BookingController extends Controller
      */
     public function show(Request $request, $bookingId)
     {
-        $user = $request->user();
-
+        // Determine user type by checking guards
+        $customer = auth()->guard('customer')->user();
+        $provider = auth()->guard('provider')->user();
+        
+        $user = $customer ?? $provider;
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+        
         // Determine if user is customer or provider
-        $userType = $user instanceof \App\Models\Customer ? 'customer' : 'provider';
+        $userType = $customer ? 'customer' : 'provider';
 
         $query = Booking::where('bookingID', $bookingId)
             ->with(['customer', 'provider', 'service', 'payment']);
 
         // Ensure user can only view their own bookings
         if ($userType === 'customer') {
-            $query->where('customerID', $user->customerID);
+            $query->where('customerID', $customer->customerID);
         } else {
-            $query->where('providerID', $user->providerID);
+            $query->where('providerID', $provider->providerID);
         }
 
         $booking = $query->first();
@@ -407,7 +425,14 @@ class BookingController extends Controller
      */
     public function customerBookings(Request $request)
     {
-        $customer = $request->user();
+        $customer = auth()->guard('customer')->user();
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
 
         $bookings = Booking::where('customerID', $customer->customerID)
             ->with(['provider', 'service'])
@@ -425,7 +450,14 @@ class BookingController extends Controller
      */
     public function providerBookings(Request $request)
     {
-        $provider = $request->user();
+        $provider = auth()->guard('provider')->user();
+        
+        if (!$provider) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
 
         $query = Booking::where('providerID', $provider->providerID)
             ->with(['customer', 'service']);
@@ -457,7 +489,14 @@ class BookingController extends Controller
      */
     public function cancel(Request $request, $bookingId)
     {
-        $customer = $request->user();
+        $customer = auth()->guard('customer')->user();
+        
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
 
         $validator = Validator::make($request->all(), [
             'reason' => 'nullable|string|max:255'
@@ -520,10 +559,13 @@ class BookingController extends Controller
             $booking->refund_amount = $refundAmount;
             $booking->save();
 
-            // Update customer wallet if refund applicable
+            // Update customer wallet if refund applicable (with locking to prevent race conditions)
             if ($refundAmount > 0) {
-                $customer->walletBalance = ($customer->walletBalance ?? 0) + $refundAmount;
-                $customer->save();
+                $lockedCustomer = Customer::where('customerID', $customer->customerID)
+                    ->lockForUpdate()
+                    ->first();
+                $lockedCustomer->walletBalance = ($lockedCustomer->walletBalance ?? 0) + $refundAmount;
+                $lockedCustomer->save();
             }
 
             // Notify provider
@@ -572,7 +614,14 @@ class BookingController extends Controller
      */
     public function complete(Request $request, $bookingId)
     {
-        $provider = $request->user();
+        $provider = auth()->guard('provider')->user();
+        
+        if (!$provider) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
 
         try {
             DB::beginTransaction();
@@ -639,7 +688,7 @@ class BookingController extends Controller
     public function pendingBookings(Request $request)
     {
         try {
-            $provider = $request->user();
+            $provider = auth()->guard('provider')->user();
 
             if (!$provider) {
                 return response()->json([
@@ -678,7 +727,7 @@ class BookingController extends Controller
     public function start(Request $request, $id)
     {
         try {
-            $provider = $request->user();
+            $provider = auth()->guard('provider')->user();
 
             if (!$provider) {
                 return response()->json([

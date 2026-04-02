@@ -29,7 +29,7 @@ class AdminAuthController extends Authenticatable
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => 'required|email:rfc,dns',
             'password' => 'required|string',
         ]);
 
@@ -43,10 +43,17 @@ class AdminAuthController extends Authenticatable
 
         $admin = Admin::where('email', $request->email)->first();
 
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
+        if (!$admin) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials'
+                'message' => 'No admin account found with this email address'
+            ], 401);
+        }
+
+        if (!Hash::check($request->password, $admin->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect password. Please try again'
             ], 401);
         }
 
@@ -78,9 +85,9 @@ class AdminAuthController extends Authenticatable
                     'providers'  => ServiceProvider::count(),
                     'customers'  => Customer::count(),
                     'pending'    => ServiceProvider::where('status', 'pending')->count(),
-                    'active'     => ServiceProvider::where('status', 'Active')->count(),
-                    'suspended'  => ServiceProvider::where('status', 'Suspended')->count(),
-                    'rejected'   => ServiceProvider::where('status', 'Rejected')->count(),
+                    'active'     => ServiceProvider::whereIn('status', ['Active', 'approved'])->count(), // Support both old and new
+                    'suspended'  => ServiceProvider::whereIn('status', ['Suspended', 'suspended'])->count(), // Support both old and new
+                    'rejected'   => ServiceProvider::whereIn('status', ['Rejected', 'rejected'])->count(), // Support both old and new
                     'categories' => Category::count(),
                     'services'   => Service::count(),
                     'revenue'    => Transaction::sum('platformFee') ?? 0
@@ -102,7 +109,7 @@ class AdminAuthController extends Authenticatable
     public function getAllProviders()
     {
         try {
-            $providers = ServiceProvider::whereIn('status', ['Active', 'Suspended'])
+            $providers = ServiceProvider::whereIn('status', ['approved', 'Active', 'suspended', 'Suspended'])
                 ->with('category')
                 ->get();
             $formatted = $providers->map(function ($provider) {
@@ -154,16 +161,16 @@ class AdminAuthController extends Authenticatable
         // 3. Update status and reason
         $status = $request->status;
         if ($status === 'approved') {
-            $provider->status = 'Active';
+            $provider->status = 'approved';
             $provider->approved_at = now();
             $provider->rejected_at = null;
         } elseif ($status === 'rejected') {
-            $provider->status = 'Rejected';
+            $provider->status = 'rejected'; // Use lowercase consistently
             $provider->rejected_at = now();
             $provider->approved_at = null;
             $provider->verification_reason = $request->verification_reason;
         } elseif ($status === 'suspended') {
-            $provider->status = 'Suspended';
+            $provider->status = 'suspended'; // Use lowercase consistently
             $provider->verification_reason = $request->verification_reason;
         }
         $provider->save();
@@ -175,7 +182,7 @@ class AdminAuthController extends Authenticatable
 
         if ($status === 'approved') {
             $type = \App\Services\NotificationService::TYPE_PROVIDER_APPROVED;
-            $title = "Account Approved! 🎉";
+            $title = "Account Approved!";
             $message = "Congratulations! Your provider account has been approved. You can now start receiving service requests.";
         } elseif ($status === 'rejected') {
             $type = \App\Services\NotificationService::TYPE_PROVIDER_REJECTED;
@@ -277,7 +284,7 @@ class AdminAuthController extends Authenticatable
      */
     public function approvedProviders()
     {
-        $approved = ServiceProvider::where('status', 'Active')
+        $approved = ServiceProvider::whereIn('status', ['approved', 'Active']) // Support both old and new
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -291,7 +298,7 @@ class AdminAuthController extends Authenticatable
      */
     public function rejectedProviders()
     {
-        $rejected = ServiceProvider::where('status', 'rejected')
+        $rejected = ServiceProvider::whereIn('status', ['rejected', 'Rejected']) // Support both old and new
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -305,7 +312,7 @@ class AdminAuthController extends Authenticatable
      */
     public function suspendedProviders()
     {
-        $suspended = ServiceProvider::where('status', 'Suspended')
+        $suspended = ServiceProvider::whereIn('status', ['Suspended', 'suspended']) // Support both old and new
             ->with(['category', 'services'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -346,7 +353,7 @@ class AdminAuthController extends Authenticatable
     {
         return response()->json([
             'success' => true,
-            'data' => ServiceProvider::whereIn('status', ['Active', 'Suspended'])->get()
+            'data' => ServiceProvider::whereIn('status', ['Active', 'approved', 'Suspended', 'suspended'])->get() // Support both old and new
         ]);
     }
 
@@ -397,9 +404,15 @@ class AdminAuthController extends Authenticatable
             return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
         }
         
-        // Ensure accurate state toggling for customers (Active <-> Suspended)
-        // Default DB value is 'Active', so we toggle against it case-insensitively
-        $customer->status = strtolower($customer->status) === 'active' ? 'Suspended' : 'Active';
+        // Toggle between approved and suspended (use lowercase consistently)
+        $currentStatus = strtolower($customer->status);
+        
+        if (in_array($currentStatus, ['active', 'approved'])) {
+            $customer->status = 'suspended'; // Use lowercase
+        } else {
+            $customer->status = 'approved'; // Use lowercase
+        }
+        
         $customer->save();
         
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $customer->status]);
@@ -415,8 +428,15 @@ class AdminAuthController extends Authenticatable
             return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
         }
         
-        // Ensure accurate state toggling for providers (Active <-> Suspended)
-        $provider->status = strtolower($provider->status) === 'active' ? 'Suspended' : 'Active';
+        // Toggle between approved and suspended (use lowercase consistently)
+        $currentStatus = strtolower($provider->status);
+        
+        if (in_array($currentStatus, ['active', 'approved'])) {
+            $provider->status = 'suspended'; // Use lowercase
+        } else {
+            $provider->status = 'approved'; // Use lowercase
+        }
+        
         $provider->save();
         
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $provider->status]);
@@ -441,7 +461,6 @@ class AdminAuthController extends Authenticatable
                         'service_title' => $b->service->title ?? 'Unknown',
                         'status' => ucfirst($b->status),
                         'payment_status' => ucfirst($b->payment_status ?? 'Unpaid'),
-                        'scheduled_at' => ($b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y') : 'N/A'),
                         'location' => $b->customer->service_address ?? $b->customer->location ?? 'Addis Ababa',
                         'address_text' => $b->address_text, // Keep for raw detail if needed
                         'price' => $b->agreed_price ?? 0,
@@ -449,12 +468,19 @@ class AdminAuthController extends Authenticatable
                         'payout' => $b->provider_payout ?? ($b->agreed_price * 0.9),
                         'notes' => $b->notes ?? null,
                         
-                        // Timestamps for "View More"
+                        // Timestamps for Dynamic Timeline
+                        'created_at' => $b->created_at ? $b->created_at->format('M d, Y H:i') : 'N/A',
+                        'scheduled_at' => ($b->scheduledDate ? \Carbon\Carbon::parse($b->scheduledDate)->format('M d, Y H:i') : 'N/A'),
                         'accepted_at' => $b->accepted_at ? $b->accepted_at->format('M d, Y H:i') : 'Pending',
+                        'rejected_at' => $b->rejected_at ? $b->rejected_at->format('M d, Y H:i') : 'N/A',
                         'provider_started_at' => $b->provider_started_at ? $b->provider_started_at->format('M d, Y H:i') : 'Pending',
                         'provider_arrived_at' => $b->provider_arrived_at ? $b->provider_arrived_at->format('M d, Y H:i') : 'Pending',
                         'completed_at' => $b->completed_at ? $b->completed_at->format('M d, Y H:i') : 'Pending',
-                        'paid_at' => $b->paid_at ? $b->paid_at->format('M d, Y H:i') : 'Unpaid'
+                        'expires_at' => $b->expires_at ? $b->expires_at->format('M d, Y H:i') : 'N/A',
+                        'customer_confirmed_at' => $b->customer_confirmed_at ? $b->customer_confirmed_at->format('M d, Y H:i') : 'Pending',
+                        'paid_at' => $b->paid_at ? $b->paid_at->format('M d, Y H:i') : 'Unpaid',
+                        'released_at' => $b->released_at ? $b->released_at->format('M d, Y H:i') : 'Pending',
+                        'cancelled_at' => $b->cancelled_at ? $b->cancelled_at->format('M d, Y H:i') : 'N/A'
                     ];
                 });
 
@@ -507,7 +533,7 @@ class AdminAuthController extends Authenticatable
 
         $validator = Validator::make($request->all(), [
             'fullname' => 'required|string|max:255',
-            'email'    => 'required|email|unique:admins,email,' . $admin->adminID . ',adminID',
+            'email'    => 'required|email:rfc,dns|unique:admins,email,' . $admin->adminID . ',adminID',
             'phone'    => 'nullable|string|max:20',
         ]);
 
@@ -642,5 +668,48 @@ class AdminAuthController extends Authenticatable
             'success' => true,
             'data' => $results
         ]);
+    }
+
+    public function acceptedBookings()
+    {
+        $booking = Booking::where('status', 'accepted')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
+    }
+
+    public function pendingBookings()
+    {
+        $booking = Booking::where('status', 'pending')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
+    }
+    public function compeltedBookings()
+    {
+        $booking = Booking::where('status', 'compeleted')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
+    }
+
+    public function rejectedBookings()
+    {
+        $booking = Booking::where('status', 'rejected')
+            ->with(['category', 'services'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => $this->formatProvider($p));
+
+        return response()->json(['success' => true, 'data' => $booking]);
     }
 }

@@ -304,6 +304,15 @@ Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin'], function () {
     Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
 
     Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approveWithdrawal']);
+
+    // fetch bookings for admin
+    Route::get('/accepted/{disputeID}', [AdminAuthController::class, 'acceptedBookings']);
+    Route::get('/rejected/{disputeID}', [AdminAuthController::class, 'rejectedBookings']);
+    Route::get('/compeleted/{disputeID}', [AdminAuthController::class, 'compeletedBookings']);
+    Route::get('/pending/{disputeID}', [AdminAuthController::class, 'pendingBookings']);
+
+
+
 });
 
 Route::get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);

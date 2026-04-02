@@ -68,8 +68,20 @@ const Layout = () => {
       )}
 
       <div
-        className={`${isMobile ? 'fixed inset-y-0 left-0 z-50' : 'relative'} transition-transform duration-300 ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'
-          }`}
+        className={`${
+          isMobile
+            ? 'fixed inset-y-0 left-0 z-50'
+            : 'relative overflow-hidden'
+        } transition-all duration-300 ease-in-out ${
+          isMobile
+            ? sidebarOpen
+              ? 'translate-x-0'
+              : '-translate-x-full'
+            : sidebarOpen
+            ? ''
+            : 'w-0'
+        }`}
+        style={!isMobile ? { width: sidebarOpen ? `${sidebarWidth}px` : '0px' } : {}}
       >
         <Sidebar
           width={sidebarWidth}

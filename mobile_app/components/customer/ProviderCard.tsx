@@ -162,7 +162,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         </View>
       </View>
 
-      {provider.availableNow && (
+      {provider.isAvailable && (
         <View style={styles.availableBadge}>
           <View style={styles.availableDot} />
           <Text style={styles.availableText}>Available Now</Text>

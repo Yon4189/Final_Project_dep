@@ -261,8 +261,9 @@ export default function RegisterProviderScreen() {
   };
 
   const registerProvider = async () => {
-    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType || !profilePicture || !idPhoto || !credentialPhoto) {
-      Alert.alert('Error', 'Please fill all fields, select an ID type, and upload all required images including the business license.');
+    // Required fields validation
+    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType || !idPhoto) {
+      Alert.alert('Error', 'Please fill all required fields and upload your ID card photo.');
       return;
     }
 
@@ -539,7 +540,7 @@ export default function RegisterProviderScreen() {
         {/* Profile Picture Section */}
         <View style={styles.uploadContainer}>
           <Text style={styles.label}>
-            <Text>Profile Picture </Text><Text style={styles.required}>*</Text>
+            <Text>Profile Picture </Text><Text style={styles.optional}>(Optional)</Text>
           </Text>
           <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage('profile')}>
             {profilePictureUri ? (
@@ -716,7 +717,7 @@ export default function RegisterProviderScreen() {
         {/* Credential Photo Upload */}
         <View style={styles.uploadContainer}>
           <Text style={styles.label}>
-            <Text>Business License/Certificate </Text><Text style={styles.required}>*</Text>
+            <Text>Business License/Certificate </Text><Text style={styles.optional}>(Optional)</Text>
           </Text>
           <TouchableOpacity style={styles.idImagePicker} onPress={() => pickImage('credential')}>
             {credentialPhotoUri ? (
@@ -728,7 +729,7 @@ export default function RegisterProviderScreen() {
                   <Text>Upload License/Certificate</Text>
                 </Text>
                 <Text style={styles.imageHintText}>
-                  <Text>Required to verify your business</Text>
+                  <Text>Can be uploaded later from your profile</Text>
                 </Text>
               </View>
             )}
@@ -922,6 +923,11 @@ const styles = StyleSheet.create({
   },
   required: {
     color: Colors.error
+  },
+  optional: {
+    color: Colors.text.secondary,
+    fontSize: 12,
+    fontWeight: '400'
   },
   hintText: {
     fontSize: 12,

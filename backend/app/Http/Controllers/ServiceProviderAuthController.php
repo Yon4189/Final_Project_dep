@@ -34,15 +34,19 @@ class ServiceProviderAuthController extends Controller
         // Validate input
         $validator = Validator::make($request->all(), [
             'fullname' => ['required', 'string', 'max:255'],
-            'email' => 'required|email|unique:service_providers,email',
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'unique:service_providers,email'
+            ],
             'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
             'password' => 'required|string|min:8|confirmed',
             'service_city' => 'required|string|max:255',
             'catagoryID' => 'required|exists:catagories,catagoryID',
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
-            'credentialPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048',
-            'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID',
+            'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048', // ID photo is REQUIRED
+            'credentialPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+            'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID', // ID type is REQUIRED
             'current_latitude' => 'nullable|numeric|between:-90,90',
             'current_longitude' => 'nullable|numeric|between:-180,180',
         ]);
@@ -171,52 +175,86 @@ class ServiceProviderAuthController extends Controller
     /**
      * Login for service providers
      */
-public function login(Request $request)
-{
-    $credentials = $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
-
-    // Find provider manually instead of using attempt()
-    $provider = ServiceProvider::where('email', $credentials['email'])->first();
-    
-    if (!$provider || !Hash::check($credentials['password'], $provider->password)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid credentials'
-        ], 401);
-    }
-
-    // Check if provider is suspended or rejected
-    if (in_array($provider->status, ['rejected', 'suspended'])) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Your account has been ' . $provider->status
-        ], 403);
-    }
-    
-    $token = $provider->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
-    
-    Cache::put("provider_online_{$provider->providerID}", true, now()->addMinutes(2));
-    
-    ServiceProvider::where('providerID', $provider->providerID)
-        ->update([
-            'is_online' => true,
-            'last_seen_at' => now()
+    public function login(Request $request)
+    {
+        // Validate input with DNS check
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email:rfc,dns',
+            'password' => 'required|string'
         ]);
-    
-    return response()->json([
-        'success' => true,
-        'message' => 'Login successful',
-        'data' => [
-            'user' => $provider,
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'expires_in' => config('sanctum.expiration', 1440)
-        ]
-    ]);
-}
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide valid email and password',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Find provider by email
+        $provider = ServiceProvider::where('email', $request->email)->first();
+        
+        // Check if provider exists
+        if (!$provider) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No account found with this email address'
+            ], 401);
+        }
+
+        // Verify password
+        if (!Hash::check($request->password, $provider->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect password. Please try again'
+            ], 401);
+        }
+
+        // Only block rejected and suspended accounts from logging in
+        // Pending accounts CAN login to complete their profile
+        
+        // Check account status - rejected
+        if (in_array(strtolower($provider->status), ['rejected'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account registration was rejected. Please contact support for more information'
+            ], 403);
+        }
+
+        // Check account status - suspended
+        if (in_array(strtolower($provider->status), ['suspended'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account has been suspended. Please contact support'
+            ], 403);
+        }
+        
+        // Create authentication token
+        $token = $provider->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
+        
+        // Set online status
+        Cache::put("provider_online_{$provider->providerID}", true, now()->addMinutes(2));
+        
+        ServiceProvider::where('providerID', $provider->providerID)
+            ->update([
+                'is_online' => true,
+                'last_seen_at' => now()
+            ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => [
+                'user' => $provider,
+                'token' => $token,
+                'token_type' => 'Bearer',
+                'expires_in' => config('sanctum.expiration', 1440),
+                'status' => $provider->status, // Include status for frontend
+                'is_approved' => in_array(strtolower($provider->status), ['active', 'approved']),
+                'is_pending' => strtolower($provider->status) === 'pending'
+            ]
+        ]);
+    }
     /**
      * Logout provider (revoke token)
      */
