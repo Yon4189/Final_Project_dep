@@ -23,6 +23,7 @@ import { API_BASE_URL } from '@/app/config/api';
 import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
 import { subscribeToConversation, unsubscribeFromConversation } from '@/app/services/pusherClient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Message {
     id: string;
@@ -57,6 +58,7 @@ interface CustomerInfo {
 
 export default function ProviderChatScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { id: conversationIdParam } = useLocalSearchParams<{ id: string }>();
     const flatListRef = useRef<FlatList>(null);
     const appState = useRef(AppState.currentState);
@@ -394,7 +396,7 @@ export default function ProviderChatScreen() {
     };
 
     const renderHeader = () => (
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                 <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
@@ -462,15 +464,18 @@ export default function ProviderChatScreen() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         >
             <FlatList
                 ref={flatListRef}
                 data={messages}
                 renderItem={renderMessage}
                 keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.messagesList}
+                contentContainerStyle={[
+                    styles.messagesList,
+                    { paddingBottom: 20 }
+                ]}
                 ListHeaderComponent={renderHeader}
                 onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                 onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
@@ -482,7 +487,7 @@ export default function ProviderChatScreen() {
                 keyboardShouldPersistTaps="handled"
             />
 
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
                 <TextInput
                     style={styles.input}
                     value={inputText}
@@ -518,7 +523,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 12,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
         paddingBottom: 12,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
