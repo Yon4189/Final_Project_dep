@@ -374,20 +374,33 @@ class BookingController extends Controller
             'success' => true,
             'data' => [
                 'bookingID' => $booking->bookingID,
+                'id' => $booking->bookingID, // Add id for frontend compatibility
+                'requestNumber' => 'REQ-' . str_pad($booking->bookingID, 6, '0', STR_PAD_LEFT),
                 'status' => $booking->status,
-                'scheduledDate' => $booking->scheduledDate,
+                'scheduledDate' => $booking->scheduledDate ? $booking->scheduledDate->format('Y-m-d') : null,
+                'scheduledTime' => $booking->scheduledDate ? $booking->scheduledDate->format('H:i') : null,
                 'agreed_price' => $booking->agreed_price,
+                'estimatedPrice' => $booking->agreed_price, // Add for frontend compatibility
                 'notes' => $booking->notes,
+                'description' => $booking->notes, // Add for frontend compatibility
+                'specialInstructions' => $booking->notes, // Add for frontend compatibility
                 'created_at' => $booking->created_at,
                 'expires_at' => $booking->expires_at,
                 'service_address' => $booking->service_address,
                 'service_latitude' => $booking->service_latitude,
                 'service_longitude' => $booking->service_longitude,
+                'customerAddress' => $booking->service_address, // Add for frontend compatibility
+                'customerLatitude' => $booking->service_latitude, // Add for frontend compatibility
+                'customerLongitude' => $booking->service_longitude, // Add for frontend compatibility
                 'customer' => $userType === 'provider' ? [
                     'id' => $booking->customer->customerID,
+                    'customerId' => $booking->customer->customerID, // Add for frontend compatibility
                     'name' => $booking->customer->fullname,
+                    'customerName' => $booking->customer->fullname, // Add for frontend compatibility
                     'phone' => $booking->customer->phone,
-                    'profilePicture' => $booking->customer->profilePicture
+                    'customerPhone' => $booking->customer->phone, // Add for frontend compatibility
+                    'profilePicture' => $booking->customer->profilePicture,
+                    'customerImage' => $booking->customer->profilePicture // Add for frontend compatibility
                 ] : null,
                 'provider' => $userType === 'customer' ? [
                     'id' => $booking->provider->providerID,
@@ -399,12 +412,17 @@ class BookingController extends Controller
                 'service' => [
                     'id' => $booking->service->serviceID,
                     'title' => $booking->service->title,
-                    'description' => $booking->service->description
+                    'serviceName' => $booking->service->title, // Add for frontend compatibility
+                    'description' => $booking->service->description,
+                    'estimatedPrice' => $booking->service->estimatedPrice ?? $booking->agreed_price
                 ],
                 'timeline' => [
                     'accepted_at' => $booking->accepted_at,
+                    'provider_started_at' => $booking->provider_started_at,
+                    'provider_arrived_at' => $booking->provider_arrived_at,
                     'completed_at' => $booking->completed_at,
-                    'cancelled_at' => $booking->cancelled_at
+                    'cancelled_at' => $booking->cancelled_at,
+                    'startedAt' => $booking->provider_started_at, // Add for frontend compatibility
                 ],
                 'payment' => $booking->payment ? [
                     'status' => $booking->payment->status,

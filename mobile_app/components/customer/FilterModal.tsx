@@ -34,7 +34,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     max: initialFilters.priceRange?.max || 10000,
   });
   const [minRating, setMinRating] = useState(initialFilters.minRating || 0);
-  const [verifiedOnly, setVerifiedOnly] = useState(initialFilters.verifiedOnly || false);
   const [availableNow, setAvailableNow] = useState(initialFilters.availableNow || false);
   const [maxDistance, setMaxDistance] = useState(initialFilters.maxDistance || 50);
 
@@ -43,7 +42,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       sortBy,
       priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
       minRating: minRating > 0 ? minRating : undefined,
-      verifiedOnly,
       availableNow,
       maxDistance,
     };
@@ -55,7 +53,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     setSortBy('rating');
     setPriceRange({ min: 0, max: 10000 });
     setMinRating(0);
-    setVerifiedOnly(false);
     setAvailableNow(false);
     setMaxDistance(50);
   };
@@ -184,19 +181,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
             {/* Toggle Options */}
             <View style={styles.section}>
-              <TouchableOpacity
-                style={styles.toggleOption}
-                onPress={() => setVerifiedOnly(!verifiedOnly)}
-              >
-                <View style={styles.toggleLeft}>
-                  <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
-                  <Text style={styles.toggleText}>Verified Only</Text>
-                </View>
-                <View style={[styles.checkbox, verifiedOnly && styles.checkboxChecked]}>
-                  {verifiedOnly && <Ionicons name="checkmark" size={14} color={Colors.surface} />}
-                </View>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.toggleOption}
                 onPress={() => setAvailableNow(!availableNow)}

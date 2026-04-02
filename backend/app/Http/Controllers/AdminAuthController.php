@@ -109,7 +109,7 @@ class AdminAuthController extends Authenticatable
     public function getAllProviders()
     {
         try {
-            $providers = ServiceProvider::whereIn('status', ['approved', 'suspended'])
+            $providers = ServiceProvider::whereIn('status', ['approved', 'suspended','pending'])
                 ->with('category')
                 ->get();
             $formatted = $providers->map(function ($provider) {
