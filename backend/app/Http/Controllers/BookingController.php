@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\NotificationService;
+use App\Services\LocationValidator;
 use App\Models\Payment;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -26,8 +28,13 @@ class BookingController extends Controller
 
 
     protected $notificationService;
+    protected $locationValidator;
 
-    public function __construct(NotificationService $notificationService)
+    public function __construct(NotificationService $notificationService, LocationValidator $locationValidator)
+    {
+        $this->notificationService = $notificationService;
+        $this->locationValidator = $locationValidator;
+    }
     {
         $this->notificationService = $notificationService;
     }
@@ -42,10 +49,18 @@ class BookingController extends Controller
             'serviceID' => 'required|exists:services,serviceID',
             'scheduledDate' => 'required|date|after:now',
             'agreed_price' => 'required|numeric|min:1',
-            'service_address' => 'nullable|string|max:255',
-            'service_latitude' => 'nullable|numeric|between:-90,90',
-            'service_longitude' => 'nullable|numeric|between:-180,180',
             'notes' => 'nullable|string|max:500',
+            
+            // Location validation
+            'location_type' => 'required|in:current,saved,manual,pin_on_map',
+            
+            // Conditional validation based on location_type
+            'latitude' => 'required_if:location_type,current,pin_on_map|nullable|numeric|between:-90,90',
+            'longitude' => 'required_if:location_type,current,pin_on_map|nullable|numeric|between:-180,180',
+            'address_id' => 'required_if:location_type,saved|nullable|integer',
+            'manual_address' => 'required_if:location_type,manual|nullable|string|min:5|max:500',
+            'formatted_address' => 'required_if:location_type,pin_on_map|nullable|string',
+            'place_id' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -96,15 +111,29 @@ class BookingController extends Controller
 
             Log::info('Creating booking for customer:', ['customerID' => $customer->customerID]);
 
+            // Validate and process location data
+            try {
+                $locationData = $this->locationValidator->validateLocationInput($request, $customer->customerID);
+            } catch (ValidationException $e) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Location validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
             $booking = Booking::create([
                 'customerID' => $customer->customerID,
                 'providerID' => $request->providerID,
                 'serviceID' => $request->serviceID,
                 'scheduledDate' => $request->scheduledDate,
                 'agreed_price' => $request->agreed_price,
-                'service_address' => $request->service_address,
-                'service_latitude' => $request->service_latitude,
-                'service_longitude' => $request->service_longitude,
+                'service_latitude' => $locationData['latitude'],
+                'service_longitude' => $locationData['longitude'],
+                'address_text' => $locationData['full_address'],
+                'place_id' => $locationData['place_id'] ?? null,
+                'location_source' => $locationData['source'],
                 'notes' => $request->notes,
                 'status' => 'pending',
                 'expires_at' => now()->addHours(24),
@@ -123,7 +152,7 @@ class BookingController extends Controller
                     'service_name' => $service->title,
                     'scheduled_date' => $booking->scheduledDate->format('Y-m-d H:i'),
                     'agreed_price' => $booking->agreed_price,
-                    'address' => $booking->service_address ?? 'Location pinned on map'
+                    'address' => $booking->address_text ?? 'Location provided'
                 ],
                 $booking->bookingID
             );
@@ -150,9 +179,11 @@ class BookingController extends Controller
                         'price' => $booking->agreed_price
                     ],
                     'scheduledDate' => $booking->scheduledDate,
-                    'service_city' => $booking->service_address ?? [
+                    'location' => [
+                        'address' => $booking->address_text,
                         'latitude' => $booking->service_latitude,
-                        'longitude' => $booking->service_longitude
+                        'longitude' => $booking->service_longitude,
+                        'source' => $booking->location_source
                     ]
                 ]
             ], 201);

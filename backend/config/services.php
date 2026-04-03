@@ -41,4 +41,8 @@ return [
     'webhook_secret' => env('CHAPA_WEBHOOK_SECRET'),
     ],
 
+    'google_places' => [
+        'api_key' => env('GOOGLE_PLACES_API_KEY'),
+    ],
+
 ];
