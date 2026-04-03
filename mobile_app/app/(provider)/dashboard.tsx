@@ -1,6 +1,7 @@
 // app/(provider)/dashboard.tsx
 import React, { useState, useEffect } from 'react';
 import {
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -12,6 +13,8 @@ import {
   Dimensions,
   Alert,
   Modal,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,6 +81,54 @@ export default function ProviderDashboard() {
   const { data: conversations, isLoading: isChatsLoading } = useConversations();
   const notificationCountQuery = useProviderNotificationCount();
   const unreadNotificationCount = notificationCountQuery.data ?? 0;
+
+  // Sidebar animation and gesture handling
+  const sidebarAnim = React.useRef(new Animated.Value(0)).current;
+  const SIDEBAR_WIDTH = 260; // Slightly narrower as requested
+
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only respond to horizontal swipes
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Only allow dragging to the left (negative dx)
+        if (gestureState.dx < 0) {
+          sidebarAnim.setValue(gestureState.dx);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -100 || gestureState.vx < -0.5) {
+          // Close if swiped far enough or fast enough
+          closeMenu();
+        } else {
+          // Snap back to open
+          Animated.spring(sidebarAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  const openMenu = () => {
+    setShowHamburgerMenu(true);
+    sidebarAnim.setValue(0); // Reset position
+  };
+
+  const closeMenu = () => {
+    Animated.timing(sidebarAnim, {
+      toValue: -SIDEBAR_WIDTH,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowHamburgerMenu(false);
+    });
+  };
 
   // Debug logging
   useEffect(() => {
@@ -150,7 +201,7 @@ export default function ProviderDashboard() {
               shadowOpacity: 0.2,
               shadowRadius: 4,
             }}
-            onPress={() => setShowHamburgerMenu(true)}
+            onPress={openMenu}
             activeOpacity={0.7}
           >
             <Ionicons name="menu" size={24} color={Colors.primary} />
@@ -657,26 +708,64 @@ export default function ProviderDashboard() {
     ];
 
     return (
-      <Modal visible={showHamburgerMenu} transparent animationType="fade" onRequestClose={() => setShowHamburgerMenu(false)}>
-        <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setShowHamburgerMenu(false)}>
-          <View style={styles.menuDropdown}>
+      <Modal 
+        visible={showHamburgerMenu} 
+        transparent 
+        animationType="none" 
+        onRequestClose={closeMenu}
+      >
+        <View style={styles.menuOverlay}>
+          <TouchableOpacity 
+            style={StyleSheet.absoluteFill} 
+            activeOpacity={1} 
+            onPress={closeMenu}
+          >
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} />
+          </TouchableOpacity>
+
+          <Animated.View 
+            style={[
+              styles.menuDropdown,
+              { transform: [{ translateX: sidebarAnim }] }
+            ]}
+            {...panResponder.panHandlers}
+          >
             <View style={styles.menuHeader}>
-              <Text style={styles.menuTitle}>Menu</Text>
-              <TouchableOpacity onPress={() => setShowHamburgerMenu(false)}>
-                <Ionicons name="close" size={22} color={(Colors.text as any)?.primary || '#222'} />
+              <View>
+                <Text style={styles.menuTitle}>Menu</Text>
+                <Text style={styles.menuSubtitle}>Provider Control Center</Text>
+              </View>
+              <TouchableOpacity 
+                onPress={closeMenu}
+                style={styles.menuCloseButton}
+              >
+                <Ionicons name="close" size={24} color={(Colors.text as any)?.primary || '#222'} />
               </TouchableOpacity>
             </View>
-            {menuItems.map((item, index) => (
-              <TouchableOpacity key={item.label} style={[styles.menuItem, index < menuItems.length - 1 && styles.menuItemBorder]} onPress={item.onPress} activeOpacity={0.7}>
-                <View style={[styles.menuItemIcon, { backgroundColor: item.color + '18' }]}>
-                  <Ionicons name={item.icon} size={22} color={item.color} />
-                </View>
-                <Text style={styles.menuItemLabel}>{item.label}</Text>
-                <Ionicons name="chevron-forward" size={16} color={(Colors.text as any)?.secondary || '#888'} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {menuItems.map((item, index) => (
+                <TouchableOpacity 
+                  key={item.label} 
+                  style={[
+                    styles.menuItem, 
+                    index < menuItems.length - 1 && styles.menuItemBorder
+                  ]} 
+                  onPress={() => {
+                    closeMenu();
+                    item.onPress();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.menuItemIcon, { backgroundColor: item.color + '18' }]}>
+                    <Ionicons name={item.icon} size={22} color={item.color} />
+                  </View>
+                  <Text style={styles.menuItemLabel}>{item.label}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={(Colors.text as any)?.secondary || '#888'} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        </View>
       </Modal>
     );
   };
@@ -773,61 +862,73 @@ const styles = StyleSheet.create({
   },
   menuOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
+    flexDirection: 'row',
   },
   menuDropdown: {
-    marginTop: 140,
-    marginLeft: 16,
+    height: '100%',
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    paddingVertical: 8,
-    width: 220,
+    width: 260,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 20,
   },
   menuHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 70 : 50,
+    paddingBottom: 25,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    marginBottom: 4,
+    marginBottom: 8,
+    backgroundColor: Colors.primary + '08',
   },
   menuTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111',
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.primary,
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: (Colors.text as any)?.secondary || '#666',
+    marginTop: 2,
+  },
+  menuCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 14,
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border + '50',
   },
   menuItemIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuItemLabel: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#222',
+    fontSize: 16,
+    fontWeight: '600',
+    color: (Colors.text as any)?.primary || '#222',
   },
   headerTop: {
     flexDirection: 'row',

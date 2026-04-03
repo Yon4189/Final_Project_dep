@@ -9,11 +9,11 @@ import {
     Image,
     RefreshControl,
     ActivityIndicator,
-    SafeAreaView,
     TextInput,
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
@@ -25,6 +25,7 @@ import type { ServiceProvider } from '@/app/types/customer.types';
 
 export default function CustomerChatList() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [conversations, setConversations] = useState<any[]>([]);
     const [providers, setProviders] = useState<ServiceProvider[]>([]);
     const [loading, setLoading] = useState(true);
@@ -183,10 +184,9 @@ export default function CustomerChatList() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-            <SafeAreaView style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingTop: Math.max(insets.top, 10) }}>
                 <FlatList
                     data={activeTab === 'chats' ? filteredConversations : providers}
                     renderItem={activeTab === 'chats' ? renderConversationItem : renderProviderItem}
@@ -255,9 +255,10 @@ export default function CustomerChatList() {
                             </Text>
                         </View>
                     }
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 20 }}
                     keyboardShouldPersistTaps="handled"
                 />
-            </SafeAreaView>
+            </View>
         </KeyboardAvoidingView>
     );
 }
@@ -338,7 +339,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingTop: 150,
         paddingHorizontal: 40,
     },
     emptyText: {
