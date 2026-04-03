@@ -27,6 +27,7 @@ use App\Http\Controllers\AdminDisputeController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\ProviderTrackingController;
 use App\Http\Controllers\OnlineStatusController;
+use App\Http\Controllers\LocationAutocompleteController;
 
 
 
@@ -51,6 +52,9 @@ Route::get('/test', function () {
 Route::get('/public/stats', [AdminAuthController::class, 'getStats']);
 Route::get('/categories', [CategoryController::class, 'getCategories']);
 Route::get('/services', [ServiceController::class, 'index']);
+
+// Location Autocomplete (Public - no auth required)
+Route::get('/location/autocomplete', [LocationAutocompleteController::class, 'autocomplete']);
 
 // ==================== AUTH ROUTES ====================
 // Customer Auth
