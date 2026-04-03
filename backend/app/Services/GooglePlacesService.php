@@ -15,11 +15,23 @@ class GooglePlacesService
     public function __construct()
     {
         $this->apiKey = config('services.google_places.api_key');
-        $this->baseUrl = 'https://maps.googleapis.com/maps/api';
-        $this->client = new Client([
+        $this->baseUrl = 'https://nominatim.openstreetmap.org';
+        
+        // Configure Guzzle client
+        $clientConfig = [
             'base_uri' => $this->baseUrl,
             'timeout' => 10,
-        ]);
+            'headers' => [
+                'User-Agent' => 'ServiceBookingApp/1.0' // Required by Nominatim
+            ]
+        ];
+        
+        // Disable SSL verification in local environment (Windows SSL certificate issue)
+        if (app()->environment('local')) {
+            $clientConfig['verify'] = false;
+        }
+        
+        $this->client = new Client($clientConfig);
     }
 
     /**
@@ -31,31 +43,60 @@ class GooglePlacesService
     public function validateAddress(string $address): array
     {
         try {
-            $response = $this->client->get('/geocode/json', [
+            // Use Nominatim (OpenStreetMap) for geocoding - FREE, no API key needed
+            $options = [
                 'query' => [
-                    'address' => $address,
-                    'key' => $this->apiKey,
+                    'q' => $address,
+                    'format' => 'json',
+                    'limit' => 1,
+                    'addressdetails' => 1
                 ]
+            ];
+            
+            // Disable SSL verification in local environment
+            if (app()->environment('local')) {
+                $options['verify'] = false;
+            }
+            
+            Log::info('Nominatim API Request', [
+                'address' => $address,
+                'environment' => app()->environment(),
+            ]);
+            
+            $response = $this->client->get('/search', $options);
+            $results = json_decode($response->getBody(), true);
+            
+            // Log the response
+            Log::info('Nominatim API Response', [
+                'address' => $address,
+                'results_count' => count($results),
+                'results' => $results
             ]);
 
-            $body = json_decode($response->getBody(), true);
-
-            if ($body['status'] === 'OK' && !empty($body['results'])) {
-                $result = $body['results'][0];
+            if (!empty($results)) {
+                $result = $results[0];
+                
+                // Nominatim returns results even for partial matches
+                // Check if it's a reasonable match
+                $displayName = $result['display_name'] ?? '';
                 
                 return [
                     'status' => 'success',
                     'isValid' => true,
                     'data' => [
-                        'formatted_address' => $result['formatted_address'],
-                        'latitude' => $result['geometry']['location']['lat'],
-                        'longitude' => $result['geometry']['location']['lng'],
-                        'place_id' => $result['place_id'],
+                        'formatted_address' => $displayName,
+                        'latitude' => (float) $result['lat'],
+                        'longitude' => (float) $result['lon'],
+                        'place_id' => $result['place_id'] ?? 'nominatim_' . $result['osm_id'],
                     ]
                 ];
             }
 
-            // Address not found or invalid
+            // Address not found
+            Log::warning('Nominatim: Address not found', [
+                'address' => $address
+            ]);
+            
             return [
                 'status' => 'error',
                 'isValid' => false,
@@ -63,9 +104,10 @@ class GooglePlacesService
             ];
 
         } catch (RequestException $e) {
-            Log::error('Google Places API validation failed', [
+            Log::error('Nominatim API validation failed', [
                 'address' => $address,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : 'no response'
             ]);
             
             return [
@@ -74,9 +116,10 @@ class GooglePlacesService
                 'message' => 'Could not validate address: ' . $e->getMessage()
             ];
         } catch (\Exception $e) {
-            Log::error('Google Places validation exception', [
+            Log::error('Nominatim validation exception', [
                 'address' => $address,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return [
