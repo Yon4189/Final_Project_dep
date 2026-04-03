@@ -1,1 +1,20 @@
-sadasdasd
+Questions we will be asked on:
+
+- how we handle the security? how is the route protected?
+- how do you handle/protect senstive info like home address, bank account, phone number?
+- how is payment made?
+
+
+
+
+Logical error:
+- more than one booking is allowed for the same service with the same provider
+
+
+CORE FEATURES THAT NEEDS TO BE MADE
+- location tracking
+- dispute handling
+
+
+REVIEW
+- payement system

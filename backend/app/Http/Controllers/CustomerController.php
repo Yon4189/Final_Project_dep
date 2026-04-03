@@ -17,9 +17,18 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use App\Models\CustomerAddress;
 use App\Models\ProviderTracking;
+use App\Services\LocationValidator;
+use Illuminate\Validation\ValidationException;
 
 class CustomerController extends Authenticatable
 {
+    protected $locationValidator;
+
+    public function __construct(LocationValidator $locationValidator)
+    {
+        $this->locationValidator = $locationValidator;
+    }
+
     private function resolveCustomer()
     {
         $customer = Auth::guard('customer')->user();
@@ -286,14 +295,18 @@ class CustomerController extends Authenticatable
                 'scheduledDate' => 'required|date|after_or_equal:today',
                 'agreed_price' => 'required|numeric|min:0',
                 
-                // Location fields - make them more flexible
-                'location_source' => 'nullable|in:gps,saved,new',
-                'saved_address_id' => 'nullable|exists:customer_addresses,addressID',
-                'full_address' => 'nullable|string|max:255',
-                'service_address' => 'nullable|string|max:255',
-                'latitude' => 'nullable|numeric',
-                'longitude' => 'nullable|numeric',
+                // NEW: Location validation with 4 types
+                'location_type' => 'required|in:current,saved,manual,pin_on_map',
+                'latitude' => 'required_if:location_type,current,pin_on_map|nullable|numeric|between:-90,90',
+                'longitude' => 'required_if:location_type,current,pin_on_map|nullable|numeric|between:-180,180',
+                'address_id' => 'required_if:location_type,saved|nullable|integer',
+                'manual_address' => 'required_if:location_type,manual|nullable|string|min:5|max:500',
+                'formatted_address' => 'required_if:location_type,pin_on_map|nullable|string',
                 'place_id' => 'nullable|string',
+                
+                // Optional: Save location to addresses
+                'save_address' => 'nullable|boolean',
+                'address_label' => 'nullable|string|max:50',
                 
                 'notes' => 'nullable|string|max:1000'
             ], [
@@ -303,6 +316,7 @@ class CustomerController extends Authenticatable
                 'scheduledDate.after_or_equal' => 'scheduled date must be today or in the future',
                 'agreed_price.required' => 'please enter the agreed price',
                 'agreed_price.min' => 'price cannot be negative',
+                'location_type.required' => 'please select a location type',
             ]);
 
             $validated = $validator->validated();
@@ -350,48 +364,21 @@ class CustomerController extends Authenticatable
             }
 
             // Process location data based on source
-            $locationSource = $validated['location_source'] ?? 'new';
-            
-            if ($locationSource === 'saved' && !empty($validated['saved_address_id'])) {
-                $address = CustomerAddress::find($validated['saved_address_id']);
-                if (!$address) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'saved address not found'
-                    ], 404);
-                }
-                
-                $locationData = [
-                    'service_address' => $address->full_address,
-                    'address_text' => $address->full_address,
-                    'service_latitude' => $address->latitude,
-                    'service_longitude' => $address->longitude,
-                    'place_id' => $address->place_id,
-                    'location_source' => 'saved',
-                    'saved_address_id' => $address->addressID
-                ];
-            } else {
-                // Use provided address or fall back to service_address
-                $address = $validated['full_address'] ?? $validated['service_address'] ?? null;
-                
-                $locationData = [
-                    'service_address' => $address,
-                    'address_text' => $address,
-                    'service_latitude' => $validated['latitude'] ?? null,
-                    'service_longitude' => $validated['longitude'] ?? null,
-                    'place_id' => $validated['place_id'] ?? null,
-                    'location_source' => $locationSource,
-                    'saved_address_id' => null
-                ];
+            // NEW: Use LocationValidator for validation
+            try {
+                $locationData = $this->locationValidator->validateLocationInput($request, $customer->customerID);
+            } catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Location validation failed',
+                    'errors' => $e->errors()
+                ], 422);
             }
 
             // create booking with location data
 
             // Merge address into notes if it exists
             $finalNotes = $validated['notes'] ?? '';
-            if (!empty($validated['service_address'])) {
-                $finalNotes = "Address: " . $validated['service_address'] . "\n" . $finalNotes;
-            }
 
             // create booking
 
@@ -405,14 +392,13 @@ class CustomerController extends Authenticatable
                 'notes' => $validated['notes'] ?? null,
                 'expires_at' => now()->addHours(24),
                 
-                // Location fields (using your exact column names)
-                'service_address' => $locationData['service_address'],
-                'address_text' => $locationData['address_text'],
-                'service_latitude' => $locationData['service_latitude'],
-                'service_longitude' => $locationData['service_longitude'],
-                'place_id' => $locationData['place_id'],
-                'location_source' => $locationData['location_source'],
-                'saved_address_id' => $locationData['saved_address_id']
+                // Location fields from validated location data
+                'service_latitude' => $locationData['latitude'],
+                'service_longitude' => $locationData['longitude'],
+                'address_text' => $locationData['full_address'],
+                'place_id' => $locationData['place_id'] ?? null,
+                'location_source' => $locationData['source'],
+                'saved_address_id' => $request->input('address_id') ?? null
             ]);
 
             // log the booking creation
@@ -420,8 +406,17 @@ class CustomerController extends Authenticatable
                 'booking_id' => $booking->bookingID,
                 'customer_id' => $customer->customerID,
                 'provider_id' => $validated['providerID'],
-                'location_source' => $locationData['location_source']
+                'location_source' => $locationData['source']
             ]);
+
+            // Save location to addresses if requested
+            if ($request->input('save_address') && in_array($locationData['source'], ['gps', 'manual', 'pin_on_map'])) {
+                $this->saveLocationToAddresses(
+                    $customer->customerID,
+                    $locationData,
+                    $request->input('address_label', 'other')
+                );
+            }
 
             return response()->json([
                 'success' => true,
@@ -1051,5 +1046,68 @@ class CustomerController extends Authenticatable
         }
 
         return $timeline;
+    }
+
+    /**
+     * Save location to customer addresses
+     * 
+     * @param int $customerId
+     * @param array $locationData
+     * @param string $label
+     * @return void
+     */
+    private function saveLocationToAddresses(int $customerId, array $locationData, string $label = 'other'): void
+    {
+        try {
+            // Check if customer already has 5 addresses (limit)
+            $addressCount = CustomerAddress::where('customerID', $customerId)->count();
+            if ($addressCount >= 5) {
+                Log::info('Cannot save address: customer has reached limit of 5 addresses', [
+                    'customer_id' => $customerId
+                ]);
+                return;
+            }
+
+            // Check for duplicate address (same coordinates)
+            $existingAddress = CustomerAddress::where('customerID', $customerId)
+                ->where('latitude', $locationData['latitude'])
+                ->where('longitude', $locationData['longitude'])
+                ->first();
+
+            if ($existingAddress) {
+                Log::info('Address already exists, skipping save', [
+                    'customer_id' => $customerId,
+                    'address_id' => $existingAddress->addressID
+                ]);
+                return;
+            }
+
+            // Validate label
+            if (!in_array($label, ['home', 'office', 'other'])) {
+                $label = 'other';
+            }
+
+            // Create new address
+            CustomerAddress::create([
+                'customerID' => $customerId,
+                'full_address' => $locationData['full_address'],
+                'latitude' => $locationData['latitude'],
+                'longitude' => $locationData['longitude'],
+                'place_id' => $locationData['place_id'] ?? null,
+                'label' => $label,
+                'is_default' => false
+            ]);
+
+            Log::info('Location saved to customer addresses', [
+                'customer_id' => $customerId,
+                'label' => $label
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to save location to addresses', [
+                'customer_id' => $customerId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
