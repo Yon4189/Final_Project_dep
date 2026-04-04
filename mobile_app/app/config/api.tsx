@@ -4,11 +4,20 @@ import { Platform } from 'react-native';
 const getApiBaseUrl = (): string => {
 
     // 1️⃣ Use environment variable first
+    // 1️⃣ Priority: Automatically detected IP (only in dev)
+    if (__DEV__) {
+        const dynamicIp = Constants.expoConfig?.extra?.apiIp;
+        if (dynamicIp && dynamicIp !== 'localhost') {
+            return `http://${dynamicIp}:8000/api`;
+        }
+    }
+
+    // 2️⃣ Use environment variable if provided
     if (process.env.EXPO_PUBLIC_API_URL) {
         return process.env.EXPO_PUBLIC_API_URL;
     }
 
-    // 2️⃣ Check for IP specify in env
+    // 3️⃣ Check for IP specified in env
     if (process.env.EXPO_PUBLIC_API_IP) {
         return `http://${process.env.EXPO_PUBLIC_API_IP}:8000/api`;
     }
