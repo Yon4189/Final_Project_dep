@@ -95,7 +95,7 @@ export default function LandingScreen() {
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { marginTop: 40 }]}>
+      <View style={[styles.header, { marginTop: 100 }]}>
         <Text style={styles.title}>
           <Text>HomeService Pro</Text>
         </Text>

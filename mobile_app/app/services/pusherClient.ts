@@ -18,11 +18,18 @@ const getReverbHost = (): string => {
     return process.env.EXPO_PUBLIC_REVERB_HOST;
   }
   if (__DEV__) {
+    // 1️⃣ Priority: Automatically detected IP from app.config.js
+    const dynamicIp = Constants.expoConfig?.extra?.apiIp;
+    if (dynamicIp && dynamicIp !== 'localhost') {
+      return dynamicIp;
+    }
+
+    // 2️⃣ Fallback: Try hostUri from Expo
     const hostUri = Constants.expoConfig?.hostUri;
     if (hostUri) {
       const host = hostUri.split(':')[0];
       if (host && host !== 'localhost' && host !== '127.0.0.1') {
-        return host; // Same LAN IP as HTTP API
+        return host;
       }
     }
     if (Platform.OS === 'android') return '10.0.2.2';
@@ -68,7 +75,7 @@ export async function getPusher(): Promise<Pusher> {
       },
     });
     pusherInstance = instance;
-    console.log('[Reverb] Connected ✅');
+    console.log('[Reverb] Connected ');
     return instance;
   } finally {
     connecting = false;
