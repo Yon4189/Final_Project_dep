@@ -164,7 +164,7 @@ Route::group(['middleware' => 'auth:customer', 'prefix' => 'customer'], function
     Route::post('/bookings/{bookingID}/dispute', [DisputeController::class, 'customerRaiseDispute']);
     Route::get('/disputes', [DisputeController::class, 'getCustomerDisputes']);
     Route::get('/disputes/{disputeID}', [DisputeController::class, 'show']);
-    Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage']);
+    Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
 
 
     // Address Book Routes
@@ -239,7 +239,7 @@ Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function
     Route::post('/bookings/{bookingID}/dispute', [DisputeController::class, 'providerRaiseDispute']);
     Route::get('/disputes', [DisputeController::class, 'getProviderDisputes']);
     Route::get('/disputes/{disputeID}', [DisputeController::class, 'show']);
-    Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage']);
+    Route::post('/disputes/{disputeID}/messages', [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
 
     Route::post('/tracking/update', [ProviderTrackingController::class, 'updateLocation']);
     Route::get('/tracking/booking/{bookingID}', [ProviderTrackingController::class, 'getBookingRoute']);
@@ -304,7 +304,7 @@ Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin'], function () {
     Route::get('/disputes/{disputeID}', [AdminDisputeController::class, 'show']);
     Route::put('/disputes/{disputeID}/status', [AdminDisputeController::class, 'updateStatus']);
     Route::post('/disputes/{disputeID}/notes', [AdminDisputeController::class, 'addPrivateNote']);
-    Route::post('/disputes/{disputeID}/messages', [AdminDisputeController::class, 'addMessage']);
+    Route::post('/disputes/{disputeID}/messages', [AdminDisputeController::class, 'addMessage'])->middleware('throttle:10,1');
     Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
 
     Route::post('/withdrawals/{id}/approve', [AdminWithdrawalController::class, 'approveWithdrawal']);
