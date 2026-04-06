@@ -1,12 +1,11 @@
 // app/(provider)/requests/[id].tsx
-import { Colors } from "@/app/constants/Colors";
 import {
   formatCurrency,
   formatDateTime
 } from "@/app/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -31,17 +30,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from "@/app/services/api";
 import * as pusherClient from "@/app/services/pusherClient";
 import { useTracking } from "@/hooks/useTracking";
-
-const STATUS_COLORS = {
-  pending: Colors.warning,
-  accepted: Colors.primary,
-  confirmed: Colors.primary,
-  arrived: Colors.primary,
-  in_progress: Colors.info,
-  waiting_customer_confirmation: Colors.info,
-  completed: Colors.success,
-  cancelled: Colors.error,
-};
+import { useTheme } from "@/app/context/ThemeContext";
+import { ThemeColors } from "@/app/constants/Colors";
 
 const STATUS_ICONS = {
   pending: "time-outline",
@@ -65,6 +55,18 @@ const STATUS_STEPS = [
 export default function RequestDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const STATUS_COLORS = useMemo(() => ({
+    pending: colors.warning,
+    accepted: colors.primary,
+    confirmed: colors.primary,
+    arrived: colors.primary,
+    in_progress: colors.info,
+    waiting_customer_confirmation: colors.info,
+    completed: colors.success,
+    cancelled: colors.error,
+  }), [colors]);
   const [refreshing, setRefreshing] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -140,10 +142,7 @@ export default function RequestDetails() {
   };
 
   const getStatusColor = (status: string) => {
-    return (
-      STATUS_COLORS[status as keyof typeof STATUS_COLORS] ||
-      Colors.text.secondary
-    );
+    return STATUS_COLORS[status as keyof typeof STATUS_COLORS] || colors.text.secondary;
   };
 
   const getStatusIcon = (status: string) => {
@@ -347,22 +346,12 @@ export default function RequestDetails() {
       ]}
     >
       <View style={styles.headerTop}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Request Details</Text>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => setShowActionModal(true)}
-        >
-          <Ionicons
-            name="ellipsis-vertical"
-            size={22}
-            color={Colors.text.primary}
-          />
+        <TouchableOpacity style={styles.menuButton} onPress={() => setShowActionModal(true)}>
+          <Ionicons name="ellipsis-vertical" size={22} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
 
@@ -415,7 +404,7 @@ export default function RequestDetails() {
           <View style={styles.customerInfo}>
             <Text style={styles.customerName}>{request?.customerName}</Text>
             <View style={styles.customerRating}>
-              <Ionicons name="star" size={14} color={Colors.warning} />
+              <Ionicons name="star" size={14} color={colors.warning} />
               <Text style={styles.ratingText}>4.8</Text>
               <Text style={styles.reviewCount}>(127 reviews)</Text>
             </View>
@@ -424,15 +413,11 @@ export default function RequestDetails() {
 
         <View style={styles.contactButtons}>
           <TouchableOpacity style={styles.contactButton} onPress={handleCall}>
-            <Ionicons name="call" size={20} color={Colors.primary} />
+            <Ionicons name="call" size={20} color={colors.primary} />
             <Text style={styles.contactButtonText}>Call</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.contactButton}
-            onPress={handleMessage}
-          >
-            <Ionicons name="chatbubble" size={20} color={Colors.primary} />
+          <TouchableOpacity style={styles.contactButton} onPress={handleMessage}>
+            <Ionicons name="chatbubble" size={20} color={colors.primary} />
             <Text style={styles.contactButtonText}>Message</Text>
           </TouchableOpacity>
         </View>
@@ -445,59 +430,41 @@ export default function RequestDetails() {
       <Text style={styles.sectionTitle}>Service Details</Text>
       <View style={styles.detailsCard}>
         <View style={styles.detailRow}>
-          <Ionicons name="construct-outline" size={20} color={Colors.primary} />
+          <Ionicons name="construct-outline" size={20} color={colors.primary} />
           <View style={styles.detailContent}>
             <Text style={styles.detailLabel}>Service</Text>
             <Text style={styles.detailValue}>{request?.serviceName}</Text>
           </View>
         </View>
-
         <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
+          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
           <View style={styles.detailContent}>
             <Text style={styles.detailLabel}>Date & Time</Text>
-            <Text style={styles.detailValue}>
-              {request?.scheduledDate} at {request?.scheduledTime}
-            </Text>
+            <Text style={styles.detailValue}>{request?.scheduledDate} at {request?.scheduledTime}</Text>
           </View>
         </View>
-
         <View style={styles.detailRow}>
-          <Ionicons name="time-outline" size={20} color={Colors.primary} />
+          <Ionicons name="time-outline" size={20} color={colors.primary} />
           <View style={styles.detailContent}>
             <Text style={styles.detailLabel}>Estimated Duration</Text>
-            <Text style={styles.detailValue}>
-              {request?.estimatedDuration} minutes
-            </Text>
+            <Text style={styles.detailValue}>{request?.estimatedDuration} minutes</Text>
           </View>
         </View>
-
         {request?.description && (
           <View style={styles.detailRow}>
-            <Ionicons
-              name="document-text-outline"
-              size={20}
-              color={Colors.primary}
-            />
+            <Ionicons name="document-text-outline" size={20} color={colors.primary} />
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Description</Text>
               <Text style={styles.detailValue}>{request.description}</Text>
             </View>
           </View>
         )}
-
         {request?.specialInstructions && (
           <View style={styles.detailRow}>
-            <Ionicons
-              name="alert-circle-outline"
-              size={20}
-              color={Colors.warning}
-            />
+            <Ionicons name="alert-circle-outline" size={20} color={colors.warning} />
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Special Instructions</Text>
-              <Text style={[styles.detailValue, styles.instructionsText]}>
-                {request.specialInstructions}
-              </Text>
+              <Text style={[styles.detailValue, styles.instructionsText]}>{request.specialInstructions}</Text>
             </View>
           </View>
         )}
@@ -510,31 +477,18 @@ export default function RequestDetails() {
       <Text style={styles.sectionTitle}>Service Location</Text>
       <View style={styles.locationCard}>
         <View style={styles.addressContainer}>
-          <Ionicons name="location-outline" size={20} color={Colors.primary} />
+          <Ionicons name="location-outline" size={20} color={colors.primary} />
           <Text style={styles.addressText}>{request?.customerAddress}</Text>
         </View>
-
         {request?.distance && (
           <View style={styles.distanceContainer}>
             <View style={styles.distanceItem}>
-              <Ionicons
-                name="navigate-outline"
-                size={16}
-                color={Colors.text.secondary}
-              />
-              <Text style={styles.distanceText}>
-                {request.distance.toFixed(1)} km away
-              </Text>
+              <Ionicons name="navigate-outline" size={16} color={colors.text.secondary} />
+              <Text style={styles.distanceText}>{request.distance.toFixed(1)} km away</Text>
             </View>
             <View style={styles.distanceItem}>
-              <Ionicons
-                name="time-outline"
-                size={16}
-                color={Colors.text.secondary}
-              />
-              <Text style={styles.distanceText}>
-                ~{request.travelTime} min drive
-              </Text>
+              <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
+              <Text style={styles.distanceText}>~{request.travelTime} min drive</Text>
             </View>
           </View>
         )}
@@ -562,21 +516,13 @@ export default function RequestDetails() {
               ]}
             />
             <View style={styles.mapOverlay}>
-              <Ionicons
-                name="expand-outline"
-                size={20}
-                color={Colors.surface}
-              />
+              <Ionicons name="expand-outline" size={20} color={colors.surface} />
               <Text style={styles.mapOverlayText}>View on map</Text>
             </View>
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity
-          style={styles.directionsButton}
-          onPress={handleOpenMaps}
-        >
-          <Ionicons name="navigate" size={20} color={Colors.surface} />
+        <TouchableOpacity style={styles.directionsButton} onPress={handleOpenMaps}>
+          <Ionicons name="navigate" size={20} color={colors.surface} />
           <Text style={styles.directionsButtonText}>Start Navigation</Text>
         </TouchableOpacity>
       </View>
@@ -606,27 +552,14 @@ export default function RequestDetails() {
 
         {(request?.status === "completed" || request?.status === "waiting_customer_confirmation") && (
           <View style={styles.paymentStatus}>
-            <Ionicons
-              name="checkmark-circle"
-              size={20}
-              color={Colors.success}
-            />
-            <Text style={styles.paymentStatusText}>
-              Payment pending customer confirmation
-            </Text>
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Text style={styles.paymentStatusText}>Payment pending customer confirmation</Text>
           </View>
         )}
-
         {request?.status === "confirmed" && (
           <View style={styles.paymentStatus}>
-            <Ionicons
-              name="card-outline"
-              size={20}
-              color={Colors.primary}
-            />
-            <Text style={[styles.paymentStatusText, { color: Colors.primary }]}>
-              Payment Held - Ready to start
-            </Text>
+            <Ionicons name="card-outline" size={20} color={colors.primary} />
+            <Text style={[styles.paymentStatusText, { color: colors.primary }]}>Payment Held - Ready to start</Text>
           </View>
         )}
       </View>
@@ -657,9 +590,7 @@ export default function RequestDetails() {
                     <Ionicons
                       name={step.icon as any}
                       size={14}
-                      color={
-                        isCompleted ? Colors.surface : Colors.text.secondary
-                      }
+                      color={isCompleted ? colors.surface : colors.text.secondary}
                     />
                   </View>
                   {index < STATUS_STEPS.length - 1 && (
@@ -713,89 +644,52 @@ export default function RequestDetails() {
       <View style={styles.actionButtonsContainer}>
         {isPending && (
           <>
-            <TouchableOpacity
-              style={styles.acceptButton}
-              onPress={handleAccept}
-            >
-              <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color={Colors.surface}
-              />
+            <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
               <Text style={styles.acceptButtonText}>Accept Request</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.rejectButton}
-              onPress={() => setShowActionModal(true)}
-            >
-              <Ionicons name="close-circle" size={20} color={Colors.error} />
+            <TouchableOpacity style={styles.rejectButton} onPress={() => setShowActionModal(true)}>
+              <Ionicons name="close-circle" size={20} color={colors.error} />
               <Text style={styles.rejectButtonText}>Reject</Text>
             </TouchableOpacity>
           </>
         )}
-
         {(isConfirmed || isAccepted) && (
           <View style={styles.confirmedActions}>
-            <TouchableOpacity
-              style={styles.rescheduleButton}
-              onPress={() => setShowScheduleModal(true)}
-            >
-              <Ionicons name="calendar" size={20} color={Colors.warning} />
+            <TouchableOpacity style={styles.rescheduleButton} onPress={() => setShowScheduleModal(true)}>
+              <Ionicons name="calendar" size={20} color={colors.warning} />
               <Text style={styles.rescheduleButtonText}>Reschedule</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity style={styles.arriveButton} onPress={handleArrive}>
-              <Ionicons name="pin" size={20} color={Colors.surface} />
+              <Ionicons name="pin" size={20} color={colors.surface} />
               <Text style={styles.arriveButtonText}>Mark Arrived</Text>
             </TouchableOpacity>
           </View>
         )}
-
         {isArrived && (
           <TouchableOpacity style={styles.startButton} onPress={handleStart}>
-            <Ionicons name="play-circle" size={20} color={Colors.surface} />
+            <Ionicons name="play-circle" size={20} color={colors.surface} />
             <Text style={styles.startButtonText}>Start Service</Text>
           </TouchableOpacity>
         )}
-
         {isInProgress && (
-          <TouchableOpacity
-            style={styles.completeButton}
-            onPress={handleComplete}
-          >
-            <Ionicons
-              name="checkmark-done-circle"
-              size={20}
-              color={Colors.surface}
-            />
+          <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
+            <Ionicons name="checkmark-done-circle" size={20} color={colors.surface} />
             <Text style={styles.completeButtonText}>Complete Service</Text>
           </TouchableOpacity>
         )}
-
         {isWaitingConfirmation && (
-          <View style={[styles.completedMessage, { backgroundColor: Colors.info + '10' }]}>
-            <Ionicons
-              name="time-outline"
-              size={24}
-              color={Colors.info}
-            />
-            <Text style={[styles.completedText, { color: Colors.info }]}>
+          <View style={[styles.completedMessage, { backgroundColor: colors.info + '10' }]}>
+            <Ionicons name="time-outline" size={24} color={colors.info} />
+            <Text style={[styles.completedText, { color: colors.info }]}>
               Service marked as complete. Waiting for customer to confirm and release payment.
             </Text>
           </View>
         )}
-
         {isCompleted && (
           <View style={styles.completedMessage}>
-            <Ionicons
-              name="checkmark-circle"
-              size={24}
-              color={Colors.success}
-            />
-            <Text style={styles.completedText}>
-              Service completed successfully. Payment has been processed.
-            </Text>
+            <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+            <Text style={styles.completedText}>Service completed successfully. Payment has been processed.</Text>
           </View>
         )}
       </View>
@@ -817,16 +711,15 @@ export default function RequestDetails() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Reject Request</Text>
             <TouchableOpacity onPress={() => setShowActionModal(false)}>
-              <Ionicons name="close" size={24} color={Colors.text.primary} />
+              <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
-
           <View style={styles.modalBody}>
             <Text style={styles.modalLabel}>Reason for rejection</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Please provide a reason..."
-              placeholderTextColor={Colors.text.secondary}
+              placeholderTextColor={colors.text.secondary}
               value={rejectReason}
               onChangeText={setRejectReason}
               multiline
@@ -874,29 +767,19 @@ export default function RequestDetails() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Reschedule Service</Text>
             <TouchableOpacity onPress={() => setShowScheduleModal(false)}>
-              <Ionicons name="close" size={24} color={Colors.text.primary} />
+              <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
-
           <View style={styles.modalBody}>
             <Text style={styles.modalLabel}>New Date</Text>
             <TouchableOpacity style={styles.modalPicker}>
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={Colors.primary}
-              />
-              <Text style={styles.modalPickerText}>
-                {rescheduleDate || "Select date"}
-              </Text>
+              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+              <Text style={styles.modalPickerText}>{rescheduleDate || "Select date"}</Text>
             </TouchableOpacity>
-
             <Text style={styles.modalLabel}>New Time</Text>
             <TouchableOpacity style={styles.modalPicker}>
-              <Ionicons name="time-outline" size={20} color={Colors.primary} />
-              <Text style={styles.modalPickerText}>
-                {rescheduleTime || "Select time"}
-              </Text>
+              <Ionicons name="time-outline" size={20} color={colors.primary} />
+              <Text style={styles.modalPickerText}>{rescheduleTime || "Select time"}</Text>
             </TouchableOpacity>
 
             <View style={styles.modalActions}>
@@ -938,11 +821,11 @@ export default function RequestDetails() {
       <View style={styles.fullScreenModal}>
         <View style={styles.directionsHeader}>
           <TouchableOpacity onPress={() => setShowDirections(false)}>
-            <Ionicons name="close" size={24} color={Colors.text.primary} />
+            <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.directionsTitle}>Customer Location</Text>
           <TouchableOpacity onPress={handleOpenMaps}>
-            <Ionicons name="navigate" size={24} color={Colors.primary} />
+            <Ionicons name="navigate" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -968,33 +851,18 @@ export default function RequestDetails() {
 
         <View style={styles.directionsFooter}>
           <View style={styles.destinationInfo}>
-            <Ionicons name="location" size={20} color={Colors.primary} />
-            <Text style={styles.destinationAddress}>
-              {request?.customerAddress}
-            </Text>
+            <Ionicons name="location" size={20} color={colors.primary} />
+            <Text style={styles.destinationAddress}>{request?.customerAddress}</Text>
           </View>
-
           {request?.distance && (
             <View style={styles.distanceInfo}>
               <View style={styles.distanceDetail}>
-                <Ionicons
-                  name="navigate-outline"
-                  size={16}
-                  color={Colors.text.secondary}
-                />
-                <Text style={styles.distanceDetailText}>
-                  {request.distance.toFixed(1)} km
-                </Text>
+                <Ionicons name="navigate-outline" size={16} color={colors.text.secondary} />
+                <Text style={styles.distanceDetailText}>{request.distance.toFixed(1)} km</Text>
               </View>
               <View style={styles.distanceDetail}>
-                <Ionicons
-                  name="time-outline"
-                  size={16}
-                  color={Colors.text.secondary}
-                />
-                <Text style={styles.distanceDetailText}>
-                  ~{request.travelTime} min
-                </Text>
+                <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
+                <Text style={styles.distanceDetailText}>~{request.travelTime} min</Text>
               </View>
             </View>
           )}
@@ -1010,12 +878,9 @@ export default function RequestDetails() {
   if (!request) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
+        <Ionicons name="alert-circle-outline" size={64} color={colors.error} />
         <Text style={styles.errorText}>Request not found</Text>
-        <TouchableOpacity
-          style={styles.errorButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
           <Text style={styles.errorButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -1048,13 +913,13 @@ export default function RequestDetails() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 3,
@@ -1072,7 +937,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   menuButton: {
     padding: 4,
@@ -1099,28 +964,28 @@ const styles = StyleSheet.create({
   trackingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.success + '15',
+    backgroundColor: colors.success + '15',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.success + '30',
+    borderColor: colors.success + '30',
   },
   trackingDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.success,
+    backgroundColor: colors.success,
     marginRight: 6,
   },
   trackingText: {
     fontSize: 11,
-    color: Colors.success,
+    color: colors.success,
     fontWeight: '600',
   },
   requestNumber: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   section: {
     padding: 20,
@@ -1129,15 +994,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 12,
   },
   customerCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   customerHeader: {
     flexDirection: "row",
@@ -1156,7 +1021,7 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 4,
   },
   customerRating: {
@@ -1167,12 +1032,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 14,
     fontWeight: "500",
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   reviewCount: {
     marginLeft: 4,
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   contactButtons: {
     flexDirection: "row",
@@ -1183,22 +1048,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary + "10",
+    backgroundColor: colors.primary + "10",
     paddingVertical: 12,
     borderRadius: 12,
     gap: 8,
   },
   contactButtonText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: "500",
   },
   detailsCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   detailRow: {
     flexDirection: "row",
@@ -1210,23 +1075,23 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   instructionsText: {
-    color: Colors.warning,
+    color: colors.warning,
     fontStyle: "italic",
   },
   locationCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   addressContainer: {
     flexDirection: "row",
@@ -1237,7 +1102,7 @@ const styles = StyleSheet.create({
   addressText: {
     flex: 1,
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     lineHeight: 20,
   },
   distanceContainer: {
@@ -1252,7 +1117,7 @@ const styles = StyleSheet.create({
   },
   distanceText: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   mapPreview: {
     height: 150,
@@ -1269,7 +1134,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     right: 8,
-    backgroundColor: Colors.primary + "CC",
+    backgroundColor: colors.primary + "CC",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
@@ -1278,12 +1143,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   mapOverlayText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 12,
     fontWeight: "500",
   },
   markerContainer: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 4,
   },
@@ -1291,22 +1156,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,
   },
   directionsButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 14,
     fontWeight: "600",
   },
   paymentCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   priceRow: {
     flexDirection: "row",
@@ -1316,48 +1181,48 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   priceValue: {
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     fontWeight: "500",
   },
   priceDivider: {
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
     marginVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   totalValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: Colors.primary,
+    color: colors.primary,
   },
   paymentStatus: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 16,
     padding: 12,
-    backgroundColor: Colors.success + "10",
+    backgroundColor: colors.success + "10",
     borderRadius: 12,
     gap: 8,
   },
   paymentStatusText: {
     flex: 1,
     fontSize: 13,
-    color: Colors.success,
+    color: colors.success,
   },
   timelineCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   timelineItem: {
     flexDirection: "row",
@@ -1371,19 +1236,19 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
   },
   timelineDotCompleted: {
-    backgroundColor: Colors.success,
-    borderColor: Colors.success,
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   timelineDotCurrent: {
-    borderColor: Colors.primary,
+    borderColor: colors.primary,
     borderWidth: 3,
   },
   timelineLine: {
@@ -1391,10 +1256,10 @@ const styles = StyleSheet.create({
     top: 26,
     width: 2,
     height: 40,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
   },
   timelineLineCompleted: {
-    backgroundColor: Colors.success,
+    backgroundColor: colors.success,
   },
   timelineContent: {
     flex: 1,
@@ -1403,16 +1268,16 @@ const styles = StyleSheet.create({
   },
   timelineLabel: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     marginBottom: 4,
   },
   timelineLabelCompleted: {
-    color: Colors.text.primary,
+    color: colors.text.primary,
     fontWeight: "500",
   },
   timelineTime: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   actionButtonsContainer: {
     padding: 20,
@@ -1422,14 +1287,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.success,
+    backgroundColor: colors.success,
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 12,
     gap: 8,
   },
   acceptButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -1437,15 +1302,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.error + "10",
+    backgroundColor: colors.error + "10",
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.error + "30",
+    borderColor: colors.error + "30",
     gap: 8,
   },
   rejectButtonText: {
-    color: Colors.error,
+    color: colors.error,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -1458,15 +1323,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.warning + "10",
+    backgroundColor: colors.warning + "10",
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.warning + "30",
+    borderColor: colors.warning + "30",
     gap: 8,
   },
   rescheduleButtonText: {
-    color: Colors.warning,
+    color: colors.warning,
     fontSize: 15,
     fontWeight: "600",
   },
@@ -1475,13 +1340,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
   },
   startButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 15,
     fontWeight: "600",
   },
@@ -1490,13 +1355,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
   },
   arriveButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 15,
     fontWeight: "600",
   },
@@ -1504,20 +1369,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.success,
+    backgroundColor: colors.success,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
   },
   completeButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 16,
     fontWeight: "600",
   },
   completedMessage: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.success + "10",
+    backgroundColor: colors.success + "10",
     padding: 16,
     borderRadius: 12,
     gap: 12,
@@ -1525,7 +1390,7 @@ const styles = StyleSheet.create({
   completedText: {
     flex: 1,
     fontSize: 14,
-    color: Colors.success,
+    color: colors.success,
     lineHeight: 20,
   },
   modalOverlay: {
@@ -1534,7 +1399,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -1548,7 +1413,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   modalBody: {
     gap: 16,
@@ -1556,32 +1421,32 @@ const styles = StyleSheet.create({
   modalLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 4,
   },
   modalInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     minHeight: 100,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   modalPicker: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     gap: 12,
   },
   modalPickerText: {
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   modalActions: {
     flexDirection: "row",
@@ -1594,24 +1459,24 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     alignItems: "center",
   },
   modalCancelText: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     fontWeight: "500",
   },
   modalConfirmButton: {
     flex: 1,
-    backgroundColor: Colors.error,
+    backgroundColor: colors.error,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
   },
   modalConfirmText: {
     fontSize: 14,
-    color: Colors.surface,
+    color: colors.surface,
     fontWeight: "600",
   },
   modalButtonDisabled: {
@@ -1619,7 +1484,7 @@ const styles = StyleSheet.create({
   },
   fullScreenModal: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   directionsHeader: {
     flexDirection: "row",
@@ -1628,23 +1493,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   directionsTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   fullScreenMap: {
     flex: 1,
   },
   directionsFooter: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: colors.border,
   },
   destinationInfo: {
     flexDirection: "row",
@@ -1655,7 +1520,7 @@ const styles = StyleSheet.create({
   destinationAddress: {
     flex: 1,
     fontSize: 14,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     lineHeight: 20,
   },
   distanceInfo: {
@@ -1669,7 +1534,7 @@ const styles = StyleSheet.create({
   },
   distanceDetailText: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   errorContainer: {
     flex: 1,
@@ -1679,18 +1544,18 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginTop: 16,
     marginBottom: 24,
   },
   errorButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
   },
   errorButtonText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 14,
     fontWeight: "600",
   },

@@ -21,8 +21,9 @@ import {
   PanResponder,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/app/context/ThemeContext";
 import { Colors } from "@/app/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 import { useLocation } from "../../hooks/useLocation";
 import { useSearch } from "../../hooks/useSearch";
@@ -101,6 +102,8 @@ export default function CustomerDashboard() {
   
   // Sidebar animation and gesture handling
   const sidebarAnim = React.useRef(new Animated.Value(0)).current;
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const SIDEBAR_WIDTH = 260; // Slightly narrower as requested
 
   const panResponder = React.useRef(
@@ -434,7 +437,7 @@ export default function CustomerDashboard() {
                 onPress={closeMenu}
                 style={styles.menuCloseButton}
               >
-                <Ionicons name="close" size={24} color={Colors.text?.primary || '#222'} />
+                <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -455,7 +458,7 @@ export default function CustomerDashboard() {
                     <Ionicons name={item.icon} size={22} color={item.color} />
                   </View>
                   <Text style={styles.menuItemLabel}>{item.label}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={Colors.text?.secondary || '#888'} />
+                  <Ionicons name="chevron-forward" size={16} color={colors.text.secondary} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -495,7 +498,7 @@ export default function CustomerDashboard() {
               onPress={openMenu}
               activeOpacity={0.7}
             >
-              <Ionicons name="menu" size={24} color={Colors.primary} />
+              <Ionicons name="menu" size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -508,7 +511,7 @@ export default function CustomerDashboard() {
               <Ionicons
                 name="notifications-outline"
                 size={24}
-                color={Colors.primary}
+                color={colors.primary}
               />
               {unreadNotifications > 0 && (
                 <View style={styles.notificationBadge}>
@@ -542,7 +545,7 @@ export default function CustomerDashboard() {
                     <Ionicons
                       name="person-outline"
                       size={24}
-                      color={Colors.primary}
+                      color={colors.primary}
                     />
                   </View>
                 );
@@ -624,7 +627,7 @@ export default function CustomerDashboard() {
       <View style={styles.recentChatsSection}>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleContainer}>
-            <Ionicons name="chatbubbles-outline" size={20} color={Colors.primary} />
+            <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Recent Chats</Text>
           </View>
           <TouchableOpacity onPress={() => router.push("/(customer)/chat/index")}>
@@ -672,7 +675,6 @@ export default function CustomerDashboard() {
     );
   };
 
-
   const renderTopRated = () => {
     if (topRatedLoading) {
       return <LoadingSpinner />;
@@ -689,9 +691,6 @@ export default function CustomerDashboard() {
         params: {
           sortBy: "rating",
           minRating: "4",
-          // You can add more filters here
-          // categoryId: filters.categoryId || '',
-          // maxDistance: '50',
         },
       });
     };
@@ -705,7 +704,7 @@ export default function CustomerDashboard() {
       <View style={styles.topRatedSection}>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleContainer}>
-            <Ionicons name="star" size={20} color={Colors.warning} />
+            <Ionicons name="star" size={20} color={colors.warning} />
             <Text style={styles.sectionTitle}>Top Rated Pros</Text>
           </View>
           <TouchableOpacity onPress={handleViewAllTopRated}>
@@ -735,7 +734,7 @@ export default function CustomerDashboard() {
                 {provider.businessName}
               </Text>
               <View style={styles.topRatedRating}>
-                <Ionicons name="star" size={14} color={Colors.warning} />
+                <Ionicons name="star" size={14} color={colors.warning} />
                 <Text style={styles.topRatedRatingText}>
                   {provider.rating.toFixed(1)}
                 </Text>
@@ -769,7 +768,7 @@ export default function CustomerDashboard() {
         <Ionicons
           name="list-outline"
           size={20}
-          color={!showMapView ? Colors.primary : Colors.text.secondary}
+          color={!showMapView ? colors.primary : colors.text.secondary}
         />
         <Text
           style={[
@@ -791,7 +790,7 @@ export default function CustomerDashboard() {
         <Ionicons
           name="map-outline"
           size={20}
-          color={showMapView ? Colors.primary : Colors.text.secondary}
+          color={showMapView ? colors.primary : colors.text.secondary}
         />
         <Text
           style={[
@@ -806,11 +805,9 @@ export default function CustomerDashboard() {
   );
 
   const renderMapView = () => {
-    // Convert providers to markers format
     const markers = providers
-      .filter((provider) => provider.location) // Filter out providers without location
+      .filter((provider) => provider.location)
       .map((provider) => {
-        // TypeScript assertion to ensure location exists after filter
         const location = provider.location!;
         return {
           position:
@@ -826,7 +823,6 @@ export default function CustomerDashboard() {
         };
       });
 
-    // Prepare center coordinates
     const center = location
       ? Platform.OS === "web"
         ? [location.latitude, location.longitude]
@@ -848,8 +844,6 @@ export default function CustomerDashboard() {
       </View>
     );
   };
-
-  // renderProviderList has been integrated into the main return to avoid nested VirtualizedLists
 
   if (locationLoading && !providers.length) {
     return (
@@ -1049,457 +1043,490 @@ export default function CustomerDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   mainContent: {
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
+    padding: 20,
+    backgroundColor: colors.surface,
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 15,
-    backgroundColor: Colors.surface,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    marginBottom: 20,
-    position: 'relative',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   greetingContainer: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   greeting: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: Colors.text.primary,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.text.primary,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 12,
-    color: Colors.text.secondary,
+    fontSize: 14,
+    color: colors.text.secondary,
     marginTop: 2,
     textAlign: 'center',
   },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    position: 'absolute',
-    right: 0,
-  },
   navigationRow: {
-    width: '100%',
-    alignItems: 'flex-start',
-    marginTop: 4,
-    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
   },
   leftIconColumn: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 4,
   },
   hamburgerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: Colors.primary + '15',
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 8,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary + '15',
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  notificationButton: {
-    position: "relative",
-    padding: 4,
-  },
-  // Hamburger menu styles
-  menuOverlay: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  menuDropdown: {
-    height: '100%',
-    backgroundColor: Colors.surface,
-    width: 260,
-    shadowColor: '#000',
-    shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 20,
-  },
-  menuHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 70 : 50,
-    paddingBottom: 25,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    marginBottom: 8,
-    backgroundColor: Colors.primary + '08',
-  },
-  menuTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  menuSubtitle: {
-    fontSize: 12,
-    color: Colors.text?.secondary || '#666',
-    marginTop: 2,
-  },
-  menuCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 14,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border + '50',
-  },
-  menuItemIcon: {
-    width: 42,
-    height: 42,
+    padding: 10,
+    backgroundColor: colors.background,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuItemLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text?.primary || '#222',
-  },
-  headerButton: {
-    position: "relative",
-    padding: 4,
-  },
-  badge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: Colors.surface,
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  complaintBadge: {
-    backgroundColor: Colors.warning,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: 8,
+    position: 'relative',
   },
   notificationBadge: {
-    position: "absolute",
+    position: 'absolute',
     top: -2,
     right: -2,
-    backgroundColor: Colors.error,
-    borderRadius: 10,
+    backgroundColor: colors.error,
     minWidth: 18,
     height: 18,
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    zIndex: 1,
   },
   notificationBadgeText: {
-    color: Colors.surface,
+    color: '#FFF',
     fontSize: 10,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   profileButton: {
-    padding: 2,
     marginLeft: 4,
   },
   profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: colors.primary,
+  },
+  profilePlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   searchContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: Colors.surface,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
     zIndex: 10,
-    alignItems: 'flex-start',
   },
   content: {
     flex: 1,
   },
   categoriesSection: {
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    marginBottom: 30,
+    marginTop: 20,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   sectionTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginLeft: 8,
+    fontWeight: 'bold',
+    color: colors.text.primary,
   },
   seeAllText: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: "500",
+    color: colors.primary,
+    fontWeight: '600',
   },
   categoriesScroll: {
+    marginLeft: -20,
     paddingLeft: 20,
-    marginBottom: 29,
+    marginBottom: 10,
   },
   categoryCard: {
-    alignItems: "center",
-    marginRight: 16,
-    width: 70,
+    width: 85,
+    alignItems: 'center',
+    marginRight: 15,
+    padding: 10,
+    borderRadius: 15,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   categoryCardSelected: {
-    opacity: 1,
+    backgroundColor: colors.primary + '10',
+    borderColor: colors.primary,
   },
   categoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.background,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
-    borderWidth: 2,
-    borderColor: Colors.border,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   categoryIcon: {
     fontSize: 24,
   },
   categoryName: {
     fontSize: 12,
-    color: Colors.text.secondary,
-    textAlign: "center",
+    fontWeight: '600',
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  recentChatsSection: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  recentChatsScroll: {
+    paddingBottom: 5,
+    marginLeft: -20,
+    paddingLeft: 20,
+  },
+  recentChatCard: {
+    width: 75,
+    marginRight: 15,
+    alignItems: 'center',
+  },
+  recentChatAvatarContainer: {
+    position: 'relative',
+    marginBottom: 6,
+  },
+  recentChatAvatar: {
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  recentChatUnreadBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.error,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  recentChatName: {
+    fontSize: 11,
+    color: colors.text.primary,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   topRatedSection: {
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    marginBottom: 8,
+    marginTop: 25,
+    paddingHorizontal: 20,
   },
   topRatedScroll: {
+    marginLeft: -20,
     paddingLeft: 20,
   },
   topRatedCard: {
-    width: 100,
-    marginRight: 12,
-    alignItems: "center",
-    backgroundColor: Colors.background,
-    borderRadius: 12,
+    width: 140,
+    backgroundColor: colors.surface,
+    borderRadius: 15,
     padding: 12,
+    marginRight: 15,
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
-
-  topRatedImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 8,
-  },
-  topRatedName: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: Colors.text.primary,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  topRatedRating: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  topRatedRatingText: {
-    marginLeft: 2,
-    fontSize: 11,
-    color: Colors.text.primary,
-    fontWeight: "500",
-  },
-  topRatedReviews: {
-    fontSize: 10,
-    color: Colors.text.secondary,
-    marginTop: 2,
-  },
-  topRatedDistance: {
-    fontSize: 10,
-    color: Colors.primary,
-    fontWeight: "500",
-    marginTop: 2,
-  },
-  viewToggle: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  viewToggleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  viewToggleActive: {
-    backgroundColor: Colors.primary + "20",
-  },
-  viewToggleText: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  viewToggleTextActive: {
-    color: Colors.primary,
-    fontWeight: "500",
-  },
-  mapContainer: {
-    height: 500,
-    marginTop: 12,
-    marginHorizontal: 20,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  providersList: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  popularServices: {
-    padding: 20,
-  },
-  popularTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginBottom: 16,
-  },
-  popularGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -5,
-  },
-  popularItem: {
-    width: "33.33%",
-    padding: 5,
-  },
-  popularItemText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: Colors.text.secondary,
-    textAlign: "center",
-  },
-  popularItemIcon: {
-    fontSize: 24,
-    textAlign: "center",
-    color: Colors.primary,
-  },
-  bottomPadding: {
-    height: 80,
-  },
-  skeletonCard: {
-    backgroundColor: "#e0e0e0",
-    opacity: 0.7,
-  },
-  initialLoading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  profilePlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary + '15',
-    justifyContent: 'center',
+    borderColor: colors.placeholder || colors.border,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  quickActionsContainer: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    gap: 8,
-  },
-  actionCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  topRatedImage: {
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    marginBottom: 8,
+    backgroundColor: colors.background,
+  },
+  topRatedName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  topRatedRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  topRatedRatingText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+  },
+  topRatedReviews: {
+    fontSize: 10,
+    color: colors.text.secondary,
+    marginBottom: 4,
+  },
+  topRatedDistance: {
+    fontSize: 10,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  viewToggleActive: {
+    backgroundColor: colors.background,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  viewToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  viewToggleTextActive: {
+    color: colors.primary,
+  },
+  mapContainer: {
+    height: 400,
+    marginHorizontal: 20,
+    marginTop: 15,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  journeyCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 20,
+    marginTop: 25,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  journeyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 8,
+  },
+  journeySubtitle: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  journeySteps: {
+    gap: 0,
+  },
+  journeyStep: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  journeyStepLeft: {
+    alignItems: 'center',
+    width: 30,
+  },
+  journeyNumBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  journeyNum: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  journeyConnector: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.primary + '30',
+    marginVertical: 4,
+  },
+  journeyStepContent: {
+    flex: 1,
+    paddingBottom: 25,
+  },
+  journeyStepLabel: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  journeyStepDesc: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    lineHeight: 16,
+  },
+  providersList: {
+    paddingBottom: 100,
+  },
+  initialLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: colors.text.secondary,
+  },
+  bottomPadding: {
+    height: 100,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  menuDropdown: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 260,
+    height: '100%',
+    backgroundColor: colors.surface,
+    paddingTop: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  menuHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  menuTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  menuCloseButton: {
+    padding: 6,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    marginHorizontal: 12,
+    borderRadius: 14,
+    marginBottom: 4,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    borderRadius: 0,
+  },
+  menuItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  menuItemLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  skeletonCard: {
+    backgroundColor: colors.skeleton || colors.border,
+    opacity: 0.5,
   },
   actionIconContainer: {
     width: 44,
@@ -1508,125 +1535,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    backgroundColor: colors.background,
   },
   actionCardLabel: {
     fontSize: 12,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  journeyCard: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: 20,
-    marginTop: 20,
-    padding: 20,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  journeyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  journeySubtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  journeySteps: {
-    marginTop: 10,
-  },
-  journeyStep: {
-    flexDirection: 'row',
-    marginBottom: 0,
-  },
-  journeyStepLeft: {
-    alignItems: 'center',
-    width: 30,
-    marginRight: 15,
-  },
-  journeyNumBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  journeyNum: {
-    color: Colors.surface,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  journeyConnector: {
-    width: 2,
-    flex: 1,
-    backgroundColor: Colors.primary + '30',
-    marginVertical: 4,
-  },
-  journeyStepContent: {
-    flex: 1,
-    paddingBottom: 25,
-  },
-  journeyStepLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 4,
-  },
-  journeyStepDesc: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-    lineHeight: 18,
-  },
-  recentChatsSection: {
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    marginBottom: 8,
-  },
-  recentChatsScroll: {
-    paddingLeft: 20,
-    paddingRight: 8,
-  },
-  recentChatCard: {
-    width: 80,
-    marginRight: 16,
-    alignItems: 'center',
-  },
-  recentChatAvatarContainer: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  recentChatAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  recentChatUnreadBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.error,
-    borderWidth: 2,
-    borderColor: Colors.surface,
-  },
-  recentChatName: {
-    fontSize: 12,
-    color: Colors.text.primary,
-    textAlign: 'center',
-    fontWeight: '500',
   },
 });

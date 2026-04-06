@@ -89,6 +89,8 @@ class CustomerController extends Authenticatable
             'completedAt' => optional($booking->completed_at)->toISOString(),
             'cancelledAt' => optional($booking->cancelled_at)->toISOString(),
             'cancellationReason' => $booking->cancellation_reason,
+            'latitude' => $booking->service_latitude,
+            'longitude' => $booking->service_longitude,
             'review' => $booking->relationLoaded('review') ? $booking->review : null,
             'customer' => $customer,
             'providerPhone' => $provider?->phone,
@@ -202,7 +204,15 @@ class CustomerController extends Authenticatable
 
         $validated = $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|min:8|confirmed',
+            'new_password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',      // must contain at least one lowercase letter
+                'regex:/[A-Z]/',      // must contain at least one uppercase letter
+                'regex:/[0-9]/',      // must contain at least one digit
+            ],
         ]);
 
         if (!Hash::check($validated['current_password'], $customer->password)) {
@@ -212,7 +222,8 @@ class CustomerController extends Authenticatable
             ], 400);
         }
 
-        $customer->update(['password' => Hash::make($validated['new_password'])]);
+        $customer->password = Hash::make($validated['new_password']);
+        $customer->save();
 
         return response()->json([
             'success' => true,
@@ -664,7 +675,9 @@ class CustomerController extends Authenticatable
                     'is_moving' => ($latestTracking->speed ?? 0) > 2
                 ] : null,
                 'destination' => [
-                    'address' => $booking->address_text ?? $booking->service_address
+                    'address' => $booking->address_text ?? $booking->service_address,
+                    'latitude' => $booking->service_latitude,
+                    'longitude' => $booking->service_longitude
                 ],
                 'eta' => $eta,
                 'history' => $history,

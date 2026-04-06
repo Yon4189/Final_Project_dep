@@ -186,6 +186,8 @@ Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function
     Route::post('/logout', [ServiceProviderAuthController::class, 'logout']);
     Route::get('/profile', [ServiceProviderAuthController::class, 'profile']);
     Route::post('/profile/update', [ServiceProviderAuthController::class, 'updateProfile']);
+    Route::post('/profile/password', [ServiceProviderAuthController::class, 'changePassword']);
+    Route::post('/location/update', [ServiceProviderAuthController::class, 'updateLocation']);
     Route::post('/location/update', [ServiceProviderAuthController::class, 'updateLocation']);
     Route::post('/push-token', [ServiceProviderAuthController::class, 'updatePushToken']);
     
@@ -243,6 +245,12 @@ Route::group(['middleware' => 'auth:provider', 'prefix' => 'provider'], function
 
     Route::post('/tracking/update', [ProviderTrackingController::class, 'updateLocation']);
     Route::get('/tracking/booking/{bookingID}', [ProviderTrackingController::class, 'getBookingRoute']);
+
+    // Services Management
+    Route::get('/services', [ServiceController::class, 'index']);
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::put('/services/{id}', [ServiceController::class, 'update']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 });
 
 // ==================== ADMIN ROUTES ====================

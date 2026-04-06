@@ -48,7 +48,15 @@ class CustomerAuthController extends Controller
                     }
                 },
             ],
-            'password' => 'required|string|min:8|confirmed',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',      // must contain at least one lowercase letter
+                'regex:/[A-Z]/',      // must contain at least one uppercase letter
+                'regex:/[0-9]/',      // must contain at least one digit
+            ],
             'profilePicture' => 'nullable|image|max:2048',
             'location' => 'required|string|max:255',
             'service_city' => 'nullable|string|max:255', // Optional, will use location if not provided

@@ -40,7 +40,15 @@ class ServiceProviderAuthController extends Controller
                 'unique:service_providers,email'
             ],
             'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
-            'password' => 'required|string|min:8|confirmed',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',      // must contain at least one lowercase letter
+                'regex:/[A-Z]/',      // must contain at least one uppercase letter
+                'regex:/[0-9]/',      // must contain at least one digit
+            ],
             'service_city' => 'required|string|max:255',
             'catagoryID' => 'required|exists:catagories,catagoryID',
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -299,6 +307,9 @@ class ServiceProviderAuthController extends Controller
                 'status' => $provider->status,
                 'category' => $provider->category,
                 'services' => $provider->services,
+                'business_license' => $provider->business_license,
+                'insurance_certificate' => $provider->insurance_certificate,
+                'certifications' => $provider->certifications,
             ]
         ]);
     }
@@ -309,6 +320,12 @@ class ServiceProviderAuthController extends Controller
     public function updateProfile(Request $request)
     {
         $provider = $request->user();
+        \Log::info('Profile Update Request Received', [
+            'provider_id' => $provider->providerID,
+            'content_type' => $request->header('Content-Type'),
+            'all_data' => $request->all(),
+            'files' => array_keys($request->allFiles())
+        ]);
 
         $validator = Validator::make($request->all(), [
             'fullname' => 'sometimes|string|max:255',
@@ -317,6 +334,9 @@ class ServiceProviderAuthController extends Controller
             'service_city' => 'sometimes|string|max:255',
             'serviceRadiusKm' => 'nullable|numeric|min:1|max:100',
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'business_license' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:4096',
+            'insurance_certificate' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:4096',
+            'certifications' => 'nullable|string', // JSON string from frontend
             'current_latitude' => 'nullable|numeric|between:-90,90',
             'current_longitude' => 'nullable|numeric|between:-180,180',
         ]);
@@ -340,6 +360,25 @@ class ServiceProviderAuthController extends Controller
             $profileName = Str::random(20) . '_profile.' . $file->getClientOriginalExtension();
             $file->move(public_path('profilepics'), $profileName);
             $provider->profilePicture = 'profilepics/' . $profileName;
+        }
+
+        // Handle documents
+        $documents = ['business_license', 'insurance_certificate'];
+        foreach ($documents as $doc) {
+            if ($request->hasFile($doc)) {
+                if ($provider->$doc && file_exists(public_path($provider->$doc))) {
+                    unlink(public_path($provider->$doc));
+                }
+                $file = $request->file($doc);
+                $docName = Str::random(20) . "_{$doc}." . $file->getClientOriginalExtension();
+                $file->move(public_path('credentials'), $docName);
+                $provider->$doc = 'credentials/' . $docName;
+            }
+        }
+
+        // Handle certifications JSON
+        if ($request->has('certifications')) {
+            $provider->certifications = json_decode($request->certifications, true);
         }
 
         // Update other fields
@@ -472,6 +511,49 @@ class ServiceProviderAuthController extends Controller
             'success' => true,
             'message' => 'Bank details updated successfully',
             'data' => $this->getBankDetails($request)->original['data']
+        ]);
+    }
+
+    /**
+     * Change provider password
+     */
+    public function changePassword(Request $request)
+    {
+        $provider = Auth::guard('provider')->user();
+
+        if (!$provider) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Provider not found'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'current_password' => 'required',
+            'new_password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',      // must contain at least one lowercase letter
+                'regex:/[A-Z]/',      // must contain at least one uppercase letter
+                'regex:/[0-9]/',      // must contain at least one digit
+            ],
+        ]);
+
+        if (!Hash::check($validated['current_password'], $provider->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect'
+            ], 400);
+        }
+
+        $provider->password = Hash::make($validated['new_password']);
+        $provider->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully'
         ]);
     }
 }

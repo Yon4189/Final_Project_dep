@@ -1,5 +1,5 @@
 // app/(provider)/profile/edit.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/app/constants/Colors';
+import { useTheme } from '@/app/context/ThemeContext';
+import { ThemeColors } from '@/app/constants/Colors';
 import { useProviderQueries } from '@/hooks/useProviderQueries';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { profile, updateProfile, isLoading } = useProviderQueries();
   
   const [form, setForm] = useState({
@@ -176,7 +179,7 @@ export default function EditProfileScreen() {
           onPress={handleSave}
         >
           <Text style={styles.saveButtonText}>Save Changes</Text>
-          <Ionicons name="save-outline" size={20} color={Colors.surface} />
+          <Ionicons name="save-outline" size={20} color={colors.surface} />
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -192,93 +195,21 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingTop: 40,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.text.secondary,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 48,
-    fontSize: 15,
-    color: Colors.text.primary,
-  },
-  textArea: {
-    height: 100,
-    paddingTop: 12,
-    textAlignVertical: 'top',
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    height: 52,
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-  },
-  saveButtonText: {
-    color: Colors.surface,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  cancelButtonText: {
-    color: Colors.text.secondary,
-    fontSize: 15,
-  },
+const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { padding: 20, paddingTop: 40 },
+  header: { marginBottom: 24 },
+  title: { fontSize: 24, fontWeight: 'bold', color: colors.text.primary, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: colors.text.secondary },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text.primary, marginBottom: 12, marginTop: 8 },
+  card: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, marginBottom: 8 },
+  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, height: 48, fontSize: 15, color: colors.text.primary },
+  textArea: { height: 100, paddingTop: 12, textAlignVertical: 'top' },
+  row: { flexDirection: 'row' },
+  saveButton: { backgroundColor: colors.primary, height: 52, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 10 },
+  saveButtonText: { color: colors.surface, fontSize: 16, fontWeight: 'bold' },
+  cancelButton: { height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
+  cancelButtonText: { color: colors.text.secondary, fontSize: 15 },
 });

@@ -131,7 +131,7 @@ export default function CustomerProfile() {
   const renderEditableField = (field: EditableField) => (
     <View key={field.key} style={styles.fieldContainer}>
       <View style={styles.fieldLabelContainer}>
-        <Ionicons name={field.icon} size={20} color={Colors.primary} />
+        <Ionicons name={field.icon} size={20} color={colors.primary} />
         <Text style={styles.fieldLabel}>{field.label}</Text>
       </View>
       
@@ -142,6 +142,7 @@ export default function CustomerProfile() {
           onChangeText={(text) => setEditedProfile({ ...editedProfile, [field.key]: text })}
           keyboardType={field.type === 'email' ? 'email-address' : field.type === 'phone' ? 'phone-pad' : 'default'}
           autoCapitalize="none"
+          placeholderTextColor={colors.text.secondary}
         />
       ) : (
         <Text style={styles.fieldValue}>{field.value || 'Not set'}</Text>
@@ -157,11 +158,11 @@ export default function CustomerProfile() {
   ) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
-        <Ionicons name={icon} size={22} color={Colors.text.secondary} />
+        <Ionicons name={icon} size={22} color={colors.text.secondary} />
         <Text style={styles.settingLabel}>{label}</Text>
       </View>
       {rightElement || (
-        <Ionicons name="chevron-forward" size={20} color={Colors.text.secondary} />
+        <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
       )}
     </TouchableOpacity>
   );
@@ -187,9 +188,9 @@ export default function CustomerProfile() {
             />
             <TouchableOpacity style={styles.editImageButton} onPress={handlePickImage}>
               {uploadingImage ? (
-                <ActivityIndicator size="small" color={Colors.surface} />
+                <ActivityIndicator size="small" color={colors.surface} />
               ) : (
-                <Ionicons name="camera" size={20} color={Colors.surface} />
+                <Ionicons name="camera" size={20} color={colors.surface} />
               )}
             </TouchableOpacity>
           </View>
@@ -206,7 +207,7 @@ export default function CustomerProfile() {
                   disabled={updateProfile.isPending}
                 >
                   {updateProfile.isPending ? (
-                    <ActivityIndicator size="small" color={Colors.surface} />
+                    <ActivityIndicator size="small" color={colors.surface} />
                   ) : (
                     <Text style={styles.saveButtonText}>Save</Text>
                   )}
@@ -214,7 +215,7 @@ export default function CustomerProfile() {
               </>
             ) : (
               <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-                <Ionicons name="pencil" size={18} color={Colors.surface} />
+                <Ionicons name="pencil" size={18} color={colors.surface} />
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </TouchableOpacity>
             )}
@@ -264,40 +265,40 @@ export default function CustomerProfile() {
           <View style={styles.sectionContent}>
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
-                <Ionicons name="mail-outline" size={22} color={Colors.text.secondary} />
+                <Ionicons name="mail-outline" size={22} color={colors.text.secondary} />
                 <Text style={styles.settingLabel}>Email Notifications</Text>
               </View>
               <Switch
                 value={notifications.email}
                 onValueChange={(value) => setNotifications({ ...notifications, email: value })}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor={Colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.surface}
               />
             </View>
 
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
-                <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
+                <Ionicons name="notifications-outline" size={22} color={colors.text.secondary} />
                 <Text style={styles.settingLabel}>Push Notifications</Text>
               </View>
               <Switch
                 value={notifications.push}
                 onValueChange={(value) => setNotifications({ ...notifications, push: value })}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor={Colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.surface}
               />
             </View>
 
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
-                <Ionicons name="chatbubble-outline" size={22} color={Colors.text.secondary} />
+                <Ionicons name="chatbubble-outline" size={22} color={colors.text.secondary} />
                 <Text style={styles.settingLabel}>SMS Notifications</Text>
               </View>
               <Switch
                 value={notifications.sms}
                 onValueChange={(value) => setNotifications({ ...notifications, sms: value })}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor={Colors.surface}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.surface}
               />
             </View>
           </View>
@@ -316,7 +317,7 @@ export default function CustomerProfile() {
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+          <Ionicons name="log-out-outline" size={22} color={colors.error} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 

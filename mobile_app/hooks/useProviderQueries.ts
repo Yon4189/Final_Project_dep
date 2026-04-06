@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useProviderStore } from '@/app/store/providerStore';
 import { providerService } from '@/app/services/provider.service';
 import { useEarningsSummary } from './useProviderEarnings';
 import type {
@@ -55,17 +56,19 @@ export function useProviderProfile(options?: Omit<UseQueryOptions<ProviderProfil
   });
 }
 
-export function useUpdateProfile(options?: UseMutationOptions<ProviderProfile, Error, Partial<ProviderProfile>>) {
+export function useUpdateProfile(options?: UseMutationOptions<ProviderProfile, Error, Partial<ProviderProfile> | FormData>) {
   const queryClient = useQueryClient();
 
-  return useMutation<ProviderProfile, Error, Partial<ProviderProfile>>({
-    mutationFn: async (data: Partial<ProviderProfile>) => {
+  return useMutation<ProviderProfile, Error, Partial<ProviderProfile> | FormData>({
+    mutationFn: async (data: Partial<ProviderProfile> | FormData) => {
       const response = await providerService.updateProfile(data);
       if (!response.success) throw new Error(response.message);
       return response.data as ProviderProfile;
     },
     onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: providerKeys.profile() });
+      queryClient.setQueryData(providerKeys.profile(), data);
+      const { setProfile } = useProviderStore.getState();
+      setProfile(data);
       handleSuccess('Profile updated successfully');
     },
     onError: (error, variables, context) => {

@@ -1,5 +1,5 @@
 // app/(provider)/reviews/index.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,14 +12,16 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/app/constants/Colors';
-import { useProviderReviews} from '@/hooks/useProviderReviews';
+import { useTheme } from '@/app/context/ThemeContext';
+import { ThemeColors } from '@/app/constants/Colors';
+import { useProviderReviews } from '@/hooks/useProviderReviews';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { EmptyState } from '../../../components/common/EmptyState';
-import { formatDate, formatTimeAgo } from '../../utils/formatters';
+import { formatTimeAgo } from '../../utils/formatters';
 import type { CustomerReview } from '../../types/provider.types';
 
 const RATING_DISTRIBUTION = [
@@ -32,6 +34,8 @@ const RATING_DISTRIBUTION = [
 
 export default function ProviderReviews() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedReview, setSelectedReview] = useState<CustomerReview | null>(null);
   const [showResponseModal, setShowResponseModal] = useState(false);
@@ -108,7 +112,7 @@ export default function ProviderReviews() {
     <View style={styles.header}>
       <View style={styles.headerTop}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.surface} />
+          <Ionicons name="arrow-back" size={24} color={colors.surface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Reviews & Ratings</Text>
         <View style={{ width: 24 }} />
@@ -126,7 +130,7 @@ export default function ProviderReviews() {
               key={star}
               name={star <= Math.floor(stats?.averageRating || 0) ? 'star' : 'star-outline'}
               size={20}
-              color={Colors.warning}
+              color={colors.warning}
             />
           ))}
         </View>
@@ -190,75 +194,22 @@ export default function ProviderReviews() {
 
     return (
       <View style={styles.criteriaContainer}>
-        <View style={styles.criteriaRow}>
-          <Text style={styles.criteriaLabel}>Punctuality</Text>
-          <View style={styles.criteriaStars}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={star <= criteria.punctuality ? 'star' : 'star-outline'}
-                size={12}
-                color={Colors.warning}
-              />
-            ))}
+        {[
+          { label: 'Punctuality', value: criteria.punctuality },
+          { label: 'Quality', value: criteria.quality },
+          { label: 'Professionalism', value: criteria.professionalism },
+          { label: 'Communication', value: criteria.communication },
+          { label: 'Value for Money', value: criteria.valueForMoney },
+        ].map(({ label, value }) => (
+          <View key={label} style={styles.criteriaRow}>
+            <Text style={styles.criteriaLabel}>{label}</Text>
+            <View style={styles.criteriaStars}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Ionicons key={star} name={star <= value ? 'star' : 'star-outline'} size={12} color={colors.warning} />
+              ))}
+            </View>
           </View>
-        </View>
-
-        <View style={styles.criteriaRow}>
-          <Text style={styles.criteriaLabel}>Quality</Text>
-          <View style={styles.criteriaStars}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={star <= criteria.quality ? 'star' : 'star-outline'}
-                size={12}
-                color={Colors.warning}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.criteriaRow}>
-          <Text style={styles.criteriaLabel}>Professionalism</Text>
-          <View style={styles.criteriaStars}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={star <= criteria.professionalism ? 'star' : 'star-outline'}
-                size={12}
-                color={Colors.warning}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.criteriaRow}>
-          <Text style={styles.criteriaLabel}>Communication</Text>
-          <View style={styles.criteriaStars}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={star <= criteria.communication ? 'star' : 'star-outline'}
-                size={12}
-                color={Colors.warning}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.criteriaRow}>
-          <Text style={styles.criteriaLabel}>Value for Money</Text>
-          <View style={styles.criteriaStars}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={star <= criteria.valueForMoney ? 'star' : 'star-outline'}
-                size={12}
-                color={Colors.warning}
-              />
-            ))}
-          </View>
-        </View>
+        ))}
       </View>
     );
   };
@@ -279,7 +230,7 @@ export default function ProviderReviews() {
         
         <View style={styles.ratingBadge}>
           <Text style={styles.ratingBadgeText}>{item.rating.toFixed(1)}</Text>
-          <Ionicons name="star" size={12} color={Colors.warning} />
+          <Ionicons name="star" size={12} color={colors.warning} />
         </View>
       </View>
 
@@ -300,29 +251,25 @@ export default function ProviderReviews() {
       {item.response ? (
         <View style={styles.responseContainer}>
           <View style={styles.responseHeader}>
-            <Ionicons name="chatbubble" size={14} color={Colors.primary} />
+            <Ionicons name="chatbubble" size={14} color={colors.primary} />
             <Text style={styles.responseTitle}>Your response</Text>
             <Text style={styles.responseDate}>{formatTimeAgo(item.response.createdAt)}</Text>
           </View>
           <Text style={styles.responseText}>{item.response.message}</Text>
         </View>
       ) : (
-        <TouchableOpacity
-          style={styles.respondButton}
-          onPress={() => handleRespond(item)}
-        >
-          <Ionicons name="chatbubble-outline" size={16} color={Colors.primary} />
+        <TouchableOpacity style={styles.respondButton} onPress={() => handleRespond(item)}>
+          <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
           <Text style={styles.respondButtonText}>Respond to this review</Text>
         </TouchableOpacity>
       )}
 
       <View style={styles.reviewFooter}>
         <TouchableOpacity style={styles.helpfulButton}>
-          <Ionicons name="thumbs-up-outline" size={14} color={Colors.text.secondary} />
+          <Ionicons name="thumbs-up-outline" size={14} color={colors.text.secondary} />
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.shareButton}>
-          <Ionicons name="share-outline" size={14} color={Colors.text.secondary} />
+          <Ionicons name="share-outline" size={14} color={colors.text.secondary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -340,7 +287,7 @@ export default function ProviderReviews() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Respond to Review</Text>
             <TouchableOpacity onPress={() => setShowResponseModal(false)}>
-              <Ionicons name="close" size={24} color={Colors.text.primary} />
+              <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
 
@@ -356,7 +303,7 @@ export default function ProviderReviews() {
                     <Text style={styles.modalReviewerName}>{selectedReview.customerName}</Text>
                     <View style={styles.modalRating}>
                       <Text style={styles.modalRatingValue}>{selectedReview.rating.toFixed(1)}</Text>
-                      <Ionicons name="star" size={12} color={Colors.warning} />
+                      <Ionicons name="star" size={12} color={colors.warning} />
                     </View>
                   </View>
                 </View>
@@ -366,7 +313,7 @@ export default function ProviderReviews() {
               <TextInput
                 style={styles.modalInput}
                 placeholder="Write your response..."
-                placeholderTextColor={Colors.text.secondary}
+                placeholderTextColor={colors.text.secondary}
                 value={responseText}
                 onChangeText={setResponseText}
                 multiline
@@ -391,7 +338,7 @@ export default function ProviderReviews() {
                   disabled={!responseText.trim() || isResponding}
                 >
                   {isResponding ? (
-                    <ActivityIndicator size="small" color={Colors.surface} />
+                    <ActivityIndicator size="small" color={colors.surface} />
                   ) : (
                     <Text style={styles.modalSubmitText}>Post Response</Text>
                   )}
@@ -444,391 +391,74 @@ export default function ProviderReviews() {
   );
 }
 
-// Add missing RefreshControl import
-import { RefreshControl } from 'react-native';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    marginBottom: 20,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colors.surface,
-  },
-  ratingSummary: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: 20,
-    marginTop: -20,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  overallRating: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  ratingValue: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    gap: 4,
-  },
-  totalReviews: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  ratingDistribution: {
-    marginBottom: 24,
-  },
-  distributionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  distributionLabel: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-    width: 45,
-  },
-  progressBarContainer: {
-    flex: 1,
-    height: 8,
-    backgroundColor: Colors.background,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: Colors.warning + '40',
-  },
-  progressBarActive: {
-    backgroundColor: Colors.warning,
-  },
-  distributionCount: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-    width: 30,
-    textAlign: 'right',
-  },
-  sortContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  sortLabel: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-  },
-  sortChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    backgroundColor: Colors.background,
-    borderRadius: 16,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sortChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  sortChipText: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-  },
-  sortChipTextActive: {
-    color: Colors.surface,
-  },
-  listContainer: {
-    flexGrow: 1,
-  },
-  reviewCard: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  reviewerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reviewerImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  reviewerName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  reviewDate: {
-    fontSize: 11,
-    color: Colors.text.secondary,
-  },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.warning + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  ratingBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.warning,
-  },
-  criteriaContainer: {
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
-  criteriaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  criteriaLabel: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-  },
-  criteriaStars: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  reviewComment: {
-    fontSize: 14,
-    color: Colors.text.primary,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  reviewImages: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  reviewImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  responseContainer: {
-    backgroundColor: Colors.primary + '05',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.primary + '20',
-  },
-  responseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 6,
-  },
-  responseTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: Colors.primary,
-  },
-  responseDate: {
-    fontSize: 10,
-    color: Colors.text.secondary,
-    marginLeft: 'auto',
-  },
-  responseText: {
-    fontSize: 13,
-    color: Colors.text.primary,
-    lineHeight: 18,
-  },
-  respondButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary + '10',
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginBottom: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
-    borderStyle: 'dashed',
-  },
-  respondButtonText: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '500',
-  },
-  reviewFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  helpfulButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  helpfulText: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-  },
-  shareButton: {
-    padding: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text.primary,
-  },
-  modalReviewPreview: {
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  modalReviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  modalReviewerImage: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 10,
-  },
-  modalReviewerName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  modalRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  modalRatingValue: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-  },
-  modalReviewComment: {
-    fontSize: 13,
-    color: Colors.text.primary,
-    lineHeight: 18,
-  },
-  modalInput: {
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 14,
-    color: Colors.text.primary,
-    minHeight: 120,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 20,
-    textAlignVertical: 'top',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  modalCancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  modalCancelText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    fontWeight: '500',
-  },
-  modalSubmitButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  modalSubmitDisabled: {
-    opacity: 0.5,
-  },
-  modalSubmitText: {
-    fontSize: 14,
-    color: Colors.surface,
-    fontWeight: '600',
-  },
-  bottomPadding: {
-    height: 40,
-  },
+const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { backgroundColor: colors.primary, paddingTop: 60, paddingBottom: 30, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  backButton: { padding: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '600', color: colors.surface },
+  ratingSummary: { backgroundColor: colors.surface, marginHorizontal: 20, marginTop: -20, borderRadius: 20, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  overallRating: { alignItems: 'center', marginBottom: 24 },
+  ratingValue: { fontSize: 48, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 },
+  starsContainer: { flexDirection: 'row', marginBottom: 8, gap: 4 },
+  totalReviews: { fontSize: 14, color: colors.text.secondary },
+  ratingDistribution: { marginBottom: 24 },
+  distributionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 },
+  distributionLabel: { fontSize: 12, color: colors.text.secondary, width: 45 },
+  progressBarContainer: { flex: 1, height: 8, backgroundColor: colors.background, borderRadius: 4, overflow: 'hidden' },
+  progressBar: { height: '100%', backgroundColor: colors.warning + '40' },
+  progressBarActive: { backgroundColor: colors.warning },
+  distributionCount: { fontSize: 12, color: colors.text.secondary, width: 30, textAlign: 'right' },
+  sortContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sortLabel: { fontSize: 13, color: colors.text.secondary },
+  sortChip: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: colors.background, borderRadius: 16, marginRight: 8, borderWidth: 1, borderColor: colors.border },
+  sortChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  sortChipText: { fontSize: 12, color: colors.text.secondary },
+  sortChipTextActive: { color: colors.surface },
+  listContainer: { flexGrow: 1 },
+  reviewCard: { backgroundColor: colors.surface, marginHorizontal: 20, marginBottom: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  reviewerInfo: { flexDirection: 'row', alignItems: 'center' },
+  reviewerImage: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  reviewerName: { fontSize: 15, fontWeight: '600', color: colors.text.primary, marginBottom: 2 },
+  reviewDate: { fontSize: 11, color: colors.text.secondary },
+  ratingBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.warning + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, gap: 4 },
+  ratingBadgeText: { fontSize: 12, fontWeight: '600', color: colors.warning },
+  criteriaContainer: { backgroundColor: colors.background, borderRadius: 12, padding: 12, marginBottom: 12 },
+  criteriaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  criteriaLabel: { fontSize: 12, color: colors.text.secondary },
+  criteriaStars: { flexDirection: 'row', gap: 2 },
+  reviewComment: { fontSize: 14, color: colors.text.primary, lineHeight: 20, marginBottom: 12 },
+  reviewImages: { flexDirection: 'row', marginBottom: 12 },
+  reviewImage: { width: 80, height: 80, borderRadius: 8, marginRight: 8, borderWidth: 1, borderColor: colors.border },
+  responseContainer: { backgroundColor: colors.primary + '08', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: colors.primary + '20' },
+  responseHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 },
+  responseTitle: { fontSize: 12, fontWeight: '500', color: colors.primary },
+  responseDate: { fontSize: 10, color: colors.text.secondary, marginLeft: 'auto' },
+  responseText: { fontSize: 13, color: colors.text.primary, lineHeight: 18 },
+  respondButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary + '10', paddingVertical: 10, borderRadius: 12, marginBottom: 12, gap: 6, borderWidth: 1, borderColor: colors.primary + '30', borderStyle: 'dashed' },
+  respondButtonText: { fontSize: 13, color: colors.primary, fontWeight: '500' },
+  reviewFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  helpfulButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  helpfulText: { fontSize: 12, color: colors.text.secondary },
+  shareButton: { padding: 4 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: colors.text.primary },
+  modalReviewPreview: { backgroundColor: colors.background, borderRadius: 12, padding: 16, marginBottom: 20 },
+  modalReviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  modalReviewerImage: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
+  modalReviewerName: { fontSize: 14, fontWeight: '500', color: colors.text.primary, marginBottom: 2 },
+  modalRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  modalRatingValue: { fontSize: 12, color: colors.text.secondary },
+  modalReviewComment: { fontSize: 13, color: colors.text.primary, lineHeight: 18 },
+  modalInput: { backgroundColor: colors.background, borderRadius: 12, padding: 16, fontSize: 14, color: colors.text.primary, minHeight: 120, borderWidth: 1, borderColor: colors.border, marginBottom: 20, textAlignVertical: 'top' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  modalCancelButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  modalCancelText: { fontSize: 14, color: colors.text.secondary, fontWeight: '500' },
+  modalSubmitButton: { backgroundColor: colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  modalSubmitDisabled: { opacity: 0.5 },
+  modalSubmitText: { fontSize: 14, color: colors.surface, fontWeight: '600' },
+  bottomPadding: { height: 40 },
 });

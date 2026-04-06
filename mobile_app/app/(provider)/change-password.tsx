@@ -1,4 +1,4 @@
-// app/(customer)/change-password.tsx
+// app/(provider)/change-password.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -64,7 +64,7 @@ export default function ChangePassword() {
 
     setLoading(true);
     try {
-      const response = await api.post('/customer/profile/password', {
+      const response = await api.post('/provider/profile/password', {
         current_password: formData.current_password,
         new_password: formData.new_password,
         new_password_confirmation: formData.confirm_password,
@@ -446,6 +446,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     width: 70,
     textAlign: 'right',
+    paddingLeft: 0,
   },
   requirementsContainer: {
     marginTop: 12,

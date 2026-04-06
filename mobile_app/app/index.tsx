@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import AppButton from '../components/AppButton';
 import RoleCard from '../components/RoleCard';
-import { Colors } from '@/app/constants/Colors';
+import { ThemeColors } from '@/app/constants/Colors';
+import { useTheme } from './context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +33,8 @@ const getCategoryIcon = (name: string) => {
 
 export default function LandingScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const [selectedRole, setSelectedRole] = useState<'customer' | 'provider' | null>(null);
 
   const [stats, setStats] = useState([
@@ -128,7 +131,7 @@ export default function LandingScreen() {
               </TouchableOpacity>
             ))
           ) : (
-            <Text style={{ textAlign: 'center', width: '100%', color: Colors.text.secondary }}>
+            <Text style={{ textAlign: 'center', width: '100%', color: colors.text.secondary }}>
               <Text>Loading services...</Text>
             </Text>
           )}
@@ -210,26 +213,26 @@ export default function LandingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     padding: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     marginTop: 5,
   },
   heroSection: {
@@ -255,7 +258,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   heroText: {
-    color: Colors.text.light,
+    color: colors.text.light,
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
@@ -265,7 +268,7 @@ const styles = StyleSheet.create({
   },
   servicesSection: {
     padding: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     margin: 15,
     borderRadius: 15,
     elevation: 3,
@@ -273,7 +276,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -287,7 +290,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     padding: 10,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderRadius: 10,
   },
   serviceIcon: {
@@ -297,12 +300,12 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     textAlign: 'center',
   },
   roleSection: {
     padding: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     margin: 15,
     borderRadius: 15,
     elevation: 3,
@@ -319,7 +322,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     margin: 15,
     borderRadius: 15,
     elevation: 3,
@@ -330,25 +333,25 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     marginTop: 5,
   },
   ctaSection: {
     padding: 20,
     marginHorizontal: 15,
     marginBottom: 30,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 15,
     elevation: 3,
   },
   ctaTitle: {
     textAlign: 'center',
     fontSize: 16,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 15,
     fontWeight: '600',
   },
@@ -360,7 +363,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   guestText: {
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     fontSize: 14,
   },
 });
+

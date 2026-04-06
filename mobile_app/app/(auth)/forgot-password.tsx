@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import axios from 'axios';
 import AppInput from '../../components/AppInput';
 import { API_BASE_URL } from '../config/api';
 import { useRouter } from 'expo-router';
+import { useTheme } from "../context/ThemeContext";
+import { ThemeColors } from "../constants/Colors";
 
 export default function ForgotPassword() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState(''); // This will store the 60-char token automatically
+  const [token, setToken] = useState(''); // This will store the 6-digit code
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [step, setStep] = useState(1); // 1: Email, 2: New Password
@@ -38,7 +43,7 @@ export default function ForgotPassword() {
     }
   };
 
-  // STEP 2: Update Password using the stored token
+  // STEP 2: Update Password using the entered code
   const handleResetPassword = async () => {
     if (token.length !== 6) {
       return Alert.alert("Error", "Please enter the 6-digit verification code");
@@ -54,7 +59,7 @@ export default function ForgotPassword() {
     try {
       const response = await axios.post(`${API_BASE_URL}/reset-password`, {
         email: email,
-        token: token, // This is the 60-char token we caught in Step 1
+        token: token,
         password: password,
         password_confirmation: passwordConfirmation,
       });
@@ -79,6 +84,7 @@ export default function ForgotPassword() {
       style={{ flex: 1 }}
     >
       <ScrollView 
+        style={styles.outerContainer}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
@@ -109,6 +115,7 @@ export default function ForgotPassword() {
             keyboardType="number-pad"
             maxLength={6}
             autoCapitalize="none"
+            placeholderTextColor={colors.text.secondary}
           />
 
           <AppInput
@@ -143,20 +150,21 @@ export default function ForgotPassword() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
+  outerContainer: { flex: 1, backgroundColor: colors.background },
   container: { 
     flexGrow: 1, 
     padding: 20, 
     justifyContent: 'center', 
-    backgroundColor: '#F5F7FA',
+    backgroundColor: colors.background,
     paddingBottom: 40,
   },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 30, textAlign: 'center' },
-  card: { backgroundColor: '#fff', padding: 20, borderRadius: 15, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: '#444', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#E0E0E0', padding: 15, borderRadius: 10, marginBottom: 20, fontSize: 16, backgroundColor: '#FAFAFA' },
-  button: { backgroundColor: '#0A84FF', padding: 16, borderRadius: 10, alignItems: 'center' },
+  title: { fontSize: 28, fontWeight: 'bold', color: colors.text.primary, marginBottom: 30, textAlign: 'center' },
+  card: { backgroundColor: colors.surface, padding: 20, borderRadius: 15, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
+  label: { fontSize: 14, fontWeight: '600', color: colors.text.primary, marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: colors.border, padding: 15, borderRadius: 10, marginBottom: 20, fontSize: 16, backgroundColor: colors.background, color: colors.text.primary },
+  button: { backgroundColor: colors.primary, padding: 16, borderRadius: 10, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   backButton: { marginTop: 20, alignItems: 'center' },
-  backText: { color: '#0A84FF', fontSize: 14, fontWeight: '500' }
-});
+  backText: { color: colors.primary, fontSize: 14, fontWeight: '500' }
+});

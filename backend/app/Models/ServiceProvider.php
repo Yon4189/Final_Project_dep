@@ -58,7 +58,10 @@ class ServiceProvider extends Authenticatable
         'telebir_holder_name',   
         'preferred_payout_method',
         'last_withdrawal_at',
-        'expo_push_token'
+        'expo_push_token',
+        'business_license',
+        'insurance_certificate',
+        'certifications'
     ];
 
     protected $hidden = [
@@ -73,6 +76,7 @@ class ServiceProvider extends Authenticatable
         'current_latitude' => 'decimal:8',
         'current_longitude' => 'decimal:8',
         'rating' => 'decimal:2',
+        'certifications' => 'array',
     ];
 
     /**

@@ -109,33 +109,47 @@ export const ProviderMap: React.FC<ProviderMapProps> = ({
     if (!providerLocation || !customerLocation) return;
 
     try {
-      // In production, use Google Maps Directions API
-      // This is a simplified mock implementation
-      const mockRoute = [
-        providerLocation,
-        {
-          latitude: (providerLocation.latitude + customerLocation.latitude) / 2,
-          longitude: (providerLocation.longitude + customerLocation.longitude) / 2,
-        },
-        customerLocation,
-      ];
+      // Using OSRM (Open Source Routing Machine) to get the real driving route
+      const url = `http://router.project-osrm.org/route/v1/driving/${providerLocation.longitude},${providerLocation.latitude};${customerLocation.longitude},${customerLocation.latitude}?geometries=geojson&overview=full`;
+      const response = await fetch(url);
+      const data = await response.json();
 
-      setRouteCoordinates(mockRoute);
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        
+        // OSRM returns coordinates as [longitude, latitude]
+        const coordinates = route.geometry.coordinates.map((coord: [number, number]) => ({
+          latitude: coord[1],
+          longitude: coord[0], // fix OSRM reversed coordinates
+        }));
 
-      // Calculate mock distance and duration
+        setRouteCoordinates(coordinates);
+
+        // OSRM provides distance in meters, convert to km
+        const distance = Number((route.distance / 1000).toFixed(1));
+        
+        // OSRM provides duration in seconds, convert to minutes
+        const duration = Math.round(route.duration / 60);
+
+        setRouteInfo({ distance, duration });
+        onRouteCalculated?.(distance, duration);
+      } else {
+        throw new Error('No valid route returned from OSRM');
+      }
+    } catch (error) {
+      console.warn('Failed to calculate real route, falling back to mock straight line:', error);
+      
+      // Fallback
+      setRouteCoordinates([providerLocation, customerLocation]);
       const distance = calculateDistance(
         providerLocation.latitude,
         providerLocation.longitude,
         customerLocation.latitude,
         customerLocation.longitude
       );
-      
-      const duration = Math.round(distance * 2); // Assume average speed 30 km/h
-
+      const duration = Math.round(distance * 2);
       setRouteInfo({ distance, duration });
       onRouteCalculated?.(distance, duration);
-    } catch (error) {
-      console.warn('Failed to calculate route:', error);
     }
   };
 

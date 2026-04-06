@@ -374,6 +374,8 @@ export interface ServiceRequest {
   scheduledDate: string;
   scheduledTime: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
   locationId?: ID;
   description?: string;
   specialInstructions?: string;

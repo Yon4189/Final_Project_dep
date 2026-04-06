@@ -31,6 +31,8 @@ export interface ProviderProfile {
   languages: string[];
   badges: Badge[];
   bankDetails?: BankDetails;
+  business_license?: string;
+  insurance_certificate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,11 +107,12 @@ export interface ProviderNotificationPayload {
 export interface Certification {
   id: string;
   name: string;
-  issuer: string;
-  issuedDate: string;
+  image?: string | null;
+  issuer?: string;
+  issuedDate?: string;
   expiryDate?: string;
   document?: string;
-  verified: boolean;
+  verified?: boolean;
 }
 
 export interface Badge {

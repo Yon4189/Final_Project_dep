@@ -1,14 +1,15 @@
 // app/(provider)/_layout.tsx
 import React, { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
-import { TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/app/constants/Colors';
 import { useProviderStore } from '@/app/store/providerStore';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ProviderLayout() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
+  const { colors } = useTheme();
 
   // Use selector to avoid unnecessary re-renders on every store change
   const loadProfile = useProviderStore(state => state.loadProfile);
@@ -29,22 +30,22 @@ export default function ProviderLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: colors.surface,
         },
-        headerTintColor: Colors.text.primary,
+        headerTintColor: colors.text.primary,
         headerTitleStyle: {
           fontWeight: '600',
           fontSize: 18,
         },
         headerShadowVisible: false,
         contentStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: colors.background,
         },
         headerBackVisible: false,
         headerLeft: ({ canGoBack }) =>
           canGoBack ? (
             <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
-              <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+              <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           ) : null,
         headerRight: () => (
@@ -52,7 +53,7 @@ export default function ProviderLayout() {
             onPress={() => router.replace('/(provider)/dashboard')}
             style={{ marginRight: 16 }}
           >
-            <Ionicons name="home-outline" size={24} color={Colors.primary} />
+            <Ionicons name="home-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
         ),
       }}
@@ -104,13 +105,13 @@ export default function ProviderLayout() {
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity onPress={() => { }} style={{ marginRight: 16 }}>
-                <Ionicons name="filter-outline" size={22} color={Colors.text.primary} />
+                <Ionicons name="filter-outline" size={22} color={colors.text.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => router.replace('/(provider)/dashboard')}
                 style={{ marginRight: 16 }}
               >
-                <Ionicons name="home-outline" size={24} color={Colors.primary} />
+                <Ionicons name="home-outline" size={24} color={colors.primary} />
               </TouchableOpacity>
             </View>
           ),
@@ -137,13 +138,13 @@ export default function ProviderLayout() {
               >
                 <View
                   style={{
-                    backgroundColor: Colors.primary,
+                    backgroundColor: colors.primary,
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 16,
                   }}
                 >
-                  <Text style={{ color: Colors.surface, fontSize: 12, fontWeight: '600' }}>
+                  <Text style={{ color: colors.surface, fontSize: 12, fontWeight: '600' }}>
                     Withdraw
                   </Text>
                 </View>
@@ -152,7 +153,7 @@ export default function ProviderLayout() {
                 onPress={() => router.replace('/(provider)/dashboard')}
                 style={{ marginRight: 16 }}
               >
-                <Ionicons name="home-outline" size={24} color={Colors.primary} />
+                <Ionicons name="home-outline" size={24} color={colors.primary} />
               </TouchableOpacity>
             </View>
           ),

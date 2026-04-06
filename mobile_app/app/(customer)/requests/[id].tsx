@@ -20,6 +20,11 @@ import { api } from "@/app/services/api";
 import { ReviewModal } from '../../../components/customer/ReviewModal';
 import { ComplaintModal } from '../../../components/customer/ComplaintModal';
 import { format } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
+import Map from '../../../components/Map/index';
+import { useTrackProvider, bookingKeys } from '@/hooks/useCustomerBookings';
+import * as pusherClient from '@/app/services/pusherClient';
+import { useEffect } from 'react';
 
 const STATUS_COLORS = {
   pending: Colors.warning,
@@ -64,6 +69,39 @@ export default function RequestDetails() {
   const { data: request, isLoading } = useServiceRequest(id as string);
   const cancelRequest = useCancelRequest();
   const confirmCompletion = useConfirmCompletion();
+  const queryClient = useQueryClient();
+  const { data: trackingResponse } = useTrackProvider(id as string);
+  const trackingData = trackingResponse?.data || trackingResponse; // Handle both nested and direct data
+
+  const [liveLocation, setLiveLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    heading?: number;
+    speed?: number;
+  } | null>(null);
+
+  // Real-time updates
+  useEffect(() => {
+    if (request && id) {
+      // Live GPS tracking channel
+      pusherClient.subscribeToBookingTracking(id as string, (data) => {
+        console.log('[Reverb] Live location received:', data);
+        setLiveLocation({
+          latitude: data.latitude,
+          longitude: data.longitude,
+          heading: data.heading,
+          speed: data.speed,
+        });
+        
+        // Invalidate tracking query to get fresh ETA/history if needed
+        queryClient.invalidateQueries({ queryKey: bookingKeys.track(id as string) });
+      });
+
+      return () => {
+        pusherClient.unsubscribeFromBookingTracking(id as string);
+      };
+    }
+  }, [request?.id, id]);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -130,7 +168,9 @@ export default function RequestDetails() {
   };
 
   const handleTrackProvider = () => {
-    Alert.alert('Coming Soon', 'Live tracking is not available yet.');
+    setSelectedTab('details');
+    // We could scroll to map here if needed
+    Alert.alert('Tracking Active', 'You can now view the provider location on the map below.');
   };
 
   const handleCancelRequest = async () => {
@@ -259,47 +299,114 @@ export default function RequestDetails() {
   );
 
   const renderServiceDetails = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Details</Text>
-      <View style={styles.detailsCard}>
-        <View style={styles.detailRow}>
-          <Ionicons name="construct-outline" size={20} color={Colors.primary} />
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Service</Text>
-            <Text style={styles.detailValue}>{request.serviceName}</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Date & Time</Text>
-            <Text style={styles.detailValue}>
-              {format(new Date(request.scheduledDate), 'MMMM d, yyyy')} at {request.scheduledTime}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Ionicons name="location-outline" size={20} color={Colors.primary} />
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Location</Text>
-            <Text style={styles.detailValue}>{request.address}</Text>
-          </View>
-        </View>
-
-        {request.specialInstructions && (
+    <View style={styles.tabContent}>
+      {renderLiveTracking()}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Service Details</Text>
+        <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
-            <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
+            <Ionicons name="construct-outline" size={20} color={Colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Special Instructions</Text>
-              <Text style={styles.detailValue}>{request.specialInstructions}</Text>
+              <Text style={styles.detailLabel}>Service</Text>
+              <Text style={styles.detailValue}>{request.serviceName}</Text>
+            </View>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Date & Time</Text>
+              <Text style={styles.detailValue}>
+                {format(new Date(request.scheduledDate), 'MMMM d, yyyy')} at {request.scheduledTime}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Ionicons name="location-outline" size={20} color={Colors.primary} />
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={styles.detailValue}>{request.address}</Text>
+            </View>
+          </View>
+
+          {request.specialInstructions && (
+            <View style={styles.detailRow}>
+              <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Special Instructions</Text>
+                <Text style={styles.detailValue}>{request.specialInstructions}</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderLiveTracking = () => {
+    const showTrack = ['accepted', 'confirmed', 'arrived', 'in_progress'].includes(request.status);
+    if (!showTrack) return null;
+
+    // Use live location if available, fallback to latest fetched tracking data, then fallback to request start
+    const providerPos = liveLocation || (trackingData?.provider ? {
+      latitude: parseFloat(trackingData.provider.latitude),
+      longitude: parseFloat(trackingData.provider.longitude),
+    } : null);
+
+    // Customer location
+    const destinationPos = {
+      latitude: request.latitude || 0,
+      longitude: request.longitude || 0,
+    };
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.liveTrackingHeader}>
+          <Text style={styles.sectionTitle}>Live Tracking</Text>
+          <View style={styles.liveIndicator}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        </View>
+        
+        <View style={styles.mapContainer}>
+          <Map
+            center={providerPos ? [providerPos.latitude, providerPos.longitude] : undefined}
+            userLocation={destinationPos}
+            markers={providerPos ? [
+              {
+                position: [providerPos.latitude, providerPos.longitude],
+                title: request.providerName || 'Provider',
+                description: 'Current Location'
+              }
+            ] : []}
+            style={{ height: 250, width: '100%' }}
+          />
+          
+          {!providerPos && (
+            <View style={styles.mapOverlay}>
+              <Text style={styles.mapOverlayText}>Waiting for provider location...</Text>
+            </View>
+          )}
+        </View>
+
+        {trackingData?.eta && (
+          <View style={styles.etaCard}>
+            <View style={styles.etaItem}>
+              <Text style={styles.etaLabel}>Distance</Text>
+              <Text style={styles.etaValue}>{trackingData.eta.distance_km || '0'} km</Text>
+            </View>
+            <View style={styles.etaDivider} />
+            <View style={styles.etaItem}>
+              <Text style={styles.etaLabel}>Est. Arrival</Text>
+              <Text style={styles.etaValue}>{trackingData.eta.minutes || '?' } min</Text>
             </View>
           </View>
         )}
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderPaymentDetails = () => (
     <View style={styles.section}>
@@ -876,6 +983,9 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '500',
   },
+  tabContent: {
+    padding: 0,
+  },
   timelineCard: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
@@ -1161,5 +1271,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.surface,
     fontWeight: '600',
+  },
+  liveTrackingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 6,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.error,
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.error,
+  },
+  mapContainer: {
+    height: 250,
+    backgroundColor: Colors.border,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+    position: 'relative',
+  },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapOverlayText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    fontWeight: '500',
+  },
+  etaCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  etaItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  etaLabel: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginBottom: 4,
+  },
+  etaValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.primary,
+  },
+  etaDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: 16,
   },
 });

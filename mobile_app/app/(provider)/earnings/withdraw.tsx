@@ -16,7 +16,8 @@ import {
 } from "react-native";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderEarnings } from "../../../hooks/useProviderEarnings";
-import { Colors } from "../../constants/Colors";
+import { useTheme } from "../../context/ThemeContext";
+import { ThemeColors } from "../../constants/Colors";
 import type { Currency } from "../../types/customer.types";
 import type { BankDetails } from "../../types/provider.types";
 import { formatCurrency } from "../../utils/formatters";
@@ -28,6 +29,8 @@ interface BankAccount extends BankDetails {
 
 export default function WithdrawScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [step, setStep] = useState(1);
   const [amount, setAmount] = useState("");
   const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
@@ -205,7 +208,7 @@ export default function WithdrawScreen() {
           <TextInput
             style={styles.amountInput}
             placeholder="0.00"
-            placeholderTextColor={Colors.text.secondary}
+            placeholderTextColor={colors.text.secondary}
             value={amount}
             onChangeText={handleAmountChange}
             keyboardType="numeric"
@@ -251,11 +254,7 @@ export default function WithdrawScreen() {
         </View>
 
         <View style={styles.infoBox}>
-          <Ionicons
-            name="information-circle-outline"
-            size={20}
-            color={Colors.info}
-          />
+          <Ionicons name="information-circle-outline" size={20} color={colors.info} />
           <Text style={styles.infoText}>
             Withdrawals are processed within 1-3 business days to your
             registered bank account. Minimum withdrawal: ETB 50
@@ -287,7 +286,7 @@ export default function WithdrawScreen() {
               >
                 <View style={styles.bankCardLeft}>
                   <View style={styles.bankIcon}>
-                    <Ionicons name="business" size={24} color={Colors.primary} />
+                    <Ionicons name="business" size={24} color={colors.primary} />
                   </View>
                   <View style={styles.bankInfo}>
                     <Text style={styles.bankName}>{bank.bankName || ""}</Text>
@@ -311,7 +310,7 @@ export default function WithdrawScreen() {
           style={styles.addBankButton}
           onPress={() => setSelectedBank(null)}
         >
-          <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
           <Text style={styles.addBankText}>Add New Bank Account</Text>
         </TouchableOpacity>
 
@@ -324,7 +323,7 @@ export default function WithdrawScreen() {
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g., Commercial Bank of Ethiopia"
-                placeholderTextColor={Colors.text.secondary}
+                placeholderTextColor={colors.text.secondary}
                 value={bankDetails.bankName}
                 onChangeText={(text) =>
                   setBankDetails({ ...bankDetails, bankName: text })
@@ -337,7 +336,7 @@ export default function WithdrawScreen() {
               <TextInput
                 style={styles.formInput}
                 placeholder="Name as it appears on account"
-                placeholderTextColor={Colors.text.secondary}
+                placeholderTextColor={colors.text.secondary}
                 value={bankDetails.accountName}
                 onChangeText={(text) =>
                   setBankDetails({ ...bankDetails, accountName: text })
@@ -350,7 +349,7 @@ export default function WithdrawScreen() {
               <TextInput
                 style={styles.formInput}
                 placeholder="Enter account number"
-                placeholderTextColor={Colors.text.secondary}
+                placeholderTextColor={colors.text.secondary}
                 value={bankDetails.accountNumber}
                 onChangeText={(text) =>
                   setBankDetails({ ...bankDetails, accountNumber: text })
@@ -365,7 +364,7 @@ export default function WithdrawScreen() {
                 <TextInput
                   style={styles.formInput}
                   placeholder="Branch name"
-                  placeholderTextColor={Colors.text.secondary}
+                  placeholderTextColor={colors.text.secondary}
                   value={bankDetails.branch}
                   onChangeText={(text) =>
                     setBankDetails({ ...bankDetails, branch: text })
@@ -378,7 +377,7 @@ export default function WithdrawScreen() {
                 <TextInput
                   style={styles.formInput}
                   placeholder="SWIFT"
-                  placeholderTextColor={Colors.text.secondary}
+                  placeholderTextColor={colors.text.secondary}
                   value={bankDetails.swiftCode}
                   onChangeText={(text) =>
                     setBankDetails({ ...bankDetails, swiftCode: text })
@@ -394,7 +393,7 @@ export default function WithdrawScreen() {
             >
               <View style={[styles.checkbox, saveBank && styles.checkboxChecked]}>
                 {saveBank && (
-                  <Ionicons name="checkmark" size={16} color={Colors.surface} />
+                  <Ionicons name="checkmark" size={16} color={colors.surface} />
                 )}
               </View>
               <Text style={styles.checkboxLabel}>
@@ -414,7 +413,7 @@ export default function WithdrawScreen() {
     return (
       <View style={styles.stepContainer}>
         <View style={styles.successIcon}>
-          <Ionicons name="wallet-outline" size={60} color={Colors.primary} />
+          <Ionicons name="wallet-outline" size={60} color={colors.primary} />
         </View>
 
         <Text style={styles.confirmTitle}>Review & Confirm</Text>
@@ -468,7 +467,7 @@ export default function WithdrawScreen() {
         >
           <View style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}>
             {agreeTerms && (
-              <Ionicons name="checkmark" size={16} color={Colors.surface} />
+              <Ionicons name="checkmark" size={16} color={colors.surface} />
             )}
           </View>
           <Text style={styles.termsText}>
@@ -479,11 +478,7 @@ export default function WithdrawScreen() {
         </TouchableOpacity>
 
         <View style={styles.warningBox}>
-          <Ionicons
-            name="alert-circle-outline"
-            size={20}
-            color={Colors.warning}
-          />
+          <Ionicons name="alert-circle-outline" size={20} color={colors.warning} />
           <Text style={styles.warningText}>
             Please ensure all details are correct. Withdrawals cannot be
             reversed once processed.
@@ -510,7 +505,7 @@ export default function WithdrawScreen() {
         <TouchableOpacity
           onPress={step === 1 ? () => router.back() : handleBack}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Withdraw Funds</Text>
         <View style={{ width: 24 }} />
@@ -580,7 +575,7 @@ export default function WithdrawScreen() {
           {step < 3 ? (
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
               <Text style={styles.nextButtonText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
+              <Ionicons name="arrow-forward" size={20} color={colors.surface} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -592,15 +587,11 @@ export default function WithdrawScreen() {
               disabled={isPending}
             >
               {isPending ? (
-                <ActivityIndicator size="small" color={Colors.surface} />
+                <ActivityIndicator size="small" color={colors.surface} />
               ) : (
                 <>
                   <Text style={styles.confirmButtonText}>Confirm Withdrawal</Text>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={20}
-                    color={Colors.surface}
-                  />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
                 </>
               )}
             </TouchableOpacity>
@@ -611,437 +602,80 @@ export default function WithdrawScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text.primary,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-    backgroundColor: Colors.surface,
-  },
-  progressStep: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: Colors.background,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  progressStepActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  progressStepText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text.secondary,
-  },
-  progressStepTextActive: {
-    color: Colors.surface,
-  },
-  progressLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: Colors.border,
-    marginHorizontal: 8,
-  },
-  progressLineActive: {
-    backgroundColor: Colors.primary,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  stepContainer: {
-    paddingBottom: 20,
-  },
-  stepTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  stepSubtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginBottom: 24,
-  },
-  amountContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.primary,
-    marginBottom: 20,
-    paddingBottom: 8,
-  },
-  currencySymbol: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginRight: 8,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 32,
-    fontWeight: "bold",
-    color: Colors.text.primary,
-    padding: 0,
-  },
-  quickAmounts: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -4,
-    marginBottom: 24,
-  },
-  quickAmount: {
-    width: "23%",
-    margin: "1%",
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  quickAmountText: {
-    fontSize: 12,
-    color: Colors.text.primary,
-    fontWeight: "500",
-  },
-  feeBreakdown: {
-    backgroundColor: Colors.background,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  feeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  feeLabel: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  feeValue: {
-    fontSize: 14,
-    color: Colors.text.primary,
-  },
-  feeDivider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 12,
-  },
-  netLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text.primary,
-  },
-  netValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: Colors.primary,
-  },
-  infoBox: {
-    flexDirection: "row",
-    backgroundColor: Colors.info + "10",
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.info + "20",
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.text.secondary,
-    lineHeight: 18,
-  },
-  savedBanks: {
-    marginBottom: 20,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginBottom: 12,
-  },
-  bankCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  bankCardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + "10",
-  },
-  bankCardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  bankIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primary + "20",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  bankInfo: {
-    flex: 1,
-  },
-  bankName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text.primary,
-    marginBottom: 4,
-  },
-  bankAccount: {
-    fontSize: 13,
-    color: Colors.text.secondary,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  radioSelected: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  addBankButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primary + "10",
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.primary + "30",
-    borderStyle: "dashed",
-    gap: 8,
-    marginBottom: 20,
-  },
-  addBankText: {
-    fontSize: 15,
-    color: Colors.primary,
-    fontWeight: "500",
-  },
-  newBankForm: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  formGroup: {
-    marginBottom: 16,
-  },
-  formLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: Colors.text.primary,
-    marginBottom: 6,
-  },
-  formInput: {
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 14,
-    color: Colors.text.primary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  formRow: {
-    flexDirection: "row",
-    marginHorizontal: -8,
-  },
-  saveBankCheckbox: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    marginRight: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: Colors.primary,
-  },
-  checkboxLabel: {
-    fontSize: 14,
-    color: Colors.text.primary,
-  },
-  successIcon: {
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  confirmTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: Colors.text.primary,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  confirmSubtitle: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  summaryCard: {
-    backgroundColor: Colors.background,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  summaryValue: {
-    fontSize: 14,
-    color: Colors.text.primary,
-    fontWeight: "500",
-  },
-  netAmount: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: Colors.primary,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 12,
-  },
-  bankSummary: {
-    alignItems: "flex-end",
-  },
-  bankSummaryName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  bankSummaryDetails: {
-    fontSize: 12,
-    color: Colors.text.secondary,
-  },
-  termsCheckbox: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  termsText: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.text.secondary,
-  },
-  termsLink: {
-    color: Colors.primary,
-    fontWeight: "500",
-  },
-  warningBox: {
-    flexDirection: "row",
-    backgroundColor: Colors.warning + "10",
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.warning + "20",
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.warning,
-    lineHeight: 18,
-  },
-  footer: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  nextButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  nextButtonText: {
-    fontSize: 16,
-    color: Colors.surface,
-    fontWeight: "600",
-  },
-  confirmButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.success,
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  confirmButtonDisabled: {
-    opacity: 0.5,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    color: Colors.surface,
-    fontWeight: "600",
-  },
+const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { flexGrow: 1 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: colors.text.primary },
+  progressContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 40, paddingVertical: 20, backgroundColor: colors.surface },
+  progressStep: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.background, borderWidth: 2, borderColor: colors.border, justifyContent: "center", alignItems: "center" },
+  progressStepActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  progressStepText: { fontSize: 14, fontWeight: "600", color: colors.text.secondary },
+  progressStepTextActive: { color: colors.surface },
+  progressLine: { flex: 1, height: 2, backgroundColor: colors.border, marginHorizontal: 8 },
+  progressLineActive: { backgroundColor: colors.primary },
+  content: { flex: 1, padding: 20 },
+  stepContainer: { paddingBottom: 20 },
+  stepTitle: { fontSize: 22, fontWeight: "bold", color: colors.text.primary, marginBottom: 8 },
+  stepSubtitle: { fontSize: 14, color: colors.text.secondary, marginBottom: 24 },
+  amountContainer: { flexDirection: "row", alignItems: "center", borderBottomWidth: 2, borderBottomColor: colors.primary, marginBottom: 20, paddingBottom: 8 },
+  currencySymbol: { fontSize: 24, fontWeight: "600", color: colors.text.primary, marginRight: 8 },
+  amountInput: { flex: 1, fontSize: 32, fontWeight: "bold", color: colors.text.primary, padding: 0 },
+  quickAmounts: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4, marginBottom: 24 },
+  quickAmount: { width: "23%", margin: "1%", backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12, alignItems: "center", borderWidth: 1, borderColor: colors.border },
+  quickAmountText: { fontSize: 12, color: colors.text.primary, fontWeight: "500" },
+  feeBreakdown: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 20 },
+  feeRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  feeLabel: { fontSize: 14, color: colors.text.secondary },
+  feeValue: { fontSize: 14, color: colors.text.primary },
+  feeDivider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
+  netLabel: { fontSize: 16, fontWeight: "600", color: colors.text.primary },
+  netValue: { fontSize: 18, fontWeight: "bold", color: colors.primary },
+  infoBox: { flexDirection: "row", backgroundColor: colors.info + "10", borderRadius: 12, padding: 16, gap: 12, borderWidth: 1, borderColor: colors.info + "20" },
+  infoText: { flex: 1, fontSize: 13, color: colors.text.secondary, lineHeight: 18 },
+  savedBanks: { marginBottom: 20 },
+  sectionLabel: { fontSize: 14, fontWeight: "600", color: colors.text.primary, marginBottom: 12 },
+  bankCard: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.background, borderRadius: 12, padding: 16, marginBottom: 8, borderWidth: 2, borderColor: "transparent" },
+  bankCardSelected: { borderColor: colors.primary, backgroundColor: colors.primary + "10" },
+  bankCardLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  bankIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary + "20", justifyContent: "center", alignItems: "center", marginRight: 12 },
+  bankInfo: { flex: 1 },
+  bankName: { fontSize: 16, fontWeight: "600", color: colors.text.primary, marginBottom: 4 },
+  bankAccount: { fontSize: 13, color: colors.text.secondary },
+  radioButton: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.primary, justifyContent: "center", alignItems: "center" },
+  radioSelected: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  addBankButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: colors.primary + "10", paddingVertical: 16, borderRadius: 12, borderWidth: 2, borderColor: colors.primary + "30", borderStyle: "dashed", gap: 8, marginBottom: 20 },
+  addBankText: { fontSize: 15, color: colors.primary, fontWeight: "500" },
+  newBankForm: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border },
+  formGroup: { marginBottom: 16 },
+  formLabel: { fontSize: 13, fontWeight: "500", color: colors.text.primary, marginBottom: 6 },
+  formInput: { backgroundColor: colors.background, borderRadius: 12, padding: 14, fontSize: 14, color: colors.text.primary, borderWidth: 1, borderColor: colors.border },
+  formRow: { flexDirection: "row", marginHorizontal: -8 },
+  saveBankCheckbox: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: colors.primary, marginRight: 12, justifyContent: "center", alignItems: "center" },
+  checkboxChecked: { backgroundColor: colors.primary },
+  checkboxLabel: { fontSize: 14, color: colors.text.primary },
+  successIcon: { alignItems: "center", marginVertical: 20 },
+  confirmTitle: { fontSize: 22, fontWeight: "bold", color: colors.text.primary, textAlign: "center", marginBottom: 8 },
+  confirmSubtitle: { fontSize: 14, color: colors.text.secondary, textAlign: "center", marginBottom: 24 },
+  summaryCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 20 },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  summaryLabel: { fontSize: 14, color: colors.text.secondary },
+  summaryValue: { fontSize: 14, color: colors.text.primary, fontWeight: "500" },
+  netAmount: { fontSize: 18, fontWeight: "bold", color: colors.primary },
+  summaryDivider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
+  bankSummary: { alignItems: "flex-end" },
+  bankSummaryName: { fontSize: 14, fontWeight: "500", color: colors.text.primary, marginBottom: 2 },
+  bankSummaryDetails: { fontSize: 12, color: colors.text.secondary },
+  termsCheckbox: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  termsText: { flex: 1, fontSize: 13, color: colors.text.secondary },
+  termsLink: { color: colors.primary, fontWeight: "500" },
+  warningBox: { flexDirection: "row", backgroundColor: colors.warning + "10", borderRadius: 12, padding: 16, gap: 12, borderWidth: 1, borderColor: colors.warning + "20" },
+  warningText: { flex: 1, fontSize: 13, color: colors.warning, lineHeight: 18 },
+  footer: { padding: 20, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
+  nextButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 12, gap: 8 },
+  nextButtonText: { fontSize: 16, color: colors.surface, fontWeight: "600" },
+  confirmButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: colors.success, paddingVertical: 16, borderRadius: 12, gap: 8 },
+  confirmButtonDisabled: { opacity: 0.5 },
+  confirmButtonText: { fontSize: 16, color: colors.surface, fontWeight: "600" },
 });

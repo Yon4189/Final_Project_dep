@@ -35,9 +35,6 @@ class BookingController extends Controller
         $this->notificationService = $notificationService;
         $this->locationValidator = $locationValidator;
     }
-    {
-        $this->notificationService = $notificationService;
-    }
     public function store(Request $request)
     {
         // Log the incoming request for debugging

@@ -3,11 +3,11 @@ import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useCurrencyStore } from './store/currencyStore';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import '../hooks/useTracking';
 import { useNotifications } from '../hooks/useNotifications';
 import * as SplashScreen from 'expo-splash-screen';
-
+import { StatusBar } from 'expo-status-bar';
 import { LogBox } from 'react-native';
 
 // Silence the Expo SDK 53 Android push notification warning in local development
@@ -17,6 +17,28 @@ LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+function RootLayoutContent() {
+  const { colors, isDark } = useTheme();
+
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background }
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(customer)" />
+        <Stack.Screen name="(provider)" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </>
+  );
+}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -33,13 +55,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-          <Stack.Screen name="(provider)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
+        <RootLayoutContent />
       </QueryClientProvider>
     </ThemeProvider>
   );

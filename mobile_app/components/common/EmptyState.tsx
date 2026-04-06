@@ -1,5 +1,4 @@
-// components/common/EmptyState.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +7,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/app/constants/Colors';
+import { useTheme } from '@/app/context/ThemeContext';
+import { ThemeColors } from '@/app/constants/Colors';
 
 interface EmptyStateProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -21,7 +21,7 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  icon = 'alert-circle-outline',
+  icon,
   title,
   message,
   actionLabel,
@@ -29,16 +29,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   variant = 'default',
   style,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+
   const getIconColor = () => {
     switch (variant) {
       case 'error':
-        return Colors.error;
+        return colors.error;
       case 'search':
-        return Colors.primary;
+        return colors.primary;
       case 'loading':
-        return Colors.text.secondary;
+        return colors.text.secondary;
       default:
-        return Colors.text.secondary;
+        return colors.text.secondary;
     }
   };
 
@@ -72,14 +75,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {actionLabel && onAction && (
         <TouchableOpacity style={styles.actionButton} onPress={onAction}>
           <Text style={styles.actionButtonText}>{actionLabel}</Text>
-          <Ionicons name="arrow-forward" size={18} color={Colors.primary} />
+          <Ionicons name="arrow-forward" size={18} color={colors.primary} />
         </TouchableOpacity>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -92,23 +95,23 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     textAlign: 'center',
     marginBottom: 8,
   },
   message: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -117,17 +120,17 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: colors.primary + '10',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: colors.primary,
   },
   actionButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.primary,
+    color: colors.primary,
     marginRight: 8,
   },
-});
+});

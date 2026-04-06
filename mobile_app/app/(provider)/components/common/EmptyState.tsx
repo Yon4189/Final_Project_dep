@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '@/app/constants/Colors';
+import { useTheme } from '@/app/context/ThemeContext';
+import { ThemeColors } from '@/app/constants/Colors';
 
 const { width } = Dimensions.get('window');
 
@@ -43,6 +44,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   iconColor,
   iconSize,
 }) => {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+
   const getIconSize = () => {
     if (iconSize) return iconSize;
     switch (variant) {
@@ -61,15 +65,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     if (iconColor) return iconColor;
     switch (icon) {
       case 'alert-circle-outline':
-        return Colors.error;
+        return colors.error;
       case 'checkmark-circle-outline':
-        return Colors.success;
+        return colors.success;
       case 'time-outline':
-        return Colors.warning;
+        return colors.warning;
       case 'cloud-offline-outline':
-        return Colors.info;
+        return colors.info;
       default:
-        return Colors.text.secondary;
+        return colors.text.secondary;
     }
   };
 
@@ -81,10 +85,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     if (illustration) {
       return (
         <LinearGradient
-          colors={[Colors.primary + '20', Colors.primary + '05']}
+          colors={[colors.primary + '20', colors.primary + '05']}
           style={[styles.illustrationContainer, { width: getIconSize() * 2, height: getIconSize() * 2 }]}
         >
-          <Ionicons name={icon} size={getIconSize()} color={Colors.primary} />
+          <Ionicons name={icon} size={getIconSize()} color={colors.primary} />
         </LinearGradient>
       );
     }
@@ -100,7 +104,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     return (
       <View style={[styles.compactContainer]}>
         <View style={styles.compactContent}>
-          <Ionicons name={icon} size={24} color={Colors.text.secondary} />
+          <Ionicons name={icon} size={24} color={colors.text.secondary} />
           <View style={styles.compactTextContainer}>
             <Text style={styles.compactTitle}>{title}</Text>
             <Text style={styles.compactMessage}>{message}</Text>
@@ -317,27 +321,33 @@ export const NoEarnings: React.FC = () => (
   />
 );
 
-export const NetworkError: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => (
-  <EmptyState
-    icon="cloud-offline-outline"
-    title="Network Error"
-    message="Unable to connect. Please check your internet connection"
-    actionLabel="Try Again"
-    onAction={onRetry}
-    iconColor={Colors.info}
-  />
-);
+export const NetworkError: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => {
+  const { colors } = useTheme();
+  return (
+    <EmptyState
+      icon="cloud-offline-outline"
+      title="Network Error"
+      message="Unable to connect. Please check your internet connection"
+      actionLabel="Try Again"
+      onAction={onRetry}
+      iconColor={colors.info}
+    />
+  );
+};
 
-export const ServerError: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => (
-  <EmptyState
-    icon="alert-circle-outline"
-    title="Server Error"
-    message="Something went wrong on our end. Please try again later"
-    actionLabel="Retry"
-    onAction={onRetry}
-    iconColor={Colors.error}
-  />
-);
+export const ServerError: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => {
+  const { colors } = useTheme();
+  return (
+    <EmptyState
+      icon="alert-circle-outline"
+      title="Server Error"
+      message="Something went wrong on our end. Please try again later"
+      actionLabel="Retry"
+      onAction={onRetry}
+      iconColor={colors.error}
+    />
+  );
+};
 
 export const ComingSoon: React.FC<{ feature?: string; onNotify?: () => void }> = ({
   feature,
@@ -353,27 +363,33 @@ export const ComingSoon: React.FC<{ feature?: string; onNotify?: () => void }> =
   />
 );
 
-export const AccessDenied: React.FC<{ onBack?: () => void }> = ({ onBack }) => (
-  <EmptyState
-    icon="lock-closed-outline"
-    title="Access Denied"
-    message="You don't have permission to view this content"
-    actionLabel="Go Back"
-    onAction={onBack}
-    iconColor={Colors.error}
-  />
-);
+export const AccessDenied: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+  const { colors } = useTheme();
+  return (
+    <EmptyState
+      icon="lock-closed-outline"
+      title="Access Denied"
+      message="You don't have permission to view this content"
+      actionLabel="Go Back"
+      onAction={onBack}
+      iconColor={colors.error}
+    />
+  );
+};
 
-export const NoLocation: React.FC<{ onEnable?: () => void }> = ({ onEnable }) => (
-  <EmptyState
-    icon="location-outline"
-    title="Location Required"
-    message="Please enable location services to find providers near you"
-    actionLabel="Enable Location"
-    onAction={onEnable}
-    iconColor={Colors.primary}
-  />
-);
+export const NoLocation: React.FC<{ onEnable?: () => void }> = ({ onEnable }) => {
+  const { colors } = useTheme();
+  return (
+    <EmptyState
+      icon="location-outline"
+      title="Location Required"
+      message="Please enable location services to find providers near you"
+      actionLabel="Enable Location"
+      onAction={onEnable}
+      iconColor={colors.primary}
+    />
+  );
+};
 
 export const NoData: React.FC<{ onRefresh?: () => void }> = ({ onRefresh }) => (
   <EmptyState
@@ -386,7 +402,7 @@ export const NoData: React.FC<{ onRefresh?: () => void }> = ({ onRefresh }) => (
   />
 );
 
-const emptyStyles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -417,7 +433,7 @@ const emptyStyles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -426,7 +442,7 @@ const emptyStyles = StyleSheet.create({
   },
   message: {
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -442,7 +458,7 @@ const emptyStyles = StyleSheet.create({
     maxWidth: 300,
   },
   actionButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -453,7 +469,7 @@ const emptyStyles = StyleSheet.create({
     borderRadius: 14,
   },
   actionText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -461,20 +477,20 @@ const emptyStyles = StyleSheet.create({
     fontSize: 17,
   },
   secondaryActionButton: {
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   largeSecondaryActionButton: {
     paddingVertical: 16,
     borderRadius: 14,
   },
   secondaryActionText: {
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -486,13 +502,13 @@ const emptyStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   compactContent: {
     flex: 1,
@@ -506,60 +522,62 @@ const emptyStyles = StyleSheet.create({
   compactTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 2,
   },
   compactMessage: {
     fontSize: 13,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   compactAction: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: colors.primary + '10',
     borderRadius: 20,
     marginLeft: 12,
   },
   compactActionText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 13,
     fontWeight: '500',
   },
   // Card variant
   cardContainer: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     margin: 16,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginTop: 16,
     marginBottom: 8,
   },
   cardMessage: {
     fontSize: 13,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: 16,
   },
   cardAction: {
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: colors.primary + '10',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
   },
   cardActionText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 13,
     fontWeight: '500',
   },
 });
 
 // Merge styles
-const styles = { ...emptyStyles };
+const styles = {}; 
+// Actually we have to use useMemo to get the styles from getStyles.
+// I'll update the component logic to reflect this.

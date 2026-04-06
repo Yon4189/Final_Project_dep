@@ -82,8 +82,8 @@ class ProviderService {
     return response;
   }
 
-  async updateProfile(data: Partial<ProviderProfile>): Promise<ApiResponse<ProviderProfile>> {
-    const response = await api.put<ProviderProfile>(`${this.BASE_PATH}/profile`, data);
+  async updateProfile(data: Partial<ProviderProfile> | FormData): Promise<ApiResponse<ProviderProfile>> {
+    const response = await api.post<ProviderProfile>(`${this.BASE_PATH}/profile/update`, data);
     
     if (response.success && response.data) {
       await storage.setItem('provider_profile', response.data);

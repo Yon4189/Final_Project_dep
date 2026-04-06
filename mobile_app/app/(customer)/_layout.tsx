@@ -1,15 +1,17 @@
 // app/(customer)/_layout.tsx
-import React from 'react';
-import { Stack } from 'expo-router';
-import { Colors } from '@/app/constants/Colors';
+import React, { useMemo } from 'react';
+import { Stack, useRouter } from 'expo-router';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useUnreadNotificationsCount } from '@/hooks/useCustomerQueries';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors } from '@/app/constants/Colors';
 
 function NotificationBadge() {
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   if (unreadCount === 0) {
     return (
@@ -17,7 +19,7 @@ function NotificationBadge() {
         onPress={() => router.push('/(customer)/notifications')}
         style={{ marginRight: 15 }}
       >
-        <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+        <Ionicons name="notifications-outline" size={24} color={colors.primary} />
       </TouchableOpacity>
     );
   }
@@ -27,7 +29,7 @@ function NotificationBadge() {
       onPress={() => router.push('/(customer)/notifications')}
       style={{ marginRight: 15, position: 'relative' }}
     >
-      <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+      <Ionicons name="notifications-outline" size={24} color={colors.primary} />
       <View style={styles.badge}>
         <Text style={styles.badgeText}>
           {unreadCount > 9 ? '9+' : unreadCount}
@@ -39,15 +41,16 @@ function NotificationBadge() {
 
 export default function CustomerLayout() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerTintColor: Colors.text.primary,
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text.primary,
         headerTitleStyle: { fontWeight: '600' },
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.background },
+        contentStyle: { backgroundColor: colors.background },
         headerLeft: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
             <TouchableOpacity
@@ -60,12 +63,12 @@ export default function CustomerLayout() {
               }}
               style={{ marginRight: 12 }}
             >
-              <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+              <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.replace('/(customer)/dashboard')}
             >
-              <Ionicons name="home-outline" size={24} color={Colors.primary} />
+              <Ionicons name="home-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
         ),
@@ -222,22 +225,22 @@ export default function CustomerLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: Colors.error,
+    backgroundColor: colors.error,
     borderRadius: 9,
     minWidth: 18,
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
   },
   badgeText: {
-    color: Colors.surface,
+    color: colors.surface,
     fontSize: 10,
     fontWeight: 'bold',
   },

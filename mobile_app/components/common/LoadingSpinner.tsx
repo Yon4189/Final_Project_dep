@@ -1,5 +1,5 @@
 // components/common/LoadingSpinner.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   ActivityIndicator,
@@ -7,7 +7,8 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { Colors } from '@/app/constants/Colors';
+import { useTheme } from '@/app/context/ThemeContext';
+import { ThemeColors } from '@/app/constants/Colors';
 
 interface LoadingSpinnerProps {
   size?: 'small' | 'large';
@@ -19,15 +20,19 @@ interface LoadingSpinnerProps {
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'large',
-  color = Colors.primary,
+  color,
   text,
   fullScreen = false,
   style,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+  const spinnerColor = color || colors.primary;
+
   if (fullScreen) {
     return (
       <View style={[styles.fullScreenContainer, style]}>
-        <ActivityIndicator size={size} color={color} />
+        <ActivityIndicator size={size} color={spinnerColor} />
         {text && <Text style={styles.text}>{text}</Text>}
       </View>
     );
@@ -35,13 +40,13 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <ActivityIndicator size={size} color={color} />
+      <ActivityIndicator size={size} color={spinnerColor} />
       {text && <Text style={styles.text}>{text}</Text>}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     padding: 20,
     alignItems: 'center',
@@ -51,12 +56,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   text: {
     marginTop: 12,
     fontSize: 14,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     textAlign: 'center',
   },
 });

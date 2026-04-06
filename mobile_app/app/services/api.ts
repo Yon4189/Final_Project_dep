@@ -320,6 +320,13 @@ class ApiService {
           console.log(` No token for request: ${config.url}`);
         }
 
+        // Fix for FormData: Set Content-Type to null to allow Axios to set boundary
+        const isFormData = config.data && typeof config.data.append === 'function';
+        if (isFormData && config.headers) {
+          config.headers['Content-Type'] = null;
+          console.log('Detected FormData, set Content-Type to null for Axios boundary');
+        }
+
         config.headers['X-Request-ID'] = this.generateRequestId();
 
         // Attach user type header

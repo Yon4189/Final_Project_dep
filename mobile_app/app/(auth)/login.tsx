@@ -1,7 +1,7 @@
 // app/(auth)/login.tsx
 import { api } from "../services/api";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Alert,
   ScrollView,
@@ -16,11 +16,15 @@ import {
 } from "react-native";
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
-import { Colors } from "../constants/Colors";
+import { ThemeColors } from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../context/ThemeContext";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -206,7 +210,6 @@ export default function LoginScreen() {
     }
   };
 
-  // Rest of your component remains the same...
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -236,7 +239,7 @@ export default function LoginScreen() {
               <Ionicons
                 name="person-outline"
                 size={24}
-                color={userType === "customer" ? "#FFFFFF" : Colors.primary}
+                color={userType === "customer" ? "#FFFFFF" : colors.primary}
               />
               <Text
                 style={[
@@ -259,7 +262,7 @@ export default function LoginScreen() {
               <Ionicons
                 name="construct-outline"
                 size={24}
-                color={userType === "provider" ? "#FFFFFF" : Colors.primary}
+                color={userType === "provider" ? "#FFFFFF" : colors.primary}
               />
               <Text
                 style={[
@@ -275,7 +278,7 @@ export default function LoginScreen() {
           {/* Email Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputWithIcon}>
-              <Ionicons name="mail-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
+              <Ionicons name="mail-outline" size={20} color={colors.primary} style={styles.inputIcon} />
               <View style={{ flex: 1 }}>
                 <AppInput
                   label="Email"
@@ -285,7 +288,6 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   required
-                //  editable={!loading}
                 />
               </View>
             </View>
@@ -294,7 +296,7 @@ export default function LoginScreen() {
           {/* Password Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputWithIcon}>
-              <Ionicons name="lock-closed-outline" size={20} color={Colors.primary} style={styles.inputIcon} />
+              <Ionicons name="lock-closed-outline" size={20} color={colors.primary} style={styles.inputIcon} />
               <View style={{ flex: 1 }}>
                 <AppInput
                   label="Password"
@@ -304,7 +306,6 @@ export default function LoginScreen() {
                   secureTextEntry
                   showPasswordToggle={true}
                   required
-                //editable={!loading}
                 />
               </View>
             </View>
@@ -328,7 +329,7 @@ export default function LoginScreen() {
 
           {loading && (
             <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color={Colors.primary} />
+              <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>Authenticating...</Text>
             </View>
           )}
@@ -364,10 +365,10 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   contentContainer: {
     flexGrow: 1,
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 60,
     paddingBottom: 40,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     elevation: 5,
@@ -389,17 +390,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.text.primary,
+    color: colors.text.primary,
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     marginTop: 5,
   },
   formContainer: {
     padding: 20,
     marginHorizontal: 15,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 15,
     elevation: 3,
     shadowColor: "#000",
@@ -410,7 +411,7 @@ const styles = StyleSheet.create({
   },
   userTypeContainer: {
     flexDirection: "row",
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderRadius: 10,
     padding: 5,
     marginBottom: 25,
@@ -426,12 +427,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   userTypeBtnActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
   },
   userTypeText: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
   },
   userTypeTextActive: {
     color: "#FFFFFF",
@@ -452,7 +453,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   forgotPasswordText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontWeight: "600",
   },
   divider: {
@@ -463,17 +464,17 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
   },
   dividerText: {
     paddingHorizontal: 15,
-    color: Colors.text.secondary,
+    color: colors.text.secondary,
     fontSize: 14,
   },
   registerTitle: {
     textAlign: "center",
     fontSize: 16,
-    color: Colors.text.primary,
+    color: colors.text.primary,
     marginBottom: 15,
     fontWeight: "600",
   },
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 15,
@@ -494,8 +495,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
-});
+});

@@ -456,18 +456,24 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         }
       }
 
+      // Map location source to backend's expected location_type
+      let locationType: 'current' | 'saved' | 'manual' = 'current';
+      if (locationSource === 'gps') locationType = 'current';
+      else if (locationSource === 'saved') locationType = 'saved';
+      else if (locationSource === 'new') locationType = 'manual';
+
       const bookingResponse = await createBooking.mutateAsync({
         providerID: Number(provider.id),
         serviceID: Number(selectedServiceId),
         scheduledDate: scheduledDate,
         agreed_price: parseFloat(agreedPrice), // Use the agreed price entered by customer
-        service_address: finalAddress,
-        full_address: finalAddress,
-        location_source: locationSource,
-        saved_address_id: savedAddressId ? Number(savedAddressId) : undefined,
-        latitude: locationSource === 'gps' ? (userLocation?.latitude || 0) : 0,
-        longitude: locationSource === 'gps' ? (userLocation?.longitude || 0) : 0,
         notes: description,
+        
+        location_type: locationType,
+        latitude: locationType === 'current' ? (userLocation?.latitude || 0) : undefined,
+        longitude: locationType === 'current' ? (userLocation?.longitude || 0) : undefined,
+        address_id: locationType === 'saved' && savedAddressId ? Number(savedAddressId) : undefined,
+        manual_address: locationType === 'manual' ? finalAddress : undefined,
       });
 
       const bookingId =

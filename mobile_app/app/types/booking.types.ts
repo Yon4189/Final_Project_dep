@@ -53,15 +53,16 @@ export interface CreateBookingDTO {
   serviceID: number;
   scheduledDate: string;
   agreed_price: number;
-  service_address?: string;
-  service_latitude?: number;
-  service_longitude?: number;
-  full_address?: string;
-  saved_address_id?: number;
-  location_source?: 'gps' | 'saved' | 'new';
+  notes?: string;
+  
+  // Location fields exactly matching backend LocationValidator
+  location_type: 'current' | 'saved' | 'manual' | 'pin_on_map';
   latitude?: number;
   longitude?: number;
-  notes?: string;
+  address_id?: number;
+  manual_address?: string;
+  formatted_address?: string;
+  place_id?: string;
 }
 
 export interface BookingResponse {

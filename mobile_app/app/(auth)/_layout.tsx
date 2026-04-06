@@ -2,10 +2,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
-import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AuthLayout() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   // Common back button handler for all screens
   const handleBackPress = () => {
@@ -27,7 +28,7 @@ export default function AuthLayout() {
       <Ionicons
         name="arrow-back"
         size={24}
-        color={Colors.surface}
+        color={colors.surface}
       />
     </TouchableOpacity>
   );
@@ -36,16 +37,16 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.primary,
         },
-        headerTintColor: Colors.surface,
+        headerTintColor: colors.surface,
         headerTitleStyle: {
           fontWeight: 'bold',
           fontSize: 18,
         },
         headerTitleAlign: 'center', // Center the title
         contentStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: colors.background,
         },
         animation: 'slide_from_right',
         // Apply back button to all screens by default
@@ -58,7 +59,6 @@ export default function AuthLayout() {
         options={{
           title: 'Sign In',
           headerShown: true,
-          // Customize if needed, but inherits headerLeft from screenOptions
         }}
       />
 
@@ -68,9 +68,8 @@ export default function AuthLayout() {
         options={{
           title: 'Provider Registration',
           headerStyle: {
-            backgroundColor: Colors.secondary, // Different color for provider
+            backgroundColor: colors.primary, // Use primary for consistency, or a dedicated theme color
           },
-          // Inherits headerLeft from screenOptions
         }}
       />
 
@@ -79,18 +78,16 @@ export default function AuthLayout() {
         name="register-customer"
         options={{
           title: 'Customer Registration',
-          // Inherits headerLeft and headerStyle from screenOptions
         }}
       />
 
-      {/* FORGOT PASSWORD SCREEN - Add this if you have it */}
+      {/* FORGOT PASSWORD SCREEN */}
       <Stack.Screen
         name="forgot-password"
         options={{
           title: 'Forgot Password',
-          // Inherits headerLeft from screenOptions
         }}
       />
     </Stack>
   );
-}
+}
