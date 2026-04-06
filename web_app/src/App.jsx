@@ -22,7 +22,7 @@ import ResetPassword from './pages/ResetPassword';
 import Payment from './pages/Payment';
 
 /**
- * 🛡️ ProtectedRoute Component
+ *  ProtectedRoute Component
  * This wrapper checks if the user exists in our AuthContext.
  * If not, it redirects them to the /login page.
  */
@@ -44,12 +44,12 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* ✅ 1. PUBLIC ROUTES - Anyone can see these */}
+            {/*  1. PUBLIC ROUTES - Anyone can see these */}
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/payment/:txRef" element={<Payment />} />
 
-            {/* 🔐 2. PROTECTED ROUTES - Only logged-in users */}
+            {/*  2. PROTECTED ROUTES - Only logged-in users */}
             <Route
               path="/"
               element={
