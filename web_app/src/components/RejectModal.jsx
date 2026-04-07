@@ -50,7 +50,7 @@ const RejectModal = ({
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200"
+        className="bg-admin-card rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200 border border-admin-border"
       >
         <div className="p-6 bg-red-500 text-white flex justify-between items-center">
           <h2 id="reject-modal-title" className="text-lg font-black italic tracking-tighter uppercase">
@@ -65,12 +65,12 @@ const RejectModal = ({
           </button>
         </div>
         <div className="p-6">
-          <label id="reject-modal-description" className="block text-slate-700 font-bold mb-2 text-xs uppercase">
+          <label id="reject-modal-description" className="block text-admin-text font-bold mb-2 text-xs uppercase">
             Rejection Reason
           </label>
           <textarea
             ref={textareaRef}
-            className="w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-400"
+            className="w-full border border-admin-border rounded-xl p-3 text-sm text-admin-text focus:outline-none focus:ring-2 focus:ring-red-400 bg-admin-card transition-colors"
             rows={3}
             placeholder={defaultReason}
             value={inputReason}
@@ -78,11 +78,11 @@ const RejectModal = ({
             aria-required="true"
           />
         </div>
-        <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+        <div className="p-6 border-t border-admin-border flex justify-end gap-3">
           <button
             ref={cancelButtonRef}
             onClick={onCancel}
-            className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="bg-admin-card hover:bg-slate-100 dark:hover:bg-slate-700 text-admin-text font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500 border border-admin-border"
           >
             Cancel
           </button>

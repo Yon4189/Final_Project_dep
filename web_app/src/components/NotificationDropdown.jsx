@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2, Info, AlertTriangle, Wallet, BellOff, Check, ShieldCheck, Star } from 'lucide-react';
 import api from '../api/axios';
 
@@ -122,12 +122,12 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-14 right-0 w-80 bg-white shadow-2xl border border-slate-100 overflow-hidden z-50 rounded-[2rem] transition-all duration-200 animate-in fade-in zoom-in origin-top-right">
+    <div className="absolute top-14 right-0 w-80 bg-admin-card shadow-2xl border border-admin-border overflow-hidden z-50 rounded-[2rem] transition-all duration-200 animate-in fade-in zoom-in origin-top-right">
 
       {/* Header */}
-      <div className="bg-slate-900 p-4 flex items-center justify-between">
+      <div className="bg-slate-900 dark:bg-black p-4 flex items-center justify-between border-b border-white/5">
         <h3 className="text-white font-bold">Notifications</h3>
-        <span className="bg-slate-700 text-slate-300 text-xs px-2 py-1 rounded-full font-medium">
+        <span className="bg-white/10 text-slate-300 text-xs px-2 py-1 rounded-full font-medium">
           {notifications.length} New
         </span>
       </div>
@@ -137,12 +137,12 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-10">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
-            <p className="text-sm text-slate-400">Loading notifications...</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">Loading notifications...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-            <AlertTriangle className="w-8 h-8 text-red-300 mb-2" />
-            <p className="text-sm font-bold text-slate-700">Failed to load</p>
+            <AlertTriangle className="w-8 h-8 text-red-300 dark:text-red-900/50 mb-2" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Failed to load</p>
             <button
               onClick={() => fetchNotifications(true)}
               className="mt-2 text-xs font-bold text-blue-500 hover:underline"
@@ -151,19 +151,19 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
             </button>
           </div>
         ) : notifications.length > 0 ? (
-          <div className="flex flex-col divide-y divide-slate-50">
+          <div className="flex flex-col divide-y divide-slate-50 dark:divide-slate-800">
             {notifications.map((notif) => (
               <div
                 key={notif.notificationID || notif.id}
-                className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors flex gap-3 items-start group ${!notif.is_seen ? 'bg-blue-50/30' : ''}`}
+                className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors flex gap-3 items-start group ${!notif.is_seen ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
               >
                 {getIcon(notif.type)}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-slate-800 leading-tight mb-1 group-hover:text-blue-600 transition-colors truncate">
+                  <h4 className="text-sm font-semibold text-slate-800 text-admin-text leading-tight mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
                     {notif.title}
                   </h4>
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{notif.message}</p>
-                  <span className="text-[10px] text-slate-400 mt-1.5 block font-medium uppercase tracking-widest">
+                  <p className="text-xs text-admin-text-muted line-clamp-2 leading-relaxed">{notif.message}</p>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 block font-medium uppercase tracking-widest">
                     {timeAgo(notif.created_at)}
                   </span>
                 </div>
@@ -175,21 +175,21 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-              <BellOff className="w-6 h-6 text-slate-300" />
+            <div className="w-12 h-12 bg-admin-card rounded-full flex items-center justify-center mb-3">
+              <BellOff className="w-6 h-6 text-slate-300 dark:text-slate-600" />
             </div>
-            <p className="text-sm font-bold text-slate-700">No new notifications</p>
-            <p className="text-xs text-slate-500 mt-1">You're all caught up!</p>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No new notifications</p>
+            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">You're all caught up!</p>
           </div>
         )}
       </div>
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="p-3 bg-slate-50 border-t border-slate-100">
+        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 border-t border-admin-border">
           <button
             onClick={markAllAsRead}
-            className="w-full py-2 flex items-center justify-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="w-full py-2 flex items-center justify-center gap-2 text-sm font-bold text-admin-text-muted hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
           >
             <Check size={16} />
             Mark all as Read

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Clock, 
@@ -99,12 +99,12 @@ const AdminWithdrawalManagement = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-admin-card rounded-lg shadow-md p-6">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 bg-admin-card rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-gray-200 bg-admin-card rounded"></div>
             ))}
           </div>
         </div>
@@ -116,23 +116,23 @@ const AdminWithdrawalManagement = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+        <h2 className="text-2xl font-bold text-gray-900 text-admin-text flex items-center">
           <Banknote className="w-6 h-6 mr-2" />
           Withdrawal Management
         </h2>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4">
+      <div className="bg-admin-card rounded-lg shadow-md p-4 border border-admin-border">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Status
             </label>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 bg-admin-card text-gray-900 dark:text-white"
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
@@ -144,33 +144,33 @@ const AdminWithdrawalManagement = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               From Date
             </label>
             <input
               type="date"
               value={filters.date_from}
               onChange={(e) => handleFilterChange('date_from', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 bg-admin-card text-gray-900 dark:text-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               To Date
             </label>
             <input
               type="date"
               value={filters.date_to}
               onChange={(e) => handleFilterChange('date_to', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 bg-admin-card text-gray-900 dark:text-white"
             />
           </div>
 
           <div className="flex items-end">
             <button
               onClick={() => setFilters({ status: '', date_from: '', date_to: '' })}
-              className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+              className="w-full bg-gray-200 bg-admin-card text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
             >
               Clear Filters
             </button>
@@ -187,53 +187,53 @@ const AdminWithdrawalManagement = () => {
       )}
 
       {/* Withdrawals List */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-admin-card rounded-lg shadow-md overflow-hidden border border-admin-border">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
+            <thead className="bg-gray-50 dark:bg-black/20">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 text-admin-text-muted uppercase tracking-wider">
                   Reference
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 text-admin-text-muted uppercase tracking-wider">
                   Provider
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 text-admin-text-muted uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 text-admin-text-muted uppercase tracking-wider">
                   Bank Details
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 text-admin-text-muted uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 text-admin-text-muted uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 text-admin-text-muted uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-transparent divide-y divide-gray-200 dark:divide-slate-800">
               {withdrawals.map((withdrawal) => (
-                <tr key={withdrawal.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={withdrawal.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {withdrawal.withdrawal_ref}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-300">
                     {withdrawal.provider?.businessName || 'N/A'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-300">
                     <div>
                       <div className="font-medium">ETB {withdrawal.amount?.toLocaleString()}</div>
-                      <div className="text-xs text-gray-500">Fee: ETB {withdrawal.platform_fee?.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-500">Fee: ETB {withdrawal.platform_fee?.toLocaleString()}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-300">
                     <div>
                       <div className="font-medium">{withdrawal.provider_bank_name}</div>
-                      <div className="text-xs text-gray-500">****{withdrawal.provider_account_number?.slice(-4)}</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-500">****{withdrawal.provider_account_number?.slice(-4)}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -242,7 +242,7 @@ const AdminWithdrawalManagement = () => {
                       <span className="ml-1 capitalize">{withdrawal.status}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-admin-text-muted">
                     {new Date(withdrawal.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -283,22 +283,22 @@ const AdminWithdrawalManagement = () => {
 
         {withdrawals.length === 0 && !loading && (
           <div className="text-center py-8">
-            <Banknote className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No withdrawals found</p>
+            <Banknote className="w-12 h-12 text-gray-400 dark:text-slate-700 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-slate-500">No withdrawals found</p>
           </div>
         )}
       </div>
 
       {/* Withdrawal Details Modal */}
       {showDetails && selectedWithdrawal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-admin-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-admin-border">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Withdrawal Details</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Withdrawal Details</h3>
                 <button
                   onClick={() => setShowDetails(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
                 >
                   <XCircle className="w-6 h-6" />
                 </button>
@@ -307,12 +307,12 @@ const AdminWithdrawalManagement = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Reference</p>
-                    <p className="font-medium">{selectedWithdrawal.withdrawal_ref}</p>
+                    <p className="text-sm text-gray-600 text-admin-text-muted">Reference</p>
+                    <p className="font-medium dark:text-white">{selectedWithdrawal.withdrawal_ref}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Status</p>
-                    <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedWithdrawal.status)}`}>
+                    <p className="text-sm text-gray-600 text-admin-text-muted">Status</p>
+                    <div className={`flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${getStatusColor(selectedWithdrawal.status)}`}>
                       {getStatusIcon(selectedWithdrawal.status)}
                       <span className="ml-1 capitalize">{selectedWithdrawal.status}</span>
                     </div>
@@ -321,38 +321,38 @@ const AdminWithdrawalManagement = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Amount</p>
-                    <p className="font-medium">ETB {selectedWithdrawal.amount?.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600 text-admin-text-muted">Amount</p>
+                    <p className="font-medium dark:text-white">ETB {selectedWithdrawal.amount?.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Platform Fee</p>
-                    <p className="font-medium">ETB {selectedWithdrawal.platform_fee?.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600 text-admin-text-muted">Platform Fee</p>
+                    <p className="font-medium dark:text-white">ETB {selectedWithdrawal.platform_fee?.toLocaleString()}</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600">Net Amount</p>
-                  <p className="text-lg font-bold text-green-600">ETB {selectedWithdrawal.net_amount?.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600 text-admin-text-muted">Net Amount</p>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">ETB {selectedWithdrawal.net_amount?.toLocaleString()}</p>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600">Bank Information</p>
-                  <div className="bg-gray-50 p-3 rounded">
-                    <p className="font-medium">{selectedWithdrawal.provider_bank_name}</p>
-                    <p className="text-sm">Account: {selectedWithdrawal.provider_account_number}</p>
-                    <p className="text-sm">Name: {selectedWithdrawal.provider_account_holder_name}</p>
+                  <p className="text-sm text-gray-600 text-admin-text-muted">Bank Information</p>
+                  <div className="bg-gray-50 dark:bg-slate-800/50 p-3 rounded border border-admin-border">
+                    <p className="font-medium dark:text-white">{selectedWithdrawal.provider_bank_name}</p>
+                    <p className="text-sm dark:text-slate-300">Account: {selectedWithdrawal.provider_account_number}</p>
+                    <p className="text-sm dark:text-slate-300">Name: {selectedWithdrawal.provider_account_holder_name}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Created</p>
-                    <p className="font-medium">{new Date(selectedWithdrawal.created_at).toLocaleString()}</p>
+                    <p className="text-sm text-gray-600 text-admin-text-muted">Created</p>
+                    <p className="font-medium dark:text-white">{new Date(selectedWithdrawal.created_at).toLocaleString()}</p>
                   </div>
                   {selectedWithdrawal.processed_at && (
                     <div>
-                      <p className="text-sm text-gray-600">Processed</p>
-                      <p className="font-medium">{new Date(selectedWithdrawal.processed_at).toLocaleString()}</p>
+                      <p className="text-sm text-gray-600 text-admin-text-muted">Processed</p>
+                      <p className="font-medium dark:text-white">{new Date(selectedWithdrawal.processed_at).toLocaleString()}</p>
                     </div>
                   )}
                 </div>

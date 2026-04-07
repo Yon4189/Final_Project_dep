@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle, Hash } from 'lucide-react';
 import api from '../api/axios';
@@ -49,22 +49,22 @@ const ResetPassword = () => {
 
   if (isFinished) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-        <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 text-center">
+      <div className="min-h-screen bg-slate-100 dark:bg-admin-content flex items-center justify-center p-6">
+        <div className="bg-admin-card w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 text-center border border-transparent dark:border-slate-800">
           <CheckCircle className="mx-auto text-green-500 mb-4" size={60} />
-          <h2 className="text-2xl font-bold text-slate-800">Password Updated!</h2>
-          <p className="text-slate-500 mt-2">Redirecting you to login...</p>
+          <h2 className="text-2xl font-bold text-admin-text">Password Updated!</h2>
+          <p className="text-admin-text-muted mt-2">Redirecting you to login...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 sm:p-14">
+    <div className="min-h-screen bg-slate-100 dark:bg-admin-content flex items-center justify-center p-6">
+      <div className="bg-admin-card w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 sm:p-14 border border-transparent dark:border-slate-800">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-black text-slate-800">New Password</h2>
-          <p className="text-slate-500 text-sm mt-2">Create a secure password for your account</p>
+          <h2 className="text-3xl font-black text-admin-text">New Password</h2>
+          <p className="text-admin-text-muted text-sm mt-2">Create a secure password for your account</p>
         </div>
 
         {error && (
@@ -78,31 +78,31 @@ const ResetPassword = () => {
             <input 
               type="text" 
               required placeholder="6-digit Verification Code"
-              className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500 tracking-widest font-bold"
+              className="w-full bg-slate-100 bg-admin-card border-none rounded-2xl py-4 pl-6 pr-14 text-admin-text focus:ring-2 focus:ring-blue-500 tracking-widest font-bold transition-colors"
               value={tokenInput} onChange={(e) => setTokenInput(e.target.value)}
               maxLength={6}
             />
-            <Hash className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
+            <Hash className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={22} />
           </div>
 
           <div className="relative">
             <input 
               type={showPassword ? "text" : "password"} 
               required placeholder="New Password"
-              className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-100 bg-admin-card border-none rounded-2xl py-4 pl-6 pr-14 text-admin-text focus:ring-2 focus:ring-blue-500 transition-colors"
               value={password} onChange={(e) => setPassword(e.target.value)}
             />
-            <Lock className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
+            <Lock className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={22} />
           </div>
 
           <div className="relative">
             <input 
               type={showPassword ? "text" : "password"} 
               required placeholder="Confirm New Password"
-              className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-100 bg-admin-card border-none rounded-2xl py-4 pl-6 pr-14 text-admin-text focus:ring-2 focus:ring-blue-500 transition-colors"
               value={password_confirmation} onChange={(e) => setPasswordConfirmation(e.target.value)}
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400">
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600">
               {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
             </button>
           </div>

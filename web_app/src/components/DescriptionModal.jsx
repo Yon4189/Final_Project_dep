@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import { XCircle } from 'lucide-react';
 
 const DescriptionModal = ({ show, providerName, description, onClose }) => {
@@ -41,7 +41,7 @@ const DescriptionModal = ({ show, providerName, description, onClose }) => {
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in duration-200"
+        className="bg-admin-card rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in duration-200 border border-admin-border"
       >
         <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
           <h2 id="description-modal-title" className="text-xl font-black italic tracking-tighter uppercase">
@@ -57,14 +57,14 @@ const DescriptionModal = ({ show, providerName, description, onClose }) => {
           </button>
         </div>
         <div id="description-modal-content" className="p-8">
-          <p className="text-slate-700 text-base leading-relaxed whitespace-pre-wrap">
+          <p className="text-admin-text text-base leading-relaxed whitespace-pre-wrap">
             {description}
           </p>
         </div>
-        <div className="p-6 border-t border-slate-100 flex justify-end">
+        <div className="p-6 border-t border-admin-border flex justify-end">
           <button
             onClick={onClose}
-            className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="bg-slate-200 bg-admin-card hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500"
           >
             Close
           </button>

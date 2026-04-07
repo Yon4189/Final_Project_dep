@@ -110,21 +110,21 @@ const Services = () => {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            {activeTab === 'categories' ? 'Categories' : 'Services'}
+          <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
+            {activeTab === 'categories' ? 'Service Categories' : 'Platform Services'}
           </h1>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">
-            {activeTab === 'categories' ? 'Manage service categories' : 'View system services'}
+          <p className="text-admin-text-muted text-[10px] font-black uppercase tracking-widest italic mt-1">
+            {activeTab === 'categories' ? 'Manage service taxonomies and metadata' : 'Review system-wide provider offerings'}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
             <Database size={14} className={
               dbStatus === 'connected' ? 'text-green-500' :
                 dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
-            <span className="text-xs font-semibold uppercase tracking-wider">
+            <span className="text-[10px] font-black uppercase tracking-widest text-admin-text-muted">
               {dbStatus === 'connected' && 'Database Connected'}
               {dbStatus === 'disconnected' && 'Database Disconnected'}
               {dbStatus === 'checking' && 'Checking Database...'}
@@ -132,7 +132,7 @@ const Services = () => {
           </div>
           <button
             onClick={refresh}
-            className="p-2.5 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-2.5 bg-admin-card border border-admin-border rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Refresh data"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />

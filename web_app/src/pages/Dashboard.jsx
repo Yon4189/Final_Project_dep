@@ -134,18 +134,18 @@ const Dashboard = () => {
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight italic">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-admin-text tracking-tight">Admin Dashboard</h1>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
             <Database size={14} className={dbStatus === 'connected' ? 'text-green-500' : 'text-red-500'} aria-hidden="true" />
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-admin-text-muted">
               {dbStatus === 'connected' ? 'Database connected' : 'Database disconnected'}
             </span>
           </div>
           <button
             onClick={refresh}
-            className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-3 bg-admin-card border border-admin-border rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Refresh dashboard data"
             aria-busy={isLoading}
           >

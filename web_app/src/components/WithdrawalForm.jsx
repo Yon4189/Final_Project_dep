@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { BanknoteIcon, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { paymentAPI } from '../api/payment';
 
@@ -102,12 +102,12 @@ const WithdrawalForm = ({
     return (
       <div className="text-center py-8">
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Withdrawal Request Submitted!</h3>
-        <p className="text-gray-600 mb-4">
+        <h3 className="text-xl font-semibold text-gray-900 text-admin-text mb-2">Withdrawal Request Submitted!</h3>
+        <p className="text-gray-600 text-admin-text-muted mb-4">
           Your withdrawal request has been submitted and is being processed.
         </p>
-        <div className="bg-blue-50 p-4 rounded-lg mb-4">
-          <div className="flex items-center text-blue-700 mb-2">
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4 border border-blue-100 dark:border-blue-900/30">
+          <div className="flex items-center text-blue-700 dark:text-blue-400 mb-2">
             <Clock className="w-5 h-5 mr-2" />
             <span className="font-medium">Processing Time: 24-48 hours</span>
           </div>
@@ -134,11 +134,11 @@ const WithdrawalForm = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
+    <div className="bg-admin-card rounded-lg shadow-md p-6 max-w-md mx-auto border border-admin-border">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Withdrawal</h2>
-        <div className="text-sm text-gray-600">
-          Available Balance: <span className="font-semibold text-blue-600">
+        <h2 className="text-2xl font-bold text-gray-900 text-admin-text mb-2">Request Withdrawal</h2>
+        <div className="text-sm text-gray-600 text-admin-text-muted">
+          Available Balance: <span className="font-semibold text-blue-600 dark:text-blue-400">
             ETB {providerData?.total_earned?.toLocaleString() || 0}
           </span>
         </div>
@@ -153,7 +153,7 @@ const WithdrawalForm = ({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Withdrawal Amount (ETB)
           </label>
           <input
@@ -165,7 +165,7 @@ const WithdrawalForm = ({
             max={providerData?.total_earned || 0}
             step="0.01"
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-admin-card text-gray-900 dark:text-white"
             placeholder="Enter amount"
           />
           <p className="text-xs text-gray-500 mt-1">
@@ -174,7 +174,7 @@ const WithdrawalForm = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Bank Name
           </label>
           <select
@@ -182,7 +182,7 @@ const WithdrawalForm = ({
             value={withdrawalData.bank_name}
             onChange={handleInputChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-admin-card text-gray-900 dark:text-white"
           >
             <option value="">Select your bank</option>
             {ethiopianBanks.map(bank => (
@@ -192,7 +192,7 @@ const WithdrawalForm = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Account Number
           </label>
           <input
@@ -201,13 +201,13 @@ const WithdrawalForm = ({
             value={withdrawalData.account_number}
             onChange={handleInputChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-admin-card text-gray-900 dark:text-white"
             placeholder="Enter your account number"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Account Holder Name
           </label>
           <input
@@ -216,26 +216,26 @@ const WithdrawalForm = ({
             value={withdrawalData.account_holder_name}
             onChange={handleInputChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-admin-card text-gray-900 dark:text-white"
             placeholder="Name as it appears on the account"
           />
         </div>
 
         {withdrawalData.amount && parseFloat(withdrawalData.amount) > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium text-gray-900 mb-2">Withdrawal Summary</h4>
+          <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg border border-admin-border">
+            <h4 className="font-medium text-gray-900 text-admin-text mb-2">Withdrawal Summary</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Requested Amount:</span>
-                <span className="font-medium">ETB {parseFloat(withdrawalData.amount).toLocaleString()}</span>
+                <span className="text-gray-600 text-admin-text-muted">Requested Amount:</span>
+                <span className="font-medium dark:text-white">ETB {parseFloat(withdrawalData.amount).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Platform Fee (5%):</span>
-                <span className="font-medium text-red-600">-ETB {platformFee.toLocaleString()}</span>
+                <span className="text-gray-600 text-admin-text-muted">Platform Fee (5%):</span>
+                <span className="font-medium text-red-600 dark:text-red-400">-ETB {platformFee.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span className="text-gray-900 font-medium">Net Amount:</span>
-                <span className="font-bold text-green-600">ETB {netAmount.toLocaleString()}</span>
+              <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-slate-700">
+                <span className="text-gray-900 text-admin-text font-medium">Net Amount:</span>
+                <span className="font-bold text-green-600 dark:text-green-400">ETB {netAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>

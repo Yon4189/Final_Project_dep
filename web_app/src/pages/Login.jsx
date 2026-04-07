@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
@@ -88,15 +88,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 sm:p-14 animate-in fade-in zoom-in duration-500">
+    <div className="min-h-screen bg-slate-100 dark:bg-admin-content flex items-center justify-center p-6">
+      <div className="bg-admin-card w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 sm:p-14 animate-in fade-in zoom-in duration-500 border border-transparent dark:border-slate-800">
 
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-black text-slate-800">
+          <h2 className="text-3xl font-black text-admin-text">
             {viewMode === 'login' ? 'Admin Login' : 'Reset Password'}
           </h2>
           {viewMode === 'forgot' && (
-            <p className="text-slate-500 text-sm mt-2">Enter your email to receive a reset link</p>
+            <p className="text-admin-text-muted text-sm mt-2">Enter your email to receive a reset link</p>
           )}
         </div>
 
@@ -118,10 +118,10 @@ const Login = () => {
             <div className="relative">
               <input
                 type="email" required placeholder="Enter your email"
-                className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-slate-100 bg-admin-card border-none rounded-2xl py-4 pl-6 pr-14 text-admin-text focus:ring-2 focus:ring-blue-500 transition-colors"
                 value={email} onChange={(e) => setEmail(e.target.value)}
               />
-              <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
+              <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={22} />
             </div>
 
             <div className="relative">
@@ -129,10 +129,10 @@ const Login = () => {
                 type={showPassword ? "text" : "password"} required placeholder="Enter your password"
                 name="admin_password_unique"
                 autoComplete="new-password"
-                className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-slate-100 bg-admin-card border-none rounded-2xl py-4 pl-6 pr-14 text-admin-text focus:ring-2 focus:ring-blue-500 transition-colors"
                 value={password} onChange={(e) => setPassword(e.target.value)}
               />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400">
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600">
                 {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
               </button>
             </div>
@@ -157,10 +157,10 @@ const Login = () => {
             <div className="relative">
               <input
                 type="email" required placeholder="Your email address"
-                className="w-full bg-slate-100 border-none rounded-2xl py-4 pl-6 pr-14 text-slate-700 focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-slate-100 bg-admin-card border-none rounded-2xl py-4 pl-6 pr-14 text-admin-text focus:ring-2 focus:ring-blue-500 transition-colors"
                 value={email} onChange={(e) => setEmail(e.target.value)}
               />
-              <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={22} />
+              <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={22} />
             </div>
 
             <button type="submit" disabled={isLoading} className="w-full bg-blue-600 text-white font-black py-4 rounded-full flex items-center justify-center gap-2 uppercase tracking-widest">
