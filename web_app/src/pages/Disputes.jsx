@@ -18,6 +18,10 @@ const Disputes = () => {
     refund_amount: 0
   });
   const [newMessage, setNewMessage] = useState('');
+  const [recipientType, setRecipientType] = useState('customer');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
   // 1. Data Fetching with TanStack Query
@@ -26,9 +30,14 @@ const Disputes = () => {
     isLoading: loading, 
     refetch 
   } = useQuery({
-    queryKey: ['disputes'],
+    queryKey: ['disputes', statusFilter, priorityFilter, searchQuery],
     queryFn: async () => {
-      const response = await disputeAPI.getAllDisputes();
+      const filters = {};
+      if (statusFilter) filters.status = statusFilter;
+      if (priorityFilter) filters.priority = priorityFilter;
+      if (searchQuery) filters.search = searchQuery;
+
+      const response = await disputeAPI.getAllDisputes(filters);
       let disputesData = [];
       let statsData = null;
 
@@ -44,7 +53,6 @@ const Disputes = () => {
       return { disputes: disputesData, stats: statsData };
     },
     staleTime: 30000,
-    refetchInterval: 20000,
   });
 
   const handleReviewCase = async (disputeID) => {
@@ -117,6 +125,7 @@ const Disputes = () => {
       const response = await disputeAPI.addDisputeMessage(
         selectedDispute.disputeID, 
         newMessage, 
+        recipientType, // Send to selected recipient
         isAdminOnly
       );
 
@@ -130,7 +139,7 @@ const Disputes = () => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      alert('Failed to send message');
+      alert('Failed to send message: ' + (error.response?.data?.message || error.message));
     } finally {
       setSendingMessage(false);
     }
@@ -193,11 +202,35 @@ const Disputes = () => {
                   type="text" 
                   placeholder="Search by ID or title..." 
                   className="pl-12 pr-4 py-3 bg-admin-card border border-admin-border rounded-2xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none w-full shadow-sm text-admin-text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
              </div>
-             <button className="flex items-center justify-center gap-2 bg-admin-card border border-admin-border px-5 py-3 rounded-2xl text-admin-text-muted hover:text-admin-text font-black text-[10px] uppercase shadow-sm transition-all">
-               <Filter size={14} /> Filter Tools
-             </button>
+             <div className="flex gap-2">
+                <select 
+                  className="px-4 py-3 bg-admin-card border border-admin-border rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none text-admin-text-muted hover:text-admin-text shadow-sm"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="escalated">Escalated</option>
+                </select>
+                <select 
+                  className="px-4 py-3 bg-admin-card border border-admin-border rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none text-admin-text-muted hover:text-admin-text shadow-sm"
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                >
+                  <option value="">All Priorities</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+             </div>
           </div>
           
           <div className="overflow-x-auto hidden lg:block">
@@ -412,26 +445,48 @@ const Disputes = () => {
                     </div>
                      {/* Chat Input */}
                     <div className="mt-4 pt-4 border-t border-admin-border">
-                      <div className="flex gap-2">
-                        <input 
-                          type="text"
-                          placeholder="Type a message to users..."
-                          className="flex-1 p-3 bg-admin-card border border-admin-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-admin-text transition-all"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(false)}
-                        />
-                        <button 
-                          disabled={sendingMessage || !newMessage.trim()}
-                          onClick={() => handleSendMessage(false)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all disabled:opacity-50 active:scale-95 flex items-center gap-2"
-                        >
-                          {sendingMessage ? <Loader2 size={14} className="animate-spin" /> : 'Send'}
-                        </button>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Recipient:</span>
+                          <div className="flex gap-1">
+                            {['customer', 'provider', 'admin'].map((type) => (
+                              <button 
+                                key={type}
+                                onClick={() => setRecipientType(type)}
+                                className={`px-2 py-1 rounded text-[8px] font-black uppercase transition-all ${
+                                  recipientType === type 
+                                  ? 'bg-blue-600 text-white shadow-md' 
+                                  : 'bg-slate-100 dark:bg-admin-sidebar text-slate-400 hover:text-slate-600'
+                                }`}
+                              >
+                                {type}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            placeholder={`Type a message to ${recipientType}...`}
+                            className="flex-1 p-3 bg-admin-card border border-admin-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-admin-text transition-all"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(recipientType === 'admin')}
+                          />
+                          <button 
+                            disabled={sendingMessage || !newMessage.trim()}
+                            onClick={() => handleSendMessage(recipientType === 'admin')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all disabled:opacity-50 active:scale-95 flex items-center gap-2"
+                          >
+                            {sendingMessage ? <Loader2 size={14} className="animate-spin" /> : 'Send'}
+                          </button>
+                        </div>
                       </div>
 
                       <p className="text-[9px] text-slate-400 mt-2 px-1 italic">
-                        * Messages sent here are visible to both the Customer and the Provider.
+                        {recipientType === 'admin' 
+                          ? '* Messages sent to Admin are private and only visible to the moderation team.' 
+                          : `* Message will be sent directly to the ${recipientType}.`}
                       </p>
                     </div>
                  </div>
