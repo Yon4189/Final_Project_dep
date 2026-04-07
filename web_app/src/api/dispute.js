@@ -39,9 +39,10 @@ export const disputeAPI = {
   },
 
   // Add public message/chat
-  addDisputeMessage: async (disputeID, message, isAdminOnly = false) => {
+  addDisputeMessage: async (disputeID, message, recipientType = 'customer', isAdminOnly = false) => {
     const response = await api.post(`/admin/disputes/${disputeID}/messages`, { 
       message, 
+      recipient_type: recipientType,
       is_admin_only: isAdminOnly 
     });
     return response.data;
