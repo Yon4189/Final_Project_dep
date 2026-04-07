@@ -218,6 +218,18 @@ class AdminDisputeController extends Controller
                 'disputeID' => $disputeID,
                 'sender_id' => $admin->adminID,
                 'sender_type' => 'admin',
+                'recipient_type' => 'customer',
+                'message' => "Dispute status changed from {$oldStatus} to {$request->status}" . 
+                             ($request->notes ? "\nNotes: {$request->notes}" : ''),
+                'is_admin_only' => false
+            ]);
+
+            // Duplicate for provider thread
+            DisputeMessage::create([
+                'disputeID' => $disputeID,
+                'sender_id' => $admin->adminID,
+                'sender_type' => 'admin',
+                'recipient_type' => 'provider',
                 'message' => "Dispute status changed from {$oldStatus} to {$request->status}" . 
                              ($request->notes ? "\nNotes: {$request->notes}" : ''),
                 'is_admin_only' => false
@@ -278,6 +290,7 @@ class AdminDisputeController extends Controller
             'disputeID' => $disputeID,
             'sender_id' => $admin->adminID,
             'sender_type' => 'admin',
+            'recipient_type' => 'admin',
             'message' => $request->note,
             'is_admin_only' => true
         ]);
@@ -391,6 +404,7 @@ class AdminDisputeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'message' => 'required|string',
+            'recipient_type' => 'required|in:customer,provider,admin',
             'is_admin_only' => 'boolean'
         ]);
 
@@ -409,11 +423,15 @@ class AdminDisputeController extends Controller
         }
 
         try {
+            // Sanitize message content
+            $sanitizedMessage = strip_tags($request->message);
+
             $message = DisputeMessage::create([
                 'disputeID' => $disputeID,
                 'sender_id' => $admin->adminID,
                 'sender_type' => 'admin',
-                'message' => $request->message,
+                'recipient_type' => $request->recipient_type,
+                'message' => $sanitizedMessage,
                 'is_admin_only' => $request->is_admin_only ?? false
             ]);
 
@@ -421,6 +439,29 @@ class AdminDisputeController extends Controller
             if ($dispute->status === 'pending') {
                 $dispute->status = 'under_review';
                 $dispute->save();
+            }
+
+            // Send notification based on recipient_type
+            if ($request->recipient_type === 'customer') {
+                $this->notificationService->toUser(
+                    'customer',
+                    $dispute->raised_by_type === 'customer' ? $dispute->raised_by_id : $dispute->against_id,
+                    'dispute',
+                    'New Message from Admin',
+                    "Admin has sent you a message regarding dispute #{$disputeID}",
+                    ['disputeID' => $disputeID],
+                    $dispute->bookingID
+                );
+            } elseif ($request->recipient_type === 'provider') {
+                $this->notificationService->toUser(
+                    'provider',
+                    $dispute->raised_by_type === 'provider' ? $dispute->raised_by_id : $dispute->against_id,
+                    'dispute',
+                    'New Message from Admin',
+                    "Admin has sent you a message regarding dispute #{$disputeID}",
+                    ['disputeID' => $disputeID],
+                    $dispute->bookingID
+                );
             }
 
             return response()->json([

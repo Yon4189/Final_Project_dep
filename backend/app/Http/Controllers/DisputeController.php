@@ -109,6 +109,7 @@ class DisputeController extends Controller
                 'disputeID' => $dispute->disputeID,
                 'sender_id' => $customer->customerID,
                 'sender_type' => 'customer',
+                'recipient_type' => 'admin',
                 'message' => $request->description,
                 'attachments' => !empty($attachments) ? $attachments : null
             ]);
@@ -234,6 +235,7 @@ class DisputeController extends Controller
                 'disputeID' => $dispute->disputeID,
                 'sender_id' => $provider->providerID,
                 'sender_type' => 'provider',
+                'recipient_type' => 'admin',
                 'message' => $request->description,
                 'attachments' => !empty($attachments) ? $attachments : null
             ]);
@@ -346,7 +348,7 @@ class DisputeController extends Controller
         
         $userType = $this->getUserType($user);
         
-        $dispute = Dispute::with(['booking', 'raisedBy', 'against', 'messages.sender'])
+        $dispute = Dispute::with(['booking', 'raisedBy', 'against'])
             ->find($disputeID);
 
         if (!$dispute) {
@@ -357,27 +359,25 @@ class DisputeController extends Controller
         }
 
         // Check if user is involved
-        if ($userType !== 'admin') {
-            $isInvolved = false;
-            if ($userType === 'customer') {
-                $isInvolved = ($dispute->raised_by_type === 'customer' && $dispute->raised_by_id == $user->customerID) ||
-                              ($dispute->against_type === 'customer' && $dispute->against_id == $user->customerID);
-            } elseif ($userType === 'provider') {
-                $isInvolved = ($dispute->raised_by_type === 'provider' && $dispute->raised_by_id == $user->providerID) ||
-                              ($dispute->against_type === 'provider' && $dispute->against_id == $user->providerID);
-            }
-            
-            if (!$isInvolved) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
-            
-            // For non-admin, hide admin-only messages
-            $dispute->messages = $dispute->messages->filter(function($msg) {
-                return !$msg->is_admin_only;
-            })->values();
+        if (!$this->isUserInvolved($dispute, $user, $userType)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        // Filter messages by recipient_type based on user type
+        if ($userType === 'customer') {
+            $dispute->load(['messages' => function($query) {
+                $query->where('recipient_type', 'customer')->with('sender');
+            }]);
+        } elseif ($userType === 'provider') {
+            $dispute->load(['messages' => function($query) {
+                $query->where('recipient_type', 'provider')->with('sender');
+            }]);
+        } else {
+            // Admin sees all messages
+            $dispute->load(['messages.sender']);
         }
 
         return response()->json([
@@ -394,7 +394,7 @@ class DisputeController extends Controller
         $validator = Validator::make($request->all(), [
             'message' => 'required|string',
             'attachments' => 'nullable|array',
-            'attachments.*' => 'file|mimes:jpg,jpeg,png,pdf,doc,docx|max:5120',
+            'attachments.*' => 'file|mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi,webm|max:51200',
             'is_admin_only' => 'boolean'
         ]);
 
@@ -418,19 +418,16 @@ class DisputeController extends Controller
             ], 404);
         }
 
-        // Handle file uploads
-        $attachments = [];
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('disputes/' . $dispute->bookingID, 'public');
-                $attachments[] = [
-                    'name' => $file->getClientOriginalName(),
-                    'path' => $path,
-                    'type' => $file->getMimeType(),
-                    'size' => $file->getSize()
-                ];
-            }
+        // Check if user is involved
+        if (!$this->isUserInvolved($dispute, $user, $userType)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
         }
+
+        // Process attachments with video support
+        $attachments = $this->processAttachments($request, $dispute->bookingID);
 
         // Get sender ID based on type
         $senderId = null;
@@ -442,11 +439,18 @@ class DisputeController extends Controller
             $senderId = $user->adminID;
         }
 
+        // Sanitize message content
+        $sanitizedMessage = strip_tags($request->message);
+
+        // Determine recipient_type: customer/provider messages go to admin
+        $recipientType = ($userType === 'customer' || $userType === 'provider') ? 'admin' : 'customer';
+
         $message = DisputeMessage::create([
             'disputeID' => $disputeID,
             'sender_id' => $senderId,
             'sender_type' => $userType,
-            'message' => $request->message,
+            'recipient_type' => $recipientType,
+            'message' => $sanitizedMessage,
             'attachments' => !empty($attachments) ? $attachments : null,
             'is_admin_only' => $request->is_admin_only ?? false
         ]);
@@ -455,6 +459,23 @@ class DisputeController extends Controller
         if ($dispute->status === 'pending') {
             $dispute->status = 'under_review';
             $dispute->save();
+        }
+
+        // Send notifications (only to admin, not to other party)
+        if ($userType === 'customer') {
+            $this->notificationService->toAdmins(
+                'dispute',
+                'New Message in Dispute',
+                "Customer has sent a message in dispute #{$disputeID}",
+                ['disputeID' => $disputeID]
+            );
+        } elseif ($userType === 'provider') {
+            $this->notificationService->toAdmins(
+                'dispute',
+                'New Message in Dispute',
+                "Provider has sent a message in dispute #{$disputeID}",
+                ['disputeID' => $disputeID]
+            );
         }
 
         return response()->json([
@@ -486,5 +507,94 @@ class DisputeController extends Controller
         if ($user && isset($user->providerID)) return 'provider';
         if ($user && isset($user->adminID)) return 'admin';
         return null;
+    }
+
+    /**
+     * Check if user is involved in the dispute
+     */
+    private function isUserInvolved($dispute, $user, $userType)
+    {
+        // Admin can access all disputes
+        if ($userType === 'admin') {
+            return true;
+        }
+
+        // Check if customer is involved
+        if ($userType === 'customer') {
+            return ($dispute->raised_by_type === 'customer' && $dispute->raised_by_id == $user->customerID) ||
+                   ($dispute->against_type === 'customer' && $dispute->against_id == $user->customerID);
+        }
+
+        // Check if provider is involved
+        if ($userType === 'provider') {
+            return ($dispute->raised_by_type === 'provider' && $dispute->raised_by_id == $user->providerID) ||
+                   ($dispute->against_type === 'provider' && $dispute->against_id == $user->providerID);
+        }
+
+        return false;
+    }
+
+    /**
+     * Process file attachments with video support
+     */
+    private function processAttachments($request, $bookingID)
+    {
+        $attachments = [];
+        
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                // Validate attachment
+                $validation = $this->validateAttachment($file);
+                if (!$validation['valid']) {
+                    throw new \Exception($validation['error']);
+                }
+
+                $path = $file->store('disputes/' . $bookingID, 'public');
+                $attachments[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'type' => $file->getMimeType(),
+                    'size' => $file->getSize()
+                ];
+            }
+        }
+
+        return $attachments;
+    }
+
+    /**
+     * Validate attachment file
+     */
+    private function validateAttachment($file)
+    {
+        $mimeType = $file->getMimeType();
+        $extension = strtolower($file->getClientOriginalExtension());
+        $size = $file->getSize();
+
+        // Define allowed types
+        $documentTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 
+                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        $videoTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+        
+        $documentExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'];
+        $videoExtensions = ['mp4', 'mov', 'avi', 'webm'];
+
+        // Check if it's a document
+        if (in_array($mimeType, $documentTypes) && in_array($extension, $documentExtensions)) {
+            if ($size > 5 * 1024 * 1024) { // 5MB
+                return ['valid' => false, 'error' => 'Document file size must not exceed 5MB'];
+            }
+            return ['valid' => true];
+        }
+
+        // Check if it's a video
+        if (in_array($mimeType, $videoTypes) && in_array($extension, $videoExtensions)) {
+            if ($size > 50 * 1024 * 1024) { // 50MB
+                return ['valid' => false, 'error' => 'Video file size must not exceed 50MB'];
+            }
+            return ['valid' => true];
+        }
+
+        return ['valid' => false, 'error' => 'Invalid file type. Allowed: jpg, jpeg, png, pdf, doc, docx, mp4, mov, avi, webm'];
     }
 }
