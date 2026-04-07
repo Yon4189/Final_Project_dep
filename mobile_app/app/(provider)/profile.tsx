@@ -141,9 +141,11 @@ export default function ProviderProfile() {
 
   const renderProfileCard = () => {
     const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || '';
-    const profileImageUrl = profile?.profilePicture 
-      ? (profile.profilePicture.startsWith('http') ? profile.profilePicture : `${apiBaseUrl}/${profile.profilePicture}`)
-      : 'https://via.placeholder.com/150';
+    const profileImageUrl = (() => {
+      const pic = profile?.profilePicture || (profile as any)?.profile_picture || (profile as any)?.profileImage;
+      if (!pic) return 'https://via.placeholder.com/150';
+      return pic.startsWith('http') ? pic : `${apiBaseUrl}/${pic}`;
+    })();
 
     return (
       <View style={styles.profileCard}>

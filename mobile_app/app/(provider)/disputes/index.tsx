@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
-import { useProviderDisputes } from '../../../hooks/useProviderQueries';
-import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { EmptyState } from '../../../components/common/EmptyState';
-import { formatTimeAgo } from '../../utils/formatters';
-import type { Dispute, DisputeStatus } from '../../types/provider.types';
+import { Colors } from '@/app/constants/Colors';
+import { useProviderDisputes } from '@/hooks/useProviderQueries';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { EmptyState } from '@/components/common/EmptyState';
+import { formatTimeAgo } from '@/app/utils/formatters';
+import type { Dispute, DisputeStatus } from '@/app/types/provider.types';
 
 const STATUS_COLORS: Record<DisputeStatus, string> = {
   pending: Colors.warning,

@@ -64,11 +64,11 @@ export default function ProviderChatList() {
             >
                 <Image
                     source={{
-                        uri: customer?.profilePicture
-                            ? (customer.profilePicture.startsWith('http')
-                                ? customer.profilePicture
-                                : `${API_BASE_URL.replace('/api', '')}/${customer.profilePicture}`)
-                            : 'https://via.placeholder.com/50',
+                        uri: (() => {
+                          const pic = customer?.profilePicture || customer?.profile_picture || customer?.profileImage;
+                          if (!pic) return 'https://via.placeholder.com/50';
+                          return pic.startsWith('http') ? pic : `${API_BASE_URL.replace('/api', '')}/${pic}`;
+                        })()
                     }}
                     style={styles.avatar}
                 />

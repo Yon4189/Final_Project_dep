@@ -75,7 +75,7 @@ class ServiceProvider extends Authenticatable
         'rejected_at' => 'datetime',
         'current_latitude' => 'decimal:8',
         'current_longitude' => 'decimal:8',
-        'rating' => 'decimal:2',
+        'rating' => 'float',
         'certifications' => 'array',
     ];
 

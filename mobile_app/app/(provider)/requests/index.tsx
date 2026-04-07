@@ -14,9 +14,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { EmptyState } from "../../../components/common/EmptyState";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import { useProviderQueries, useProviderRequests } from "../../../hooks/useProviderQueries";
+import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { useProviderQueries, useProviderRequests } from "@/hooks/useProviderQueries";
 import { useTheme } from "../../context/ThemeContext";
 import { ThemeColors } from "../../constants/Colors";
 import type { ServiceRequest } from "../../types/provider.types";

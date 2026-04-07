@@ -21,11 +21,11 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import Map from "../../../components/Map/index";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import { useProviderQueries, useProviderRequest } from "../../../hooks/useProviderQueries";
-import { useConfirmCompletion } from '../../../hooks/useCustomerQueries';
-import { PriceText } from '../../../components/common/PriceText';
+import Map from "@/components/Map/index";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { useProviderQueries, useProviderRequest } from "@/hooks/useProviderQueries";
+import { useConfirmCompletion } from '@/hooks/useCustomerQueries';
+import { PriceText } from '@/components/common/PriceText';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from "@/app/services/api";
 import * as pusherClient from "@/app/services/pusherClient";

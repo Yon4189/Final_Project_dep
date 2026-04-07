@@ -22,7 +22,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/app/context/ThemeContext";
-import { Colors } from "@/app/constants/Colors";
+import { Colors, ThemeColors } from "@/app/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 import { useLocation } from "../../hooks/useLocation";
@@ -42,6 +42,8 @@ import { customerService } from "@/app/services/customer.service";
 import { paymentService } from "@/app/services/payment.service";
 import type { ServiceProvider } from "@/app/types/customer.types";
 import { ActivityIndicator } from "react-native";
+import * as SecureStore from 'expo-secure-store';
+import { useCustomerStore } from "@/app/store/customerStore";
 // Import the appropriate map based on platform
 let MapComponent: any;
 if (Platform.OS === "web") {
@@ -356,6 +358,27 @@ export default function CustomerDashboard() {
     setRefreshing(false);
   };
 
+  const handleLogout = async () => {
+    closeMenu();
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Logout', 
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await SecureStore.deleteItemAsync('auth_token');
+            await SecureStore.deleteItemAsync('user_data');
+            useCustomerStore.getState().reset();
+            router.replace('/(auth)/login');
+          } catch (error) {
+            console.error('Logout error:', error);
+          }
+        }
+      }
+    ]);
+  };
+
   const renderHamburgerMenu = () => {
     const menuItems = [
       {
@@ -395,13 +418,10 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: 'Support',
-        icon: 'shield-checkmark-outline' as const,
-        color: Colors.warning || '#FF9500',
-        onPress: () => {
-          setShowHamburgerMenu(false);
-          router.push('/(customer)/complaints');
-        },
+        label: 'Logout',
+        icon: 'log-out-outline' as const,
+        color: Colors.error || '#FF3B30',
+        onPress: handleLogout,
       },
     ];
 
@@ -428,17 +448,29 @@ export default function CustomerDashboard() {
             ]}
             {...panResponder.panHandlers}
           >
-            <View style={styles.menuHeader}>
-              <View>
-                <Text style={styles.menuTitle}>Menu</Text>
-                <Text style={styles.menuSubtitle}>Navigation & Account</Text>
+            <View style={[styles.menuHeader, { backgroundColor: colors.primary, flexDirection: 'column', alignItems: 'flex-start', paddingTop: 40 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center', marginBottom: 15 }}>
+                <Image
+                  source={{ 
+                    uri: (() => {
+                      const pic = user?.profilePicture || user?.profile_picture || user?.profileImage;
+                      if (!pic) return 'https://via.placeholder.com/60';
+                      return pic.startsWith('http') ? pic : `${API_BASE_URL.replace('/api', '')}/${pic}`;
+                    })()
+                  }}
+                  style={styles.menuAvatar}
+                />
+                <TouchableOpacity 
+                  onPress={closeMenu}
+                  style={[styles.menuCloseButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                >
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity 
-                onPress={closeMenu}
-                style={styles.menuCloseButton}
-              >
-                <Ionicons name="close" size={24} color={colors.text.primary} />
-              </TouchableOpacity>
+              <View>
+                <Text style={[styles.menuName, { color: 'white' }]}>{user?.fullname || user?.firstName || 'Customer'}</Text>
+                <Text style={[styles.menuEmail, { color: 'rgba(255,255,255,0.8)' }]}>{user?.email || 'Customer Account'}</Text>
+              </View>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
               {menuItems.map((item, index) => (
@@ -1281,7 +1313,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: 12,
     marginRight: 15,
     borderWidth: 1,
-    borderColor: colors.placeholder || colors.border,
+    borderColor: colors.border,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1483,6 +1515,27 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  menuAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 10,
+  },
+  menuName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  menuEmail: {
+    fontSize: 12,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 10,
+    marginHorizontal: 15,
+  },
   menuTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -1525,7 +1578,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.text.primary,
   },
   skeletonCard: {
-    backgroundColor: colors.skeleton || colors.border,
+    backgroundColor: colors.skeleton,
     opacity: 0.5,
   },
   actionIconContainer: {

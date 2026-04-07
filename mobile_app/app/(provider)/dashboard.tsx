@@ -18,14 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
-import { useProviderStore } from '../store/providerStore';
-import { useProviderQueries } from '../../hooks/useProviderQueries';
-import { useProviderNotificationCount } from '../../hooks/useProviderNotifications';
+import { useProviderStore } from '@/app/store/providerStore';
+import { useProviderQueries } from '@/hooks/useProviderQueries';
+import { useProviderNotificationCount } from '@/hooks/useProviderNotifications';
 import * as pusherClient from '@/app/services/pusherClient';
-import { PriceText } from '../../components/common/PriceText';
-import { API_BASE_URL } from '../config/api';
-import { useConversations } from '../../hooks/useChat';
-import { RecentMessagesModal } from '../../components/provider/RecentMessagesModal';
+import { PriceText } from '@/components/common/PriceText';
+import { API_BASE_URL } from '@/app/config/api';
+import { useConversations } from '@/hooks/useChat';
+import { RecentMessagesModal } from '@/components/provider/RecentMessagesModal';
 import type { RequestStatus } from '../types/provider.types';
 
 const { width } = Dimensions.get('window');
@@ -143,7 +143,15 @@ export default function ProviderDashboard() {
 
           <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/(provider)/profile')}>
             <Image
-              source={{ uri: (profile as any)?.profilePicture || 'https://via.placeholder.com/40' }}
+              source={{ 
+                uri: (() => {
+                  const pic = (profile as any)?.profilePicture || 
+                               (profile as any)?.profile_picture || 
+                               (profile as any)?.profileImage;
+                  if (!pic) return 'https://via.placeholder.com/40';
+                  return pic.startsWith('http') ? pic : `${API_BASE_URL.replace('/api', '')}/${pic}`;
+                })()
+              }}
               style={styles.avatar}
             />
           </TouchableOpacity>
@@ -215,7 +223,77 @@ export default function ProviderDashboard() {
         <Modal transparent visible={showHamburgerMenu} animationType="none">
           <View style={styles.drawerOverlay}>
             <Animated.View {...panResponder.panHandlers} style={[styles.drawer, { transform: [{ translateX: sidebarAnim }] }]}>
-              {/* Drawer Content */}
+              <View style={styles.drawerHeader}>
+                <Image
+                  source={{ 
+                    uri: (() => {
+                      const pic = (profile as any)?.profilePicture || 
+                                   (profile as any)?.profile_picture || 
+                                   (profile as any)?.profileImage;
+                      if (!pic) return 'https://via.placeholder.com/80';
+                      return pic.startsWith('http') ? pic : `${API_BASE_URL.replace('/api', '')}/${pic}`;
+                    })()
+                  }}
+                  style={styles.drawerAvatar}
+                />
+                <Text style={styles.drawerName}>{profile?.fullname || 'Provider'}</Text>
+                <Text style={styles.drawerEmail}>{profile?.email}</Text>
+              </View>
+
+              <ScrollView style={styles.drawerContent}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/'); }}>
+                  <Ionicons name="home-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>Home</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/dashboard'); }}>
+                  <Ionicons name="grid-outline" size={22} color={colors.primary} />
+                  <Text style={styles.drawerItemText}>Dashboard</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/profile'); }}>
+                  <Ionicons name="person-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>My Profile</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/earnings'); }}>
+                  <Ionicons name="wallet-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>Earnings</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/requests'); }}>
+                  <Ionicons name="list-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>Service Requests</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/schedule'); }}>
+                  <Ionicons name="calendar-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>My Schedule</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/reviews'); }}>
+                  <Ionicons name="star-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>Reviews & Ratings</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/disputes'); }}>
+                  <Ionicons name="alert-circle-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>Disputes</Text>
+                </TouchableOpacity>
+
+                <View style={styles.drawerDivider} />
+
+                <TouchableOpacity style={styles.drawerItem} onPress={async () => { 
+                  closeMenu(); 
+                  const { api } = await import('@/app/services/api');
+                  await api.clearAll();
+                  useProviderStore.getState().reset(); 
+                  router.replace('/login'); 
+                }}>
+                  <Ionicons name="log-out-outline" size={22} color={colors.error} />
+                  <Text style={[styles.drawerItemText, { color: colors.error }]}>Logout</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </Animated.View>
             <TouchableOpacity style={styles.drawerClose} onPress={closeMenu} />
           </View>
@@ -247,7 +325,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   iconButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
   badge: { position: 'absolute', top: -5, right: -5, backgroundColor: colors.error, minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: colors.primary },
   badgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
-  profileButton: { width: 44, height: 44, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
+  profileButton: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
   avatar: { width: '100%', height: '100%' },
   availabilityCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', padding: 12, borderRadius: 16 },
   availabilityInfo: { flexDirection: 'row', alignItems: 'center' },
@@ -268,6 +346,14 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   tabBadgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
   mainContent: { paddingHorizontal: 20 },
   drawerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row' },
-  drawer: { width: 260, backgroundColor: colors.surface, height: '100%' },
+  drawer: { width: 260, backgroundColor: colors.surface, height: '100%', elevation: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 10 },
   drawerClose: { flex: 1 },
+  drawerHeader: { padding: 30, paddingTop: Platform.OS === 'ios' ? 60 : 40, backgroundColor: colors.primary, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
+  drawerAvatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)', marginBottom: 15 },
+  drawerName: { fontSize: 20, fontWeight: 'bold', color: colors.surface },
+  drawerEmail: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
+  drawerContent: { flex: 1, paddingHorizontal: 15 },
+  drawerItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 15, marginBottom: 5 },
+  drawerItemText: { fontSize: 16, fontWeight: '500', color: colors.text.primary, marginLeft: 15 },
+  drawerDivider: { height: 1, backgroundColor: colors.border, marginVertical: 15, marginHorizontal: 15 },
 });

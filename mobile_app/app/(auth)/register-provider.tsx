@@ -192,10 +192,35 @@ export default function RegisterProviderScreen() {
       Alert.alert('Error', 'Please fill all required fields and upload your ID card photo.');
       return;
     }
+
+    // Client-side validation
+    const phoneRegex = /^(09|07)[0-9]{8}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      Alert.alert('Invalid Phone', 'Phone number must start with 09 or 07 and be 10 digits long.');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      Alert.alert('Weak Password', 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.');
+      return;
+    }
+
+    if (formData.password !== formData.password_confirmation) {
+      Alert.alert('Password Mismatch', 'Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
     try {
       const data = new FormData();
       Object.entries(formData).forEach(([key, val]) => data.append(key, val));
+      
+      // Ensure catagoryID is sent at the root level (Backend requirement)
+      if (serviceOfferings.length > 0 && serviceOfferings[0].categoryId) {
+        data.append('catagoryID', serviceOfferings[0].categoryId);
+      }
+
       const servicesToSend = serviceOfferings.map(s => ({
         categoryId: s.categoryId,
         serviceName: s.serviceName,
@@ -203,6 +228,7 @@ export default function RegisterProviderScreen() {
         description: s.description || ''
       }));
       data.append('services', JSON.stringify(servicesToSend));
+      
       if (profilePicture) data.append('profilePicture', profilePicture as any);
       if (idPhoto) data.append('idPhoto', idPhoto as any);
       if (credentialPhoto) data.append('credentialPhoto', credentialPhoto as any);
@@ -217,7 +243,20 @@ export default function RegisterProviderScreen() {
         setRegistrationSuccess(true);
       }
     } catch (err: any) {
-      Alert.alert('Registration Error', err.message || "Failed to register.");
+      console.log('Registration Error Details:', err);
+      
+      // Better error message extraction for validation failures
+      let errorMessage = err.message || "Failed to register.";
+      
+      if (err.errors) {
+        const firstErrorKey = Object.keys(err.errors)[0];
+        const firstErrorMessages = err.errors[firstErrorKey];
+        if (Array.isArray(firstErrorMessages) && firstErrorMessages.length > 0) {
+          errorMessage = firstErrorMessages[0];
+        }
+      }
+      
+      Alert.alert('Registration Error', errorMessage);
     } finally {
       setLoading(false);
     }

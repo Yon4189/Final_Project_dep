@@ -12,9 +12,16 @@ Logical error:
 
 
 CORE FEATURES THAT NEEDS TO BE MADE
-- location tracking
+- location tracking [backend is done]
 - dispute handling
+- search fileter: nearby
 
 
 REVIEW
 - payement system
+
+
+
+============ New features to add ============
+- push notifications
+- continue with google on registration or login

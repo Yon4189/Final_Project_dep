@@ -40,6 +40,14 @@ class NotificationService {
         return null;
       }
 
+      // Detect if running in Expo Go
+      const isExpoGo = Constants.appOwnership === 'expo';
+      
+      if (isExpoGo) {
+        console.warn('Push Notifications (remote) are not supported in Expo Go. Returning mock token for development.');
+        return 'expo-go-mock-token';
+      }
+
       // Get the project ID from Expo constants or app config
       const projectId =
         Constants?.expoConfig?.extra?.eas?.projectId ??
@@ -47,9 +55,7 @@ class NotificationService {
 
       if (!projectId) {
         console.warn('No EAS Project ID found. Push notifications require an EAS project.');
-        console.warn('You can configure this by running `eas init` in your project folder.');
-        
-        return 'mock-token-local-dev'; // Return a mock token for local testing without EAS
+        return 'mock-token-no-eas';
       }
 
       // Get the token from Expo using the valid projectId

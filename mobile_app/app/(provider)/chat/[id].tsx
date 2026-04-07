@@ -404,11 +404,11 @@ export default function ProviderChatScreen() {
             <View style={styles.profileContainer}>
                 <Image
                     source={{
-                        uri: customer?.profilePicture
-                            ? (customer.profilePicture.startsWith('http')
-                                ? customer.profilePicture
-                                : `${API_BASE_URL.replace('/api', '')}/${customer.profilePicture}`)
-                            : 'https://via.placeholder.com/40',
+                        uri: (() => {
+                          const pic = customer?.profilePicture || (customer as any)?.profile_picture || (customer as any)?.profileImage;
+                          if (!pic) return 'https://via.placeholder.com/40';
+                          return pic.startsWith('http') ? pic : `${API_BASE_URL.replace('/api', '')}/${pic}`;
+                        })()
                     }}
                     style={styles.avatar}
                 />

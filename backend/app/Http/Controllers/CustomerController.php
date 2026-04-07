@@ -275,7 +275,7 @@ class CustomerController extends Authenticatable
 
         return response()->json([
             'success' => true,
-            'data' => $bookings->map(function ($booking) {
+            'data' => $bookings->map(function (Booking $booking) {
                 return $this->bookingToServiceRequestPayload($booking);
             })->values()
         ]);
@@ -436,7 +436,7 @@ class CustomerController extends Authenticatable
                     $booking->load(['service.category', 'provider'])
                 )
             ], 201);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'validation failed',

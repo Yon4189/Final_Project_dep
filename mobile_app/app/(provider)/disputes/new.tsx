@@ -16,12 +16,12 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '../../constants/Colors';
-import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { formatCurrency } from '../../utils/formatters';
-import { useProviderQueries } from '../../../hooks/useProviderQueries';
-import { useCreateDispute } from '../../../hooks/useProviderDisputes';
-import type { DisputeReason } from '../../types/provider.types';
+import { Colors } from '@/app/constants/Colors';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { formatCurrency } from '@/app/utils/formatters';
+import { useProviderQueries } from '@/hooks/useProviderQueries';
+import { useCreateDispute } from '@/hooks/useProviderDisputes';
+import type { DisputeReason } from '@/app/types/provider.types';
 
 const DISPUTE_REASONS: { value: DisputeReason; label: string; icon: string; description: string }[] = [
   {
