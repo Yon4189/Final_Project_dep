@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 
 const StatCard = ({ title, value, icon: Icon, color, loading = false }) => {
   if (loading) {
@@ -30,7 +30,7 @@ const StatCard = ({ title, value, icon: Icon, color, loading = false }) => {
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">{title}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-admin-text-muted">{title}</p>
           <p className="text-2xl font-bold text-admin-text mt-2">{value}</p>
         </div>
         <div className={`p-3 rounded-full ${color} bg-opacity-10 dark:bg-opacity-20`}>

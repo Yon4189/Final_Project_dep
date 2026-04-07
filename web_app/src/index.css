@@ -108,7 +108,7 @@ html, body {
 main thead,
 main thead tr {
   background-color: #f8fafc;
-  color: #475569;
+  color: #64748b;
 }
 
 .dark main thead,
@@ -121,13 +121,15 @@ main thead tr {
 /* --- Table Row Dividers --- */
 .dark main .divide-slate-100 > * + *,
 .dark main .divide-slate-200 > * + *,
-.dark main .divide-y > * + * {
+.dark main .divide-y > * + *,
+.dark main .divide-admin-border > * + * {
   border-color: var(--admin-border) !important;
 }
 
 /* --- Table Row Hover --- */
-.dark main tr:hover td {
-  background-color: rgba(255, 255, 255, 0.03) !important;
+.dark main tr:hover td,
+.dark main tr:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
 }
 
 /* --- Form Inputs placeholder color --- */

@@ -118,9 +118,9 @@ const Settings = () => {
             <div className="p-3 bg-admin-accent/10 rounded-2xl text-admin-accent">
               <SettingsIcon size={24} />
             </div>
-            <h1 className="text-2xl font-black text-admin-text tracking-tight italic">System Control</h1>
+            <h1 className="text-2xl font-bold text-admin-text tracking-tight">System Control</h1>
           </div>
-          <p className="text-admin-text-muted text-sm font-medium uppercase tracking-[0.2em] italic mt-2 ml-1">
+          <p className="text-admin-text-muted text-[11px] font-bold uppercase tracking-[0.2em] mt-2 ml-1">
             Global Configuration & Core Branding Engine
           </p>
         </div>

@@ -300,7 +300,7 @@ const UsersTable = ({
                     <span className="text-xs font-medium text-admin-text-muted bg-white border border-slate-100 px-2 py-1 rounded">{user.joined || '—'}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
                         ['active', 'approved'].includes(user.status?.toLowerCase())
                           ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                           : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'

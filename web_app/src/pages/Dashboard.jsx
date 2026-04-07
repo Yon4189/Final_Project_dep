@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Database, Users, UserCheck, Clock, Banknote, Layers, Wrench } from 'lucide-react';
 import api from '../api/axios';
@@ -134,12 +134,12 @@ const Dashboard = () => {
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-admin-text tracking-tight italic">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-admin-text tracking-tight">Admin Dashboard</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
             <Database size={14} className={dbStatus === 'connected' ? 'text-green-500' : 'text-red-500'} aria-hidden="true" />
-            <span className="text-[10px] font-black uppercase tracking-wider text-admin-text-muted">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-admin-text-muted">
               {dbStatus === 'connected' ? 'Database connected' : 'Database disconnected'}
             </span>
           </div>

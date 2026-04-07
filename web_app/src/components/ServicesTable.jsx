@@ -236,7 +236,7 @@ const ServicesTable = ({
       {/* Desktop Table (unchanged) */}
       <div className="overflow-x-auto hidden lg:block">
         <table className="w-full text-left">
-          <thead className="bg-admin-card text-admin-text border-b border-admin-border">
+          <thead className="bg-admin-card text-admin-text-muted text-[11px] uppercase font-bold border-b border-admin-border tracking-wider">
             <tr>
               {activeTab === 'categories' ? (
                 <>
@@ -271,7 +271,7 @@ const ServicesTable = ({
                       <td className="px-6 py-4 font-mono text-sm text-admin-text-muted">#{item.catagoryID}</td>
                       <td className="px-6 py-4 font-semibold text-admin-text">{item.name}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-widest ${item.status === 'Active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'}`}>
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border tracking-wider ${item.status === 'Active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'}`}>
                           <span className="text-admin-text">{item.status || 'Active'}</span>
                         </span>
                       </td>
@@ -308,7 +308,7 @@ const ServicesTable = ({
                       <td className="px-6 py-4 font-mono text-sm text-admin-text-muted">#{item.serviceID}</td>
                       <td className="px-6 py-4 font-semibold text-admin-text">{item.title}</td>
                       <td className="px-6 py-4">
-                        <span className="inline-block bg-blue-50 dark:bg-blue-900/30 text-admin-text px-3 py-1 rounded-full text-[10px] font-black uppercase border border-blue-100 dark:border-blue-800 tracking-widest">
+                        <span className="inline-block bg-blue-50 dark:bg-blue-900/30 text-admin-text px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-blue-100 dark:border-blue-800 tracking-wider">
                           {getCategoryName(item.catagoryID)}
                         </span>
                       </td>

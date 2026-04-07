@@ -280,17 +280,17 @@ const VerificationQueueTable = ({
                             <p className="font-bold text-admin-text text-sm leading-tight whitespace-nowrap">
                               {item.name}
                             </p>
-                            <p className="text-[10px] text-admin-text-muted font-black uppercase tracking-widest">{item.email}</p>
+                            <p className="text-[10px] text-admin-text-muted font-bold uppercase tracking-wider">{item.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="bg-admin-card text-admin-text px-2 py-1 rounded text-[9px] font-black uppercase border border-admin-border">
+                        <span className="bg-admin-card text-admin-text px-2 py-1 rounded text-[10px] font-bold uppercase border border-admin-border tracking-wider">
                           {item.service_type || 'Root'}
                         </span>
                       </td>
                       <td className="px-6 py-5">
-                        <p className="text-xs font-black text-admin-text-muted uppercase tracking-tighter">
+                        <p className="text-xs font-bold text-admin-text-muted uppercase tracking-wider">
                           {item.service_title || '—'}
                         </p>
                       </td>
