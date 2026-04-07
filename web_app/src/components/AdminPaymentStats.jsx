@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { CreditCard, TrendingUp, TrendingDown, Users, Calendar } from 'lucide-react';
 import { paymentAPI } from '../api/payment';
 
@@ -33,9 +33,9 @@ const AdminPaymentStats = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(8)].map((_, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-md p-6 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded mb-4"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
+          <div key={i} className="bg-admin-card rounded-lg shadow-md p-6 animate-pulse border border-admin-border">
+            <div className="h-4 bg-gray-200 dark:bg-admin-sidebar rounded mb-4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-admin-sidebar rounded"></div>
           </div>
         ))}
       </div>
@@ -44,11 +44,11 @@ const AdminPaymentStats = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <p className="text-red-600">{error}</p>
+      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50 rounded-lg p-6 text-center">
+        <p className="text-red-600 dark:text-red-400 font-bold">{error}</p>
         <button
           onClick={fetchStats}
-          className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+          className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
         >
           Retry
         </button>
@@ -60,16 +60,16 @@ const AdminPaymentStats = () => {
     <div className="space-y-6">
       {/* Payment Statistics */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <h3 className="text-lg font-semibold text-gray-900 text-admin-text mb-4 flex items-center">
           <CreditCard className="w-5 h-5 mr-2" />
           Payment Statistics
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Payments</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Total Payments</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {paymentStats?.total_payments?.toLocaleString() || 0}
                 </p>
               </div>
@@ -77,11 +77,11 @@ const AdminPaymentStats = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Successful</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Successful</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {paymentStats?.successful_payments?.toLocaleString() || 0}
                 </p>
               </div>
@@ -89,11 +89,11 @@ const AdminPaymentStats = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Failed</p>
-                <p className="text-2xl font-bold text-red-600">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Failed</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                   {paymentStats?.failed_payments?.toLocaleString() || 0}
                 </p>
               </div>
@@ -101,11 +101,11 @@ const AdminPaymentStats = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                   {paymentStats?.pending_payments?.toLocaleString() || 0}
                 </p>
               </div>
@@ -141,16 +141,16 @@ const AdminPaymentStats = () => {
 
       {/* Withdrawal Statistics */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <h3 className="text-lg font-semibold text-gray-900 text-admin-text mb-4 flex items-center">
           <Users className="w-5 h-5 mr-2" />
           Withdrawal Statistics
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Withdrawals</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Total Withdrawals</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {withdrawalStats?.total_withdrawals?.toLocaleString() || 0}
                 </p>
               </div>
@@ -158,11 +158,11 @@ const AdminPaymentStats = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                   {withdrawalStats?.pending_withdrawals?.toLocaleString() || 0}
                 </p>
               </div>
@@ -170,11 +170,11 @@ const AdminPaymentStats = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Completed</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {withdrawalStats?.completed_withdrawals?.toLocaleString() || 0}
                 </p>
               </div>
@@ -182,11 +182,11 @@ const AdminPaymentStats = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-admin-card rounded-lg shadow-md p-6 border border-admin-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Platform Fees</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-sm text-gray-600 text-admin-text-muted">Platform Fees</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   ETB {withdrawalStats?.total_platform_fees?.toLocaleString() || 0}
                 </p>
               </div>

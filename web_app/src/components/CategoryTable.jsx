@@ -30,7 +30,7 @@ const CategoryTable = ({ categories, onEdit, onDelete, isLoading, isError }) => 
   return (
     <div className="overflow-x-auto hidden lg:block">
       <table className="w-full text-left">
-        <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-semibold border-b border-slate-100 tracking-wider">
+        <thead className="bg-admin-card text-admin-text-muted text-[10px] uppercase font-black border-b border-admin-border tracking-widest italic">
           <tr>
             <th className="px-8 py-4">ID</th>
             <th className="px-8 py-4">Name</th>
@@ -39,19 +39,19 @@ const CategoryTable = ({ categories, onEdit, onDelete, isLoading, isError }) => 
             <th className="px-8 py-4 text-right">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50">
+        <tbody className="divide-y divide-admin-border">
           {categories.map((item) => (
-            <tr key={item.catagoryID} className="hover:bg-slate-50/50 transition-colors">
-              <td className="px-8 py-4 font-mono text-xs font-bold text-slate-300">#{item.catagoryID}</td>
-              <td className="px-8 py-4 font-semibold text-slate-800">{item.name}</td>
+            <tr key={item.catagoryID} className="hover:bg-admin-card/50 transition-colors">
+              <td className="px-8 py-4 font-mono text-xs font-bold text-admin-text-muted">#{item.catagoryID}</td>
+              <td className="px-8 py-4 font-semibold text-admin-text">{item.name}</td>
               <td className="px-8 py-4">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-semibold uppercase border ${
-                  item.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border tracking-widest ${
+                  item.status === 'Active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
                 }`}>
-                  {item.status || 'Active'}
+                  <span className="text-admin-text">{item.status || 'Active'}</span>
                 </span>
               </td>
-              <td className="px-8 py-4 text-sm text-slate-500 max-w-xs truncate italic">{item.description || 'No description.'}</td>
+              <td className="px-8 py-4 text-sm text-admin-text-muted max-w-xs truncate italic">{item.description || 'No description.'}</td>
               <td className="px-8 py-4 text-right">
                 <div className="flex justify-end gap-3">
                   <button

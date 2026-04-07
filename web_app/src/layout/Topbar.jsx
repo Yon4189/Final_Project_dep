@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, Settings, Menu, X, Loader2, Star, ShieldCheck, Layers, Wrench, Users as UsersIcon } from 'lucide-react';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { Search, Bell, User, Settings, Menu, X, Loader2, Star, ShieldCheck, Layers, Wrench, Users as UsersIcon, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import NotificationDropdown from '../components/NotificationDropdown';
+import { useTheme } from '../context/ThemeContext';
 
 const Topbar = ({ onToggleSidebar, isMobile }) => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const getBackendUrl = (path) => {
     if (!path) return '';
@@ -88,13 +90,13 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
   };
 
   return (
-    <header className={`h-16 bg-white flex items-center justify-between ${isMobile ? 'px-4' : 'px-8'} shadow-sm border-b border-slate-200 sticky top-0 z-10`}>
+    <header className={`h-16 bg-admin-sidebar flex items-center justify-between ${isMobile ? 'px-4' : 'px-8'} shadow-sm border-b border-white/5 sticky top-0 z-10 transition-colors duration-300`}>
       {/* Left: Toggle & Search */}
       <div className="flex-1 flex items-center gap-2 md:gap-4 min-w-0">
         {!isSearchExpanded && (
           <button
             onClick={onToggleSidebar}
-            className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
+            className="p-2 hover:bg-white/10 rounded-xl transition-colors text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
             title="Toggle Sidebar"
           >
             <Menu size={20} />
@@ -103,7 +105,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
 
         <div className={`relative ${isSearchExpanded ? 'flex-1' : 'flex-initial'}`} ref={searchRef}>
           <div
-            className={`flex items-center bg-white border rounded-xl transition-all focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 ${showResults ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200'
+            className={`flex items-center bg-white/5 border rounded-xl transition-all focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 ${showResults ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-white/10'
               } ${isMobile ? (isSearchExpanded ? 'w-full px-4 py-2' : 'w-10 h-10 justify-center cursor-pointer') : 'w-64 lg:w-96 px-4 py-2'}`}
             onClick={() => isMobile && !isSearchExpanded && setIsSearchExpanded(true)}
           >
@@ -112,7 +114,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
               <input
                 type="text"
                 placeholder={isMobile ? "Search..." : "Search categories, services, users..."}
-                className="bg-transparent border-none outline-none ml-2 text-sm w-full text-slate-700 placeholder:text-slate-400"
+                className="bg-transparent border-none outline-none ml-2 text-sm w-full text-white placeholder:text-slate-500"
                 value={searchQuery}
                 autoFocus={isMobile && isSearchExpanded}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -139,7 +141,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
 
           {/* Search Results Dropdown */}
           {showResults && (
-            <div className={`absolute top-14 left-0 ${isMobile ? 'w-[calc(100vw-2rem)] fixed left-4 right-4' : 'w-[30rem]'} bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden z-50`}>
+            <div className={`absolute top-14 left-0 ${isMobile ? 'w-[calc(100vw-2rem)] fixed left-4 right-4' : 'w-[30rem]'} bg-admin-card rounded-2xl shadow-lg border border-admin-border overflow-hidden z-50`}>
               <div className="max-h-[70vh] md:max-h-[32rem] overflow-y-auto p-2">
                 {/* No Results */}
                 {!isSearching && searchResults && Object.values(searchResults).every(arr => arr.length === 0) && (
@@ -228,13 +230,13 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                       <button
                         key={cust.id}
                         onClick={() => handleResultClick('customers', cust)}
-                        className="w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl transition-all flex items-center gap-3"
+                        className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-3"
                       >
-                        <div className="w-8 h-8 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg flex items-center justify-center">
                           <User size={14} />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-700">{cust.name}</span>
+                          <span className="text-sm font-medium text-admin-text">{cust.name}</span>
                           <span className="text-[10px] text-slate-400 font-medium uppercase">{cust.status}</span>
                         </div>
                       </button>
@@ -242,7 +244,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                   </div>
                 )}
               </div>
-              <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
+              <div className="bg-admin-card p-3 text-center border-t border-admin-border">
                 <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Global Admin Search</p>
               </div>
             </div>
@@ -255,17 +257,26 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
         {/* Settings (optional) */}
         <Link
           to="/settings"
-          className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
           title="Platform Settings"
         >
           <Settings size={20} />
         </Link>
 
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+          title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+
         {/* Notifications */}
         <div className="relative" ref={notificationRef}>
           <button
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-            className={`text-slate-400 hover:text-blue-600 relative p-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${isNotificationOpen ? 'bg-slate-100 text-blue-600' : 'hover:bg-slate-50'
+            className={`text-slate-400 hover:text-white relative p-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${isNotificationOpen ? 'bg-white/10 text-white' : 'hover:bg-white/5'
               }`}
           >
             <Bell size={20} />
@@ -284,18 +295,18 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
         {/* Profile */}
         <Link
           to="/profile"
-          className="flex items-center gap-3 pl-4 border-l border-slate-200 hover:bg-slate-50 p-1 rounded-2xl transition-all group"
+          className="flex items-center gap-3 pl-4 border-l border-white/10 hover:bg-white/5 p-1 rounded-2xl transition-all group"
         >
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+            <p className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">
               {user?.name || 'Admin User'}
             </p>
-            <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-tighter">
+            <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-tighter">
               System Administrator
             </p>
           </div>
 
-          <div className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center shadow-md group-hover:scale-105 transition-transform overflow-hidden border-2 border-white ring-2 ring-slate-100">
+          <div className="w-10 h-10 bg-white/10 text-slate-400 rounded-full flex items-center justify-center shadow-md group-hover:scale-105 transition-transform overflow-hidden border-2 border-white/20 ring-2 ring-white/5">
             {user?.profilePicture ? (
               <img
                 src={getBackendUrl(user.profilePicture)}

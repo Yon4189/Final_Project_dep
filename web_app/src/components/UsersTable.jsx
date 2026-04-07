@@ -130,10 +130,10 @@ const UsersTable = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[450px] flex items-center justify-center">
+      <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <Loader2 className="animate-spin text-blue-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Loading users...</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Loading users...</p>
         </div>
       </div>
     );
@@ -141,14 +141,14 @@ const UsersTable = ({
 
   if (dbStatus === 'disconnected') {
     return (
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[450px] flex items-center justify-center">
+      <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <AlertCircle className="text-red-500 w-10 h-10 mx-auto mb-4" />
           <p className="text-sm font-medium text-red-600 mb-2">Database connection failed</p>
-          <p className="text-xs text-slate-500 mb-4">{error?.message || 'Unable to connect to server'}</p>
+          <p className="text-xs text-admin-text-muted mb-4">{error?.message || 'Unable to connect to server'}</p>
           <button
             onClick={onRefresh}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 bg-admin-card hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-admin-text"
           >
             Try Again
           </button>
@@ -158,16 +158,16 @@ const UsersTable = ({
   }
 
   return (
-    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden">
       {/* Search and Filters Bar */}
-      <div className="p-6 border-b border-slate-100">
+      <div className="p-8 border-b border-admin-border bg-admin-card">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
               placeholder={`Search ${userType.toLowerCase()} by name, email, or ID...`}
-              className="pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+              className="pl-10 pr-10 py-2.5 border border-admin-border rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-admin-card text-sm text-admin-text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -189,7 +189,7 @@ const UsersTable = ({
               <select
                 value={filterLocation}
                 onChange={(e) => setFilterLocation(e.target.value)}
-                className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                className="px-3 py-2.5 border border-admin-border rounded-xl text-sm bg-admin-card text-admin-text focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">All Locations</option>
                 {locations.map(loc => (
@@ -202,8 +202,8 @@ const UsersTable = ({
               onClick={() => toggleSort('name')}
               className={`px-3 py-2.5 border rounded-xl text-sm flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 sortBy === 'name'
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
+                  : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               Name
@@ -214,8 +214,8 @@ const UsersTable = ({
               onClick={() => toggleSort('date')}
               className={`px-3 py-2.5 border rounded-xl text-sm flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 sortBy === 'date'
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
+                  : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               Joined
@@ -238,18 +238,18 @@ const UsersTable = ({
           <div className="mt-3 text-xs text-slate-500 flex items-center gap-2">
             <Filter size={12} />
             <span>Active filters: </span>
-            {searchQuery && <span className="bg-slate-100 px-2 py-0.5 rounded">Search: {searchQuery}</span>}
-            {filterLocation && <span className="bg-slate-100 px-2 py-0.5 rounded">Location: {filterLocation}</span>}
-            {sortBy !== 'date' && <span className="bg-slate-100 px-2 py-0.5 rounded">Sort: {sortBy} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
-            {sortBy === 'date' && sortOrder !== 'desc' && <span className="bg-slate-100 px-2 py-0.5 rounded">Joined: oldest first</span>}
+            {searchQuery && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Search: {searchQuery}</span>}
+            {filterLocation && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Location: {filterLocation}</span>}
+            {sortBy !== 'date' && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Sort: {sortBy} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
+            {sortBy === 'date' && sortOrder !== 'desc' && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Joined: oldest first</span>}
           </div>
         )}
       </div>
 
       {/* Desktop Table */}
       <div className="overflow-x-auto hidden lg:block">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-100">
+        <table className="w-full text-left" aria-label="Verification queue table">
+          <thead className="bg-white text-slate-800 dark:bg-slate-900 border-b border-admin-border text-[9px] uppercase font-black tracking-tighter">
             <tr>
               <th className="px-6 py-4">User Details</th>
               <th className="px-6 py-4">Contact</th>
@@ -259,7 +259,7 @@ const UsersTable = ({
               <th className="px-8 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-slate-100">
             {currentItems.length === 0 ? (
               <tr>
                 <td colSpan="6" className="text-center py-12 text-slate-400 text-sm">
@@ -273,8 +273,8 @@ const UsersTable = ({
                     <div className="flex items-center gap-3">
                       <UserAvatar user={user} />
                       <div>
-                        <p className="font-semibold text-slate-800 text-sm">{user.name}</p>
-                        <p className="text-xs text-slate-500">ID: {user.id}</p>
+                        <p className="font-semibold text-admin-text text-sm">{user.name}</p>
+                        <p className="text-xs text-admin-text-muted">ID: {user.id}</p>
                       </div>
                     </div>
                   </td>
@@ -284,7 +284,7 @@ const UsersTable = ({
                         <Mail size={12} className="shrink-0" />
                         <span className="text-xs truncate max-w-[150px]">{user.email}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-slate-600">
+                      <div className="flex items-center gap-1 text-admin-text-muted">
                         <Phone size={12} className="shrink-0" />
                         <span className="text-xs">{user.phone || 'N/A'}</span>
                       </div>
@@ -292,21 +292,21 @@ const UsersTable = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <MapPin size={12} className="text-slate-400" />
-                      <span className="text-xs text-slate-600">{user.location}</span>
+                      <MapPin size={12} className="text-admin-text-muted" />
+                      <span className="text-xs text-admin-text">{user.location}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-xs font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded">{user.joined || '—'}</span>
+                    <span className="text-xs font-medium text-admin-text-muted bg-white border border-slate-100 px-2 py-1 rounded">{user.joined || '—'}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      ['active', 'approved'].includes(user.status?.toLowerCase())
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {user.status}
-                    </span>
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${
+                        ['active', 'approved'].includes(user.status?.toLowerCase())
+                          ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+                          : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                      }`}>
+                        <span className="text-admin-text">{user.status}</span>
+                      </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -358,17 +358,17 @@ const UsersTable = ({
           <div className="text-center py-12 text-slate-400 text-sm">No {userType.toLowerCase()}s found.</div>
         ) : (
           currentItems.map((user) => (
-            <div key={user.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
+            <div key={user.id} className="bg-white rounded-2xl p-5 border border-admin-border space-y-3">
               <div className="flex items-center gap-3">
                 <UserAvatar user={user} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-800 text-sm">{user.name}</p>
+                  <p className="font-semibold text-admin-text text-sm">{user.name}</p>
                   <p className="text-xs text-slate-500">ID: {user.id}</p>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                   ['active', 'approved'].includes(user.status?.toLowerCase())
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-amber-100 text-amber-700'
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                    : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                 }`}>
                   {user.status}
                 </span>
@@ -418,18 +418,18 @@ const UsersTable = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-xs font-medium text-slate-500">
-            Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, processedData.length)} of {processedData.length}
-          </span>
-          <div className="flex items-center gap-1 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
-              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"
-            >
-              <ChevronLeft size={18} />
-            </button>
+        <div className="p-6 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs font-medium text-admin-text-muted">
+              Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, processedData.length)} of {processedData.length}
+            </span>
+            <div className="flex items-center gap-1 bg-admin-card p-1.5 rounded-xl border border-admin-border shadow-sm">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition text-admin-text-muted"
+              >
+                <ChevronLeft size={18} />
+              </button>
             {[...Array(totalPages)].map((_, i) => (
               <button
                 key={i + 1}
@@ -446,7 +446,7 @@ const UsersTable = ({
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(prev => prev + 1)}
-              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition text-admin-text-muted"
             >
               <ChevronRight size={18} />
             </button>

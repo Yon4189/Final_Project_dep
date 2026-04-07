@@ -72,7 +72,7 @@ const VerificationQueueTable = ({
   const TableSkeleton = () => (
     <div className="overflow-x-auto hidden lg:block animate-pulse" aria-label="Loading verification queue">
       <table className="w-full text-left">
-        <thead className="bg-slate-50 text-slate-400 text-[9px] uppercase font-black border-b border-slate-100 tracking-tighter">
+        <thead className="bg-slate-50 dark:bg-black/20 text-slate-400 dark:text-slate-500 text-[9px] uppercase font-black border-b border-admin-border tracking-tighter">
           <tr>
             <th className="px-6 py-5">Provider Full Name</th>
             <th className="px-6 py-5">Category</th>
@@ -84,30 +84,30 @@ const VerificationQueueTable = ({
             <th className="px-8 py-5 text-center">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50">
+        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
           {[...Array(3)].map((_, i) => (
             <tr key={i}>
               <td className="px-6 py-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-200"></div>
+                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800"></div>
                   <div>
-                    <div className="h-4 w-24 bg-slate-200 rounded mb-1"></div>
-                    <div className="h-3 w-32 bg-slate-200 rounded"></div>
+                    <div className="h-4 w-24 bg-slate-200 bg-admin-card rounded mb-1"></div>
+                    <div className="h-3 w-32 bg-slate-200 bg-admin-card rounded"></div>
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-5"><div className="h-5 w-20 bg-slate-200 rounded"></div></td>
-              <td className="px-6 py-5"><div className="h-5 w-24 bg-slate-200 rounded"></div></td>
-              <td className="px-6 py-5"><div className="h-5 w-40 bg-slate-200 rounded"></div></td>
-              <td className="px-6 py-5 text-center"><div className="h-5 w-12 bg-slate-200 rounded mx-auto"></div></td>
+              <td className="px-6 py-5"><div className="h-5 w-20 bg-slate-200 bg-admin-card rounded"></div></td>
+              <td className="px-6 py-5"><div className="h-5 w-24 bg-slate-200 bg-admin-card rounded"></div></td>
+              <td className="px-6 py-5"><div className="h-5 w-40 bg-slate-200 bg-admin-card rounded"></div></td>
+              <td className="px-6 py-5 text-center"><div className="h-5 w-12 bg-slate-200 bg-admin-card rounded mx-auto"></div></td>
               <td className="px-6 py-5">
                 <div className="flex flex-col gap-1.5 items-center">
-                  <div className="w-28 h-7 bg-slate-200 rounded"></div>
-                  <div className="w-28 h-7 bg-slate-200 rounded"></div>
+                  <div className="w-28 h-7 bg-slate-200 bg-admin-card rounded"></div>
+                  <div className="w-28 h-7 bg-slate-200 bg-admin-card rounded"></div>
                 </div>
               </td>
-              <td className="px-6 py-5 text-center"><div className="h-5 w-16 bg-slate-200 rounded mx-auto"></div></td>
-              <td className="px-8 py-5"><div className="w-20 h-8 bg-slate-200 rounded ml-auto"></div></td>
+              <td className="px-6 py-5 text-center"><div className="h-5 w-16 bg-slate-200 bg-admin-card rounded mx-auto"></div></td>
+              <td className="px-8 py-5"><div className="w-20 h-8 bg-slate-200 bg-admin-card rounded ml-auto"></div></td>
             </tr>
           ))}
         </tbody>
@@ -118,20 +118,20 @@ const VerificationQueueTable = ({
   const MobileSkeleton = () => (
     <div className="lg:hidden p-4 space-y-4 animate-pulse" aria-label="Loading mobile cards">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+        <div key={i} className="bg-admin-card/50 rounded-3xl p-5 border border-admin-border space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-slate-200"></div>
+            <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800"></div>
             <div className="flex-1">
-              <div className="h-4 w-32 bg-slate-200 rounded mb-1"></div>
-              <div className="h-3 w-40 bg-slate-200 rounded"></div>
+              <div className="h-4 w-32 bg-slate-200 bg-admin-card rounded mb-1"></div>
+              <div className="h-3 w-40 bg-slate-200 bg-admin-card rounded"></div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><div className="h-3 w-16 bg-slate-200 rounded mb-1"></div><div className="h-4 w-20 bg-slate-200 rounded"></div></div>
-            <div><div className="h-3 w-16 bg-slate-200 rounded mb-1"></div><div className="h-4 w-16 bg-slate-200 rounded"></div></div>
+            <div><div className="h-3 w-16 bg-slate-200 bg-admin-card rounded mb-1"></div><div className="h-4 w-20 bg-slate-200 bg-admin-card rounded"></div></div>
+            <div><div className="h-3 w-16 bg-slate-200 bg-admin-card rounded mb-1"></div><div className="h-4 w-16 bg-slate-200 bg-admin-card rounded"></div></div>
           </div>
-          <div><div className="h-3 w-20 bg-slate-200 rounded mb-2"></div><div className="flex gap-2"><div className="flex-1 h-8 bg-slate-200 rounded"></div><div className="flex-1 h-8 bg-slate-200 rounded"></div></div></div>
-          <div className="flex justify-end gap-3"><div className="w-20 h-8 bg-slate-200 rounded"></div><div className="w-20 h-8 bg-slate-200 rounded"></div></div>
+          <div><div className="h-3 w-20 bg-slate-200 bg-admin-card rounded mb-2"></div><div className="flex gap-2"><div className="flex-1 h-8 bg-slate-200 bg-admin-card rounded"></div><div className="flex-1 h-8 bg-slate-200 bg-admin-card rounded"></div></div></div>
+          <div className="flex justify-end gap-3"><div className="w-20 h-8 bg-slate-200 bg-admin-card rounded"></div><div className="w-20 h-8 bg-slate-200 bg-admin-card rounded"></div></div>
         </div>
       ))}
     </div>
@@ -139,9 +139,9 @@ const VerificationQueueTable = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-8 border-b border-slate-100 bg-white/50">
-          <div className="h-6 w-32 bg-slate-200 rounded animate-pulse"></div>
+      <div className="bg-admin-card rounded-[2.5rem] shadow-sm border border-admin-border overflow-hidden">
+        <div className="p-8 border-b border-admin-border bg-admin-card">
+          <div className="h-6 w-32 bg-slate-200 bg-admin-card rounded animate-pulse"></div>
         </div>
         <TableSkeleton />
         <MobileSkeleton />
@@ -150,11 +150,11 @@ const VerificationQueueTable = ({
   }
 
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-admin-card rounded-[2.5rem] shadow-sm border border-admin-border overflow-hidden">
       {/* Header with filter bar */}
-      <div className="p-8 border-b border-slate-100 bg-white/50">
+      <div className="p-8 border-b border-admin-border bg-admin-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h2 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
+          <h2 className="font-black text-admin-text uppercase text-xs tracking-widest flex items-center gap-2">
             Provider Verification
             <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-[9px] font-black">
               {filteredAndSortedQueue.length}
@@ -171,7 +171,7 @@ const VerificationQueueTable = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 ref={searchInputRef}
-                className="pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-9 pr-3 py-2 border border-admin-border bg-admin-card rounded-xl text-xs w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-admin-text"
               />
             </div>
             <label htmlFor="category-filter" className="sr-only">Filter by category</label>
@@ -180,7 +180,7 @@ const VerificationQueueTable = ({
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
               ref={categorySelectRef}
-              className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-admin-border rounded-xl text-xs bg-admin-card text-admin-text focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
@@ -231,7 +231,7 @@ const VerificationQueueTable = ({
           {/* Desktop table */}
           <div className="overflow-x-auto hidden lg:block">
             <table className="w-full text-left" aria-label="Verification queue table">
-              <thead className="bg-slate-50 text-slate-400 text-[9px] uppercase font-black border-b border-slate-100 tracking-tighter">
+              <thead className="bg-slate-50 dark:bg-black/20 text-admin-text-muted text-[9px] uppercase font-black border-b border-admin-border tracking-tighter">
                 <tr>
                   <th className="px-6 py-5">Provider Full Name</th>
                   <th className="px-6 py-5">Category</th>
@@ -243,7 +243,7 @@ const VerificationQueueTable = ({
                   <th className="px-8 py-5 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-admin-border">
                 {filteredAndSortedQueue.map((item) => {
                   const profilePhotoUrl = getBackendUrl(item.profilePicture);
                   const idPhotoUrl = getBackendUrl(item.idPhoto);
@@ -258,10 +258,10 @@ const VerificationQueueTable = ({
                         <div className="flex items-center gap-3">
                           <div className="relative w-10 h-10 shrink-0">
                             {hasProfilePhoto ? (
-                              <img
+                             <img
                                 src={profilePhotoUrl}
                                 alt={`${item.name}'s profile`}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-slate-200"
+                                className="w-10 h-10 rounded-full object-cover border-2 border-admin-border"
                                 onError={(e) => {
                                   e.target.style.display = 'none';
                                   e.target.parentElement.querySelector('.fallback-placeholder').style.display = 'flex';
@@ -277,27 +277,27 @@ const VerificationQueueTable = ({
                             </div>
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 text-sm leading-tight whitespace-nowrap">
+                            <p className="font-bold text-admin-text text-sm leading-tight whitespace-nowrap">
                               {item.name}
                             </p>
-                            <p className="text-[10px] text-slate-400 font-medium">{item.email}</p>
+                            <p className="text-[10px] text-admin-text-muted font-black uppercase tracking-widest">{item.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[9px] font-black uppercase border border-slate-200">
+                        <span className="bg-admin-card text-admin-text px-2 py-1 rounded text-[9px] font-black uppercase border border-admin-border">
                           {item.service_type || 'Root'}
                         </span>
                       </td>
                       <td className="px-6 py-5">
-                        <p className="text-xs font-black text-slate-600 uppercase tracking-tighter">
+                        <p className="text-xs font-black text-admin-text-muted uppercase tracking-tighter">
                           {item.service_title || '—'}
                         </p>
                       </td>
                       <td className="px-6 py-5 max-w-[180px]">
                         {item.service_description ? (
                           <div>
-                            <p className="text-[11px] text-slate-600 font-medium leading-snug line-clamp-2">
+                            <p className="text-[11px] text-admin-text-muted font-medium leading-snug line-clamp-2">
                               {item.service_description}
                             </p>
                             <button
@@ -317,7 +317,7 @@ const VerificationQueueTable = ({
                           {item.estimated_cost != null ? (
                             <>{item.estimated_cost} <span className="text-[10px]">ETB</span></>
                           ) : (
-                            <span className="text-slate-300 text-[10px] italic">—</span>
+                            <span className="text-slate-300 dark:text-slate-700 text-[10px] italic">—</span>
                           )}
                         </span>
                       </td>
@@ -327,8 +327,8 @@ const VerificationQueueTable = ({
                             onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')}
                             disabled={!hasIdPhoto}
                             className={`w-28 py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasIdPhoto
-                                ? 'bg-slate-900 text-white hover:bg-black focus:ring-slate-500'
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                ? 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500'
+                                : 'bg-slate-200 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                               }`}
                             aria-label={hasIdPhoto ? `View ID document for ${item.name}` : `No ID document available for ${item.name}`}
                             aria-disabled={!hasIdPhoto}
@@ -341,7 +341,7 @@ const VerificationQueueTable = ({
                             disabled={!hasCredential}
                             className={`w-28 py-1.5 rounded-lg text-[9px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasCredential
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                               }`}
                             aria-label={hasCredential ? `View licence for ${item.name}` : `No licence available for ${item.name}`}
                             aria-disabled={!hasCredential}
@@ -375,7 +375,7 @@ const VerificationQueueTable = ({
                               </button>
                               <button
                                 onClick={() => onVerify(item.id, item.name, false)}
-                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all active:scale-90 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all active:scale-90 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:shadow-red-900/20 shadow-lg shadow-red-100"
                                 aria-label={`Reject ${item.name}`}
                               >
                                 Reject
@@ -402,7 +402,7 @@ const VerificationQueueTable = ({
               const hasCredential = !!credentialUrl;
 
               return (
-                <div key={item.id} className="bg-slate-50 rounded-3xl p-5 border border-slate-200 space-y-4">
+                <div key={item.id} className="bg-white rounded-3xl p-5 border border-admin-border space-y-4 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="relative w-12 h-12 shrink-0">
                       {hasProfilePhoto ? (
@@ -425,23 +425,23 @@ const VerificationQueueTable = ({
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-slate-900 text-sm truncate">{item.name}</p>
+                      <p className="font-bold text-admin-text text-sm truncate">{item.name}</p>
                       <p className="text-[10px] text-slate-400 truncate">{item.email}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Service</p>
-                      <p className="text-xs font-bold text-blue-600 truncate">{item.service_title || '—'}</p>
+                    <div className="grid grid-cols-2 gap-3 pb-3 border-b border-admin-border">
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Service</p>
+                        <p className="text-xs font-bold text-blue-600 dark:text-blue-400 truncate">{item.service_title || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Est. Cost</p>
+                        <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 italic">
+                          {item.estimated_cost != null ? `${item.estimated_cost} ETB` : '—'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Est. Cost</p>
-                      <p className="text-xs font-mono font-bold text-emerald-600 italic">
-                        {item.estimated_cost != null ? `${item.estimated_cost} ETB` : '—'}
-                      </p>
-                    </div>
-                  </div>
 
                   <div className="space-y-2">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Documents</p>
@@ -450,8 +450,8 @@ const VerificationQueueTable = ({
                         onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')}
                         disabled={!hasIdPhoto}
                         className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase text-center focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasIdPhoto
-                            ? 'bg-slate-900 text-white hover:bg-black focus:ring-slate-500'
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            ? 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500'
+                            : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                           }`}
                         aria-label={hasIdPhoto ? `View ID document for ${item.name}` : `No ID document available for ${item.name}`}
                         aria-disabled={!hasIdPhoto}
@@ -463,7 +463,7 @@ const VerificationQueueTable = ({
                         disabled={!hasCredential}
                         className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase text-center focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasCredential
                             ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                           }`}
                         aria-label={hasCredential ? `View licence for ${item.name}` : `No licence available for ${item.name}`}
                         aria-disabled={!hasCredential}
@@ -474,11 +474,11 @@ const VerificationQueueTable = ({
                   </div>
 
                   {item.service_description && (
-                    <button
-                      onClick={() => onViewDescription(item.service_description, item.name)}
-                      className="text-xs text-blue-600 font-medium flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                      aria-label={`Read full description for ${item.name}`}
-                    >
+                      <button
+                        onClick={() => onViewDescription(item.service_description, item.name)}
+                        className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                        aria-label={`Read full description for ${item.name}`}
+                      >
                       <Eye size={12} aria-hidden="true" /> View full description
                     </button>
                   )}
@@ -488,13 +488,13 @@ const VerificationQueueTable = ({
                       <Loader2 className="animate-spin text-blue-600" size={20} aria-label="Processing" />
                     ) : (
                       <>
-                        <button
-                          onClick={() => onVerify(item.id, item.name, false)}
-                          className="px-4 py-2 border border-red-200 text-red-500 rounded-xl text-[10px] font-black uppercase focus:outline-none focus:ring-2 focus:ring-red-500"
-                          aria-label={`Reject ${item.name}`}
-                        >
-                          Reject
-                        </button>
+                         <button
+                           onClick={() => onVerify(item.id, item.name, false)}
+                           className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-500 dark:text-red-400 rounded-xl text-[10px] font-black uppercase focus:outline-none focus:ring-2 focus:ring-red-500"
+                           aria-label={`Reject ${item.name}`}
+                         >
+                           Reject
+                         </button>
                         <button
                           onClick={() => onVerify(item.id, item.name, true)}
                           className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
@@ -512,8 +512,8 @@ const VerificationQueueTable = ({
         </>
       ) : (
         <div className="p-24 text-center">
-          <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-slate-200">
-            <CheckCircle className="text-slate-300" size={32} aria-hidden="true" />
+          <div className="bg-admin-card/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-admin-border">
+            <CheckCircle className="text-slate-300 dark:text-slate-700" size={32} aria-hidden="true" />
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
             No providers match your filters

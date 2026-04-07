@@ -65,27 +65,27 @@ const Users = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
               {userType} Management
             </h1>
             {users.length > 0 && (
-              <span className="bg-blue-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-sm">
+              <span className="bg-blue-500 text-white text-[10px] px-3 py-1 rounded-full font-black shadow-sm">
                 {users.length}
               </span>
             )}
           </div>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-wider mt-1">
-            Manage {userType.toLowerCase()} accounts and permissions.
+          <p className="text-admin-text-muted text-xs font-black uppercase tracking-widest italic mt-1">
+            Manage authenticated {userType.toLowerCase()} accounts and visibility.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
             <Database size={14} className={
               dbStatus === 'connected' ? 'text-green-500' :
               dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-wider text-admin-text-muted">
               {dbStatus === 'connected' && 'Database Connected'}
               {dbStatus === 'disconnected' && 'Database Disconnected'}
               {dbStatus === 'checking' && 'Checking Database...'}
@@ -93,7 +93,7 @@ const Users = () => {
           </div>
           <button
             onClick={() => refetch()}
-            className="p-2.5 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-2.5 bg-admin-card border border-admin-border rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Refresh data"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />

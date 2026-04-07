@@ -113,10 +113,10 @@ const VerificationTable = ({
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[450px] flex items-center justify-center">
+      <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <Loader2 className="animate-spin text-blue-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Loading providers...</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Loading providers...</p>
         </div>
       </div>
     );
@@ -125,14 +125,14 @@ const VerificationTable = ({
   // Error state
   if (dbStatus === 'disconnected') {
     return (
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[450px] flex items-center justify-center">
+      <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <AlertCircle className="text-red-500 w-10 h-10 mx-auto mb-4" />
           <p className="text-sm font-medium text-red-600 mb-2">Database connection failed</p>
-          <p className="text-xs text-slate-500 mb-4">{error?.message || 'Unable to connect to server'}</p>
+          <p className="text-xs text-admin-text-muted mb-4">{error?.message || 'Unable to connect to server'}</p>
           <button
             onClick={onRefresh}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 bg-admin-card hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-admin-text"
           >
             Try Again
           </button>
@@ -142,9 +142,9 @@ const VerificationTable = ({
   }
 
   return (
-    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden">
       {/* Search and Filters Bar */}
-      <div className="p-6 border-b border-slate-100">
+      <div className="p-6 border-b border-admin-border bg-admin-card">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           {/* Search Input */}
           <div className="relative w-full md:w-80">
@@ -152,7 +152,7 @@ const VerificationTable = ({
             <input
               type="text"
               placeholder="Search by name, email, service, or ID..."
-              className="pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+              className="pl-10 pr-10 py-2.5 border border-admin-border rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-admin-card text-sm text-admin-text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -176,7 +176,7 @@ const VerificationTable = ({
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                className="px-3 py-2.5 border border-admin-border rounded-xl text-sm bg-admin-card text-admin-text focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">All Categories</option>
                 {categories.map(cat => (
@@ -190,8 +190,8 @@ const VerificationTable = ({
               onClick={() => toggleSort('name')}
               className={`px-3 py-2.5 border rounded-xl text-sm flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 sortBy === 'name'
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
+                  : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               Name
@@ -203,8 +203,8 @@ const VerificationTable = ({
               onClick={() => toggleSort('date')}
               className={`px-3 py-2.5 border rounded-xl text-sm flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 sortBy === 'date'
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
+                  : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               Date
@@ -216,8 +216,8 @@ const VerificationTable = ({
               onClick={() => toggleSort('cost')}
               className={`px-3 py-2.5 border rounded-xl text-sm flex items-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 sortBy === 'cost'
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
+                  : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               Cost
@@ -253,7 +253,7 @@ const VerificationTable = ({
       {/* Desktop Table */}
       <div className="overflow-x-auto hidden lg:block">
         <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-100">
+          <thead className="bg-slate-50 dark:bg-black/20 text-admin-text-muted text-xs font-semibold uppercase border-b border-admin-border">
             <tr>
               <th className="px-6 py-4">Provider</th>
               <th className="px-6 py-4">Category</th>
@@ -266,7 +266,7 @@ const VerificationTable = ({
               <th className="px-8 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-admin-border">
             {currentItems.length === 0 ? (
               <tr>
                 <td colSpan="9" className="text-center py-12 text-slate-400 text-sm">
@@ -308,7 +308,7 @@ const VerificationTable = ({
                           </div>
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-800 text-sm">{item.name}</p>
+                          <p className="font-semibold text-admin-text text-sm">{item.name}</p>
                           <p className="text-xs text-slate-500">{item.email}</p>
                         </div>
                       </div>
@@ -316,7 +316,7 @@ const VerificationTable = ({
 
                     {/* Category */}
                     <td className="px-6 py-4">
-                      <span className="inline-block bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-medium">
+                      <span className="inline-block bg-admin-card text-admin-text px-2 py-1 rounded text-xs font-medium border border-admin-border">
                         {item.service_type || '—'}
                       </span>
                     </td>
@@ -330,10 +330,10 @@ const VerificationTable = ({
                     <td className="px-6 py-4 max-w-[200px]">
                       {item.service_description ? (
                         <div>
-                          <p className="text-xs text-slate-600 line-clamp-2">{item.service_description}</p>
+                          <p className="text-xs text-admin-text-muted line-clamp-2">{item.service_description}</p>
                           <button
                             onClick={() => onViewDescription(item.service_description, item.name)}
-                            className="mt-1 text-blue-500 hover:text-blue-700 text-[10px] font-medium flex items-center gap-1"
+                            className="mt-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-[10px] font-medium flex items-center gap-1"
                           >
                             <Eye size={12} /> Read more
                           </button>
@@ -358,8 +358,8 @@ const VerificationTable = ({
                           disabled={!hasIdPhoto}
                           className={`w-28 py-1.5 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 transition ${
                             hasIdPhoto
-                              ? 'bg-slate-800 text-white hover:bg-slate-900'
-                              : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                              ? 'bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-900 dark:hover:bg-slate-600'
+                              : 'bg-slate-100 bg-admin-card text-slate-400 cursor-not-allowed'
                           }`}
                         >
                           <ImageIcon size={12} /> ID
@@ -369,8 +369,8 @@ const VerificationTable = ({
                           disabled={!hasCredential}
                           className={`w-28 py-1.5 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 transition ${
                             hasCredential
-                              ? 'bg-blue-600 text-white hover:bg-blue-700'
-                              : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                              ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-600'
+                              : 'bg-slate-100 bg-admin-card text-slate-400 cursor-not-allowed'
                           }`}
                         >
                           <FileCheck size={12} /> Licence
@@ -385,13 +385,13 @@ const VerificationTable = ({
 
                     {/* Status badge */}
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        status === 'active' ? 'bg-green-100 text-green-700' :
-                        status === 'rejected' ? 'bg-red-100 text-red-700' :
-                        status === 'suspended' ? 'bg-purple-100 text-purple-700' :
-                        'bg-amber-100 text-amber-700'
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${
+                        status === 'active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' :
+                        status === 'rejected' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
+                        status === 'suspended' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' :
+                        'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                       }`}>
-                        {item.status || 'Pending'}
+                        <span className="text-admin-text">{item.status || 'Pending'}</span>
                       </span>
                     </td>
 
@@ -456,7 +456,7 @@ const VerificationTable = ({
             const status = item.status?.toLowerCase() || 'pending';
 
             return (
-              <div key={item.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
+              <div key={item.id} className="bg-white rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="relative w-10 h-10 shrink-0">
                     {hasProfilePhoto ? (
@@ -478,24 +478,24 @@ const VerificationTable = ({
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-800 text-sm">{item.name}</p>
+                    <p className="font-semibold text-admin-text text-sm">{item.name}</p>
                     <p className="text-xs text-slate-500 truncate">{item.email}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    status === 'active' ? 'bg-green-100 text-green-700' :
-                    status === 'rejected' ? 'bg-red-100 text-red-700' :
-                    status === 'suspended' ? 'bg-purple-100 text-purple-700' :
-                    'bg-amber-100 text-amber-700'
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${
+                    status === 'active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' :
+                    status === 'rejected' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
+                    status === 'suspended' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' :
+                    'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                   }`}>
-                    {item.status || 'Pending'}
+                    <span className="text-admin-text">{item.status || 'Pending'}</span>
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-200 pt-2">
-                  <div><span className="font-semibold text-slate-500">Category:</span> {item.service_type || '—'}</div>
-                  <div><span className="font-semibold text-slate-500">Cost:</span> {item.estimated_cost ? `${item.estimated_cost} ETB` : '—'}</div>
-                  <div><span className="font-semibold text-slate-500">Service:</span> {item.service_title || '—'}</div>
-                  <div><span className="font-semibold text-slate-500">Submitted:</span> {item.submission_date || 'Unknown'}</div>
+                <div className="grid grid-cols-2 gap-2 text-xs border-t border-admin-border pt-2">
+                  <div><span className="font-semibold text-admin-text-muted">Category:</span> <span className="dark:text-slate-300">{item.service_type || '—'}</span></div>
+                  <div><span className="font-semibold text-admin-text-muted">Cost:</span> <span className="dark:text-slate-300">{item.estimated_cost ? `${item.estimated_cost} ETB` : '—'}</span></div>
+                  <div><span className="font-semibold text-admin-text-muted">Service:</span> <span className="dark:text-slate-300">{item.service_title || '—'}</span></div>
+                  <div><span className="font-semibold text-admin-text-muted">Submitted:</span> <span className="dark:text-slate-300">{item.submission_date || 'Unknown'}</span></div>
                 </div>
 
                 {item.service_description && (
@@ -560,15 +560,15 @@ const VerificationTable = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-xs font-medium text-slate-500">
+        <div className="p-6 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-xs font-medium text-admin-text-muted">
             Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, processedData.length)} of {processedData.length}
           </span>
-          <div className="flex items-center gap-1 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-1 bg-admin-card p-1.5 rounded-xl border border-admin-border shadow-sm">
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => prev - 1)}
-              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition text-admin-text-muted"
             >
               <ChevronLeft size={18} />
             </button>
@@ -588,7 +588,7 @@ const VerificationTable = ({
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(prev => prev + 1)}
-              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition text-admin-text-muted"
             >
               <ChevronRight size={18} />
             </button>

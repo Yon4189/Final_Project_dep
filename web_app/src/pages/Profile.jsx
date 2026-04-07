@@ -142,13 +142,13 @@ const Profile = () => {
         </div>
       )}
 
-      <h1 className="text-2xl font-black text-slate-900 italic tracking-tight uppercase">Admin Account Settings</h1>
+      <h1 className="text-2xl font-black text-admin-text italic tracking-tight">Admin Account Settings</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Avatar Section */}
-        <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center space-y-4">
+        <div className="bg-admin-card p-6 sm:p-8 rounded-[2.5rem] border border-admin-border shadow-sm text-center space-y-4">
           <div className="relative w-32 h-32 mx-auto">
-            <div className="w-full h-full bg-slate-50 rounded-full flex items-center justify-center border-4 border-white shadow-xl overflow-hidden ring-1 ring-slate-100">
+            <div className="w-full h-full bg-admin-card dark:bg-admin-sidebar rounded-full flex items-center justify-center border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden ring-1 ring-admin-border dark:ring-slate-800">
               {profileData.profilePicture ? (
                 <img
                   src={getBackendUrl(profileData.profilePicture)}
@@ -158,7 +158,7 @@ const Profile = () => {
                 />
               ) : null}
               <div
-                className="w-full h-full items-center justify-center text-slate-200"
+                className="w-full h-full items-center justify-center text-slate-200 dark:text-slate-700"
                 style={{ display: profileData.profilePicture ? 'none' : 'flex' }}
               >
                 <User size={64} />
@@ -175,62 +175,62 @@ const Profile = () => {
               type="button"
               onClick={handleCameraClick}
               disabled={isUploading}
-              className="absolute bottom-0 right-0 p-3 bg-blue-600 text-white rounded-full border-4 border-white shadow-lg hover:bg-blue-700 transition-all active:scale-90 disabled:bg-slate-400"
+              className="absolute bottom-0 right-0 p-3 bg-blue-600 text-white rounded-full border-4 border-white dark:border-slate-800 shadow-lg hover:bg-blue-700 transition-all active:scale-90 disabled:bg-slate-400"
             >
               <Camera size={16} />
             </button>
           </div>
           <div>
-            <h3 className="font-black text-slate-800 text-xl italic tracking-tighter">{profileData.name}</h3>
-            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 py-1 px-3 rounded-full inline-block mt-2">
+            <h3 className="font-black text-admin-text text-xl italic tracking-tighter">{profileData.name}</h3>
+            <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-900/10 py-1 px-3 rounded-full inline-block mt-2">
               System Controller
             </p>
           </div>
         </div>
 
         {/* Info Form */}
-        <div className="md:col-span-2 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
+        <div className="md:col-span-2 bg-admin-card rounded-[2.5rem] border border-admin-border shadow-sm overflow-hidden">
           <form onSubmit={handleUpdate} className="p-6 sm:p-10 space-y-8" autoComplete="off">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Full Name</label>
                 <div className="relative">
                   <input
                     type="text"
                     required
-                    className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-6 pr-12 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
+                    className="w-full bg-admin-card border border-admin-border rounded-2xl py-4 pl-6 pr-12 text-admin-text focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                   />
-                  <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
                 </div>
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
                 <div className="relative">
                   <input
                     type="email"
                     required
-                    className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-6 pr-12 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
+                    className="w-full bg-admin-card border border-admin-border rounded-2xl py-4 pl-6 pr-12 text-admin-text focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
                     value={profileData.email}
                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                   />
-                  <Mail className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <Mail className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
                 </div>
               </div>
 
               <div className="space-y-3 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Phone Number</label>
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="+251 ..."
-                    className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-6 pr-12 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
+                    className="w-full bg-admin-card border border-admin-border rounded-2xl py-4 pl-6 pr-12 text-admin-text focus:ring-2 focus:ring-blue-500 outline-none font-bold transition-all"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                   />
-                  <Phone className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <Phone className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
                 </div>
               </div>
             </div>
@@ -239,7 +239,7 @@ const Profile = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-slate-900 hover:bg-black disabled:bg-slate-400 text-white font-black py-5 rounded-3xl transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black py-5 rounded-3xl transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95"
               >
                 {isLoading ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
                 {isLoading ? 'Processing...' : 'Save Profile Changes'}
