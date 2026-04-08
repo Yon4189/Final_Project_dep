@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
+import { API_BASE_URL } from '@/app/config/api';
 import { useProviderStore } from '@/app/store/providerStore';
 import { useUpdateProfile } from '@/hooks/useProviderQueries';
 import { Certification } from '@/app/types/provider.types';
@@ -167,7 +168,10 @@ export default function CertificationsScreen() {
             <View key={cert.id} style={styles.certCard}>
               <View style={styles.certImageContainer}>
                 {cert.image ? (
-                  <Image source={{ uri: cert.image.startsWith('http') ? cert.image : `${process.env.EXPO_PUBLIC_API_URL?.replace('/api', '')}/${cert.image}` }} style={styles.certImage} />
+                  <Image
+                    source={{ uri: cert.image.startsWith('http') ? cert.image : `${API_BASE_URL.replace('/api', '')}/${cert.image}` }}
+                    style={styles.certImage}
+                  />
                 ) : (
                   <View style={styles.certPlaceholder}>
                     <Ionicons name="document-text-outline" size={32} color={colors.border} />
@@ -252,7 +256,7 @@ export default function CertificationsScreen() {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, justifyContent: 'space-between' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 100, paddingBottom: 20, paddingHorizontal: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, justifyContent: 'space-between' },
   backButton: { padding: 4 },
   title: { fontSize: 20, fontWeight: 'bold', color: colors.text.primary },
   addButton: { padding: 4 },

@@ -22,6 +22,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { formatPhoneNumber } from '../utils/formatters';
 import type { WorkingHours } from '../types/provider.types';
 import { api } from '@/app/services/api';
+import { API_BASE_URL } from '@/app/config/api';
 import { useUpdateProfile } from '@/hooks/useProviderQueries';
 
 const WEEKDAYS = [
@@ -140,7 +141,7 @@ export default function ProviderProfile() {
   );
 
   const renderProfileCard = () => {
-    const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || '';
+    const apiBaseUrl = API_BASE_URL.replace('/api', '');
     const profileImageUrl = (() => {
       const pic = profile?.profilePicture || (profile as any)?.profile_picture || (profile as any)?.profileImage;
       if (!pic) return 'https://via.placeholder.com/150';
@@ -262,7 +263,7 @@ export default function ProviderProfile() {
 
       <TouchableOpacity 
         style={styles.infoRow}
-        onPress={() => router.push('/(provider)/profile/location')}
+        onPress={() => router.push('/(provider)/profile/edit')}
       >
         <View style={styles.infoLeft}>
           <Ionicons name="location-outline" size={20} color={colors.primary} />
@@ -549,7 +550,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   header: {
     backgroundColor: colors.primary,
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,

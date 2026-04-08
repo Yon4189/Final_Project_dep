@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: Colors.surface,
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 16,
     borderBottomWidth: 3,
   },

@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/app/constants/Colors';
+import { API_BASE_URL } from '@/app/config/api';
 import { useProviderStore } from '@/app/store/providerStore';
 import { useUpdateProfile } from '@/hooks/useProviderQueries';
 import AppButton from '@/components/AppButton';
@@ -98,9 +99,9 @@ export default function DocumentsScreen() {
 
         {isUploaded && profile?.[type] && (
           <View style={styles.previewContainer}>
-            <Image 
-              source={{ uri: `${process.env.EXPO_PUBLIC_API_URL?.replace('/api', '')}/${profile[type]}` }} 
-              style={styles.previewImage} 
+            <Image
+              source={{ uri: `${API_BASE_URL.replace('/api', '')}/${profile[type]}` }}
+              style={styles.previewImage}
               resizeMode="cover"
             />
           </View>
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 20,
     paddingHorizontal: 20,
     backgroundColor: Colors.surface,

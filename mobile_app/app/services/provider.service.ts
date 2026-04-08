@@ -268,7 +268,11 @@ class ProviderService {
   // ==================== Disputes ====================
 
   async getDisputes(): Promise<ApiResponse<Dispute[]>> {
-    return api.get<Dispute[]>(`${this.BASE_PATH}/disputes`);
+    const response = await api.get<any>(`${this.BASE_PATH}/disputes`);
+    if (response.success && response.data && Array.isArray(response.data.data)) {
+      response.data = response.data.data;
+    }
+    return response as ApiResponse<Dispute[]>;
   }
 
   async getDisputeDetails(id: string): Promise<ApiResponse<Dispute>> {

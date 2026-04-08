@@ -920,7 +920,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   header: {
     backgroundColor: colors.surface,
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 16,
     borderBottomWidth: 3,
   },
@@ -1491,7 +1491,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 20,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,

@@ -1,5 +1,6 @@
 // utils/constants.ts
 import { Dimensions, Platform } from 'react-native';
+import { API_BASE_URL } from '../config/api';
 import type { Currency } from '../types/customer.types';
 
 const { width, height } = Dimensions.get('window');
@@ -11,7 +12,7 @@ export const APP = {
   VERSION: '1.0.0',
   BUNDLE_ID: 'com.homelink.app',
   DEEPLINK_PREFIX: 'mobileapp://',
-  API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://api.homelink.com/v1',
+  API_URL: API_BASE_URL,
   WEBSITE_URL: 'https://homelink.com',
   SUPPORT_EMAIL: 'support@homelink.com',
   SUPPORT_PHONE: '+251911234567',

@@ -393,7 +393,7 @@ export default function ProviderReviews() {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { backgroundColor: colors.primary, paddingTop: 60, paddingBottom: 30, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
+  header: { backgroundColor: colors.primary, paddingTop: 100, paddingBottom: 30, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: '600', color: colors.surface },
