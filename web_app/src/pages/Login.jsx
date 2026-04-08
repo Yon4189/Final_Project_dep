@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
@@ -53,7 +53,7 @@ const Login = () => {
         login(userSession, token);
 
         // redirect to dashboard
-        navigate('/');
+        navigate('/admin');
       } else {
         setError(response.data.message || 'Login failed');
       }

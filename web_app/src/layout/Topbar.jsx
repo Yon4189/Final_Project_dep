@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, Settings, Menu, X, Loader2, Star, ShieldCheck, Layers, Wrench, Users as UsersIcon, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -73,16 +73,16 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
 
     switch (type) {
       case 'categories':
-        navigate('/services/categories');
+        navigate('/admin/services/categories');
         break;
       case 'services':
-        navigate('/services/services');
+        navigate('/admin/services/services');
         break;
       case 'providers':
-        navigate('/users/providers');
+        navigate('/admin/users/providers');
         break;
       case 'customers':
-        navigate('/users/customers');
+        navigate('/admin/users/customers');
         break;
       default:
         break;
@@ -256,7 +256,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
       <div className="flex items-center gap-4">
         {/* Settings (optional) */}
         <Link
-          to="/settings"
+          to="/admin/settings"
           className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
           title="Platform Settings"
         >
@@ -294,7 +294,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
 
         {/* Profile */}
         <Link
-          to="/profile"
+          to="/admin/profile"
           className="flex items-center gap-3 pl-4 border-l border-white/10 hover:bg-white/5 p-1 rounded-2xl transition-all group"
         >
           <div className="text-right hidden sm:block">

@@ -92,7 +92,7 @@ const Payment = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Payment Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/admin')}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Dashboard
@@ -222,8 +222,8 @@ const Payment = () => {
                 </button>
               )}
               
-              <button
-                onClick={() => navigate('/dashboard')}
+            <button
+                onClick={() => navigate('/admin')}
                 className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Back to Dashboard
