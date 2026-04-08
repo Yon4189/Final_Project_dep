@@ -605,7 +605,7 @@ export default function WithdrawScreen() {
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { flexGrow: 1 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 100, paddingBottom: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { fontSize: 18, fontWeight: "600", color: colors.text.primary },
   progressContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 40, paddingVertical: 20, backgroundColor: colors.surface },
   progressStep: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.background, borderWidth: 2, borderColor: colors.border, justifyContent: "center", alignItems: "center" },

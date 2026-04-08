@@ -4,7 +4,8 @@ echo ========================================
 echo   MOBILE APP BACKEND STARTUP
 echo ========================================
 echo.
-echo Your Computer IP: 192.168.1.5
+echo Auto-detecting and setting your computer IP...
+powershell.exe -ExecutionPolicy Bypass -File "%~dp0set-ip.ps1"
 echo.
 echo Starting services...
 echo.

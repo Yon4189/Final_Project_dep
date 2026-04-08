@@ -542,7 +542,7 @@ export default function ProviderRequests() {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { backgroundColor: colors.surface, paddingTop: 60, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { backgroundColor: colors.surface, paddingTop: 100, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 16 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: "600", color: colors.text.primary },

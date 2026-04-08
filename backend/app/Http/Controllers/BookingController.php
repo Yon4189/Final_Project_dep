@@ -47,10 +47,10 @@ class BookingController extends Controller
             'scheduledDate' => 'required|date|after:now',
             'agreed_price' => 'required|numeric|min:1',
             'notes' => 'nullable|string|max:500',
-            
+
             // Location validation
             'location_type' => 'required|in:current,saved,manual,pin_on_map',
-            
+
             // Conditional validation based on location_type
             'latitude' => 'required_if:location_type,current,pin_on_map|nullable|numeric|between:-90,90',
             'longitude' => 'required_if:location_type,current,pin_on_map|nullable|numeric|between:-180,180',
@@ -70,7 +70,7 @@ class BookingController extends Controller
         }
 
         // Check if provider is approved (support both old and new status values)
-        $provider = \App\Models\ServiceProvider::where('providerID', $request->providerID)
+        $provider = ServiceProvider::where('providerID', $request->providerID)
             ->whereIn('status', ['approved', 'Active'])
             ->first();
 
@@ -98,7 +98,7 @@ class BookingController extends Controller
 
             // Create the booking
             $customer = auth()->guard('customer')->user();
-            
+
             if (!$customer) {
                 return response()->json([
                     'success' => false,
@@ -191,7 +191,7 @@ class BookingController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create booking: ' . $e->getMessage()
@@ -397,16 +397,16 @@ class BookingController extends Controller
         // Determine user type by checking guards
         $customer = auth()->guard('customer')->user();
         $provider = auth()->guard('provider')->user();
-        
+
         $user = $customer ?? $provider;
-        
+
         if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized'
             ], 401);
         }
-        
+
         // Determine if user is customer or provider
         $userType = $customer ? 'customer' : 'provider';
 
@@ -497,7 +497,7 @@ class BookingController extends Controller
     public function customerBookings(Request $request)
     {
         $customer = auth()->guard('customer')->user();
-        
+
         if (!$customer) {
             return response()->json([
                 'success' => false,
@@ -522,7 +522,7 @@ class BookingController extends Controller
     public function providerBookings(Request $request)
     {
         $provider = auth()->guard('provider')->user();
-        
+
         if (!$provider) {
             return response()->json([
                 'success' => false,
@@ -531,7 +531,7 @@ class BookingController extends Controller
         }
 
         $query = Booking::where('providerID', $provider->providerID)
-                 ->with(['customer', 'service', 'service.category', 'payment']);
+            ->with(['customer', 'service', 'service.category', 'payment']);
 
         // Filter by status if requested
         if ($request->has('status')) {
@@ -550,21 +550,21 @@ class BookingController extends Controller
             ->paginate(20);
 
         // Format the bookings data for frontend
-        $formattedBookings = $bookings->map(function($booking) {
+        $formattedBookings = $bookings->map(function ($booking) {
             return [
                 'bookingID' => $booking->bookingID,
                 'id' => $booking->bookingID,
                 'requestNumber' => 'REQ-' . str_pad($booking->bookingID, 6, '0', STR_PAD_LEFT),
                 'status' => $booking->status,
-                
+
                 // Date and Time
                 'scheduledDate' => $booking->scheduledDate ? $booking->scheduledDate->format('Y-m-d') : null,
                 'scheduledTime' => $booking->scheduledDate ? $booking->scheduledDate->format('H:i') : null,
-                
+
                 // Price
                 'agreed_price' => $booking->agreed_price,
                 'estimatedPrice' => $booking->agreed_price,
-                
+
                 // Location
                 'service_address' => $booking->service_address,
                 'customerAddress' => $booking->service_address,
@@ -573,24 +573,24 @@ class BookingController extends Controller
                 'service_longitude' => $booking->service_longitude,
                 'customerLatitude' => $booking->service_latitude,
                 'customerLongitude' => $booking->service_longitude,
-                
+
                 // Notes
                 'notes' => $booking->notes,
                 'description' => $booking->notes,
                 'specialInstructions' => $booking->notes,
-                
+
                 // Customer Info
                 'customerID' => $booking->customer->customerID ?? null,
                 'customerId' => $booking->customer->customerID ?? null,
                 'customerName' => $booking->customer->fullname ?? 'Unknown',
                 'customerPhone' => $booking->customer->phone ?? null,
                 'customerImage' => $booking->customer->profilePicture ?? null,
-                
+
                 // Service Info
                 'serviceID' => $booking->service->serviceID ?? null,
                 'serviceName' => $booking->service->title ?? 'Unknown Service',
                 'serviceDescription' => $booking->service->description ?? null,
-                
+
                 // Timestamps
                 'created_at' => $booking->created_at,
                 'createdAt' => $booking->created_at, // Add for frontend compatibility
@@ -600,7 +600,7 @@ class BookingController extends Controller
                 'provider_arrived_at' => $booking->provider_arrived_at,
                 'completed_at' => $booking->completed_at,
                 'cancelled_at' => $booking->cancelled_at,
-                
+
                 // Nested objects for compatibility
                 'customer' => [
                     'id' => $booking->customer->customerID ?? null,
@@ -645,7 +645,7 @@ class BookingController extends Controller
     public function cancel(Request $request, $bookingId)
     {
         $customer = auth()->guard('customer')->user();
-        
+
         if (!$customer) {
             return response()->json([
                 'success' => false,
@@ -770,7 +770,7 @@ class BookingController extends Controller
     public function complete(Request $request, $bookingId)
     {
         $provider = auth()->guard('provider')->user();
-        
+
         if (!$provider) {
             return response()->json([
                 'success' => false,

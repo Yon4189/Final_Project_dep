@@ -375,7 +375,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 40,
     backgroundColor: colors.surface,
     borderBottomLeftRadius: 30,

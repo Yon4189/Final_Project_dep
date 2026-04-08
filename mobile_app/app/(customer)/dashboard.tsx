@@ -409,6 +409,15 @@ export default function CustomerDashboard() {
         },
       },
       {
+        label: 'Disputes',
+        icon: 'warning-outline' as const,
+        color: Colors.warning || '#FF9500',
+        onPress: () => {
+          setShowHamburgerMenu(false);
+          router.push('/(customer)/complaints');
+        },
+      },
+      {
         label: 'Wallet',
         icon: 'wallet-outline' as const,
         color: Colors.success || '#34C759',

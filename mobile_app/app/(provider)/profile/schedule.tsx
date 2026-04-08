@@ -9,27 +9,15 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { API_BASE_URL } from '@/app/config/api';
 
-const getApiUrl = (): string => {
-  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-  if (__DEV__) {
-    const hostUri = Constants.expoConfig?.hostUri;
-    if (hostUri) {
-      return `http://${hostUri.split(':')[0]}:8000/api`;
-    }
-    if (Platform.OS === 'android') return 'http://10.0.2.2:8000/api';
-  }
-  return 'http://127.0.0.1:8000/api';
-};
-
-const API_URL = getApiUrl();
+const API_URL = API_BASE_URL;
 
 const WEEKDAYS = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'

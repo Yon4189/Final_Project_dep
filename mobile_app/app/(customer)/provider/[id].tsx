@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 16,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 100,
   },
   loadingText: {
     marginTop: 16,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 100,
   },
   errorTitle: {
     fontSize: 20,

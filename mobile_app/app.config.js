@@ -1,16 +1,48 @@
 const os = require('os');
 
+const PREFERRED_INTERFACES = ['wi-fi', 'wifi', 'wlan', 'ethernet'];
+const SKIPPED_INTERFACES = ['loopback', 'virtual', 'vmware', 'vbox', 'hyper-v', 'bluetooth', 'docker'];
+
+function isPrivateIpv4(address) {
+  return (
+    address.startsWith('10.') ||
+    address.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(address)
+  );
+}
+
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
-  for (const interfaceName in interfaces) {
-    const addresses = interfaces[interfaceName];
-    for (const addr of addresses) {
-      if (addr.family === 'IPv4' && !addr.internal) {
-        return addr.address;
+  const candidates = [];
+
+  for (const [interfaceName, addresses] of Object.entries(interfaces)) {
+    const lowerName = interfaceName.toLowerCase();
+
+    for (const addr of addresses || []) {
+      if (addr.family !== 'IPv4' || addr.internal) {
+        continue;
       }
+
+      if (addr.address.startsWith('169.254.')) {
+        continue;
+      }
+
+      if (!isPrivateIpv4(addr.address)) {
+        continue;
+      }
+
+      const isSkipped = SKIPPED_INTERFACES.some((item) => lowerName.includes(item));
+      const isPreferred = PREFERRED_INTERFACES.some((item) => lowerName.includes(item));
+
+      candidates.push({
+        address: addr.address,
+        score: isSkipped ? -1 : isPreferred ? 2 : 1,
+      });
     }
   }
-  return 'localhost';
+
+  candidates.sort((left, right) => right.score - left.score);
+  return candidates[0]?.address || 'localhost';
 }
 
 const localIp = getLocalIp();

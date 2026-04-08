@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 20,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
