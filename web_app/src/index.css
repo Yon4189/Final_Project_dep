@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
 @theme {
   /* Dynamic colors that respond to .dark class on <html> */
@@ -44,10 +44,12 @@
 html, body {
   background-color: var(--admin-content);
   color: var(--admin-text);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Ethiopic", "Nyala", "Abyssinica SIL";
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Ethiopic", "Nyala", "Abyssinica SIL";
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+  font-size: 14px; /* Optimal base size for dashboards */
+  line-height: 1.5;
 }
 
 /* Smooth transitions for all theme changes */
@@ -63,7 +65,8 @@ html, body {
 
 /* --- Card / Panel Backgrounds --- */
 .dark main .bg-white,
-.dark main .bg-slate-50 {
+.dark main .bg-slate-50,
+.dark main .bg-gray-50 {
   background-color: var(--admin-card) !important;
 }
 
@@ -73,8 +76,7 @@ html, body {
 }
 
 .dark main .bg-slate-200,
-.dark main .bg-gray-200,
-.dark main .bg-gray-50 {
+.dark main .bg-gray-200 {
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -92,17 +94,20 @@ html, body {
 /* --- Muted Text Colors --- */
 .dark main .text-slate-600,
 .dark main .text-slate-500,
+.dark main .text-slate-400,
 .dark main .text-gray-600,
-.dark main .text-gray-500 {
+.dark main .text-gray-500,
+.dark main .text-gray-400 {
   color: var(--admin-text-muted) !important;
 }
 
 /* --- Borders --- */
+.dark main .border-slate-300,
 .dark main .border-slate-200,
 .dark main .border-slate-100,
+.dark main .border-gray-300,
 .dark main .border-gray-200,
-.dark main .border-gray-100,
-.dark main .border-gray-300 {
+.dark main .border-gray-100 {
   border-color: var(--admin-border) !important;
 }
 
@@ -111,6 +116,8 @@ main thead,
 main thead tr {
   background-color: #f8fafc;
   color: #64748b;
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 .dark main thead,
@@ -123,6 +130,8 @@ main thead tr {
 /* --- Table Row Dividers --- */
 .dark main .divide-slate-100 > * + *,
 .dark main .divide-slate-200 > * + *,
+.dark main .divide-gray-100 > * + *,
+.dark main .divide-gray-200 > * + *,
 .dark main .divide-y > * + *,
 .dark main .divide-admin-border > * + * {
   border-color: var(--admin-border) !important;
@@ -145,4 +154,26 @@ main thead tr {
 .dark main option {
   background-color: #111 !important;
   color: var(--admin-text) !important;
+}
+
+/* --- Typography Improvements --- */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--admin-text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.text-xs {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1rem;
+}
+
+.text-sm {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+}
+
+/* Ensure no text is smaller than 11px for accessibility */
+.text-\[9px\], .text-\[10px\], .text-\[8px\] {
+  font-size: 11px !important;
 }

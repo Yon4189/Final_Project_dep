@@ -260,7 +260,7 @@ const BookingsTable = ({
         {/* Desktop Table */}
         <div className="overflow-x-auto hidden lg:block">
           <table className="w-full text-left">
-            <thead className="bg-admin-card text-admin-text border-b border-admin-border text-[11px] uppercase font-bold tracking-wider">
+            <thead className="bg-admin-card text-admin-text border-b border-admin-border text-xs uppercase font-bold tracking-wider">
               <tr>
                 <th className="px-6 py-4">{t('bookings_id')}</th>
                 <th className="px-6 py-4">{t('bookings_customer')}</th>
@@ -290,7 +290,7 @@ const BookingsTable = ({
                     <td className="px-6 py-4 font-semibold text-admin-text">{booking.customer_name}</td>
                     <td className="px-6 py-4 text-admin-text-muted">{booking.provider_name}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-block bg-blue-50 dark:bg-blue-900/30 text-admin-text px-2 py-1 rounded text-[10px] font-bold uppercase border border-blue-100 dark:border-blue-800 tracking-wider">
+                      <span className="inline-block bg-blue-50 dark:bg-blue-900/30 text-admin-text px-2 py-1 rounded text-xs font-bold uppercase border border-blue-100 dark:border-blue-800 tracking-wider">
                         {booking.service_type}
                       </span>
                     </td>
@@ -304,7 +304,7 @@ const BookingsTable = ({
                       {booking.price} ETB
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase border ${
                         booking.payment_status?.toLowerCase() === 'paid'
                           ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                           : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
@@ -313,7 +313,7 @@ const BookingsTable = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusStyle(booking.status)}`}>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase border ${getStatusStyle(booking.status)}`}>
                         <span className="text-admin-text">{getStatusTranslation(booking.status)}</span>
                       </span>
                     </td>

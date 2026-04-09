@@ -195,7 +195,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 <Link to="/admin/verification/pending" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/pending' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>{t('sidebar_pending_queue')}</span>
                   {stats.pending > 0 && (
-                    <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.pending}
                     </span>
                   )}
@@ -203,7 +203,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 <Link to="/admin/verification/approved" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/approved' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>{t('sidebar_approved')}</span>
                   {stats.active > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.active}
                     </span>
                   )}
@@ -211,7 +211,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 <Link to="/admin/verification/rejected" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/rejected' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>{t('sidebar_rejected')}</span>
                   {stats.rejected > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.rejected}
                     </span>
                   )}
@@ -219,7 +219,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 <Link to="/admin/verification/suspended" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/suspended' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>{t('sidebar_suspended')}</span>
                   {stats.suspended > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.suspended}
                     </span>
                   )}
@@ -258,7 +258,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 <Link to="/admin/users/customers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/users/customers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>{t('sidebar_customers')}</span>
                   {stats.customers > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.customers}
                     </span>
                   )}
@@ -266,7 +266,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 <Link to="/admin/users/providers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/users/providers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>{t('sidebar_providers')}</span>
                   {(stats.active + stats.suspended) > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.active + stats.suspended}
                     </span>
                   )}

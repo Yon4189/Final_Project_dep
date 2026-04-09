@@ -248,7 +248,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                 )}
               </div>
               <div className="bg-admin-card p-3 text-center border-t border-admin-border">
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{t('topbar_global_search')}</p>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{t('topbar_global_search')}</p>
               </div>
             </div>
           )}
@@ -279,7 +279,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-white">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold border-2 border-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -299,7 +299,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
             <p className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">
               {user?.name || 'Admin User'}
             </p>
-            <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-tighter">
+            <p className="text-xs text-blue-400 font-semibold uppercase tracking-tighter">
               {t('topbar_system_admin')}
             </p>
           </div>

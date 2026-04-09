@@ -251,7 +251,7 @@ const UsersTable = ({
       {/* Desktop Table */}
       <div className="overflow-x-auto hidden lg:block">
         <table className="w-full text-left" aria-label="Users management table">
-          <thead className="bg-white text-slate-800 dark:bg-slate-900 border-b border-admin-border text-[9px] uppercase font-black tracking-tighter">
+          <thead className="bg-white text-slate-800 dark:bg-slate-900 border-b border-admin-border text-xs uppercase font-black tracking-tighter">
             <tr>
               <th className="px-6 py-4">{t('user_mgmt_user_details')}</th>
               <th className="px-6 py-4">{t('user_mgmt_contact')}</th>
@@ -302,7 +302,7 @@ const UsersTable = ({
                     <span className="text-xs font-medium text-admin-text-muted bg-white border border-slate-100 px-2 py-1 rounded">{user.joined || '—'}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
                         ['active', 'approved'].includes(user.status?.toLowerCase())
                           ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                           : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
@@ -364,7 +364,7 @@ const UsersTable = ({
                   <p className="font-semibold text-admin-text text-sm">{user.name}</p>
                   <p className="text-xs text-slate-500">ID: {user.id}</p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
                   ['active', 'approved'].includes(user.status?.toLowerCase())
                     ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                     : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
