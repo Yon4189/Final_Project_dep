@@ -1,7 +1,9 @@
-﻿import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XCircle } from 'lucide-react';
 
 const DescriptionModal = ({ show, providerName, description, onClose }) => {
+  const { t } = useTranslation();
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
 
@@ -45,13 +47,13 @@ const DescriptionModal = ({ show, providerName, description, onClose }) => {
       >
         <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
           <h2 id="description-modal-title" className="text-xl font-black italic tracking-tighter uppercase">
-            Service Description – {providerName}
+            {t('modal_desc_title')} – {providerName}
           </h2>
           <button
             ref={closeButtonRef}
             onClick={onClose}
             className="focus:outline-none focus:ring-2 focus:ring-white rounded-full"
-            aria-label="Close description modal"
+            aria-label={t('modal_close')}
           >
             <XCircle size={28} />
           </button>
@@ -66,7 +68,7 @@ const DescriptionModal = ({ show, providerName, description, onClose }) => {
             onClick={onClose}
             className="bg-slate-200 bg-admin-card hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500"
           >
-            Close
+            {t('modal_close')}
           </button>
         </div>
       </div>
@@ -74,4 +76,4 @@ const DescriptionModal = ({ show, providerName, description, onClose }) => {
   );
 };
 
-export default DescriptionModal;
+export default DescriptionModal;

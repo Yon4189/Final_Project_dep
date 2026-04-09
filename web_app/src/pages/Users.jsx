@@ -1,51 +1,52 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
-import { Database, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Database, RefreshCw } from 'lucide-react';
 import api from '../api/axios';
 import { useUsersData } from '../hooks/useUsersData';
 import UsersTable from '../components/UsersTable';
 
 const Users = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const location = useLocation();
-  const userType = location.pathname.includes('/users/providers') ? 'Provider' : 'Customer';
-  const { users, isLoading, isError, error, refetch } = useUsersData(userType);
+  const userTypeRaw = location.pathname.includes('/users/providers') ? 'Provider' : 'Customer';
+  const { users, isLoading, isError, error, refetch } = useUsersData(userTypeRaw);
   const [processingId, setProcessingId] = useState(null);
 
   const dbStatus = isError ? 'disconnected' : (isLoading ? 'checking' : 'connected');
+  const localizedUserType = t(userTypeRaw.toLowerCase());
 
   const handleToggleStatus = async (id, currentStatus) => {
-    // Normalize status to lowercase for comparison
     const normalizedStatus = currentStatus?.toLowerCase();
     const isActive = normalizedStatus === 'active' || normalizedStatus === 'approved';
-    const action = isActive ? 'suspend' : 'activate';
+    const actionKey = isActive ? 'user_mgmt_suspend_action' : 'user_mgmt_activate_action';
     
-    if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
+    if (!window.confirm(t('user_mgmt_confirm_toggle', { action: t(actionKey) }))) return;
     setProcessingId(id);
     try {
-      const url = userType === 'Provider'
+      const url = userTypeRaw === 'Provider'
         ? `/admin/providers/${id}/status`
         : `/admin/customers/${id}/status`;
       
-      // Backend now returns lowercase status values
       await api.patch(url);
       
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
     } catch (err) {
       console.error(err);
-      alert('Failed to update status');
+      alert(t('user_mgmt_err_status'));
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;
+    if (!window.confirm(t('user_mgmt_confirm_delete', { name }))) return;
     setProcessingId(id);
     try {
-      const url = userType === 'Provider'
+      const url = userTypeRaw === 'Provider'
         ? `/admin/providers/${id}`
         : `/admin/customers/${id}`;
       await api.delete(url);
@@ -53,7 +54,7 @@ const Users = () => {
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
     } catch (err) {
       console.error(err);
-      alert('Failed to delete user');
+      alert(t('user_mgmt_err_delete'));
     } finally {
       setProcessingId(null);
     }
@@ -66,7 +67,7 @@ const Users = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
-              {userType} Management
+              {t('user_mgmt_title', { type: localizedUserType })}
             </h1>
             {users.length > 0 && (
               <span className="bg-blue-500 text-white text-[10px] px-3 py-1 rounded-full font-black shadow-sm">
@@ -75,7 +76,7 @@ const Users = () => {
             )}
           </div>
           <p className="text-admin-text-muted text-xs font-black uppercase tracking-widest italic mt-1">
-            Manage authenticated {userType.toLowerCase()} accounts and visibility.
+            {t('user_mgmt_subtitle', { type: localizedUserType })}
           </p>
         </div>
 
@@ -86,9 +87,7 @@ const Users = () => {
               dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-semibold uppercase tracking-wider text-admin-text-muted">
-              {dbStatus === 'connected' && 'Database Connected'}
-              {dbStatus === 'disconnected' && 'Database Disconnected'}
-              {dbStatus === 'checking' && 'Checking Database...'}
+              {t(`db_${dbStatus}`)}
             </span>
           </div>
           <button
@@ -104,7 +103,7 @@ const Users = () => {
       {/* Users Table */}
       <UsersTable
         users={users}
-        userType={userType}
+        userType={userTypeRaw}
         isLoading={isLoading}
         processingId={processingId}
         dbStatus={dbStatus}
@@ -117,4 +116,4 @@ const Users = () => {
   );
 };
 
-export default Users;
+export default Users;

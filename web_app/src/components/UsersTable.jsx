@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Search, X, Mail, Phone, MapPin, ShieldAlert, ShieldCheck, UserMinus,
   Loader2, AlertCircle, Filter, XCircle, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { getBackendUrl } from '../utils/url';
 
 const UserAvatar = ({ user }) => {
   const [imgError, setImgError] = useState(false);
@@ -51,6 +51,7 @@ const UsersTable = ({
   onToggleStatus,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [sortBy, setSortBy] = useState('date');
@@ -133,7 +134,7 @@ const UsersTable = ({
       <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <Loader2 className="animate-spin text-blue-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Loading users...</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t('user_mgmt_loading')}</p>
         </div>
       </div>
     );
@@ -144,18 +145,20 @@ const UsersTable = ({
       <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <AlertCircle className="text-red-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-sm font-medium text-red-600 mb-2">Database connection failed</p>
+          <p className="text-sm font-medium text-red-600 mb-2">{t('db_disconnected')}</p>
           <p className="text-xs text-admin-text-muted mb-4">{error?.message || 'Unable to connect to server'}</p>
           <button
             onClick={onRefresh}
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 bg-admin-card hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-admin-text"
           >
-            Try Again
+            {t('vqueue_clear')}
           </button>
         </div>
       </div>
     );
   }
+
+  const localizedUserTypeSingular = t(userType.toLowerCase());
 
   return (
     <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden">
@@ -166,7 +169,7 @@ const UsersTable = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              placeholder={`Search ${userType.toLowerCase()} by name, email, or ID...`}
+              placeholder={t('user_mgmt_search_placeholder', { type: localizedUserTypeSingular })}
               className="pl-10 pr-10 py-2.5 border border-admin-border rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-admin-card text-sm text-admin-text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -183,7 +186,7 @@ const UsersTable = ({
           </div>
 
           <div className="flex flex-wrap gap-3 items-center">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Filter By:</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('user_mgmt_filter_location')}</span>
 
             {locations.length > 0 && (
               <select
@@ -191,7 +194,7 @@ const UsersTable = ({
                 onChange={(e) => setFilterLocation(e.target.value)}
                 className="px-3 py-2.5 border border-admin-border rounded-xl text-sm bg-admin-card text-admin-text focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="">All Locations</option>
+                <option value="">{t('user_mgmt_all_locations')}</option>
                 {locations.map(loc => (
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
@@ -206,7 +209,7 @@ const UsersTable = ({
                   : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              Name
+              {t('user_mgmt_name')}
               {sortBy === 'name' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
             </button>
 
@@ -218,7 +221,7 @@ const UsersTable = ({
                   : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              Joined
+              {t('user_mgmt_joined')}
               {sortBy === 'date' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
             </button>
 
@@ -228,7 +231,7 @@ const UsersTable = ({
                 className="flex items-center gap-1 px-3 py-2.5 border border-red-200 rounded-xl text-sm text-red-600 hover:bg-red-50 transition"
                 aria-label="Clear all filters"
               >
-                <XCircle size={16} /> Clear
+                <XCircle size={16} /> {t('user_mgmt_clear')}
               </button>
             )}
           </div>
@@ -237,33 +240,32 @@ const UsersTable = ({
         {hasActiveFilters && (
           <div className="mt-3 text-xs text-slate-500 flex items-center gap-2">
             <Filter size={12} />
-            <span>Active filters: </span>
-            {searchQuery && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Search: {searchQuery}</span>}
-            {filterLocation && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Location: {filterLocation}</span>}
-            {sortBy !== 'date' && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Sort: {sortBy} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
-            {sortBy === 'date' && sortOrder !== 'desc' && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">Joined: oldest first</span>}
+            <span>{t('user_mgmt_active_filters')} </span>
+            {searchQuery && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">{searchQuery}</span>}
+            {filterLocation && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">{filterLocation}</span>}
+            {sortBy !== 'date' && <span className="bg-white border border-slate-200 px-2 py-0.5 rounded">{t('common_sort') || 'Sort'}: {t(`user_mgmt_${sortBy}`)} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
           </div>
         )}
       </div>
 
       {/* Desktop Table */}
       <div className="overflow-x-auto hidden lg:block">
-        <table className="w-full text-left" aria-label="Verification queue table">
-          <thead className="bg-white text-slate-800 dark:bg-slate-900 border-b border-admin-border text-[9px] uppercase font-black tracking-tighter">
+        <table className="w-full text-left" aria-label="Users management table">
+          <thead className="bg-white text-slate-800 dark:bg-slate-900 border-b border-admin-border text-xs uppercase font-black tracking-tighter">
             <tr>
-              <th className="px-6 py-4">User Details</th>
-              <th className="px-6 py-4">Contact</th>
-              <th className="px-6 py-4">Location</th>
-              <th className="px-6 py-4">Joined</th>
-              <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-8 py-4 text-right">Actions</th>
+              <th className="px-6 py-4">{t('user_mgmt_user_details')}</th>
+              <th className="px-6 py-4">{t('user_mgmt_contact')}</th>
+              <th className="px-6 py-4">{t('user_mgmt_location')}</th>
+              <th className="px-6 py-4">{t('user_mgmt_joined')}</th>
+              <th className="px-6 py-4 text-center">{t('user_mgmt_status')}</th>
+              <th className="px-8 py-4 text-right">{t('user_mgmt_actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {currentItems.length === 0 ? (
               <tr>
                 <td colSpan="6" className="text-center py-12 text-slate-400 text-sm">
-                  No {userType.toLowerCase()}s found.
+                  {t('user_mgmt_no_users', { type: localizedUserTypeSingular })}
                 </td>
               </tr>
             ) : (
@@ -300,12 +302,12 @@ const UsersTable = ({
                     <span className="text-xs font-medium text-admin-text-muted bg-white border border-slate-100 px-2 py-1 rounded">{user.joined || '—'}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
                         ['active', 'approved'].includes(user.status?.toLowerCase())
                           ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                           : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                       }`}>
-                        <span className="text-admin-text">{user.status}</span>
+                        <span className="text-admin-text">{user.status ? t(user.status.toLowerCase()) : t('pending')}</span>
                       </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -313,7 +315,7 @@ const UsersTable = ({
                       {processingId === user.id ? (
                         <div className="flex items-center gap-1 text-slate-400">
                           <Loader2 className="animate-spin" size={14} />
-                          <span className="text-xs">Processing...</span>
+                          <span className="text-xs">{t('user_mgmt_processing')}</span>
                         </div>
                       ) : (
                         <>
@@ -321,25 +323,22 @@ const UsersTable = ({
                             <button
                               onClick={() => onToggleStatus(user.id, user.status)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-semibold hover:bg-green-600 transition"
-                              title="Reactivate User"
                             >
-                              <ShieldCheck size={12} /> Reactivate
+                              <ShieldCheck size={12} /> {t('user_mgmt_reactivate')}
                             </button>
                           ) : (
                             <button
                               onClick={() => onToggleStatus(user.id, user.status)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition"
-                              title="Suspend User"
                             >
-                              <ShieldAlert size={12} /> Suspend
+                              <ShieldAlert size={12} /> {t('user_mgmt_suspend')}
                             </button>
                           )}
                           <button
                             onClick={() => onDelete(user.id, user.name)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600 transition"
-                            title="Permanent Delete"
                           >
-                            <UserMinus size={12} /> Delete
+                            <UserMinus size={12} /> {t('user_mgmt_delete')}
                           </button>
                         </>
                       )}
@@ -355,35 +354,35 @@ const UsersTable = ({
       {/* Mobile Card View */}
       <div className="lg:hidden p-4 space-y-4">
         {currentItems.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 text-sm">No {userType.toLowerCase()}s found.</div>
+          <div className="text-center py-12 text-slate-400 text-sm">{t('user_mgmt_no_users', { type: localizedUserTypeSingular })}</div>
         ) : (
           currentItems.map((user) => (
-            <div key={user.id} className="bg-white rounded-2xl p-5 border border-admin-border space-y-3">
+            <div key={user.id} className="bg-admin-card rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
               <div className="flex items-center gap-3">
                 <UserAvatar user={user} />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-admin-text text-sm">{user.name}</p>
                   <p className="text-xs text-slate-500">ID: {user.id}</p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
                   ['active', 'approved'].includes(user.status?.toLowerCase())
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                    : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                    ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+                    : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                 }`}>
-                  {user.status}
+                  <span className="text-admin-text">{user.status ? t(user.status.toLowerCase()) : t('pending')}</span>
                 </span>
               </div>
               <div className="space-y-2 text-xs text-slate-600">
                 <div className="flex items-center gap-2"><Mail size={12} className="text-slate-400" /> <span className="truncate">{user.email}</span></div>
                 <div className="flex items-center gap-2"><Phone size={12} className="text-slate-400" /> <span>{user.phone || 'N/A'}</span></div>
                 <div className="flex items-center gap-2"><MapPin size={12} className="text-slate-400" /> <span>{user.location}</span></div>
-                <div className="flex items-center gap-2"><span className="text-slate-400">Joined:</span> <span>{user.joined || '—'}</span></div>
+                <div className="flex items-center gap-2"><span className="text-slate-400">{t('user_mgmt_joined')}:</span> <span>{user.joined || '—'}</span></div>
               </div>
               <div className="flex gap-2 pt-2">
                 {processingId === user.id ? (
                   <div className="flex-1 flex items-center justify-center gap-1 text-slate-400 py-2">
                     <Loader2 className="animate-spin" size={14} />
-                    <span className="text-xs">Processing...</span>
+                    <span className="text-xs">{t('user_mgmt_processing')}</span>
                   </div>
                 ) : (
                   <>
@@ -392,21 +391,21 @@ const UsersTable = ({
                         onClick={() => onToggleStatus(user.id, user.status)}
                         className="flex-1 bg-green-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                       >
-                        <ShieldCheck size={12} /> Reactivate
+                        <ShieldCheck size={12} /> {t('user_mgmt_reactivate')}
                       </button>
                     ) : (
                       <button
                         onClick={() => onToggleStatus(user.id, user.status)}
                         className="flex-1 bg-amber-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                       >
-                        <ShieldAlert size={12} /> Suspend
+                        <ShieldAlert size={12} /> {t('user_mgmt_suspend')}
                       </button>
                     )}
                     <button
                       onClick={() => onDelete(user.id, user.name)}
                       className="flex-1 bg-red-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                     >
-                      <UserMinus size={12} /> Delete
+                      <UserMinus size={12} /> {t('user_mgmt_delete')}
                     </button>
                   </>
                 )}
@@ -420,7 +419,7 @@ const UsersTable = ({
       {totalPages > 1 && (
         <div className="p-6 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row items-center justify-between gap-4">
             <span className="text-xs font-medium text-admin-text-muted">
-              Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, processedData.length)} of {processedData.length}
+              {t('serv_showing_x_of_y', { start: indexOfFirstItem + 1, end: Math.min(indexOfLastItem, processedData.length), total: processedData.length })}
             </span>
             <div className="flex items-center gap-1 bg-admin-card p-1.5 rounded-xl border border-admin-border shadow-sm">
               <button

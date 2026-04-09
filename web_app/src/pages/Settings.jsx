@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api/axios';
 import {
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react';
 
 const Settings = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
@@ -71,14 +73,14 @@ const Settings = () => {
       });
 
       if (response.data.success) {
-        alert(`Success: System ${activeTab === 'general' ? 'rules' : 'branding'} synchronized with backend!`);
+        alert(t('set_success_sync', { tab: activeTab === 'general' ? t('set_tab_economics') : t('set_tab_branding') }));
       }
     } catch (error) {
       console.error("Persist failed:", error);
       // Inform the user about the backend status while acknowledging the UI update
       const msg = error.response?.status === 404
-        ? "Backend persistence endpoint (admin/settings) not yet fully implemented. Changes cached in session."
-        : "Critical server error while updating system configuration.";
+        ? t('set_err_backend')
+        : t('set_err_critical');
       alert(msg);
     } finally {
       setIsSaving(false);
@@ -87,23 +89,23 @@ const Settings = () => {
 
   const systemHealth = [
     {
-      name: 'API Gateway',
-      status: latency.api === 'OFFLINE' ? 'Disconnected' : 'Optimal',
+      name: t('set_health_api'),
+      status: latency.api === 'OFFLINE' ? t('db_disconnected') : t('set_status_optimal'),
       latency: latency.api,
       icon: Server,
       color: latency.api === 'OFFLINE' ? 'text-rose-500' : 'text-emerald-500'
     },
     {
-      name: 'MySQL Instance',
-      status: stats ? 'Active Sync' : 'Reconnecting...',
+      name: t('set_health_mysql'),
+      status: stats ? t('set_status_active_sync') : t('set_status_reconnecting'),
       latency: '14ms',
       icon: Database,
       color: stats ? 'text-emerald-500' : 'text-amber-500'
     },
     {
-      name: 'Live Network',
-      status: `${stats?.active || 0} Approved Providers`,
-      latency: stats ? 'Operational' : 'Wait...',
+      name: t('set_health_network'),
+      status: t('set_status_providers', { count: stats?.active || 0 }),
+      latency: stats ? t('set_status_optimal') : t('set_status_wait'),
       icon: Zap,
       color: 'text-sky-400'
     },
@@ -118,10 +120,10 @@ const Settings = () => {
             <div className="p-3 bg-admin-accent/10 rounded-2xl text-admin-accent">
               <SettingsIcon size={24} />
             </div>
-            <h1 className="text-2xl font-bold text-admin-text tracking-tight">System Control</h1>
+            <h1 className="text-2xl font-bold text-admin-text tracking-tight">{t('set_title')}</h1>
           </div>
           <p className="text-admin-text-muted text-[11px] font-bold uppercase tracking-[0.2em] mt-2 ml-1">
-            Global Configuration & Core Branding Engine
+            {t('set_subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -145,13 +147,13 @@ const Settings = () => {
               onClick={() => setActiveTab('general')}
               className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'general' ? 'bg-admin-card text-admin-accent shadow-sm ring-1 ring-admin-border dark:ring-slate-800' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
-              Economics & Rules
+              {t('set_tab_economics')}
             </button>
             <button
               onClick={() => setActiveTab('branding')}
               className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'branding' ? 'bg-admin-card text-admin-accent shadow-sm ring-1 ring-admin-border dark:ring-slate-800' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
-              Identity & Appearance
+              {t('set_tab_branding')}
             </button>
           </div>
 
@@ -162,7 +164,7 @@ const Settings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div className="space-y-4">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                      <Percent size={14} className="text-admin-accent" /> Platform Fee (Commission %)
+                      <Percent size={14} className="text-admin-accent" /> {t('set_comm_rate')}
                     </label>
                     <div className="relative group">
                       <input
@@ -175,12 +177,12 @@ const Settings = () => {
                       />
                       <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black group-focus-within:text-admin-accent transition-colors">%</div>
                     </div>
-                    <p className="text-[10px] text-slate-400 italic">Percentage deducted from every completed booking transaction.</p>
+                    <p className="text-[10px] text-slate-400 italic">{t('set_comm_desc')}</p>
                   </div>
 
                   <div className="space-y-4">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                      <Globe size={14} className="text-admin-accent" /> Local Hub Radius (KM)
+                      <Globe size={14} className="text-admin-accent" /> {t('set_radius')}
                     </label>
                     <div className="relative group">
                       <input
@@ -191,14 +193,14 @@ const Settings = () => {
                       />
                       <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black group-focus-within:text-admin-accent transition-colors">KM</div>
                     </div>
-                    <p className="text-[10px] text-slate-400 italic">Maximum distance for provider visibility in search results.</p>
+                    <p className="text-[10px] text-slate-400 italic">{t('set_radius_desc')}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div className="space-y-4">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                      <Zap size={14} className="text-admin-accent" /> Min Withdrawal Threshold
+                      <Zap size={14} className="text-admin-accent" /> {t('set_min_payout')}
                     </label>
                     <div className="relative group">
                       <input
@@ -214,8 +216,8 @@ const Settings = () => {
 
                 <div className={`p-8 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row items-center justify-between gap-6 ${config.maintenanceMode ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900 shadow-inner' : 'bg-admin-card border-admin-border shadow-sm'}`}>
                   <div className="text-center md:text-left">
-                    <p className={`text-sm font-black uppercase tracking-widest ${config.maintenanceMode ? 'text-rose-900 dark:text-rose-400' : 'text-slate-800 text-admin-text'}`}>Platform Maintenance Lock</p>
-                    <p className={`text-xs mt-1 ${config.maintenanceMode ? 'text-rose-600 dark:text-rose-500' : 'text-slate-500'}`}>When active, all external access to the mobile and web APIs will be strictly limited.</p>
+                    <p className={`text-sm font-black uppercase tracking-widest ${config.maintenanceMode ? 'text-rose-900 dark:text-rose-400' : 'text-slate-800 text-admin-text'}`}>{t('set_maintenance_title')}</p>
+      <p className={`text-xs mt-1 ${config.maintenanceMode ? 'text-rose-600 dark:text-rose-500' : 'text-slate-500'}`}>{t('set_maintenance_desc')}</p>
                   </div>
                   <button
                     onClick={() => setConfig({ ...config, maintenanceMode: !config.maintenanceMode })}
@@ -232,21 +234,21 @@ const Settings = () => {
               <div className="p-10 space-y-10">
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                    <Type size={14} className="text-admin-accent" /> System Public Identity
+                    <Type size={14} className="text-admin-accent" /> {t('set_branding_name')}
                   </label>
                   <input
                     type="text"
                     className="w-full border-2 border-admin-border bg-admin-card rounded-2xl py-6 px-8 focus:outline-none focus:border-admin-accent font-black text-2xl text-admin-text transition-all shadow-sm"
                     value={branding.systemName}
                     onChange={(e) => setBranding({ ...branding, systemName: e.target.value })}
-                    placeholder="Enter platform display name..."
+                    placeholder={t('set_branding_name_placeholder')}
                   />
-                  <p className="text-[10px] text-slate-400 italic">This name appears on transaction receipts, emails, and the public landing page.</p>
+                  <p className="text-[10px] text-slate-400 italic">{t('set_branding_name_desc')}</p>
                 </div>
 
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                    <ImageIcon size={14} className="text-admin-accent" /> High-Resolution Branding Assets
+                    <ImageIcon size={14} className="text-admin-accent" /> {t('set_branding_assets')}
                   </label>
                   <div className="flex flex-col md:flex-row gap-8 items-center border-4 border-dashed border-admin-border p-12 rounded-[3rem] bg-admin-card/50 group hover:border-admin-accent/20 transition-colors">
                     <div className="w-32 h-32 bg-admin-card rounded-3xl shadow-xl border border-admin-border flex items-center justify-center text-slate-200 group-hover:scale-105 transition-transform duration-500 overflow-hidden relative">
@@ -260,10 +262,10 @@ const Settings = () => {
                       </div>
                     </div>
                     <div className="flex-1 text-center md:text-left space-y-2">
-                      <p className="text-lg font-black text-slate-800 dark:text-slate-100 italic">Update Primary Logo</p>
-                      <p className="text-xs text-slate-400 mb-6 font-medium">Resolution: 512x512px • SVG, PNG (Transparent) or JPEG</p>
+                      <p className="text-lg font-black text-slate-800 dark:text-slate-100 italic">{t('set_branding_logo_title')}</p>
+                      <p className="text-xs text-slate-400 mb-6 font-medium">{t('set_branding_logo_desc')}</p>
                       <button className="inline-flex items-center gap-3 bg-blue-600 dark:bg-admin-accent text-white px-8 py-4 rounded-2xl font-black text-[10px] tracking-widest uppercase hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-xl hover:shadow-blue-200 dark:hover:shadow-blue-900 transition-all active:scale-95">
-                        <UploadCloud size={16} /> Choose System Assets
+                        <UploadCloud size={16} /> {t('set_branding_logo_btn')}
                       </button>
                     </div>
                   </div>
@@ -275,7 +277,7 @@ const Settings = () => {
 
             <div className="px-10 py-8 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <ShieldCheck size={14} className="text-emerald-500" /> Administrative Access Verified
+                <ShieldCheck size={14} className="text-emerald-500" /> {t('set_save_verified')}
               </div>
               <button
                 onClick={handleSave}
@@ -288,7 +290,7 @@ const Settings = () => {
                 `}
               >
                 {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                {isSaving ? 'Processing...' : 'Deploy Changes'}
+                {isSaving ? t('user_mgmt_processing') : t('set_save_btn')}
               </button>
             </div>
           </div>
@@ -301,7 +303,7 @@ const Settings = () => {
 
             <h2 className="text-xs font-black flex items-center gap-3 mb-10 uppercase tracking-[0.3em] text-slate-400 italic">
               <Activity size={18} className="text-admin-accent animate-pulse" />
-              Pulse Monitor
+              {t('set_pulse_title')}
             </h2>
 
             <div className="space-y-8 relative z-10">
@@ -317,7 +319,7 @@ const Settings = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Latency</p>
+                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">{t('set_pulse_latency')}</p>
                     <p className="text-xs font-mono font-black text-admin-accent">{item.latency}</p>
                   </div>
                 </div>
@@ -326,17 +328,17 @@ const Settings = () => {
 
             <div className="mt-12 pt-10 border-t border-white/5 relative z-10">
               <div className="flex items-center gap-3 text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
-                <AlertTriangle size={16} className="text-amber-500" /> Security Logs
+                <AlertTriangle size={16} className="text-amber-500" /> {t('set_security_logs')}
               </div>
               <div className="bg-white/5 p-6 rounded-2xl border border-white/5 space-y-4">
                 <p className="text-[10px] leading-relaxed text-slate-400 italic font-medium">
-                  • System heartbeat stable.
+                  • {t('set_log_stable')}
                 </p>
                 <p className="text-[10px] leading-relaxed text-slate-400 italic font-medium">
-                  • No unauthorized API penetration attempts detected in last session.
+                  • {t('set_log_no_penetration')}
                 </p>
                 <p className="text-[10px] leading-relaxed text-slate-500 italic mt-4 block">
-                  Last login from: {window.location.hostname}
+                  {t('set_last_login')} {window.location.hostname}
                 </p>
               </div>
             </div>
@@ -346,13 +348,13 @@ const Settings = () => {
             <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform duration-700">
               <ShieldCheck size={200} />
             </div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] mb-4 opacity-70 italic">Integration Summary</p>
-            <h3 className="text-2xl font-black uppercase italic mb-6 leading-tight">System Infrastructure is Ready</h3>
+            <p className="text-xs font-black uppercase tracking-[0.2em] mb-4 opacity-70 italic">{t('set_infra_summary')}</p>
+            <h3 className="text-2xl font-black uppercase italic mb-6 leading-tight">{t('set_infra_ready_title')}</h3>
             <p className="text-xs leading-relaxed font-medium opacity-90 mb-8 italic">
-              The control engine is connected to the backend API. All administrative actions are recorded and audited for security compliance.
+              {t('set_infra_ready_desc')}
             </p>
             <button className="w-full bg-white/10 backdrop-blur-md border border-white/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:text-admin-accent transition-all">
-              Download System Report
+              {t('set_infra_report_btn')}
             </button>
           </div>
         </div>

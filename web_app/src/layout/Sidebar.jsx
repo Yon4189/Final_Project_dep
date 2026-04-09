@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import {
@@ -13,6 +14,7 @@ import {
 import logo from '../assets/logo.jpg';
 
 const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
+  const { t } = useTranslation();
   const isMini = width < 160 && !isMobile;
 
   const location = useLocation();
@@ -43,14 +45,14 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
 
   const otherMenuItems = [
-    { name: 'My Profile', path: '/admin/profile', icon: User },
-    { name: 'Dispute Resolution', path: '/admin/disputes', icon: Scale },
-    { name: 'Payment Analytics', path: '/admin/payments', icon: BarChart3 },
-    { name: 'Settings', path: '/admin/settings', icon: Settings },
+    { name: t('sidebar_my_profile'), path: '/admin/profile', icon: User },
+    { name: t('sidebar_dispute_resolution'), path: '/admin/disputes', icon: Scale },
+    { name: t('sidebar_payment_analytics'), path: '/admin/payments', icon: BarChart3 },
+    { name: t('settings'), path: '/admin/settings', icon: Settings },
   ];
 
   const handleLogout = () => {
-    if (window.confirm("Are you sure you want to logout from the Admin panel?")) {
+    if (window.confirm(t('logout_confirm', { defaultValue: "Are you sure you want to logout from the Admin panel?" }))) {
       logout();
       navigate('/login');
     }
@@ -114,7 +116,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40'
             : 'hover:bg-white/5 hover:text-white'
             }`}
-          title={isMini ? "Dashboard" : ""}
+          title={isMini ? t('sidebar_dashboard') : ""}
         >
           {location.pathname === '/' && (
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
@@ -124,7 +126,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             className={`shrink-0 transition-transform duration-300 group-hover:scale-110 ${location.pathname === '/' ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
             strokeWidth={location.pathname === '/' ? 2.5 : 2}
           />
-          {!isMini && <span className={`text-sm tracking-wide overflow-hidden whitespace-nowrap transition-all duration-300 ${location.pathname === '/' ? 'font-bold' : 'font-medium'}`}>Dashboard</span>}
+          {!isMini && <span className={`text-sm tracking-wide overflow-hidden whitespace-nowrap transition-all duration-300 ${location.pathname === '/' ? 'font-bold' : 'font-medium'}`}>{t('sidebar_dashboard')}</span>}
         </Link>
 
         {/* Manage Services */}
@@ -133,7 +135,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             onClick={() => !isMini && setIsServicesOpen(!isServicesOpen)}
             className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isServicesActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
               }`}
-            title={isMini ? "Services" : ""}
+            title={isMini ? t('sidebar_services') : ""}
           >
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <Folder
@@ -141,7 +143,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 className={`shrink-0 transition-colors duration-300 ${isServicesActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isServicesActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide overflow-hidden whitespace-nowrap">Services</span>}
+              {!isMini && <span className="text-sm font-medium tracking-wide overflow-hidden whitespace-nowrap">{t('sidebar_services')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isServicesOpen ? 'rotate-180' : ''}`}>
@@ -154,10 +156,10 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             <div className={`grid transition-all duration-300 ease-in-out ${isServicesOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
                 <Link to="/admin/services/categories" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/services/categories' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Categories
+                  {t('sidebar_categories')}
                 </Link>
                 <Link to="/admin/services/services" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/services/services' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Provider Services
+                  {t('sidebar_provider_services')}
                 </Link>
               </div>
             </div>
@@ -178,7 +180,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 className={`shrink-0 transition-colors duration-300 ${isVerificationActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isVerificationActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide">Verification</span>}
+              {!isMini && <span className="text-sm font-medium tracking-wide">{t('sidebar_verification')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isVerificationOpen ? 'rotate-180' : ''}`}>
@@ -191,33 +193,33 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             <div className={`grid transition-all duration-300 ease-in-out ${isVerificationOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
                 <Link to="/admin/verification/pending" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/pending' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  <span>Pending Queue</span>
+                  <span>{t('sidebar_pending_queue')}</span>
                   {stats.pending > 0 && (
-                    <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.pending}
                     </span>
                   )}
                 </Link>
                 <Link to="/admin/verification/approved" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/approved' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  <span>Approved</span>
+                  <span>{t('sidebar_approved')}</span>
                   {stats.active > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.active}
                     </span>
                   )}
                 </Link>
                 <Link to="/admin/verification/rejected" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/rejected' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  <span>Rejected</span>
+                  <span>{t('sidebar_rejected')}</span>
                   {stats.rejected > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.rejected}
                     </span>
                   )}
                 </Link>
                 <Link to="/admin/verification/suspended" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/suspended' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  <span>Suspended</span>
+                  <span>{t('sidebar_suspended')}</span>
                   {stats.suspended > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.suspended}
                     </span>
                   )}
@@ -241,7 +243,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 className={`shrink-0 transition-colors duration-300 ${isUsersActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isUsersActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide">System Users</span>}
+              {!isMini && <span className="text-sm font-medium tracking-wide">{t('sidebar_system_users')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isUsersOpen ? 'rotate-180' : ''}`}>
@@ -254,17 +256,17 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             <div className={`grid transition-all duration-300 ease-in-out ${isUsersOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
                 <Link to="/admin/users/customers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/users/customers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  <span>Customers</span>
+                  <span>{t('sidebar_customers')}</span>
                   {stats.customers > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.customers}
                     </span>
                   )}
                 </Link>
                 <Link to="/admin/users/providers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/users/providers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  <span>Providers</span>
+                  <span>{t('sidebar_providers')}</span>
                   {(stats.active + stats.suspended) > 0 && (
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
+                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
                       {stats.active + stats.suspended}
                     </span>
                   )}
@@ -288,7 +290,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 className={`shrink-0 transition-colors duration-300 ${isBookingsActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isBookingsActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide">Bookings</span>}
+              {!isMini && <span className="text-sm font-medium tracking-wide">{t('sidebar_bookings')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isBookingsOpen ? 'rotate-180' : ''}`}>
@@ -301,22 +303,22 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             <div className={`grid transition-all duration-300 ease-in-out ${isBookingsOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
                 <Link to="/admin/bookings/pending" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/pending' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Pending
+                  {t('sidebar_pending_queue')}
                 </Link>
                 <Link to="/admin/bookings/accepted" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/accepted' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Accepted
+                  {t('sidebar_accepted')}
                 </Link>
                 <Link to="/admin/bookings/completed" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/completed' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Completed
+                  {t('sidebar_completed')}
                 </Link>
                 <Link to="/admin/bookings/rejected" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/rejected' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Rejected
+                  {t('sidebar_rejected')}
                 </Link>
                 <Link to="/admin/bookings/expired" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/expired' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Expired
+                  {t('sidebar_expired')}
                 </Link>
                 <Link to="/admin/bookings/cancelled" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/cancelled' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
-                  Cancelled
+                  {t('sidebar_cancelled')}
                 </Link>
               </div>
             </div>
@@ -355,7 +357,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           title={isMini ? "Logout" : ""}
         >
           <LogOut size={18} className="group-hover:rotate-12 transition-transform shrink-0" />
-          {!isMini && <span>Logout System</span>}
+          {!isMini && <span>{t('sidebar_logout')}</span>}
         </button>
       </div>
     </div>

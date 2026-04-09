@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Search, X, Eye, ImageIcon, FileCheck, Loader2, AlertCircle,
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Filter, XCircle as XCircleIcon
@@ -18,6 +19,7 @@ const VerificationTable = ({
   error,
   onRefresh,
 }) => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [sortBy, setSortBy] = useState('date'); // 'date', 'name', 'cost'
@@ -116,7 +118,7 @@ const VerificationTable = ({
       <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <Loader2 className="animate-spin text-blue-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Loading providers...</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t('vqueue_loading')}</p>
         </div>
       </div>
     );
@@ -128,13 +130,13 @@ const VerificationTable = ({
       <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <AlertCircle className="text-red-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-sm font-medium text-red-600 mb-2">Database connection failed</p>
+          <p className="text-sm font-medium text-red-600 mb-2">{t('db_disconnected')}</p>
           <p className="text-xs text-admin-text-muted mb-4">{error?.message || 'Unable to connect to server'}</p>
           <button
             onClick={onRefresh}
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 bg-admin-card hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-admin-text"
           >
-            Try Again
+            {t('vqueue_clear')}
           </button>
         </div>
       </div>
@@ -151,7 +153,7 @@ const VerificationTable = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              placeholder="Search by name, email, service, or ID..."
+              placeholder={t('vqueue_search_placeholder')}
               className="pl-10 pr-10 py-2.5 border border-admin-border rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-admin-card text-sm text-admin-text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -169,7 +171,7 @@ const VerificationTable = ({
 
           {/* Filters and Sort */}
           <div className="flex flex-wrap gap-3 items-center">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Filter/Sort:</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('vqueue_filter_sort')}</span>
 
             {/* Category filter (only if categories exist) */}
             {categories.length > 0 && (
@@ -178,7 +180,7 @@ const VerificationTable = ({
                 onChange={(e) => setFilterCategory(e.target.value)}
                 className="px-3 py-2.5 border border-admin-border rounded-xl text-sm bg-admin-card text-admin-text focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="">All Categories</option>
+                <option value="">{t('vqueue_all_categories')}</option>
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
@@ -194,7 +196,7 @@ const VerificationTable = ({
                   : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              Name
+              {t('vqueue_name')}
               {sortBy === 'name' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
             </button>
 
@@ -207,7 +209,7 @@ const VerificationTable = ({
                   : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              Date
+              {t('vqueue_date')}
               {sortBy === 'date' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
             </button>
 
@@ -220,7 +222,7 @@ const VerificationTable = ({
                   : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              Cost
+              {t('vqueue_cost')}
               {sortBy === 'cost' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
             </button>
 
@@ -231,7 +233,7 @@ const VerificationTable = ({
                 className="flex items-center gap-1 px-3 py-2.5 border border-red-200 rounded-xl text-sm text-red-600 hover:bg-red-50 transition"
                 aria-label="Clear all filters"
               >
-                <XCircleIcon size={16} /> Clear
+                <XCircleIcon size={16} /> {t('vqueue_clear')}
               </button>
             )}
           </div>
@@ -241,11 +243,10 @@ const VerificationTable = ({
         {hasActiveFilters && (
           <div className="mt-3 text-xs text-slate-500 flex items-center gap-2">
             <Filter size={12} />
-            <span>Active filters: </span>
-            {searchQuery && <span className="bg-slate-100 px-2 py-0.5 rounded">Search: {searchQuery}</span>}
-            {filterCategory && <span className="bg-slate-100 px-2 py-0.5 rounded">Category: {filterCategory}</span>}
-            {sortBy !== 'date' && <span className="bg-slate-100 px-2 py-0.5 rounded">Sort: {sortBy} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
-            {sortBy === 'date' && sortOrder !== 'desc' && <span className="bg-slate-100 px-2 py-0.5 rounded">Date: oldest first</span>}
+            <span>{t('serv_active_filters')} </span>
+            {searchQuery && <span className="bg-slate-100 px-2 py-0.5 rounded">{searchQuery}</span>}
+            {filterCategory && <span className="bg-slate-100 px-2 py-0.5 rounded">{filterCategory}</span>}
+            {sortBy !== 'date' && <span className="bg-slate-100 px-2 py-0.5 rounded">{t('common_sort') || 'Sort'}: {t(`vqueue_${sortBy}`)} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
           </div>
         )}
       </div>
@@ -255,22 +256,22 @@ const VerificationTable = ({
         <table className="w-full text-left">
           <thead className="bg-admin-card text-admin-text-muted text-[11px] uppercase font-bold border-b border-admin-border tracking-wider">
             <tr>
-              <th className="px-6 py-4">Provider</th>
-              <th className="px-6 py-4">Category</th>
-              <th className="px-6 py-4">Service</th>
-              <th className="px-6 py-4">Description</th>
-              <th className="px-6 py-4 text-center">Cost</th>
-              <th className="px-6 py-4 text-center">Files</th>
-              <th className="px-6 py-4 text-center">Submitted</th>
-              <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-8 py-4 text-right">Actions</th>
+              <th className="px-6 py-4">{t('vqueue_provider')}</th>
+              <th className="px-6 py-4">{t('vqueue_col_category')}</th>
+              <th className="px-6 py-4">{t('vqueue_service')}</th>
+              <th className="px-6 py-4">{t('vqueue_description')}</th>
+              <th className="px-6 py-4 text-center">{t('vqueue_cost')}</th>
+              <th className="px-6 py-4 text-center">{t('vqueue_files')}</th>
+              <th className="px-6 py-4 text-center">{t('vqueue_submitted')}</th>
+              <th className="px-6 py-4 text-center">{t('vqueue_status')}</th>
+              <th className="px-8 py-4 text-right">{t('vqueue_actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-admin-border">
             {currentItems.length === 0 ? (
               <tr>
                 <td colSpan="9" className="text-center py-12 text-slate-400 text-sm">
-                  No providers found.
+                  {t('vqueue_no_providers')}
                 </td>
               </tr>
             ) : (
@@ -335,11 +336,11 @@ const VerificationTable = ({
                             onClick={() => onViewDescription(item.service_description, item.name)}
                             className="mt-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-[10px] font-medium flex items-center gap-1"
                           >
-                            <Eye size={12} /> Read more
+                            <Eye size={12} /> {t('vqueue_read_more')}
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">No description</span>
+                        <span className="text-xs text-slate-400 italic">{t('vqueue_no_description')}</span>
                       )}
                     </td>
 
@@ -362,7 +363,7 @@ const VerificationTable = ({
                               : 'bg-slate-100 bg-admin-card text-slate-400 cursor-not-allowed'
                           }`}
                         >
-                          <ImageIcon size={12} /> ID
+                          <ImageIcon size={12} /> {t('vqueue_id')}
                         </button>
                         <button
                           onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
@@ -373,7 +374,7 @@ const VerificationTable = ({
                               : 'bg-slate-100 bg-admin-card text-slate-400 cursor-not-allowed'
                           }`}
                         >
-                          <FileCheck size={12} /> Licence
+                          <FileCheck size={12} /> {t('vqueue_licence')}
                         </button>
                       </div>
                     </td>
@@ -391,7 +392,7 @@ const VerificationTable = ({
                         status === 'suspended' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' :
                         'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                       }`}>
-                        <span className="text-admin-text">{item.status || 'Pending'}</span>
+                        <span className="text-admin-text">{item.status ? t(item.status.toLowerCase()) : t('pending')}</span>
                       </span>
                     </td>
 
@@ -408,7 +409,7 @@ const VerificationTable = ({
                                 onClick={() => status === 'suspended' ? onReactivate(item.id, item.name) : onApprove(item.id, item.name)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-semibold hover:bg-green-600 transition"
                               >
-                                <CheckCircle size={12} /> {status === 'suspended' ? 'Reactivate' : 'Approve'}
+                                <CheckCircle size={12} /> {status === 'suspended' ? t('vqueue_reactivate') : t('vqueue_approve')}
                               </button>
                             )}
                             {/* Reject (if not already rejected) */}
@@ -417,7 +418,7 @@ const VerificationTable = ({
                                 onClick={() => onReject(item)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600 transition"
                               >
-                                <XCircle size={12} /> Reject
+                                <XCircle size={12} /> {t('vqueue_reject')}
                               </button>
                             )}
                             {/* Suspend (if active) */}
@@ -426,7 +427,7 @@ const VerificationTable = ({
                                 onClick={() => onSuspend(item.id, item.name)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition"
                               >
-                                <AlertCircle size={12} /> Suspend
+                                <AlertCircle size={12} /> {t('vqueue_suspend')}
                               </button>
                             )}
                           </>
@@ -444,7 +445,7 @@ const VerificationTable = ({
       {/* Mobile Card View */}
       <div className="lg:hidden p-4 space-y-4">
         {currentItems.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 text-sm">No providers found.</div>
+          <div className="text-center py-12 text-slate-400 text-sm">{t('vqueue_no_providers')}</div>
         ) : (
           currentItems.map((item) => {
             const profileUrl = getBackendUrl(item.profilePicture);
@@ -456,7 +457,7 @@ const VerificationTable = ({
             const status = item.status?.toLowerCase() || 'pending';
 
             return (
-              <div key={item.id} className="bg-white rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
+              <div key={item.id} className="bg-admin-card rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="relative w-10 h-10 shrink-0">
                     {hasProfilePhoto ? (
@@ -487,15 +488,15 @@ const VerificationTable = ({
                     status === 'suspended' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' :
                     'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                   }`}>
-                    <span className="text-admin-text">{item.status || 'Pending'}</span>
+                    <span className="text-admin-text">{item.status ? t(item.status.toLowerCase()) : t('pending')}</span>
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs border-t border-admin-border pt-2">
-                  <div><span className="font-semibold text-admin-text-muted">Category:</span> <span className="dark:text-slate-300">{item.service_type || '—'}</span></div>
-                  <div><span className="font-semibold text-admin-text-muted">Cost:</span> <span className="dark:text-slate-300">{item.estimated_cost ? `${item.estimated_cost} ETB` : '—'}</span></div>
-                  <div><span className="font-semibold text-admin-text-muted">Service:</span> <span className="dark:text-slate-300">{item.service_title || '—'}</span></div>
-                  <div><span className="font-semibold text-admin-text-muted">Submitted:</span> <span className="dark:text-slate-300">{item.submission_date || 'Unknown'}</span></div>
+                  <div><span className="font-semibold text-admin-text-muted">{t('vqueue_col_category')}:</span> <span className="dark:text-slate-300">{item.service_type || '—'}</span></div>
+                  <div><span className="font-semibold text-admin-text-muted">{t('vqueue_cost')}:</span> <span className="dark:text-slate-300">{item.estimated_cost ? `${item.estimated_cost} ETB` : '—'}</span></div>
+                  <div><span className="font-semibold text-admin-text-muted">{t('vqueue_service')}:</span> <span className="dark:text-slate-300">{item.service_title || '—'}</span></div>
+                  <div><span className="font-semibold text-admin-text-muted">{t('vqueue_submitted')}:</span> <span className="dark:text-slate-300">{item.submission_date || 'Unknown'}</span></div>
                 </div>
 
                 {item.service_description && (
@@ -503,7 +504,7 @@ const VerificationTable = ({
                     onClick={() => onViewDescription(item.service_description, item.name)}
                     className="text-xs text-blue-600 font-medium flex items-center gap-1"
                   >
-                    <Eye size={12} /> View full description
+                    <Eye size={12} /> {t('vqueue_view_full_desc')}
                   </button>
                 )}
 
@@ -511,12 +512,12 @@ const VerificationTable = ({
                   <button onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')} disabled={!hasIdPhoto} className={`flex-1 py-2 rounded-lg text-xs font-semibold text-center ${
                     hasIdPhoto ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}>
-                    <ImageIcon size={12} className="inline mr-1" /> ID
+                    <ImageIcon size={12} className="inline mr-1" /> {t('vqueue_id')}
                   </button>
                   <button onClick={() => hasCredential && window.open(credentialUrl, '_blank')} disabled={!hasCredential} className={`flex-1 py-2 rounded-lg text-xs font-semibold text-center ${
                     hasCredential ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}>
-                    <FileCheck size={12} className="inline mr-1" /> Licence
+                    <FileCheck size={12} className="inline mr-1" /> {t('vqueue_licence')}
                   </button>
                 </div>
 
@@ -530,7 +531,7 @@ const VerificationTable = ({
                           onClick={() => status === 'suspended' ? onReactivate(item.id, item.name) : onApprove(item.id, item.name)}
                           className="flex-1 bg-green-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                         >
-                          <CheckCircle size={12} /> {status === 'suspended' ? 'Reactivate' : 'Approve'}
+                          <CheckCircle size={12} /> {status === 'suspended' ? t('vqueue_reactivate') : t('vqueue_approve')}
                         </button>
                       )}
                       {(status === 'pending' || status === 'active') && (
@@ -538,7 +539,7 @@ const VerificationTable = ({
                           onClick={() => onReject(item)}
                           className="flex-1 bg-red-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                         >
-                          <XCircle size={12} /> Reject
+                          <XCircle size={12} /> {t('vqueue_reject')}
                         </button>
                       )}
                       {status === 'active' && (
@@ -546,7 +547,7 @@ const VerificationTable = ({
                           onClick={() => onSuspend(item.id, item.name)}
                           className="flex-1 bg-amber-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                         >
-                          <AlertCircle size={12} /> Suspend
+                          <AlertCircle size={12} /> {t('vqueue_suspend')}
                         </button>
                       )}
                     </>
@@ -562,7 +563,7 @@ const VerificationTable = ({
       {totalPages > 1 && (
         <div className="p-6 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-xs font-medium text-admin-text-muted">
-            Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, processedData.length)} of {processedData.length}
+            {t('serv_showing_x_of_y', { start: indexOfFirstItem + 1, end: Math.min(indexOfLastItem, processedData.length), total: processedData.length })}
           </span>
           <div className="flex items-center gap-1 bg-admin-card p-1.5 rounded-xl border border-admin-border shadow-sm">
             <button
@@ -599,4 +600,4 @@ const VerificationTable = ({
   );
 };
 
-export default VerificationTable;
+export default VerificationTable;

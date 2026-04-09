@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Database, Users, UserCheck, Clock, Banknote, Layers, Wrench } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useAdminData } from '../hooks/useAdminData';
 import StatCard from '../components/StatCard';
@@ -9,6 +10,7 @@ import DescriptionModal from '../components/DescriptionModal';
 import RejectModal from '../components/RejectModal';
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { stats, pendingQueue, isLoading, isError, refresh } = useAdminData();
 
@@ -36,7 +38,7 @@ const Dashboard = () => {
     show: false,
     providerId: null,
     providerName: '',
-    defaultReason: 'Provided service details or documents are invalid.',
+    defaultReason: t('modal_reject_placeholder'),
     inputReason: '',
   });
 
@@ -54,10 +56,10 @@ const Dashboard = () => {
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         queryClient.invalidateQueries({ queryKey: ['pendingProviders'] });
-        alert(status === 'approved' ? 'Account & Service Approved!' : 'Provider Rejected.');
+        alert(status === 'approved' ? t('alert_approved') : t('alert_rejected'));
       }
     } catch (error) {
-      alert('Action failed. Ensure backend mail server is active.');
+      alert(t('alert_action_failed'));
     } finally {
       setProcessingId(null);
     }
@@ -69,18 +71,18 @@ const Dashboard = () => {
         show: true,
         providerId: id,
         providerName: name,
-        defaultReason: 'Provided service details or documents are invalid.',
+        defaultReason: t('modal_reject_placeholder'),
         inputReason: '',
       });
       return;
     }
-    if (!window.confirm(`Approve ${name} and publish their service to the marketplace?`)) return;
+    if (!window.confirm(t('confirm_approve', { name }))) return;
     processVerification(id, 'approved');
   };
 
   const handleRejectSubmit = () => {
     if (!rejectModal.inputReason.trim()) {
-      alert('Please provide a rejection reason.');
+      alert(t('alert_provide_reason'));
       return;
     }
     setRejectModal((prev) => ({ ...prev, show: false }));
@@ -92,7 +94,7 @@ const Dashboard = () => {
       show: false,
       providerId: null,
       providerName: '',
-      defaultReason: 'Provided service details or documents are invalid.',
+      defaultReason: t('modal_reject_placeholder'),
       inputReason: '',
     });
   };
@@ -106,11 +108,11 @@ const Dashboard = () => {
       setQueueLength(pendingQueue.length);
       const announcer = document.getElementById('queue-announcer');
       if (announcer) {
-        announcer.textContent = `Verification queue updated. ${pendingQueue.length} providers pending.`;
+        announcer.textContent = t('announcer_vqueue_updated', { count: pendingQueue.length });
         setTimeout(() => { announcer.textContent = ''; }, 1000);
       }
     }
-  }, [pendingQueue.length, queueLength]);
+  }, [pendingQueue.length, queueLength, t]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -134,19 +136,19 @@ const Dashboard = () => {
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-admin-text tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-admin-text tracking-tight">{t('dashboard_title')}</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
             <Database size={14} className={dbStatus === 'connected' ? 'text-green-500' : 'text-red-500'} aria-hidden="true" />
             <span className="text-[10px] font-bold uppercase tracking-wider text-admin-text-muted">
-              {dbStatus === 'connected' ? 'Database connected' : 'Database disconnected'}
+              {dbStatus === 'connected' ? t('dashboard_db_connected') : t('dashboard_db_disconnected')}
             </span>
           </div>
           <button
             onClick={refresh}
             className="p-3 bg-admin-card border border-admin-border rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Refresh dashboard data"
+            aria-label={t('dashboard_refresh')}
             aria-busy={isLoading}
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} aria-hidden="true" />
@@ -155,12 +157,12 @@ const Dashboard = () => {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard title="Providers" value={stats.providers} icon={Users} color="bg-blue-500" loading={isLoading} />
-        <StatCard title="Customers" value={stats.customers} icon={UserCheck} color="bg-emerald-500" loading={isLoading} />
-        <StatCard title="Pending" value={pendingQueue.length} icon={Clock} color="bg-orange-500" loading={isLoading} />
-        <StatCard title="Categories" value={stats.categories} icon={Layers} color="bg-purple-500" loading={isLoading} />
-        <StatCard title="Services" value={stats.services} icon={Wrench} color="bg-indigo-500" loading={isLoading} />
-        <StatCard title="Revenue" value={stats.revenue?.toLocaleString() || '0'} icon={Banknote} color="bg-green-600" loading={isLoading} />
+        <StatCard title={t('sidebar_providers')} value={stats.providers} icon={Users} color="bg-blue-500" loading={isLoading} />
+        <StatCard title={t('sidebar_customers')} value={stats.customers} icon={UserCheck} color="bg-emerald-500" loading={isLoading} />
+        <StatCard title={t('sidebar_pending_queue')} value={pendingQueue.length} icon={Clock} color="bg-orange-500" loading={isLoading} />
+        <StatCard title={t('sidebar_categories')} value={stats.categories} icon={Layers} color="bg-purple-500" loading={isLoading} />
+        <StatCard title={t('sidebar_services')} value={stats.services} icon={Wrench} color="bg-indigo-500" loading={isLoading} />
+        <StatCard title={t('dashboard_revenue')} value={stats.revenue?.toLocaleString() || '0'} icon={Banknote} color="bg-green-600" loading={isLoading} />
       </div>
 
       <VerificationQueueTable

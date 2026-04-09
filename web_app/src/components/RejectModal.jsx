@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XCircle } from 'lucide-react';
 
 const RejectModal = ({
@@ -10,6 +11,7 @@ const RejectModal = ({
   onSubmit,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   const modalRef = useRef(null);
   const textareaRef = useRef(null);
   const cancelButtonRef = useRef(null);
@@ -54,19 +56,19 @@ const RejectModal = ({
       >
         <div className="p-6 bg-red-500 text-white flex justify-between items-center">
           <h2 id="reject-modal-title" className="text-lg font-black italic tracking-tighter uppercase">
-            Reject Provider – {providerName}
+            {t('modal_reject_title')} – {providerName}
           </h2>
           <button
             onClick={onCancel}
             className="focus:outline-none focus:ring-2 focus:ring-white rounded-full"
-            aria-label="Cancel rejection"
+            aria-label={t('modal_cancel')}
           >
             <XCircle size={28} />
           </button>
         </div>
         <div className="p-6">
           <label id="reject-modal-description" className="block text-admin-text font-bold mb-2 text-xs uppercase">
-            Rejection Reason
+            {t('modal_reject_reason')}
           </label>
           <textarea
             ref={textareaRef}
@@ -84,14 +86,14 @@ const RejectModal = ({
             onClick={onCancel}
             className="bg-admin-card hover:bg-slate-100 dark:hover:bg-slate-700 text-admin-text font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500 border border-admin-border"
           >
-            Cancel
+            {t('modal_cancel')}
           </button>
           <button
             onClick={onSubmit}
             className="bg-red-500 hover:bg-red-600 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-red-400"
-            aria-label="Submit rejection"
+            aria-label={t('modal_submit')}
           >
-            Submit
+            {t('modal_submit')}
           </button>
         </div>
       </div>
@@ -99,4 +101,4 @@ const RejectModal = ({
   );
 };
 
-export default RejectModal;
+export default RejectModal;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Plus, RefreshCw, Database, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../api/axios';
 import { useServicesData } from '../hooks/useServicesData';
@@ -9,6 +10,7 @@ import CategoryModal from '../components/CategoryModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 
 const Services = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const location = useLocation();
   const { categories, services, providers, isLoading, isError, error, refresh } = useServicesData();
@@ -44,17 +46,17 @@ const Services = () => {
     try {
       if (editingCategory) {
         await api.put(`/admin/categories/${editingCategory.catagoryID}`, formData);
-        showToast('Category updated successfully');
+        showToast(t('serv_msg_cat_updated'));
       } else {
         await api.post('/admin/categories', formData);
-        showToast('Category added successfully');
+        showToast(t('serv_msg_cat_added'));
       }
       setIsModalOpen(false);
       setEditingCategory(null);
       queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Error saving category';
+      const msg = err.response?.data?.message || t('serv_msg_error_saving');
       showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
@@ -63,7 +65,7 @@ const Services = () => {
 
   const handleDeleteCategory = (item) => {
     if (categoryIsInUse(item.catagoryID)) {
-      showToast('Cannot delete: category is used by services or providers', 'error');
+      showToast(t('serv_msg_error_in_use'), 'error');
       return;
     }
     setDeleteConfirm({ show: true, id: item.catagoryID, name: item.name });
@@ -73,12 +75,12 @@ const Services = () => {
     setIsSubmitting(true);
     try {
       await api.delete(`/admin/categories/${deleteConfirm.id}`);
-      showToast('Category deleted successfully');
+      showToast(t('serv_msg_cat_deleted'));
       setDeleteConfirm({ show: false, id: null, name: '' });
       queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Cannot delete due to constraints';
+      const msg = err.response?.data?.message || t('serv_error_delete_constraint');
       showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
@@ -111,10 +113,10 @@ const Services = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
-            {activeTab === 'categories' ? 'Service Categories' : 'Platform Services'}
+            {activeTab === 'categories' ? t('serv_cat_title') : t('serv_all_title')}
           </h1>
           <p className="text-admin-text-muted text-[10px] font-black uppercase tracking-widest italic mt-1">
-            {activeTab === 'categories' ? 'Manage service taxonomies and metadata' : 'Review system-wide provider offerings'}
+            {activeTab === 'categories' ? t('serv_cat_subtitle') : t('serv_all_subtitle')}
           </p>
         </div>
 
@@ -125,9 +127,9 @@ const Services = () => {
                 dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
             <span className="text-[10px] font-black uppercase tracking-widest text-admin-text-muted">
-              {dbStatus === 'connected' && 'Database Connected'}
-              {dbStatus === 'disconnected' && 'Database Disconnected'}
-              {dbStatus === 'checking' && 'Checking Database...'}
+              {dbStatus === 'connected' && t('db_connected')}
+              {dbStatus === 'disconnected' && t('db_disconnected')}
+              {dbStatus === 'checking' && t('db_checking')}
             </span>
           </div>
           <button
@@ -142,7 +144,7 @@ const Services = () => {
               onClick={() => openModal()}
               className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <Plus size={18} /> Add Category
+              <Plus size={18} /> {t('serv_add_category')}
             </button>
           )}
         </div>
@@ -191,4 +193,4 @@ const Services = () => {
   );
 };
 
-export default Services;
+export default Services;

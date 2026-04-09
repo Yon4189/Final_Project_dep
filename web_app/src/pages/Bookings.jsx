@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import { Database, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Database, RefreshCw } from 'lucide-react';
 import { useBookingsData } from '../hooks/useBookingsData';
 import BookingsTable from '../components/BookingsTable';
 
 const Bookings = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const { bookings, isLoading, isError, error, refetch } = useBookingsData();
 
@@ -28,9 +30,9 @@ const Bookings = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-admin-text tracking-tight italic">Booking Oversight</h1>
+          <h1 className="text-2xl font-black text-admin-text tracking-tight italic">{t('bookings_title')}</h1>
           <p className="text-admin-text-muted text-sm font-medium uppercase tracking-widest italic mt-1">
-            Real-time management of platform reservations
+            {t('bookings_subtitle')}
           </p>
         </div>
 
@@ -41,9 +43,7 @@ const Bookings = () => {
                 dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
             } />
             <span className="text-xs font-semibold uppercase tracking-wider text-admin-text-muted">
-              {dbStatus === 'connected' && 'Database Connected'}
-              {dbStatus === 'disconnected' && 'Database Disconnected'}
-              {dbStatus === 'checking' && 'Checking Database...'}
+              {t(`db_${dbStatus}`)}
             </span>
           </div>
           <button
@@ -69,4 +69,4 @@ const Bookings = () => {
   );
 };
 
-export default Bookings;
+export default Bookings;
