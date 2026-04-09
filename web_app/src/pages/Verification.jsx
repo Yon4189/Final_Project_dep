@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { Database, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../api/axios';
@@ -17,6 +18,7 @@ const getFilterFromPath = (pathname) => {
 };
 
 const Verification = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const location = useLocation();
   const filter = getFilterFromPath(location.pathname);
@@ -40,41 +42,41 @@ const Verification = () => {
   };
 
   const handleApprove = async (id, name) => {
-    if (!window.confirm(`Approve ${name} and notify them via email?`)) return;
+    if (!window.confirm(t('vpage_approve_confirm', { name }))) return;
     setProcessingId(id);
     try {
       const response = await api.post(`/admin/providers/${id}/verify`, { status: 'approved' });
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['providers'] });
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
-        alert('Account Approved & Email Sent!');
+        alert(t('vpage_alert_approved'));
       }
     } catch (err) {
-      alert('Mail Error: Check backend SMTP settings.');
+      alert(t('vpage_alert_mail_error'));
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleReactivate = async (id, name) => {
-    if (!window.confirm(`Reactivate ${name}? They will become active again.`)) return;
+    if (!window.confirm(t('vpage_reactivate_confirm', { name }))) return;
     setProcessingId(id);
     try {
       const response = await api.post(`/admin/providers/${id}/verify`, { status: 'approved' });
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['providers'] });
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
-        alert('Provider Reactivated.');
+        alert(t('vpage_alert_reactivated'));
       }
     } catch (err) {
-      alert('Action failed.');
+      alert(t('common_error'));
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleSuspend = async (id, name) => {
-    if (!window.confirm(`Suspend ${name}? They will be hidden from the marketplace.`)) return;
+    if (!window.confirm(t('vpage_suspend_confirm', { name }))) return;
     setProcessingId(id);
     try {
       const response = await api.post(`/admin/providers/${id}/verify`, {
@@ -84,10 +86,10 @@ const Verification = () => {
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['providers'] });
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
-        alert('Provider Suspended.');
+        alert(t('vpage_alert_suspended'));
       }
     } catch (err) {
-      alert('Action failed.');
+      alert(t('common_error'));
     } finally {
       setProcessingId(null);
     }
@@ -109,10 +111,10 @@ const Verification = () => {
         setRejectModal({ show: false, provider: null, reason: '' });
         queryClient.invalidateQueries({ queryKey: ['providers'] });
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
-        alert('Provider Rejected & Notified.');
+        alert(t('vpage_alert_rejected'));
       }
     } catch (err) {
-      alert('Network Error');
+      alert(t('common_error'));
     } finally {
       setProcessingId(null);
     }
@@ -131,7 +133,7 @@ const Verification = () => {
       <RejectModal
         show={rejectModal.show}
         providerName={rejectModal.provider?.name}
-        defaultReason="Please provide a reason for rejection."
+        defaultReason={t('alert_provide_reason')}
         inputReason={rejectModal.reason}
         onReasonChange={(value) => setRejectModal(prev => ({ ...prev, reason: value }))}
         onSubmit={handleRejectSubmit}
@@ -143,7 +145,7 @@ const Verification = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
-              {filter} Providers
+              {t('vpage_title', { status: t(filter.toLowerCase()) })}
             </h1>
             {providers.length > 0 && (
               <span className="bg-blue-500 text-white text-[10px] px-3 py-1 rounded-full font-black shadow-sm">
@@ -152,7 +154,7 @@ const Verification = () => {
             )}
           </div>
           <p className="text-admin-text-muted text-[10px] font-black uppercase tracking-widest italic mt-1">
-            Account eligibility and professional credential verification.
+            {t('vpage_subtitle')}
           </p>
         </div>
 
@@ -160,9 +162,9 @@ const Verification = () => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
             <Database size={14} className={dbStatus === 'connected' ? 'text-green-500' : 'text-red-500'} />
             <span className="text-[10px] font-black uppercase tracking-widest text-admin-text-muted">
-              {dbStatus === 'connected' ? 'Database Connected' :
-                dbStatus === 'disconnected' ? 'Database Disconnected' :
-                  'Checking Database...'}
+              {dbStatus === 'connected' ? t('db_connected') :
+                dbStatus === 'disconnected' ? t('db_disconnected') :
+                  t('db_checking')}
             </span>
           </div>
           <button
@@ -193,4 +195,4 @@ const Verification = () => {
   );
 };
 
-export default Verification;
+export default Verification;

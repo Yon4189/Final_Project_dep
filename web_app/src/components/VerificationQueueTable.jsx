@@ -1,4 +1,5 @@
 import React, { useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, CheckCircle, Calendar, ImageIcon, FileCheck, Eye, Search, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { getBackendUrl } from '../utils/url';
 
@@ -18,8 +19,27 @@ const VerificationQueueTable = ({
   setSortOrder,
   resetFilters,
 }) => {
+  const { t } = useTranslation();
   const searchInputRef = useRef(null);
   const categorySelectRef = useRef(null);
+  
+  const translateDBString = (str) => {
+    if (!str) return str;
+    const key = str.toLowerCase().replace(/\s+/g, '_');
+    
+    // Check for category matches
+    if (key.includes('electronic')) return t('db_cat_electronic_repair');
+    if (key.includes('home_maintenance')) return t('db_cat_home_maintenance');
+    if (key.includes('plumbering') || key.includes('plumbing')) return t('db_cat_plumbing');
+    if (key.includes('cleaning')) return t('db_cat_cleaning');
+    
+    // Check for document matches
+    if (key.includes('passport')) return t('db_doc_passport');
+    if (key.includes('national')) return t('db_doc_national');
+    if (key.includes('licence') || key.includes('license')) return t('db_doc_licence');
+
+    return t(`db_${key}`) !== `db_${key}` ? t(`db_${key}`) : str;
+  };
 
   const categories = useMemo(() => {
     const cats = new Set();
@@ -74,14 +94,14 @@ const VerificationQueueTable = ({
       <table className="w-full text-left">
         <thead className="bg-slate-50 dark:bg-black/20 text-slate-400 dark:text-slate-500 text-[9px] uppercase font-black border-b border-admin-border tracking-tighter">
           <tr>
-            <th className="px-6 py-5">Provider Full Name</th>
-            <th className="px-6 py-5">Category</th>
-            <th className="px-6 py-5">Service</th>
-            <th className="px-6 py-5">Service Description</th>
-            <th className="px-6 py-5 text-center">Est. Cost</th>
-            <th className="px-6 py-5 text-center">Verification Files</th>
-            <th className="px-6 py-5 text-center">Submission</th>
-            <th className="px-8 py-5 text-center">Action</th>
+            <th className="px-6 py-5">{t('vqueue_col_name')}</th>
+            <th className="px-6 py-5">{t('vqueue_col_category')}</th>
+            <th className="px-6 py-5">{t('vqueue_col_service')}</th>
+            <th className="px-6 py-5">{t('vqueue_col_desc')}</th>
+            <th className="px-6 py-5 text-center">{t('vqueue_col_cost')}</th>
+            <th className="px-6 py-5 text-center">{t('vqueue_col_files')}</th>
+            <th className="px-6 py-5 text-center">{t('vqueue_col_submission')}</th>
+            <th className="px-8 py-5 text-center">{t('vqueue_col_action')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -155,7 +175,7 @@ const VerificationQueueTable = ({
       <div className="p-8 border-b border-admin-border bg-admin-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="font-black text-admin-text uppercase text-xs tracking-widest flex items-center gap-2">
-            Provider Verification
+            {t('vqueue_title')}
             <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-[9px] font-black">
               {filteredAndSortedQueue.length}
             </span>
@@ -163,18 +183,18 @@ const VerificationQueueTable = ({
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} aria-hidden="true" />
-              <label htmlFor="queue-search" className="sr-only">Search providers by name or email</label>
+              <label htmlFor="queue-search" className="sr-only">{t('vqueue_search_placeholder')}</label>
               <input
                 id="queue-search"
                 type="text"
-                placeholder="Search name or email..."
+                placeholder={t('vqueue_search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 ref={searchInputRef}
                 className="pl-9 pr-3 py-2 border border-admin-border bg-admin-card rounded-xl text-xs w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-admin-text"
               />
             </div>
-            <label htmlFor="category-filter" className="sr-only">Filter by category</label>
+            <label htmlFor="category-filter" className="sr-only">{t('vqueue_filter_all')}</label>
             <select
               id="category-filter"
               value={filterCategory}
@@ -182,7 +202,7 @@ const VerificationQueueTable = ({
               ref={categorySelectRef}
               className="px-3 py-2 border border-admin-border rounded-xl text-xs bg-admin-card text-admin-text focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">All Categories</option>
+              <option value="">{t('vqueue_filter_all')}</option>
               {categories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
@@ -193,9 +213,9 @@ const VerificationQueueTable = ({
                   ? 'bg-blue-50 border-blue-300 text-blue-700'
                   : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
-              aria-label={`Sort by name ${sortBy === 'name' && sortOrder === 'asc' ? 'ascending' : 'descending'}`}
+              aria-label={`${t('vqueue_sort_name')} ${sortBy === 'name' && sortOrder === 'asc' ? 'ascending' : 'descending'}`}
             >
-              Name
+              {t('vqueue_sort_name')}
               {sortBy === 'name' && (sortOrder === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
             </button>
             <button
@@ -204,24 +224,24 @@ const VerificationQueueTable = ({
                   ? 'bg-blue-50 border-blue-300 text-blue-700'
                   : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
-              aria-label={`Sort by submission date ${sortBy === 'date' && sortOrder === 'asc' ? 'ascending' : 'descending'}`}
+              aria-label={`${t('vqueue_sort_date')} ${sortBy === 'date' && sortOrder === 'asc' ? 'ascending' : 'descending'}`}
             >
-              Date
+              {t('vqueue_sort_date')}
               {sortBy === 'date' && (sortOrder === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
             </button>
             {(searchTerm || filterCategory || sortBy !== 'date' || sortOrder !== 'desc') && (
               <button
                 onClick={resetFilters}
                 className="px-3 py-2 border border-red-200 rounded-xl text-xs text-red-600 hover:bg-red-50 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-red-500"
-                aria-label="Clear all filters"
+                aria-label={t('vqueue_clear')}
               >
-                <X size={12} /> Clear
+                <X size={12} /> {t('vqueue_clear')}
               </button>
             )}
           </div>
         </div>
         <p className="text-[10px] font-bold text-slate-400 italic mt-2">
-          Review service details before approval
+          {t('vqueue_review_msg')}
         </p>
       </div>
 
@@ -233,14 +253,14 @@ const VerificationQueueTable = ({
             <table className="w-full text-left" aria-label="Verification queue table">
               <thead className="bg-slate-50 dark:bg-black/20 text-admin-text-muted text-[9px] uppercase font-black border-b border-admin-border tracking-tighter">
                 <tr>
-                  <th className="px-6 py-5">Provider Full Name</th>
-                  <th className="px-6 py-5">Category</th>
-                  <th className="px-6 py-5">Service</th>
-                  <th className="px-6 py-5">Service Description</th>
-                  <th className="px-6 py-5 text-center">Est. Cost</th>
-                  <th className="px-6 py-5 text-center">Verification Files</th>
-                  <th className="px-6 py-5 text-center">Submission</th>
-                  <th className="px-8 py-5 text-center">Action</th>
+                  <th className="px-6 py-5">{t('vqueue_col_name')}</th>
+                  <th className="px-6 py-5">{t('vqueue_col_category')}</th>
+                  <th className="px-6 py-5">{t('vqueue_col_service')}</th>
+                  <th className="px-6 py-5">{t('vqueue_col_desc')}</th>
+                  <th className="px-6 py-5 text-center">{t('vqueue_col_cost')}</th>
+                  <th className="px-6 py-5 text-center">{t('vqueue_col_files')}</th>
+                  <th className="px-6 py-5 text-center">{t('vqueue_col_submission')}</th>
+                  <th className="px-8 py-5 text-center">{t('vqueue_col_action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-admin-border">
@@ -303,13 +323,13 @@ const VerificationQueueTable = ({
                             <button
                               onClick={() => onViewDescription(item.service_description, item.name)}
                               className="mt-1 flex items-center gap-1 text-blue-500 hover:text-blue-700 font-black text-[9px] uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                              aria-label={`Read full description for ${item.name}`}
+                              aria-label={`${t('vqueue_read_more')} ${item.name}`}
                             >
-                              <Eye size={10} aria-hidden="true" /> Read more
+                              <Eye size={10} aria-hidden="true" /> {t('vqueue_read_more')}
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-slate-300 italic">No description</span>
+                          <span className="text-[10px] text-slate-300 italic">{t('vqueue_no_desc')}</span>
                         )}
                       </td>
                       <td className="px-6 py-5 text-center">
@@ -330,11 +350,11 @@ const VerificationQueueTable = ({
                                 ? 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500'
                                 : 'bg-slate-200 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                               }`}
-                            aria-label={hasIdPhoto ? `View ID document for ${item.name}` : `No ID document available for ${item.name}`}
+                            aria-label={hasIdPhoto ? `${t('vqueue_id_doc')} for ${item.name}` : `No ID document available for ${item.name}`}
                             aria-disabled={!hasIdPhoto}
                           >
                             <ImageIcon size={10} aria-hidden="true" />
-                            {item.idPhotoType ? item.idPhotoType.split(' ')[0].toUpperCase() : 'ID DOC'}
+                            {item.idPhotoType ? translateDBString(item.idPhotoType.split(' ')[0]) : t('vqueue_id_doc')}
                           </button>
                           <button
                             onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
@@ -343,10 +363,10 @@ const VerificationQueueTable = ({
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                                 : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                               }`}
-                            aria-label={hasCredential ? `View licence for ${item.name}` : `No licence available for ${item.name}`}
+                            aria-label={hasCredential ? `${t('vqueue_licence')} for ${item.name}` : `No licence available for ${item.name}`}
                             aria-disabled={!hasCredential}
                           >
-                            <FileCheck size={10} aria-hidden="true" /> LICENCE
+                            <FileCheck size={10} aria-hidden="true" /> {t('vqueue_licence')}
                           </button>
                         </div>
                       </td>
@@ -362,23 +382,23 @@ const VerificationQueueTable = ({
                         <div className="flex justify-end gap-3">
                           {processingId === item.id ? (
                             <div className="flex items-center gap-2 text-slate-300 font-bold text-[9px] italic pr-2">
-                              <Loader2 className="animate-spin" size={14} aria-hidden="true" /> MAILING...
+                              <Loader2 className="animate-spin" size={14} aria-hidden="true" /> {t('vqueue_mailing')}
                             </div>
                           ) : (
                             <>
                               <button
                                 onClick={() => onVerify(item.id, item.name, true)}
-                                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                                aria-label={`Approve ${item.name}`}
+                                className="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-90 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center gap-2"
+                                aria-label={`${t('vqueue_approve')} ${item.name}`}
                               >
-                                Approve
+                                {t('vqueue_approve')}
                               </button>
                               <button
                                 onClick={() => onVerify(item.id, item.name, false)}
-                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all active:scale-90 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:shadow-red-900/20 shadow-lg shadow-red-100"
-                                aria-label={`Reject ${item.name}`}
+                                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all active:scale-90 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:shadow-red-900/20 shadow-lg shadow-red-100 flex items-center gap-2"
+                                aria-label={`${t('vqueue_reject')} ${item.name}`}
                               >
-                                Reject
+                                {t('vqueue_reject')}
                               </button>
                             </>
                           )}
@@ -432,11 +452,11 @@ const VerificationQueueTable = ({
 
                     <div className="grid grid-cols-2 gap-3 pb-3 border-b border-admin-border">
                       <div>
-                        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Service</p>
+                        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('vqueue_col_service')}</p>
                         <p className="text-xs font-bold text-blue-600 dark:text-blue-400 truncate">{item.service_title || '—'}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Est. Cost</p>
+                        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('vqueue_col_cost')}</p>
                         <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 italic">
                           {item.estimated_cost != null ? `${item.estimated_cost} ETB` : '—'}
                         </p>
@@ -444,7 +464,7 @@ const VerificationQueueTable = ({
                     </div>
 
                   <div className="space-y-2">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Documents</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('vqueue_col_files')}</p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')}
@@ -453,10 +473,10 @@ const VerificationQueueTable = ({
                             ? 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500'
                             : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                           }`}
-                        aria-label={hasIdPhoto ? `View ID document for ${item.name}` : `No ID document available for ${item.name}`}
+                        aria-label={hasIdPhoto ? `${t('vqueue_id_doc')} for ${item.name}` : `No ID document available for ${item.name}`}
                         aria-disabled={!hasIdPhoto}
                       >
-                        ID DOC
+                        {item.idPhotoType ? translateDBString(item.idPhotoType.split(' ')[0]) : t('vqueue_id_doc')}
                       </button>
                       <button
                         onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
@@ -465,10 +485,10 @@ const VerificationQueueTable = ({
                             ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                             : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                           }`}
-                        aria-label={hasCredential ? `View licence for ${item.name}` : `No licence available for ${item.name}`}
+                        aria-label={hasCredential ? `${t('vqueue_licence')} for ${item.name}` : `No licence available for ${item.name}`}
                         aria-disabled={!hasCredential}
                       >
-                        LICENCE
+                        {t('vqueue_licence')}
                       </button>
                     </div>
                   </div>
@@ -477,9 +497,9 @@ const VerificationQueueTable = ({
                       <button
                         onClick={() => onViewDescription(item.service_description, item.name)}
                         className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                        aria-label={`Read full description for ${item.name}`}
+                        aria-label={`${t('vqueue_view_full_desc')} for ${item.name}`}
                       >
-                      <Eye size={12} aria-hidden="true" /> View full description
+                      <Eye size={12} aria-hidden="true" /> {t('vqueue_view_full_desc')}
                     </button>
                   )}
 
@@ -488,19 +508,19 @@ const VerificationQueueTable = ({
                       <Loader2 className="animate-spin text-blue-600" size={20} aria-label="Processing" />
                     ) : (
                       <>
-                         <button
-                           onClick={() => onVerify(item.id, item.name, false)}
-                           className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-500 dark:text-red-400 rounded-xl text-[10px] font-black uppercase focus:outline-none focus:ring-2 focus:ring-red-500"
-                           aria-label={`Reject ${item.name}`}
-                         >
-                           Reject
-                         </button>
+                          <button
+                            onClick={() => onVerify(item.id, item.name, false)}
+                            className="flex-1 py-3 border border-red-200 dark:border-red-900/30 text-red-500 dark:text-red-400 rounded-xl text-[11px] font-black uppercase focus:outline-none focus:ring-2 focus:ring-red-500"
+                            aria-label={`${t('vqueue_reject')} ${item.name}`}
+                          >
+                            {t('vqueue_reject')}
+                          </button>
                         <button
                           onClick={() => onVerify(item.id, item.name, true)}
-                          className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                          aria-label={`Approve ${item.name}`}
+                          className="flex-1 py-3 bg-green-500 text-white rounded-xl text-[11px] font-black uppercase shadow-lg shadow-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                          aria-label={`${t('vqueue_approve')} ${item.name}`}
                         >
-                          Approve
+                          {t('vqueue_approve')}
                         </button>
                       </>
                     )}
@@ -516,15 +536,15 @@ const VerificationQueueTable = ({
             <CheckCircle className="text-slate-300 dark:text-slate-700" size={32} aria-hidden="true" />
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-            No providers match your filters
+            {t('vqueue_no_match')}
           </p>
           {(searchTerm || filterCategory) && (
             <button
               onClick={resetFilters}
               className="mt-4 text-blue-600 text-xs font-bold underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-              aria-label="Clear all filters"
+              aria-label={t('vqueue_clear_filters')}
             >
-              Clear filters
+              {t('vqueue_clear_filters')}
             </button>
           )}
         </div>
@@ -533,4 +553,4 @@ const VerificationQueueTable = ({
   );
 };
 
-export default VerificationQueueTable;
+export default VerificationQueueTable;

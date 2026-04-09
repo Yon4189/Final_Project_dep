@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Linkedin, Mail, Phone, Send } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import logo from '../assets/logo.jpg';
 
 const LandingFooter = () => {
+  const { t } = useTranslation();
   const developerInfo = [
-    { name: 'Yonas', role: 'Frontend web developer' },
-    { name: 'Natnayel', role: 'Backend developer' },
-    { name: 'Yoseph', role: 'Frontend mobile developer' }
+    { name: 'Yonas', role: t('role_frontend_web') },
+    { name: 'Natnayel', role: t('role_backend') },
+    { name: 'Yoseph', role: t('role_frontend_mobile') }
   ];
 
   return (
@@ -17,17 +19,17 @@ const LandingFooter = () => {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-white p-1.5 flex items-center justify-center">
-                <img src={logo} alt="Ethio HandyMan Logo" className="w-full h-full object-contain" />
+                <img src={logo} alt={t('project_logo')} className="w-full h-full object-contain" />
               </div>
-              <span className="text-2xl font-black tracking-tighter">Ethio HandyMan</span>
+              <span className="text-2xl font-black tracking-tighter">{t('brand_name')}</span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Empowering local economies through secure and reliable home-based service connections.
+              {t('footer_tagline')}
             </p>
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-lg font-bold">Developers</h4>
+            <h4 className="text-lg font-bold">{t('footer_developers')}</h4>
             <div className="space-y-4">
               {developerInfo.map((dev, idx) => (
                 <div key={idx} className="flex flex-col group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-white/5 transition-colors">
@@ -39,7 +41,7 @@ const LandingFooter = () => {
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-lg font-bold">Contact Us</h4>
+            <h4 className="text-lg font-bold">{t('footer_contact')}</h4>
             <div className="space-y-3 text-slate-400 text-sm">
               <p className="flex items-center gap-3">
                 <Mail size={16} className="text-blue-400" />
@@ -62,10 +64,10 @@ const LandingFooter = () => {
         </div>
 
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500 font-bold uppercase tracking-widest">
-          <p>&copy; 2026 Ethio HandyMan. All rights reserved.</p>
+          <p>&copy; 2026 {t('brand_name')}. {t('footer_rights')}</p>
           <div className="flex gap-8">
-            <Link to="/privacy" className="hover:text-white hover:underline transition-all">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-white hover:underline transition-all">Terms of Service</Link>
+            <Link to="/privacy" className="hover:text-white hover:underline transition-all">{t('privacy')}</Link>
+            <Link to="/terms" className="hover:text-white hover:underline transition-all">{t('terms')}</Link>
           </div>
         </div>
       </div>

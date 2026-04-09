@@ -38,7 +38,7 @@ const Dashboard = () => {
     show: false,
     providerId: null,
     providerName: '',
-    defaultReason: 'Provided service details or documents are invalid.',
+    defaultReason: t('modal_reject_placeholder'),
     inputReason: '',
   });
 
@@ -56,10 +56,10 @@ const Dashboard = () => {
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         queryClient.invalidateQueries({ queryKey: ['pendingProviders'] });
-        alert(status === 'approved' ? 'Account & Service Approved!' : 'Provider Rejected.');
+        alert(status === 'approved' ? t('alert_approved') : t('alert_rejected'));
       }
     } catch (error) {
-      alert('Action failed. Ensure backend mail server is active.');
+      alert(t('alert_action_failed'));
     } finally {
       setProcessingId(null);
     }
@@ -71,18 +71,18 @@ const Dashboard = () => {
         show: true,
         providerId: id,
         providerName: name,
-        defaultReason: 'Provided service details or documents are invalid.',
+        defaultReason: t('modal_reject_placeholder'),
         inputReason: '',
       });
       return;
     }
-    if (!window.confirm(`Approve ${name} and publish their service to the marketplace?`)) return;
+    if (!window.confirm(t('confirm_approve', { name }))) return;
     processVerification(id, 'approved');
   };
 
   const handleRejectSubmit = () => {
     if (!rejectModal.inputReason.trim()) {
-      alert('Please provide a rejection reason.');
+      alert(t('alert_provide_reason'));
       return;
     }
     setRejectModal((prev) => ({ ...prev, show: false }));
@@ -94,7 +94,7 @@ const Dashboard = () => {
       show: false,
       providerId: null,
       providerName: '',
-      defaultReason: 'Provided service details or documents are invalid.',
+      defaultReason: t('modal_reject_placeholder'),
       inputReason: '',
     });
   };
@@ -108,11 +108,11 @@ const Dashboard = () => {
       setQueueLength(pendingQueue.length);
       const announcer = document.getElementById('queue-announcer');
       if (announcer) {
-        announcer.textContent = `Verification queue updated. ${pendingQueue.length} providers pending.`;
+        announcer.textContent = t('announcer_vqueue_updated', { count: pendingQueue.length });
         setTimeout(() => { announcer.textContent = ''; }, 1000);
       }
     }
-  }, [pendingQueue.length, queueLength]);
+  }, [pendingQueue.length, queueLength, t]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">

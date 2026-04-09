@@ -1,7 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Save, Loader2 } from 'lucide-react';
 
 const CategoryModal = ({ isOpen, category, onClose, onSubmit, isSubmitting }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -32,12 +34,12 @@ const CategoryModal = ({ isOpen, category, onClose, onSubmit, isSubmitting }) =>
       <div className="bg-admin-card rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300 border border-admin-border">
         <div className="p-6 border-b border-admin-border flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
           <h2 className="text-xl font-bold text-admin-text uppercase tracking-tight">
-            {category ? 'Update Category' : 'New Category'}
+            {category ? t('serv_modal_update_cat') : t('serv_modal_new_cat')}
           </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-red-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded-full"
-            aria-label="Close modal"
+            aria-label={t('modal_close')}
           >
             <X size={24} />
           </button>
@@ -45,7 +47,7 @@ const CategoryModal = ({ isOpen, category, onClose, onSubmit, isSubmitting }) =>
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
             <label className="text-xs font-semibold text-admin-text-muted uppercase tracking-wider mb-1 block">
-              Category Name *
+              {t('serv_modal_cat_name')}
             </label>
             <input
               type="text"
@@ -57,20 +59,20 @@ const CategoryModal = ({ isOpen, category, onClose, onSubmit, isSubmitting }) =>
           </div>
           <div>
             <label className="text-xs font-semibold text-admin-text-muted uppercase tracking-wider mb-1 block">
-              Status
+              {t('serv_status')}
             </label>
             <select
               className="w-full border border-admin-border rounded-xl py-3 px-4 focus:ring-2 focus:ring-blue-500 outline-none bg-admin-card text-admin-text"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
+              <option value="Active">{t('serv_status_active')}</option>
+              <option value="Inactive">{t('serv_status_inactive')}</option>
             </select>
           </div>
           <div>
             <label className="text-xs font-semibold text-admin-text-muted uppercase tracking-wider mb-1 block">
-              Description (optional)
+              {t('serv_modal_desc_optional')}
             </label>
             <textarea
               rows="3"
@@ -86,7 +88,7 @@ const CategoryModal = ({ isOpen, category, onClose, onSubmit, isSubmitting }) =>
               className="w-full bg-slate-800 dark:bg-blue-600 hover:bg-slate-900 dark:hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-              {isSubmitting ? 'Saving...' : 'Save Category'}
+              {isSubmitting ? t('serv_modal_saving') : t('serv_modal_save_cat')}
             </button>
           </div>
         </form>
@@ -95,4 +97,4 @@ const CategoryModal = ({ isOpen, category, onClose, onSubmit, isSubmitting }) =>
   );
 };
 
-export default CategoryModal;
+export default CategoryModal;

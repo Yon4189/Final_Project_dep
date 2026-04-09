@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { User, Lock, Eye, EyeOff, Loader2, ArrowLeft, ShieldCheck, Sun, Moon } from 'lucide-react';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import api from '../api/axios';
 import logo from '../assets/logo.jpg';
 
 const Login = () => {
+  const { t } = useTranslation();
   // Mode toggle: 'login' or 'forgot'
   const [viewMode, setViewMode] = useState('login');
 
@@ -22,7 +25,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- Login Handler ---
-  // In your Login component (admin login)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -32,14 +34,11 @@ const Login = () => {
       const response = await api.post('/admin/login', { email, password });
 
       if (response.data.success) {
-        // extract admin data and token from response
-        const adminData = response.data.data.admin;  // fixed: access admin object
-        const token = response.data.data.token;      // fixed: access token from data object
+        const adminData = response.data.data.admin;
+        const token = response.data.data.token;
 
-        // store token in sessionStorage
         sessionStorage.setItem('admin_token', token);
 
-        // create user session object
         const userSession = {
           id: adminData.adminID,
           name: adminData.fullname,
@@ -49,19 +48,14 @@ const Login = () => {
           role: 'admin'
         };
 
-        // store user data in sessionStorage
         sessionStorage.setItem('admin_user', JSON.stringify(userSession));
-
-        // call login function from auth context
         login(userSession, token);
-
-        // redirect to dashboard
         navigate('/admin');
       } else {
-        setError(response.data.message || 'Login failed');
+        setError(response.data.message || t('msg_login_failed'));
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || t('msg_login_failed'));
     } finally {
       setIsLoading(false);
     }
@@ -75,16 +69,15 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Hits the multi-table route we discussed earlier
       const response = await api.post('/forgot-password', { email, role: 'admin' });
       if (response.data.success) {
-        setSuccessMsg("Verification code sent! Redirecting...");
+        setSuccessMsg(t('msg_code_sent'));
         setTimeout(() => {
           navigate(`/reset-password?email=${encodeURIComponent(email)}`);
         }, 1500);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Error sending verification code.");
+      setError(err.response?.data?.message || t('msg_code_error'));
     } finally {
       setIsLoading(false);
     }
@@ -98,31 +91,36 @@ const Login = () => {
 
       <div className="absolute top-6 left-6 right-6 md:top-10 md:left-10 md:right-10 flex justify-between items-center z-50">
         <Link to="/" className="flex items-center gap-2 text-slate-500 dark:text-admin-text-muted hover:text-slate-900 dark:hover:text-white transition-all bg-white/80 backdrop-blur-md dark:bg-admin-card/80 px-5 py-2.5 rounded-full shadow-sm hover:shadow hover:-translate-y-0.5 border border-slate-200 dark:border-admin-border font-bold text-sm">
-          <ArrowLeft size={16} /> Back to Home
+          <ArrowLeft size={16} /> {t('back_to_home')}
         </Link>
 
-        <button 
-          onClick={toggleTheme}
-          className="w-11 h-11 flex items-center justify-center rounded-full bg-white/80 dark:bg-admin-card/80 backdrop-blur-md shadow-sm hover:shadow hover:-translate-y-0.5 border border-slate-200 dark:border-admin-border text-slate-500 dark:text-admin-text-muted hover:text-slate-900 dark:hover:text-white transition-all"
-          title="Toggle Theme"
-        >
-          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="bg-white/80 dark:bg-admin-card/80 backdrop-blur-md rounded-full shadow-sm border border-slate-200 dark:border-admin-border px-3">
+            <LanguageSwitcher />
+          </div>
+          <button 
+            onClick={toggleTheme}
+            className="w-11 h-11 flex items-center justify-center rounded-full bg-white/80 dark:bg-admin-card/80 backdrop-blur-md shadow-sm hover:shadow hover:-translate-y-0.5 border border-slate-200 dark:border-admin-border text-slate-500 dark:text-admin-text-muted hover:text-slate-900 dark:hover:text-white transition-all"
+            title={t('toggle_theme')}
+          >
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white/80 backdrop-blur-xl dark:bg-admin-card w-full max-w-md rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.08)] dark:shadow-2xl p-8 sm:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 border border-white dark:border-slate-800 relative z-10">
 
         <div className="text-center mb-10 space-y-4">
           <div className="w-20 h-20 bg-white rounded-3xl mx-auto flex items-center justify-center shadow-xl p-2 mb-6 transform hover:scale-105 transition-transform duration-300">
-            <img src={logo} alt="Ethio HandyMan" className="w-full h-full object-contain rounded-2xl" />
+            <img src={logo} alt={t('project_logo')} className="w-full h-full object-contain rounded-2xl" />
           </div>
           <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            {viewMode === 'login' ? 'Welcome Back' : 'Recover Access'}
+            {viewMode === 'login' ? t('welcome_back') : t('recover_access')}
           </h2>
           <p className="text-slate-500 dark:text-admin-text-muted text-sm font-medium">
             {viewMode === 'login'
-              ? 'Enter your credentials to access the system'
-              : 'Enter your email to receive a reset link'}
+              ? t('login_subtitle')
+              : t('forgot_subtitle')}
           </p>
         </div>
 
@@ -144,7 +142,7 @@ const Login = () => {
           /* LOGIN FORM */
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">Admin Email</label>
+              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('admin_email')}</label>
               <div className="relative">
                 <input
                   type="email" required placeholder="Admin@gmail.com"
@@ -156,7 +154,7 @@ const Login = () => {
             </div>
 
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">Password</label>
+              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"} required placeholder="••••••••"
@@ -177,12 +175,12 @@ const Login = () => {
                 onClick={() => { setViewMode('forgot'); setError(''); setSuccessMsg(''); }}
                 className="text-blue-600 hover:text-blue-700 text-sm font-bold hover:underline transition-all"
               >
-                forgot Password?
+                {t('forgot_password_link')}
               </button>
             </div>
 
             <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 text-lg transition-all active:scale-95 mt-6">
-              {isLoading ? <Loader2 className="animate-spin" size={24} /> : 'Login'}
+              {isLoading ? <Loader2 className="animate-spin" size={24} /> : t('login_btn')}
               {!isLoading && <ArrowLeft size={20} className="rotate-180" />}
             </button>
           </form>
@@ -190,7 +188,7 @@ const Login = () => {
           /* FORGOT PASSWORD FORM */
           <form onSubmit={handleForgotPassword} className="space-y-6">
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">Registered Email</label>
+              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('registered_email')}</label>
               <div className="relative">
                 <input
                   type="email" required placeholder="Admin@gmail.com"
@@ -202,7 +200,7 @@ const Login = () => {
             </div>
 
             <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 text-lg transition-all active:scale-95 mt-6">
-              {isLoading ? <Loader2 className="animate-spin" size={24} /> : 'Send Reset Link'}
+              {isLoading ? <Loader2 className="animate-spin" size={24} /> : t('send_reset_link')}
             </button>
 
             <button
@@ -210,7 +208,7 @@ const Login = () => {
               onClick={() => { setViewMode('login'); setError(''); setSuccessMsg(''); }}
               className="w-full flex items-center justify-center gap-2 text-slate-500 font-bold hover:text-slate-900 dark:hover:text-white transition-colors pt-4"
             >
-              <ArrowLeft size={16} /> Return to Login
+              <ArrowLeft size={16} /> {t('return_to_login')}
             </button>
           </form>
         )}

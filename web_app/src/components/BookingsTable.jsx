@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Search, X, Eye, Calendar, MapPin, DollarSign, Clock, Wrench,
   CheckCircle, XCircle, Loader2, AlertCircle, Filter, XCircle as XCircleIcon,
@@ -23,7 +24,7 @@ const getStatusStyle = (status) => {
   }
 };
 
-const TimelineStep = ({ label, date, icon: Icon, isComplete, isCurrent, bookingStatus }) => {
+const TimelineStep = ({ label, date, icon: Icon, isComplete, isCurrent, bookingStatus, t }) => {
   const stepStatus = isComplete ? 'complete' : (isCurrent ? 'current' : 'pending');
   const isTerminal = ['cancelled', 'rejected', 'expired'].includes(bookingStatus?.toLowerCase());
   
@@ -41,7 +42,7 @@ const TimelineStep = ({ label, date, icon: Icon, isComplete, isCurrent, bookingS
       <div className="flex-1">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
         <p className={`text-sm font-medium ${date !== 'Pending' ? 'text-admin-text' : 'text-admin-text-muted italic'}`}>
-          {date !== 'Pending' ? date : (isTerminal ? bookingStatus : '—')}
+          {date !== 'Pending' ? date : (isTerminal ? t(bookingStatus?.toLowerCase()) : '—')}
         </p>
       </div>
     </div>
@@ -56,6 +57,7 @@ const BookingsTable = ({
   error,
   onRefresh,
 }) => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -134,12 +136,19 @@ const BookingsTable = ({
 
   const hasActiveFilters = searchQuery || sortBy !== 'date' || sortOrder !== 'desc';
 
+  const getStatusTranslation = (status) => {
+    const s = status?.toLowerCase();
+    if (s === 'waiting_customer_confirmation' || s === 'waiting_customer') return t('status_waiting_customer');
+    if (s === 'in_progress') return t('status_in_progress');
+    return t(`status_${s}`) || status;
+  };
+
   if (isLoading) {
     return (
       <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <Loader2 className="animate-spin text-blue-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Loading bookings...</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t('bookings_loading')}</p>
         </div>
       </div>
     );
@@ -150,13 +159,13 @@ const BookingsTable = ({
       <div className="bg-admin-card rounded-[2rem] shadow-sm border border-admin-border overflow-hidden min-h-[450px] flex items-center justify-center">
         <div className="text-center p-12">
           <AlertCircle className="text-red-500 w-10 h-10 mx-auto mb-4" />
-          <p className="text-sm font-medium text-red-600 mb-2">Database connection failed</p>
+          <p className="text-sm font-medium text-red-600 mb-2">{t('db_disconnected')}</p>
           <p className="text-xs text-admin-text-muted mb-4">{error?.message || 'Unable to connect to server'}</p>
           <button
             onClick={onRefresh}
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 bg-admin-card hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-admin-text"
           >
-            Try Again
+            {t('vqueue_clear')}
           </button>
         </div>
       </div>
@@ -173,7 +182,7 @@ const BookingsTable = ({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
               <input
                 type="text"
-                placeholder="Search by ID, customer, or provider..."
+                placeholder={t('bookings_search_placeholder')}
                 className="pl-10 pr-10 py-2.5 border border-admin-border rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none bg-admin-card text-sm text-admin-text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -189,7 +198,7 @@ const BookingsTable = ({
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sort By:</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('serv_filter_by')}</span>
 
               <button
                 onClick={() => toggleSort('date')}
@@ -199,7 +208,7 @@ const BookingsTable = ({
                     : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                Date
+                {t('user_mgmt_joined')}
                 {sortBy === 'date' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
               </button>
 
@@ -211,7 +220,7 @@ const BookingsTable = ({
                     : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                Price
+                {t('bookings_price')}
                 {sortBy === 'price' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
               </button>
 
@@ -223,7 +232,7 @@ const BookingsTable = ({
                     : 'border-admin-border text-admin-text-muted hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                Status
+                {t('bookings_status')}
                 {sortBy === 'status' && (sortOrder === 'asc' ? <span className="text-xs">↑</span> : <span className="text-xs">↓</span>)}
               </button>
 
@@ -232,7 +241,7 @@ const BookingsTable = ({
                   onClick={resetFilters}
                   className="flex items-center gap-1 px-3 py-2.5 border border-red-200 rounded-xl text-sm text-red-600 hover:bg-red-50 transition"
                 >
-                  <XCircleIcon size={16} /> Clear
+                  <XCircleIcon size={16} /> {t('vqueue_clear')}
                 </button>
               )}
             </div>
@@ -241,10 +250,9 @@ const BookingsTable = ({
           {hasActiveFilters && (
             <div className="mt-3 text-xs text-slate-500 flex items-center gap-2">
               <Filter size={12} />
-              <span>Active filters: </span>
-              {searchQuery && <span className="bg-slate-100 px-2 py-0.5 rounded">Search: {searchQuery}</span>}
-              {sortBy !== 'date' && <span className="bg-slate-100 px-2 py-0.5 rounded">Sort: {sortBy} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
-              {sortBy === 'date' && sortOrder !== 'desc' && <span className="bg-slate-100 px-2 py-0.5 rounded">Date: oldest first</span>}
+              <span>{t('user_mgmt_active_filters')} </span>
+              {searchQuery && <span className="bg-slate-100 px-2 py-0.5 rounded">{searchQuery}</span>}
+              {sortBy !== 'date' && <span className="bg-slate-100 px-2 py-0.5 rounded">{t('common_sort') || 'Sort'}: {t(`bookings_${sortBy}`)} ({sortOrder === 'asc' ? 'asc' : 'desc'})</span>}
             </div>
           )}
         </div>
@@ -254,23 +262,23 @@ const BookingsTable = ({
           <table className="w-full text-left">
             <thead className="bg-admin-card text-admin-text border-b border-admin-border text-[11px] uppercase font-bold tracking-wider">
               <tr>
-                <th className="px-6 py-4">Booking ID</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Provider</th>
-                <th className="px-6 py-4">Service</th>
-                <th className="px-6 py-4">Scheduled</th>
-                <th className="px-6 py-4 text-center">Location</th>
-                <th className="px-6 py-4 text-right">Price</th>
-                <th className="px-6 py-4 text-center">Payment</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-right">View</th>
+                <th className="px-6 py-4">{t('bookings_id')}</th>
+                <th className="px-6 py-4">{t('bookings_customer')}</th>
+                <th className="px-6 py-4">{t('bookings_provider')}</th>
+                <th className="px-6 py-4">{t('bookings_service')}</th>
+                <th className="px-6 py-4">{t('bookings_scheduled')}</th>
+                <th className="px-6 py-4 text-center">{t('bookings_location')}</th>
+                <th className="px-6 py-4 text-right">{t('bookings_price')}</th>
+                <th className="px-6 py-4 text-center">{t('bookings_payment')}</th>
+                <th className="px-6 py-4 text-center">{t('bookings_status')}</th>
+                <th className="px-6 py-4 text-right">{t('bookings_view')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-admin-border">
               {currentItems.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="text-center py-12 text-slate-400 text-sm">
-                    No bookings found.
+                    {t('bookings_no_bookings')}
                   </td>
                 </tr>
               ) : (
@@ -301,12 +309,12 @@ const BookingsTable = ({
                           ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                           : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                       }`}>
-                        <span className="text-admin-text">{booking.payment_status}</span>
+                        <span className="text-admin-text">{t(`status_${booking.payment_status?.toLowerCase()}`) || booking.payment_status}</span>
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusStyle(booking.status)}`}>
-                        <span className="text-admin-text">{booking.status}</span>
+                        <span className="text-admin-text">{getStatusTranslation(booking.status)}</span>
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -328,34 +336,34 @@ const BookingsTable = ({
         {/* Mobile Card View */}
         <div className="lg:hidden p-4 space-y-4">
           {currentItems.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">No bookings found.</div>
+            <div className="text-center py-12 text-slate-400 text-sm">{t('bookings_no_bookings')}</div>
           ) : (
             currentItems.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
+              <div key={booking.id} className="bg-admin-card rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-mono text-xs text-slate-400">#{booking.id}</p>
                     <p className="font-semibold text-admin-text text-base">{booking.customer_name}</p>
-                    <p className="text-xs text-admin-text-muted">Provider: {booking.provider_name}</p>
+                    <p className="text-xs text-admin-text-muted">{t('bookings_provider')}: {booking.provider_name}</p>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(booking.status)}`}>
-                    {booking.status}
+                    {getStatusTranslation(booking.status)}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex items-center gap-1"><Calendar size={14} className="text-slate-400" /> {booking.scheduled_at}</div>
                   <div className="flex items-center gap-1"><MapPin size={14} className="text-slate-400" /> {booking.location?.split(',')[0] || 'N/A'}</div>
-                  <div className="flex items-center gap-1"><span className="font-semibold">Service:</span> {booking.service_type}</div>
-                  <div className="flex items-center gap-1"><span className="font-semibold">Price:</span> <span className="text-admin-text font-bold">{booking.price} ETB</span></div>
-                  <div className="flex items-center gap-1"><span className="font-semibold">Payment:</span> {booking.payment_status}</div>
+                  <div className="flex items-center gap-1"><span className="font-semibold text-admin-text-muted">{t('bookings_service')}:</span> {booking.service_type}</div>
+                  <div className="flex items-center gap-1"><span className="font-semibold text-admin-text-muted">{t('bookings_price')}:</span> <span className="text-admin-text font-bold">{booking.price} ETB</span></div>
+                  <div className="flex items-center gap-1"><span className="font-semibold text-admin-text-muted">{t('bookings_payment')}:</span> {t(`status_${booking.payment_status?.toLowerCase()}`) || booking.payment_status}</div>
                 </div>
 
                 <button
                   onClick={() => setSelectedBooking(booking)}
                   className="w-full mt-2 bg-admin-card border border-admin-border text-admin-text py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
-                  <Eye size={14} /> View Details
+                  <Eye size={14} /> {t('bookings_view_details')}
                 </button>
               </div>
             ))
@@ -366,7 +374,7 @@ const BookingsTable = ({
         {totalPages > 1 && (
           <div className="p-6 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row items-center justify-between gap-4">
             <span className="text-xs font-medium text-admin-text-muted">
-              Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, processedData.length)} of {processedData.length}
+              {t('serv_showing_x_of_y', { start: indexOfFirstItem + 1, end: Math.min(indexOfLastItem, processedData.length), total: processedData.length })}
             </span>
             <div className="flex items-center gap-1 bg-admin-card p-1.5 rounded-xl border border-admin-border shadow-sm">
               <button
@@ -410,7 +418,7 @@ const BookingsTable = ({
               selectedBooking.status?.toLowerCase() === 'completed' ? 'bg-green-600' : 'bg-slate-900'
             }`}>
               <div>
-                <h2 className="text-xl font-bold">Booking #{selectedBooking.id}</h2>
+                <h2 className="text-xl font-bold">{t('bookings_id')} #{selectedBooking.id}</h2>
                 <p className="text-xs opacity-80 mt-1">{selectedBooking.customer_name} → {selectedBooking.provider_name}</p>
               </div>
               <button onClick={() => setSelectedBooking(null)} className="hover:rotate-90 transition-transform p-2">
@@ -424,31 +432,31 @@ const BookingsTable = ({
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-2xl"><DollarSign size={20} /></div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">Total Fee</p>
-                    <p className="text-xl font-bold text-slate-900">{selectedBooking.price} ETB</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase">{t('bookings_total_fee')}</p>
+                    <p className="text-xl font-bold text-admin-text">{selectedBooking.price} ETB</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Commission (10%)</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">{t('bookings_commission')}</p>
                   <p className="text-sm font-bold text-blue-600">{(selectedBooking.price * 0.1).toFixed(2)} ETB</p>
                 </div>
               </div>
 
               {/* Service Info */}
               <div className="bg-admin-card p-5 rounded-2xl border border-admin-border space-y-3">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Service Details</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('bookings_service_details')}</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="dark:text-slate-300"><span className="font-semibold text-admin-text-muted">Type:</span> {selectedBooking.service_type}</div>
-                  <div className="dark:text-slate-300"><span className="font-semibold text-admin-text-muted">Location:</span> {selectedBooking.location || 'N/A'}</div>
-                  <div className="dark:text-slate-300"><span className="font-semibold text-admin-text-muted">Scheduled:</span> {selectedBooking.scheduled_at}</div>
-                  <div className="dark:text-slate-300"><span className="font-semibold text-admin-text-muted">Payment:</span> {selectedBooking.payment_status}</div>
+                  <div className="text-admin-text"><span className="font-semibold text-admin-text-muted">{t('sidebar_services')}:</span> {selectedBooking.service_type}</div>
+                  <div className="text-admin-text"><span className="font-semibold text-admin-text-muted">{t('bookings_location')}:</span> {selectedBooking.location || 'N/A'}</div>
+                  <div className="text-admin-text"><span className="font-semibold text-admin-text-muted">{t('bookings_scheduled')}:</span> {selectedBooking.scheduled_at}</div>
+                  <div className="text-admin-text"><span className="font-semibold text-admin-text-muted">{t('bookings_payment')}:</span> {t(`status_${selectedBooking.payment_status?.toLowerCase()}`) || selectedBooking.payment_status}</div>
                 </div>
               </div>
 
               {/* Timeline / Progress */}
               <div className="p-5 bg-admin-card rounded-2xl border border-admin-border space-y-4">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <Clock size={14} /> Operational Timeline
+                  <Clock size={14} /> {t('bookings_timeline')}
                 </p>
                 <div className="space-y-6 relative before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200 dark:before:bg-slate-700">
                   {(() => {
@@ -457,19 +465,13 @@ const BookingsTable = ({
                     
                     const steps = [];
                     
-                    // 9. Created_at (for all states)
-                    steps.push({ label: 'Order Created', date: selectedBooking.created_at, icon: Clock, isComplete: true });
+                    steps.push({ label: t('bookings_step_created'), date: selectedBooking.created_at, icon: Clock, isComplete: true });
+                    steps.push({ label: t('bookings_step_scheduled'), date: selectedBooking.scheduled_at, icon: Calendar, isComplete: true });
+                    steps.push({ label: t('bookings_step_paid'), date: selectedBooking.paid_at, icon: DollarSign, isComplete: selectedBooking.paid_at !== 'Unpaid' });
 
-                    // 1. Scheduled_for (for all six states)
-                    steps.push({ label: 'Scheduled For', date: selectedBooking.scheduled_at, icon: Calendar, isComplete: true });
-
-                    // 10. Paid_at (for all states)
-                    steps.push({ label: 'Payment Settled', date: selectedBooking.paid_at, icon: DollarSign, isComplete: selectedBooking.paid_at !== 'Unpaid' });
-
-                    // 2. Accepted_at (for all states except pending and expired)
                     if (status !== 'pending' && status !== 'expired') {
                       steps.push({ 
-                        label: 'Request Accepted', 
+                        label: t('bookings_step_accepted'), 
                         date: selectedBooking.accepted_at, 
                         icon: CheckCircle, 
                         isComplete: selectedBooking.accepted_at !== 'Pending',
@@ -477,20 +479,17 @@ const BookingsTable = ({
                       });
                     }
 
-                    // 3. Rejected_at (for Rejected state only)
                     if (status === 'rejected') {
-                      steps.push({ label: 'Request Rejected', date: selectedBooking.rejected_at, icon: XCircle, isComplete: true });
+                      steps.push({ label: t('bookings_step_rejected'), date: selectedBooking.rejected_at, icon: XCircle, isComplete: true });
                     }
 
-                    // 7. Expired_at (for Expired state only)
                     if (status === 'expired') {
-                      steps.push({ label: 'Request Expired', date: selectedBooking.expires_at, icon: AlertCircle, isComplete: true });
+                      steps.push({ label: t('bookings_step_expired'), date: selectedBooking.expires_at, icon: AlertCircle, isComplete: true });
                     }
 
-                    // 8. Customer Confirm_at (for Accepted state and completed states)
                     if (status === 'completed' || operationalStates.includes(status)) {
                       steps.push({ 
-                        label: 'Customer Confirmation', 
+                        label: t('bookings_step_customer_confirm'), 
                         date: selectedBooking.customer_confirmed_at, 
                         icon: UserCheck, 
                         isComplete: selectedBooking.customer_confirmed_at !== 'Pending',
@@ -498,12 +497,11 @@ const BookingsTable = ({
                       });
                     }
 
-                    // Completed Only Steps (4, 5, 6, 11)
                     if (status === 'completed') {
-                      steps.push({ label: 'Provider Arrived', date: selectedBooking.provider_arrived_at, icon: MapPin, isComplete: selectedBooking.provider_arrived_at !== 'Pending' });
-                      steps.push({ label: 'Job Started', date: selectedBooking.provider_started_at, icon: Wrench, isComplete: selectedBooking.provider_started_at !== 'Pending' });
-                      steps.push({ label: 'Job Completed', date: selectedBooking.completed_at, icon: CheckCircle, isComplete: selectedBooking.completed_at !== 'Pending' });
-                      steps.push({ label: 'Revenue Released', date: selectedBooking.released_at, icon: DollarSign, isComplete: selectedBooking.released_at !== 'Pending' });
+                      steps.push({ label: t('bookings_step_arrived'), date: selectedBooking.provider_arrived_at, icon: MapPin, isComplete: selectedBooking.provider_arrived_at !== 'Pending' });
+                      steps.push({ label: t('bookings_step_started'), date: selectedBooking.provider_started_at, icon: Wrench, isComplete: selectedBooking.provider_started_at !== 'Pending' });
+                      steps.push({ label: t('bookings_step_completed'), date: selectedBooking.completed_at, icon: CheckCircle, isComplete: selectedBooking.completed_at !== 'Pending' });
+                      steps.push({ label: t('bookings_step_released'), date: selectedBooking.released_at, icon: DollarSign, isComplete: selectedBooking.released_at !== 'Pending' });
                     }
 
                     return steps.map((step, idx) => (
@@ -515,6 +513,7 @@ const BookingsTable = ({
                         isComplete={step.isComplete}
                         isCurrent={step.isCurrent}
                         bookingStatus={selectedBooking.status}
+                        t={t}
                       />
                     ));
                   })()}
@@ -525,7 +524,7 @@ const BookingsTable = ({
                 onClick={() => setSelectedBooking(null)}
                 className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition mt-2"
               >
-                Close
+                {t('modal_close')}
               </button>
             </div>
           </div>

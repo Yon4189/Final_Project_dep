@@ -23,10 +23,10 @@ const LandingNavbar = () => {
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-xl bg-white p-1 overflow-hidden shadow-sm group-hover:scale-110 transition-transform">
-            <img src={logo} alt="Project Logo" className="w-full h-full object-contain" />
+            <img src={logo} alt={t('project_logo')} className="w-full h-full object-contain" />
           </div>
           <span className="text-xl font-black tracking-tighter text-white">
-            Ethio <span className="text-white">HandyMan</span>
+            {t('brand_name')}
           </span>
         </Link>
 
@@ -51,7 +51,7 @@ const LandingNavbar = () => {
             <button
               onClick={toggleTheme}
               className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-slate-300 hover:text-white hover:bg-white/20 transition-all border border-white/10"
-              title="Toggle Theme"
+              title={t('toggle_theme')}
             >
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>

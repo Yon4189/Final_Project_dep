@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Mail, ShieldCheck, Camera, Phone, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 
 const Profile = () => {
+  const { t } = useTranslation();
   const { user, login } = useAuth();
   const fileInputRef = useRef(null);
   const location = useLocation();
@@ -53,7 +55,7 @@ const Profile = () => {
 
     // Validate type
     if (!file.type.startsWith('image/')) {
-      return triggerToast("Please select an image file", "error");
+      return triggerToast(t('profile_toast_pic_invalid'), "error");
     }
 
     setIsUploading(true);
@@ -76,11 +78,11 @@ const Profile = () => {
         const token = sessionStorage.getItem('admin_token');
         login(updatedUser, token);
 
-        triggerToast("Profile picture updated!");
+        triggerToast(t('profile_toast_pic_success'));
       }
     } catch (err) {
       console.error(err);
-      triggerToast("Error uploading image", "error");
+      triggerToast(t('profile_toast_pic_error'), "error");
     } finally {
       setIsUploading(false);
     }
@@ -111,10 +113,10 @@ const Profile = () => {
         const token = sessionStorage.getItem('admin_token');
         login(newUserSession, token);
 
-        triggerToast("Profile updated successfully!");
+        triggerToast(t('profile_toast_success'));
       }
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to update profile";
+      const msg = err.response?.data?.message || t('profile_toast_error');
       triggerToast(msg, 'error');
     } finally {
       setIsLoading(false);
@@ -142,7 +144,7 @@ const Profile = () => {
         </div>
       )}
 
-      <h1 className="text-2xl font-black text-admin-text italic tracking-tight">Admin Account Settings</h1>
+      <h1 className="text-2xl font-black text-admin-text italic tracking-tight">{t('profile_title')}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Avatar Section */}
@@ -183,7 +185,7 @@ const Profile = () => {
           <div>
             <h3 className="font-black text-admin-text text-xl italic tracking-tighter">{profileData.name}</h3>
             <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50 dark:bg-blue-900/10 py-1 px-3 rounded-full inline-block mt-2">
-              System Controller
+              {t('profile_role')}
             </p>
           </div>
         </div>
@@ -193,7 +195,7 @@ const Profile = () => {
           <form onSubmit={handleUpdate} className="p-6 sm:p-10 space-y-8" autoComplete="off">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Full Name</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{t('profile_fullname')}</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -207,7 +209,7 @@ const Profile = () => {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{t('profile_email')}</label>
                 <div className="relative">
                   <input
                     type="email"
@@ -221,7 +223,7 @@ const Profile = () => {
               </div>
 
               <div className="space-y-3 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Phone Number</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{t('profile_phone')}</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -242,7 +244,7 @@ const Profile = () => {
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black py-5 rounded-3xl transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95"
               >
                 {isLoading ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
-                {isLoading ? 'Processing...' : 'Save Profile Changes'}
+                {isLoading ? t('user_mgmt_processing') : t('profile_save_btn')}
               </button>
             </div>
           </form>

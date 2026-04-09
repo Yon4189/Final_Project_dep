@@ -48,8 +48,8 @@ const Home = () => {
                   <div className="w-24 h-24 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-xl shadow-blue-500/40 mb-6">
                     <ShieldCheck className="w-12 h-12 text-white" />
                   </div>
-                  <h3 className="text-2xl font-black mb-2">Secure Admin Ops</h3>
-                  <p className="text-slate-500 dark:text-admin-text-muted">Encrypted. Real-time. Professional.</p>
+                  <h3 className="text-2xl font-black mb-2">{t('secure_admin_ops')}</h3>
+                  <p className="text-slate-500 dark:text-admin-text-muted">{t('secure_admin_ops_desc')}</p>
                 </div>
               </div>
             </div>
@@ -61,19 +61,19 @@ const Home = () => {
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-3 gap-12">
               <div className="space-y-4 text-center p-8 bg-white dark:bg-admin-card rounded-[2rem] shadow-sm">
-                <div className="text-4xl font-black text-blue-600">Verified</div>
-                <p className="text-slate-500 dark:text-admin-text-muted font-bold uppercase tracking-widest text-xs">Trust as standard</p>
-                <p className="text-sm">Every service provider undergoes a rigorous identity and skill verification process.</p>
+                <div className="text-4xl font-black text-blue-600">{t('stat_verified')}</div>
+                <p className="text-slate-500 dark:text-admin-text-muted font-bold uppercase tracking-widest text-xs">{t('stat_trust')}</p>
+                <p className="text-sm">{t('stat_verified_desc')}</p>
               </div>
               <div className="space-y-4 text-center p-8 bg-white dark:bg-admin-card rounded-[2rem] shadow-sm">
-                <div className="text-4xl font-black text-indigo-600">Real-time</div>
-                <p className="text-slate-500 dark:text-admin-text-muted font-bold uppercase tracking-widest text-xs">Live Monitoring</p>
-                <p className="text-sm">Track bookings, disputes, and payments as they happen across the system.</p>
+                <div className="text-4xl font-black text-indigo-600">{t('stat_realtime')}</div>
+                <p className="text-slate-500 dark:text-admin-text-muted font-bold uppercase tracking-widest text-xs">{t('stat_live')}</p>
+                <p className="text-sm">{t('stat_realtime_desc')}</p>
               </div>
               <div className="space-y-4 text-center p-8 bg-white dark:bg-admin-card rounded-[2rem] shadow-sm">
-                <div className="text-4xl font-black text-purple-600">Secure</div>
-                <p className="text-slate-500 dark:text-admin-text-muted font-bold uppercase tracking-widest text-xs">Platform Integrity</p>
-                <p className="text-sm">Advanced encryption and role-based access control protecting all system data.</p>
+                <div className="text-4xl font-black text-purple-600">{t('stat_secure')}</div>
+                <p className="text-slate-500 dark:text-admin-text-muted font-bold uppercase tracking-widest text-xs">{t('stat_integrity')}</p>
+                <p className="text-sm">{t('stat_secure_desc')}</p>
               </div>
             </div>
           </div>
@@ -82,23 +82,23 @@ const Home = () => {
         {/* Quick Access to subpages */}
         <section className="py-24 px-6">
           <div className="max-w-7xl mx-auto text-center space-y-12">
-            <h2 className="text-4xl font-black tracking-tight">Explore the System</h2>
+            <h2 className="text-4xl font-black tracking-tight">{t('explore_system')}</h2>
             <div className="grid md:grid-cols-2 gap-8">
               <Link to="/about" className="group p-12 bg-white dark:bg-admin-card border border-slate-200 dark:border-admin-border rounded-[3rem] hover:shadow-2xl transition-all text-left space-y-4">
                 <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
                   <Info size={24} />
                 </div>
-                <h3 className="text-2xl font-black">Our Mission</h3>
-                <p className="text-slate-500 dark:text-admin-text-muted leading-relaxed">Discover why we are building Ethio HandyMan and how we aim to revolutionize local service markets.</p>
-                <div className="flex items-center gap-2 text-blue-600 font-bold group-hover:gap-4 transition-all pt-4"> Read Story <ArrowRight size={18} /></div>
+                <h3 className="text-2xl font-black">{t('our_mission')}</h3>
+                <p className="text-slate-500 dark:text-admin-text-muted leading-relaxed">{t('our_mission_desc')}</p>
+                <div className="flex items-center gap-2 text-blue-600 font-bold group-hover:gap-4 transition-all pt-4"> {t('read_story')} <ArrowRight size={18} /></div>
               </Link>
               <Link to="/workflow" className="group p-12 bg-white dark:bg-admin-card border border-slate-200 dark:border-admin-border rounded-[3rem] hover:shadow-2xl transition-all text-left space-y-4">
                 <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                   <Zap size={24} />
                 </div>
-                <h3 className="text-2xl font-black">Operational Flow</h3>
-                <p className="text-slate-500 dark:text-admin-text-muted leading-relaxed">See the technical and operational steps that make our marketplace function flawlessly.</p>
-                <div className="flex items-center gap-2 text-indigo-600 font-bold group-hover:gap-4 transition-all pt-4"> View Workflow <ArrowRight size={18} /></div>
+                <h3 className="text-2xl font-black">{t('operational_flow')}</h3>
+                <p className="text-slate-500 dark:text-admin-text-muted leading-relaxed">{t('operational_flow_desc')}</p>
+                <div className="flex items-center gap-2 text-indigo-600 font-bold group-hover:gap-4 transition-all pt-4"> {t('view_workflow')} <ArrowRight size={18} /></div>
               </Link>
             </div>
           </div>
