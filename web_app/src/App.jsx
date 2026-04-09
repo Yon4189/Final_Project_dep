@@ -13,6 +13,8 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import About from './pages/About';
 import Workflow from './pages/Workflow';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import Dashboard from './pages/Dashboard';
 import Verification from './pages/Verification';
 import Users from './pages/Users';
@@ -54,6 +56,8 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
               <Route path="/workflow" element={<Workflow />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/payment/:txRef" element={<Payment />} />

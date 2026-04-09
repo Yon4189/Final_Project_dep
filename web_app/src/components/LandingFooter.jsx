@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Linkedin, Mail, Phone, Send } from 'lucide-react';
 import logo from '../assets/logo.jpg';
 
@@ -10,9 +11,9 @@ const LandingFooter = () => {
   ];
 
   return (
-    <footer className="bg-slate-900 text-white py-20 px-6">
+    <footer className="bg-slate-900 text-white py-12 px-6 border-t border-slate-800">
       <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-3 gap-16 mb-16">
+        <div className="grid md:grid-cols-3 gap-8 lg:gap-12 mb-10">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-white p-1.5 flex items-center justify-center">
@@ -29,9 +30,9 @@ const LandingFooter = () => {
             <h4 className="text-lg font-bold">Developers</h4>
             <div className="space-y-4">
               {developerInfo.map((dev, idx) => (
-                <div key={idx} className="flex flex-col">
-                  <span className="font-bold text-blue-400">{dev.name}</span>
-                  <span className="text-slate-400 text-xs">{dev.role}</span>
+                <div key={idx} className="flex flex-col group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-white/5 transition-colors">
+                  <span className="font-bold text-blue-400 group-hover:text-blue-300 transition-colors">{dev.name}</span>
+                  <span className="text-slate-400 text-xs group-hover:text-slate-300 transition-colors">{dev.role}</span>
                 </div>
               ))}
             </div>
@@ -49,11 +50,11 @@ const LandingFooter = () => {
                 <a href="tel:+251927061530" className="hover:text-white transition-colors">+251 9 27 06 15 30</a>
               </p>
             </div>
-            <div className="flex gap-4 pt-2">
-              <a href="https://t.me/Yon_4189" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-blue-400 transition-colors" title="Telegram">
+            <div className="flex gap-4 pt-4">
+              <a href="https://t.me/Yon_4189" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-blue-400 hover:scale-110 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-400/20 transition-all duration-300" title="Telegram">
                 <Send size={18} className="translate-x-[-1px] translate-y-[1px]" />
               </a>
-              <a href="https://www.linkedin.com/in/yonas-abate-5877063b6" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-blue-600 transition-colors" title="LinkedIn">
+              <a href="https://www.linkedin.com/in/yonas-abate-5877063b6" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-blue-600 hover:scale-110 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-600/20 transition-all duration-300" title="LinkedIn">
                 <Linkedin size={18} />
               </a>
             </div>
@@ -63,8 +64,8 @@ const LandingFooter = () => {
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500 font-bold uppercase tracking-widest">
           <p>&copy; 2026 Ethio HandyMan. All rights reserved.</p>
           <div className="flex gap-8">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+            <Link to="/privacy" className="hover:text-white hover:underline transition-all">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-white hover:underline transition-all">Terms of Service</Link>
           </div>
         </div>
       </div>
