@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, Settings, Menu, X, Loader2, Star, ShieldCheck, Layers, Wrench, Users as UsersIcon, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import NotificationDropdown from '../components/NotificationDropdown';
 import { useTheme } from '../context/ThemeContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const Topbar = ({ onToggleSidebar, isMobile }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,7 +100,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
           <button
             onClick={onToggleSidebar}
             className="p-2 hover:bg-white/10 rounded-xl transition-colors text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
-            title="Toggle Sidebar"
+            title={t('sidebar_dashboard')}
           >
             <Menu size={20} />
           </button>
@@ -113,7 +116,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
             {(isSearchExpanded || !isMobile) && (
               <input
                 type="text"
-                placeholder={isMobile ? "Search..." : "Search categories, services, users..."}
+                placeholder={isMobile ? t('topbar_search') : t('topbar_search_placeholder')}
                 className="bg-transparent border-none outline-none ml-2 text-sm w-full text-white placeholder:text-slate-500"
                 value={searchQuery}
                 autoFocus={isMobile && isSearchExpanded}
@@ -149,8 +152,8 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                     <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <Search size={32} className="text-slate-300" />
                     </div>
-                    <p className="text-sm font-medium text-slate-900">No matches found</p>
-                    <p className="text-xs text-slate-500 mt-1">Try another keyword</p>
+                    <p className="text-sm font-medium text-slate-900">{t('topbar_no_results')}</p>
+                    <p className="text-xs text-slate-500 mt-1">{t('topbar_try_another')}</p>
                   </div>
                 )}
 
@@ -158,7 +161,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                 {searchResults?.categories?.length > 0 && (
                   <div className="mb-4">
                     <div className="px-4 py-2 text-xs font-semibold text-blue-600 uppercase tracking-wider flex items-center gap-2">
-                      <Layers size={14} /> Categories
+                      <Layers size={14} /> {t('sidebar_categories')}
                     </div>
                     {searchResults.categories.map(cat => (
                       <button
@@ -179,7 +182,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                 {searchResults?.services?.length > 0 && (
                   <div className="mb-4">
                     <div className="px-4 py-2 text-xs font-semibold text-blue-600 uppercase tracking-wider flex items-center gap-2">
-                      <Wrench size={14} /> Services
+                      <Wrench size={14} /> {t('sidebar_services')}
                     </div>
                     {searchResults.services.map(svc => (
                       <button
@@ -200,7 +203,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                 {searchResults?.providers?.length > 0 && (
                   <div className="mb-4">
                     <div className="px-4 py-2 text-xs font-semibold text-blue-600 uppercase tracking-wider flex items-center gap-2">
-                      <ShieldCheck size={14} /> Providers
+                      <ShieldCheck size={14} /> {t('sidebar_providers')}
                     </div>
                     {searchResults.providers.map(prov => (
                       <button
@@ -224,7 +227,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                 {searchResults?.customers?.length > 0 && (
                   <div>
                     <div className="px-4 py-2 text-xs font-semibold text-blue-600 uppercase tracking-wider flex items-center gap-2">
-                      <UsersIcon size={14} /> Customers
+                      <UsersIcon size={14} /> {t('sidebar_customers')}
                     </div>
                     {searchResults.customers.map(cust => (
                       <button
@@ -245,7 +248,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
                 )}
               </div>
               <div className="bg-admin-card p-3 text-center border-t border-admin-border">
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Global Admin Search</p>
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{t('topbar_global_search')}</p>
               </div>
             </div>
           )}
@@ -254,11 +257,12 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
 
       {/* Right: Notifications & Profile */}
       <div className="flex items-center gap-4">
+        <LanguageSwitcher />
         {/* Settings (optional) */}
         <Link
           to="/admin/settings"
           className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          title="Platform Settings"
+          title={t('topbar_platform_settings')}
         >
           <Settings size={20} />
         </Link>
@@ -267,7 +271,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
         <button
           onClick={toggleTheme}
           className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          title={isDarkMode ? t('topbar_switch_light') : t('topbar_switch_dark')}
         >
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
@@ -278,6 +282,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
             className={`text-slate-400 hover:text-white relative p-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${isNotificationOpen ? 'bg-white/10 text-white' : 'hover:bg-white/5'
               }`}
+            title={t('topbar_notifications')}
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -302,7 +307,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
               {user?.name || 'Admin User'}
             </p>
             <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-tighter">
-              System Administrator
+              {t('topbar_system_admin')}
             </p>
           </div>
 

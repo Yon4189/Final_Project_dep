@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowRight, ShieldCheck, Zap, Users,
   LineChart, CheckCircle2, Info, Github,
@@ -11,6 +12,7 @@ import LandingNavbar from '../components/LandingNavbar';
 import LandingFooter from '../components/LandingFooter';
 
 const Home = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -32,11 +34,10 @@ const Home = () => {
           <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8 animate-in fade-in slide-in-from-left duration-700">
               <h1 className="text-5xl lg:text-7xl font-black tracking-tight leading-[1.1]">
-                Manage the Future of <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">Service Markets.</span>
+                {t('hero_title_prefix')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">{t('hero_title_highlight')}</span>
               </h1>
               <p className="text-slate-500 dark:text-admin-text-muted text-lg max-w-xl leading-relaxed">
-                The Ethio HandyMan Admin Panel provides absolute control over the home-based service ecosystem.
-                Verify providers, track growth, and ensures a safe experience for every customer.
+                {t('hero_subtitle')}
               </p>
 
             </div>

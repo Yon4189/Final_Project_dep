@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 @theme {
   /* Dynamic colors that respond to .dark class on <html> */
@@ -43,6 +44,7 @@
 html, body {
   background-color: var(--admin-content);
   color: var(--admin-text);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Ethiopic", "Nyala", "Abyssinica SIL";
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
