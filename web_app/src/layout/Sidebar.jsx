@@ -88,7 +88,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           >
             <img
               src={logo}
-              alt="HB_SFS Logo"
+              alt="Ethio HandyMan Logo"
               className="w-full h-full object-contain scale-[1.35] transform-gpu"
             />
           </div>
@@ -325,7 +325,6 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
 
         <div className="mt-4 mx-3 flex flex-col gap-1">
           {otherMenuItems.map((item) => {
-
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
@@ -359,10 +358,6 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           {!isMini && <span>Logout System</span>}
         </button>
       </div>
-
-
-
-
     </div>
   );
 };

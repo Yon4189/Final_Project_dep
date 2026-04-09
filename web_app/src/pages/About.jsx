@@ -13,13 +13,13 @@ const About = () => {
       <LandingNavbar />
       
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 bg-slate-50 dark:bg-admin-card/20">
+      <section className="pt-12 pb-20 px-6 bg-slate-50 dark:bg-admin-card/20">
         <div className="max-w-7xl mx-auto text-center space-y-6">
           <h1 className="text-5xl md:text-6xl font-black tracking-tight">
             Our Mission is to <span className="text-blue-600">Connect.</span>
           </h1>
           <p className="text-lg text-slate-500 dark:text-admin-text-muted max-w-2xl mx-auto leading-relaxed">
-            HB_SFS was born out of a simple idea: that finding reliable help should be as easy as ordering a meal, and skilled individuals should have a platform to shine.
+            Ethio HandyMan was born out of a simple idea: that finding reliable help should be as easy as ordering a meal, and skilled individuals should have a platform to shine.
           </p>
         </div>
       </section>
@@ -60,7 +60,7 @@ const About = () => {
           <div className="text-center max-w-3xl mx-auto space-y-8">
             <h2 className="text-4xl font-black">The Vision</h2>
             <p className="text-lg text-slate-500 dark:text-admin-text-muted leading-relaxed">
-               We see a future where every home has access to vetted, professional services instantly. From plumbing to private tutoring, HB_SFS is the bridge that makes it happen.
+               We see a future where every home has access to vetted, professional services instantly. From plumbing to private tutoring, Ethio HandyMan is the bridge that makes it happen.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-8">
                <div className="space-y-2">

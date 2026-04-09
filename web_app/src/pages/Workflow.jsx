@@ -9,6 +9,8 @@ import LandingNavbar from '../components/LandingNavbar';
 import LandingFooter from '../components/LandingFooter';
 
 const Workflow = () => {
+  const navigate = useNavigate();
+
   const adminSteps = [
     { title: "Verification", desc: "Review provider documents and identities.", icon: <ShieldCheck /> },
     { title: "Monitoring", desc: "Track active bookings and system health.", icon: <MonitorCheck /> },
@@ -28,7 +30,7 @@ const Workflow = () => {
       <LandingNavbar />
       
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 bg-blue-600">
+      <section className="pt-12 pb-20 px-6 bg-blue-600">
         <div className="max-w-7xl mx-auto text-center space-y-6">
           <h1 className="text-5xl md:text-6xl font-black tracking-tight text-white">
             How it <span className="opacity-50">Works.</span>
@@ -109,7 +111,7 @@ const Workflow = () => {
       {/* CTA section */}
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto bg-slate-900 dark:bg-white rounded-[3rem] p-12 text-center space-y-8 shadow-2xl">
-          <h2 className="text-3xl font-black text-white dark:text-slate-900">Ready to Orchestrate?</h2>
+          <h2 className="text-3xl font-black text-white dark:text-slate-900">Ready to Manage?</h2>
           <p className="text-slate-400 dark:text-slate-500 max-w-lg mx-auto"> Access the dashboard now and start managing your marketplace with professional-grade tools.</p>
           <button 
              onClick={() => navigate('/login')}

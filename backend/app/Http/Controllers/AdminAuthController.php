@@ -29,7 +29,7 @@ class AdminAuthController extends Authenticatable
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email:rfc,dns',
+            'email' => 'required|email:rfc',
             'password' => 'required|string',
         ]);
 
@@ -533,7 +533,7 @@ class AdminAuthController extends Authenticatable
 
         $validator = Validator::make($request->all(), [
             'fullname' => 'required|string|max:255',
-            'email'    => 'required|email:rfc,dns|unique:admins,email,' . $admin->adminID . ',adminID',
+            'email'    => 'required|email:rfc|unique:admins,email,' . $admin->adminID . ',adminID',
             'phone'    => 'nullable|string|max:20',
         ]);
 

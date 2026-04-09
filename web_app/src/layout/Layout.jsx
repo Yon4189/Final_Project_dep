@@ -60,7 +60,7 @@ const Layout = () => {
   };
 
   return (
-    <div className={`flex h-screen ${isDarkMode ? 'bg-black' : 'bg-white'} overflow-hidden relative ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
+    <div className={`flex fixed inset-0 ${isDarkMode ? 'bg-black' : 'bg-white'} overflow-hidden ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
       {/* Overlay for mobile sidebar */}
       {isMobile && sidebarOpen && (
         <div

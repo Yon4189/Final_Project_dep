@@ -90,7 +90,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
   };
 
   return (
-    <header className={`h-16 bg-admin-sidebar flex items-center justify-between ${isMobile ? 'px-4' : 'px-8'} shadow-sm border-b border-white/5 sticky top-0 z-10 transition-colors duration-300`}>
+    <header className={`h-16 shrink-0 relative z-40 bg-admin-sidebar flex items-center justify-between ${isMobile ? 'px-4' : 'px-8'} shadow-sm border-b border-white/5 transition-colors duration-300`}>
       {/* Left: Toggle & Search */}
       <div className="flex-1 flex items-center gap-2 md:gap-4 min-w-0">
         {!isSearchExpanded && (
