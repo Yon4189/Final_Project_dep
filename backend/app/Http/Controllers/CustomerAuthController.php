@@ -32,7 +32,7 @@ class CustomerAuthController extends Controller
             'fullname' => 'required|string|max:255',
             'email' => [
                 'required',
-                'email:rfc,dns',
+                'email:rfc',
                 'unique:customers,email'
             ],
             'phone' => [
@@ -122,7 +122,7 @@ class CustomerAuthController extends Controller
     {
         // Validate input
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email:rfc,dns',
+            'email' => 'required|email:rfc',
             'password' => 'required|string',
         ]);
 

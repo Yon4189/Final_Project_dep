@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -43,10 +43,10 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
 
   const otherMenuItems = [
-    { name: 'My Profile', path: '/profile', icon: User },
-    { name: 'Dispute Resolution', path: '/disputes', icon: Scale },
-    { name: 'Payment Analytics', path: '/payments', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { name: 'My Profile', path: '/admin/profile', icon: User },
+    { name: 'Dispute Resolution', path: '/admin/disputes', icon: Scale },
+    { name: 'Payment Analytics', path: '/admin/payments', icon: BarChart3 },
+    { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
   const handleLogout = () => {
@@ -56,10 +56,10 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
     }
   };
 
-  const isServicesActive = location.pathname.startsWith('/services');
-  const isVerificationActive = location.pathname.startsWith('/verification');
-  const isUsersActive = location.pathname.startsWith('/users');
-  const isBookingsActive = location.pathname.startsWith('/bookings');
+  const isServicesActive = location.pathname.startsWith('/admin/services');
+  const isVerificationActive = location.pathname.startsWith('/admin/verification');
+  const isUsersActive = location.pathname.startsWith('/admin/users');
+  const isBookingsActive = location.pathname.startsWith('/admin/bookings');
 
   return (
     <div
@@ -78,7 +78,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
 
       <div className="p-5 mb-2 border-b border-admin-border/50 flex flex-col items-center justify-center gap-4">
         <Link
-          to="/"
+          to="/admin"
           className="block transform transition-all active:scale-95"
           title="Go to Dashboard"
         >
@@ -88,7 +88,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           >
             <img
               src={logo}
-              alt="HB_SFS Logo"
+              alt="Ethio HandyMan Logo"
               className="w-full h-full object-contain scale-[1.35] transform-gpu"
             />
           </div>
@@ -108,9 +108,9 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
       <nav className="flex-1 mt-4">
         {/* Dashboard */}
         <Link
-          to="/"
+          to="/admin"
           onClick={() => isMobile && onClose()}
-          className={`group flex items-center px-6 py-4 mx-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'gap-4' : 'justify-center'} ${location.pathname === '/'
+          className={`group flex items-center px-6 py-4 mx-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'gap-4' : 'justify-center'} ${location.pathname === '/admin'
             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40'
             : 'hover:bg-white/5 hover:text-white'
             }`}
@@ -153,10 +153,10 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isServicesOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/services/categories" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/services/categories' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/services/categories" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/services/categories' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Categories
                 </Link>
-                <Link to="/services/services" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/services/services' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/services/services" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/services/services' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Provider Services
                 </Link>
               </div>
@@ -190,7 +190,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isVerificationOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/verification/pending" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/pending' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/verification/pending" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/pending' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>Pending Queue</span>
                   {stats.pending > 0 && (
                     <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -198,7 +198,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/verification/approved" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/approved' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/verification/approved" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/approved' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>Approved</span>
                   {stats.active > 0 && (
                     <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -206,7 +206,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/verification/rejected" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/rejected' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/verification/rejected" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/rejected' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>Rejected</span>
                   {stats.rejected > 0 && (
                     <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -214,7 +214,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/verification/suspended" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/verification/suspended' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/verification/suspended" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/verification/suspended' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>Suspended</span>
                   {stats.suspended > 0 && (
                     <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -253,7 +253,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isUsersOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/users/customers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/customers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/users/customers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/users/customers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>Customers</span>
                   {stats.customers > 0 && (
                     <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -261,7 +261,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                     </span>
                   )}
                 </Link>
-                <Link to="/users/providers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/users/providers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/users/providers" onClick={() => isMobile && onClose()} className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/users/providers' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   <span>Providers</span>
                   {(stats.active + stats.suspended) > 0 && (
                     <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center">
@@ -300,22 +300,22 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           {!isMini && (
             <div className={`grid transition-all duration-300 ease-in-out ${isBookingsOpen ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
               <div className="overflow-hidden flex flex-col gap-1 pl-12 pr-4">
-                <Link to="/bookings/pending" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/pending' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/bookings/pending" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/pending' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Pending
                 </Link>
-                <Link to="/bookings/accepted" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/accepted' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/bookings/accepted" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/accepted' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Accepted
                 </Link>
-                <Link to="/bookings/completed" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/completed' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/bookings/completed" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/completed' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Completed
                 </Link>
-                <Link to="/bookings/rejected" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/rejected' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/bookings/rejected" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/rejected' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Rejected
                 </Link>
-                <Link to="/bookings/expired" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/expired' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/bookings/expired" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/expired' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Expired
                 </Link>
-                <Link to="/bookings/cancelled" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/bookings/cancelled' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Link to="/admin/bookings/cancelled" onClick={() => isMobile && onClose()} className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all text-xs font-medium ${location.pathname === '/admin/bookings/cancelled' ? 'text-white bg-blue-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                   Cancelled
                 </Link>
               </div>
@@ -325,7 +325,6 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
 
         <div className="mt-4 mx-3 flex flex-col gap-1">
           {otherMenuItems.map((item) => {
-
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
@@ -359,10 +358,6 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           {!isMini && <span>Logout System</span>}
         </button>
       </div>
-
-
-
-
     </div>
   );
 };

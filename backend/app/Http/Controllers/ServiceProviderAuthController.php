@@ -36,7 +36,7 @@ class ServiceProviderAuthController extends Controller
             'fullname' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
-                'email:rfc,dns',
+                'email:rfc',
                 'unique:service_providers,email'
             ],
             'phone' => ['required', 'unique:service_providers,phone', 'regex:/^(09|07)[0-9]{8}$/'],
@@ -187,7 +187,7 @@ class ServiceProviderAuthController extends Controller
     {
         // Validate input with DNS check
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email:rfc,dns',
+            'email' => 'required|email:rfc',
             'password' => 'required|string'
         ]);
 

@@ -10,6 +10,11 @@ import Layout from './layout/Layout';
 import Login from './pages/Login';
 
 // Pages
+import Home from './pages/Home';
+import About from './pages/About';
+import Workflow from './pages/Workflow';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import Dashboard from './pages/Dashboard';
 import Verification from './pages/Verification';
 import Users from './pages/Users';
@@ -25,7 +30,7 @@ import Payment from './pages/Payment';
 /**
  *  ProtectedRoute Component
  * This wrapper checks if the user exists in our AuthContext.
- * If not, it redirects them to the /login page.
+ * If not, it redirects them to the / page (Home).
  */
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -33,7 +38,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) return <div className="h-screen flex items-center justify-center bg-white dark:bg-admin-content text-slate-800 dark:text-admin-text">Loading...</div>;
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -48,12 +53,17 @@ function App() {
         <AuthProvider>
           <BrowserRouter>
             <Routes>
-              {/* Rest of the routes stay the same */}
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/workflow" element={<Workflow />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/payment/:txRef" element={<Payment />} />
+              
               <Route
-                path="/"
+                path="/admin"
                 element={
                   <ProtectedRoute>
                     <Layout />
@@ -61,25 +71,25 @@ function App() {
                 }
               >
                 <Route index element={<Dashboard />} />
-                <Route path="/verification" element={<Verification />} />
-                <Route path="/verification/pending" element={<Verification />} />
-                <Route path="/verification/approved" element={<Verification />} />
-                <Route path="/verification/rejected" element={<Verification />} />
-                <Route path="/verification/suspended" element={<Verification />} />
-                <Route path="/verification/all" element={<Verification />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/users/customers" element={<Users />} />
-                <Route path="/users/providers" element={<Users />} />
+                <Route path="verification" element={<Verification />} />
+                <Route path="verification/pending" element={<Verification />} />
+                <Route path="verification/approved" element={<Verification />} />
+                <Route path="verification/rejected" element={<Verification />} />
+                <Route path="verification/suspended" element={<Verification />} />
+                <Route path="verification/all" element={<Verification />} />
+                <Route path="users" element={<Users />} />
+                <Route path="users/customers" element={<Users />} />
+                <Route path="users/providers" element={<Users />} />
                 <Route path="services" element={<Services />} />
-                <Route path="/services/categories" element={<Services />} />
-                <Route path="/services/services" element={<Services />} />
-                <Route path="/bookings" element={<Bookings />} />
-                <Route path="/bookings/pending" element={<Bookings />} />
-                <Route path="/bookings/accepted" element={<Bookings />} />
-                <Route path="/bookings/completed" element={<Bookings />} />
-                <Route path="/bookings/cancelled" element={<Bookings />} />
-                <Route path="/bookings/rejected" element={<Bookings />} />
-                <Route path="/bookings/expired" element={<Bookings />} />
+                <Route path="services/categories" element={<Services />} />
+                <Route path="services/services" element={<Services />} />
+                <Route path="bookings" element={<Bookings />} />
+                <Route path="bookings/pending" element={<Bookings />} />
+                <Route path="bookings/accepted" element={<Bookings />} />
+                <Route path="bookings/completed" element={<Bookings />} />
+                <Route path="bookings/rejected" element={<Bookings />} />
+                <Route path="bookings/expired" element={<Bookings />} />
+                <Route path="bookings/cancelled" element={<Bookings />} />
                 <Route path="disputes" element={<Disputes />} />
                 <Route path="payments" element={<Payments />} />
                 <Route path="settings" element={<Settings />} />
