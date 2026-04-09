@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, Settings, Menu, X, Loader2, Star, ShieldCheck, Layers, Wrench, Users as UsersIcon, Sun, Moon } from 'lucide-react';
+import { Search, Bell, User, Menu, X, Loader2, Star, ShieldCheck, Layers, Wrench, Users as UsersIcon, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -258,14 +258,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
       {/* Right: Notifications & Profile */}
       <div className="flex items-center gap-4">
         <LanguageSwitcher />
-        {/* Settings (optional) */}
-        <Link
-          to="/admin/settings"
-          className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          title={t('topbar_platform_settings')}
-        >
-          <Settings size={20} />
-        </Link>
+
 
         {/* Theme Toggle */}
         <button
