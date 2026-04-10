@@ -15,11 +15,57 @@ class WalletTransaction extends Model
         'transactionID',
         'walletID',
         'type',
+        'transaction_type',
+        'transaction_status',
+        'release_date',
+        'related_payment_id',
         'amount',
         'description',
         'bookingID',
         'withdrawalID',
     ];
+
+    protected $casts = [
+        'release_date' => 'datetime'
+    ];
+
+    /**
+     * Scope for held payouts
+     */
+    public function scopeHeldPayouts($query)
+    {
+        return $query->where('transaction_type', 'held_payout');
+    }
+
+    /**
+     * Scope for pending release
+     */
+    public function scopePendingRelease($query)
+    {
+        return $query->where('transaction_status', 'pending')
+                     ->where('transaction_type', 'held_payout')
+                     ->whereNotNull('release_date')
+                     ->where('release_date', '<=', now());
+    }
+
+    /**
+     * Check if transaction is releasable
+     */
+    public function isReleasable(): bool
+    {
+        return $this->transaction_type === 'held_payout' &&
+               $this->transaction_status === 'pending' &&
+               $this->release_date &&
+               $this->release_date <= now();
+    }
+
+    /**
+     * Get the related payment
+     */
+    public function relatedPayment()
+    {
+        return $this->belongsTo(Payment::class, 'related_payment_id', 'paymentID');
+    }
 
     public function wallet()
     {

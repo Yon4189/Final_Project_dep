@@ -408,3 +408,27 @@ Route::group(['middleware' => 'auth:customer', 'prefix' => 'customer'], function
 //         return 'Cannot reach Chapa: ' . $e->getMessage();
 //     }
 // });
+
+// ==================== SPLIT PAYMENT SYSTEM ROUTES ====================
+
+// Public payment callback
+Route::post('/payments/verify-callback', [PaymentController::class, 'verifyCallback']);
+
+// Customer payment routes (protected)
+Route::group(['middleware' => 'auth:customer', 'prefix' => 'payments'], function () {
+    Route::post('/calculate-deposit', [PaymentController::class, 'calculateDeposit']);
+    Route::post('/process-deposit', [PaymentController::class, 'processDeposit']);
+    Route::post('/process-final', [PaymentController::class, 'processFinal']);
+    Route::get('/status/{bookingId}', [PaymentController::class, 'getPaymentStatus']);
+});
+
+// Admin settings routes (protected)
+Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin/settings'], function () {
+    Route::get('/deposit-percentage', [\App\Http\Controllers\AdminSettingsController::class, 'getDepositPercentage']);
+    Route::put('/deposit-percentage', [\App\Http\Controllers\AdminSettingsController::class, 'updateDepositPercentage']);
+});
+
+// Provider wallet transaction routes (protected)
+Route::group(['middleware' => 'auth:provider', 'prefix' => 'wallet'], function () {
+    Route::get('/transactions', [WalletController::class, 'getTransactions']);
+});

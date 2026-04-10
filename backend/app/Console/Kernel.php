@@ -17,9 +17,13 @@ class Kernel extends ConsoleKernel
         $schedule->command('bookings:expire-unpaid')->hourly();
         // Auto-release bookings every hour
         $schedule->command('bookings:auto-release')->hourly();
-        // You can add more scheduled tasks here
         // Run every 5 minutes to mark stale users offline
         $schedule->command('users:clean-offline')->everyFiveMinutes();
+        
+        // Split payment system jobs
+        $schedule->job(new \App\Jobs\PaymentReminderJob)->hourly();
+        $schedule->job(new \App\Jobs\HeldPayoutReleaseJob)->hourly();
+        $schedule->job(new \App\Jobs\OverduePaymentJob)->dailyAt('02:00');
     }
 
     /**

@@ -482,3 +482,100 @@ public function requestWithdrawal(Request $request)
         }
     }
 }
+
+    /**
+     * Get wallet transactions with split payment filtering
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTransactions(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            $wallet = $provider->wallet;
+            
+            if (!$wallet) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'transactions' => [],
+                        'balance_summary' => [
+                            'available_balance' => 0,
+                            'pending_balance' => 0,
+                            'total_balance' => 0
+                        ]
+                    ]
+                ]);
+            }
+            
+            // Build query with optional filters
+            $query = $wallet->transactions()
+                ->with(['booking.customer', 'booking.service', 'relatedPayment']);
+            
+            // Filter by transaction_type if provided
+            if ($request->has('transaction_type')) {
+                $query->where('transaction_type', $request->transaction_type);
+            }
+            
+            // Filter by transaction_status if provided
+            if ($request->has('transaction_status')) {
+                $query->where('transaction_status', $request->transaction_status);
+            }
+            
+            $transactions = $query->latest()->paginate(20);
+            
+            // Format transactions
+            $formattedTransactions = collect($transactions->items())->map(function($t) {
+                return [
+                    'transaction_id' => $t->transactionID,
+                    'type' => $t->type,
+                    'transaction_type' => $t->transaction_type,
+                    'transaction_status' => $t->transaction_status,
+                    'amount' => (float) $t->amount,
+                    'description' => $t->description,
+                    'booking_id' => $t->bookingID,
+                    'booking' => $t->booking ? [
+                        'booking_id' => $t->booking->bookingID,
+                        'customer_name' => $t->booking->customer->fullname ?? 'N/A',
+                        'service_name' => $t->booking->service->title ?? 'N/A'
+                    ] : null,
+                    'release_date' => $t->release_date,
+                    'created_at' => $t->created_at->toIso8601String()
+                ];
+            });
+            
+            // Balance summary
+            $balanceSummary = [
+                'available_balance' => (float) $wallet->available_balance,
+                'pending_balance' => (float) $wallet->pending_balance,
+                'total_balance' => (float) ($wallet->available_balance + $wallet->pending_balance)
+            ];
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'transactions' => $formattedTransactions,
+                    'balance_summary' => $balanceSummary,
+                    'pagination' => [
+                        'total' => $transactions->total(),
+                        'current_page' => $transactions->currentPage(),
+                        'last_page' => $transactions->lastPage(),
+                        'per_page' => $transactions->perPage(),
+                        'has_more' => $transactions->hasMorePages()
+                    ]
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to get wallet transactions', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load transactions'
+            ], 500);
+        }
+    }
+}
