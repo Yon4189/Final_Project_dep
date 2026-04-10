@@ -11,6 +11,7 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
@@ -24,6 +25,7 @@ const { width } = Dimensions.get('window');
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -231,7 +233,7 @@ export default function BookingsScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
           <Text style={styles.headerTitle}>My Bookings</Text>
           <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
             <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
@@ -245,7 +247,7 @@ export default function BookingsScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
           <Text style={styles.headerTitle}>My Bookings</Text>
           <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
             <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
@@ -267,7 +269,7 @@ export default function BookingsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
         <Text style={styles.headerTitle}>My Bookings</Text>
         <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
           <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
@@ -307,7 +309,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
     paddingBottom: 16,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,

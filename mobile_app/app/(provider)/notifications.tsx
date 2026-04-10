@@ -9,9 +9,9 @@ import {
   RefreshControl,
   Image,
   Alert,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
@@ -19,6 +19,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatTimeAgo, formatCurrency } from '../utils/formatters';
 import { providerService } from '@/app/services/provider.service';
+import { api } from '@/app/services/api';
 import type { ProviderNotificationPayload, ProviderNotificationType } from '@/app/types/provider.types';
 
 // Types for provider notifications
@@ -62,6 +63,7 @@ export default function ProviderNotifications() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const normalizedNotifications = useCallback(
     (items: ProviderNotificationRaw[]) => items.map(normalizeNotification),
@@ -88,6 +90,11 @@ export default function ProviderNotifications() {
           );
           setPage(payload?.current_page ?? page);
           setHasMore((payload?.last_page ?? page) > (payload?.current_page ?? page));
+
+          // Automatically mark all as read if there are unreads
+          if (response.data.unread_count > 0 && page === 1) {
+            markAllAsRead();
+          }
         }
       } catch (error) {
         console.error('Failed to load provider notifications', error);
@@ -146,11 +153,9 @@ export default function ProviderNotifications() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     
     try {
-      await Promise.all(unreadIds.map(id => providerService.markNotificationAsRead(id)));
-      Alert.alert('Success', 'All notifications marked as read');
+      await api.post('/provider/notifications/read-all');
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
-      Alert.alert('Error', 'Unable to mark all notifications as read.');
     }
   };
 
@@ -277,8 +282,8 @@ export default function ProviderNotifications() {
   );
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerTop}>
+    <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 0 : 40) }]}>
+      <View style={[styles.headerTop, { paddingTop: insets.top > 0 ? 10 : 0 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
@@ -325,7 +330,7 @@ export default function ProviderNotifications() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {renderHeader()}
 
       <FlatList
@@ -350,7 +355,7 @@ export default function ProviderNotifications() {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -364,14 +369,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    paddingTop: Platform.OS === 'android' ? 40 : 10,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16,
   },
   backButton: {
     padding: 4,
