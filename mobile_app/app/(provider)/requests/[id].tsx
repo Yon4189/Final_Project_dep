@@ -32,6 +32,7 @@ import * as pusherClient from "@/app/services/pusherClient";
 import { useTracking } from "@/hooks/useTracking";
 import { useTheme } from "@/app/context/ThemeContext";
 import { ThemeColors } from "@/app/constants/Colors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const STATUS_ICONS = {
   pending: "time-outline",
@@ -55,6 +56,7 @@ const STATUS_STEPS = [
 export default function RequestDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const STATUS_COLORS = useMemo(() => ({
@@ -342,6 +344,7 @@ export default function RequestDetails() {
     <View
       style={[
         styles.header,
+        { paddingTop: Math.max(insets.top + 16, 32) },
         { borderBottomColor: getStatusColor(request?.status || "pending") },
       ]}
     >
@@ -819,7 +822,12 @@ export default function RequestDetails() {
       onRequestClose={() => setShowDirections(false)}
     >
       <View style={styles.fullScreenModal}>
-        <View style={styles.directionsHeader}>
+        <View
+          style={[
+            styles.directionsHeader,
+            { paddingTop: Math.max(insets.top + 16, 32) },
+          ]}
+        >
           <TouchableOpacity onPress={() => setShowDirections(false)}>
             <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
@@ -920,7 +928,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   header: {
     backgroundColor: colors.surface,
-    paddingTop: 100,
     paddingBottom: 16,
     borderBottomWidth: 3,
   },
@@ -1491,7 +1498,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 100,
     paddingBottom: 20,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,

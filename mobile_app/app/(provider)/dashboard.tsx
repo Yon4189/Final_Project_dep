@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Platform,
   View,
   Text,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   Animated,
   PanResponder,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,6 +32,7 @@ const { width } = Dimensions.get('window');
 
 export default function ProviderDashboard() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
@@ -104,7 +105,7 @@ export default function ProviderDashboard() {
       colors={[colors.primary, colors.primaryDark || colors.primary]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.header}
+      style={[styles.header, { paddingTop: Math.max(insets.top + 16, 32) }]}
     >
       <View style={styles.topSection}>
         <View style={styles.welcomeSection}>
@@ -223,7 +224,12 @@ export default function ProviderDashboard() {
         <Modal transparent visible={showHamburgerMenu} animationType="none">
           <View style={styles.drawerOverlay}>
             <Animated.View {...panResponder.panHandlers} style={[styles.drawer, { transform: [{ translateX: sidebarAnim }] }]}>
-              <View style={styles.drawerHeader}>
+              <View
+                style={[
+                  styles.drawerHeader,
+                  { paddingTop: Math.max(insets.top + 24, 40) },
+                ]}
+              >
                 <Image
                   source={{ 
                     uri: (() => {
@@ -314,7 +320,7 @@ export default function ProviderDashboard() {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: colors.background },
-  header: { padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 40, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+  header: { padding: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   topSection: { alignItems: 'center', marginBottom: 20 },
   welcomeSection: { alignItems: 'center' },
   welcomeText: { fontSize: 16, color: 'rgba(255,255,255,0.8)' },
@@ -348,7 +354,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   drawerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row' },
   drawer: { width: 260, backgroundColor: colors.surface, height: '100%', elevation: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 10 },
   drawerClose: { flex: 1 },
-  drawerHeader: { padding: 30, paddingTop: Platform.OS === 'ios' ? 60 : 40, backgroundColor: colors.primary, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
+  drawerHeader: { padding: 30, backgroundColor: colors.primary, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
   drawerAvatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)', marginBottom: 15 },
   drawerName: { fontSize: 20, fontWeight: 'bold', color: colors.surface },
   drawerEmail: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
