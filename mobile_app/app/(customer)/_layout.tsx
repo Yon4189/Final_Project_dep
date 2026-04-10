@@ -50,6 +50,8 @@ export default function CustomerLayout() {
         headerTintColor: colors.text.primary,
         headerTitleStyle: { fontWeight: '600' },
         headerShadowVisible: false,
+        headerTopInsetEnabled: true,
+        statusBarTranslucent: false,
         contentStyle: { backgroundColor: colors.background },
         headerLeft: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
@@ -100,7 +102,7 @@ export default function CustomerLayout() {
         name="change-password"
         options={{
           title: 'Change Password',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -108,7 +110,7 @@ export default function CustomerLayout() {
         name="locations"
         options={{
           title: 'Service City',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -116,7 +118,7 @@ export default function CustomerLayout() {
         name="notifications"
         options={{
           title: 'Notifications',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -132,7 +134,7 @@ export default function CustomerLayout() {
         name="bookings/[id]"
         options={{
           title: 'Booking Details',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -140,7 +142,7 @@ export default function CustomerLayout() {
         name="payment"
         options={{
           title: 'Payment',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -148,7 +150,7 @@ export default function CustomerLayout() {
         name="provider/[id]"
         options={{
           title: 'Provider Details',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -156,7 +158,7 @@ export default function CustomerLayout() {
         name="search/results"
         options={{
           title: 'Search Results',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -164,7 +166,7 @@ export default function CustomerLayout() {
         name="requests/index"
         options={{
           title: 'My Requests',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -172,7 +174,7 @@ export default function CustomerLayout() {
         name="requests/[id]"
         options={{
           title: 'Request Details',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -180,7 +182,7 @@ export default function CustomerLayout() {
         name="complaints/index"
         options={{
           title: 'My Complaints',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -188,7 +190,7 @@ export default function CustomerLayout() {
         name="complaints/new"
         options={{
           title: 'New Complaint',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -196,7 +198,7 @@ export default function CustomerLayout() {
         name="complaints/[id]"
         options={{
           title: 'Complaint Details',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
@@ -204,7 +206,7 @@ export default function CustomerLayout() {
         name="wallet/index"
         options={{
           title: 'My Wallet',
-          headerShown: true,
+          headerShown: false,
         }}
       />
 
