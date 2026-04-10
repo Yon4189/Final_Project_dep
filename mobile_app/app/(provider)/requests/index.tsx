@@ -328,7 +328,7 @@ export default function ProviderRequests() {
             style={styles.customerImage}
           />
           <View style={styles.customerDetails}>
-            <Text style={styles.customerName}>{item.customerName || ""} TEST</Text>
+            <Text style={styles.customerName}>{item.customerName || ""}</Text>
             <Text style={styles.requestNumber}>
               #{item.requestNumber || ""}
             </Text>

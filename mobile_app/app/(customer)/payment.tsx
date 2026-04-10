@@ -272,41 +272,6 @@ export default function PaymentScreen() {
     }
   };
 
-  const handleCashPayment = async () => {
-    if (!hasAccepted) {
-      Alert.alert('Awaiting confirmation', `${providerName} needs to accept first.`, [
-        { text: 'View Notifications', onPress: () => router.push('/(customer)/notifications') },
-        { text: 'OK' },
-      ]);
-      return;
-    }
-
-    if (paymentAlreadyDone) {
-      Alert.alert('Already paid', 'This booking already shows a completed payment.', [
-        { text: 'View Bookings', onPress: () => router.push('/(customer)/bookings') },
-        { text: 'OK' },
-      ]);
-      return;
-    }
-
-    try {
-      setIsPaying(true);
-      setPaymentStatus('completed');
-      if (bookingId) {
-        Alert.alert('Booking Confirmed', 'Service booked successfully.', [
-          { text: 'View Bookings', onPress: () => router.push('/(customer)/bookings') },
-          { text: 'OK', onPress: () => router.back() },
-        ]);
-      } else {
-        Alert.alert('Error', 'Booking information missing.');
-      }
-    } catch (error) {
-      setPaymentStatus('failed');
-      Alert.alert('Error', 'Failed to create request.');
-    } finally {
-      setIsPaying(false);
-    }
-  };
 
   const renderPaymentMethods = () => {
     if (loadingMethods) return <ActivityIndicator size="large" color={Colors.primary} />;
@@ -459,37 +424,20 @@ export default function PaymentScreen() {
                     </TouchableOpacity>
                   ) : (
                     <>
-                      {paymentMethod === 'chapa' ? (
-                        <TouchableOpacity
-                          style={[styles.payButton, isPaying && styles.payButtonDisabled]}
-                          onPress={handleChapaPayment}
-                          disabled={isPaying}
-                        >
-                          {isPaying ? (
-                            <ActivityIndicator size="small" color={Colors.surface} />
-                          ) : (
-                            <>
-                              <Ionicons name="card" size={20} color={Colors.surface} />
-                              <Text style={styles.payButtonText}>Pay with Chapa</Text>
-                            </>
-                          )}
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.payButton, isPaying && styles.payButtonDisabled]}
-                          onPress={handleCashPayment}
-                          disabled={isPaying}
-                        >
-                          {isPaying ? (
-                            <ActivityIndicator size="small" color={Colors.surface} />
-                          ) : (
-                            <>
-                              <Ionicons name="cash" size={20} color={Colors.surface} />
-                              <Text style={styles.payButtonText}>Pay Cash on Service</Text>
-                            </>
-                          )}
-                        </TouchableOpacity>
-                      )}
+                      <TouchableOpacity
+                        style={[styles.payButton, isPaying && styles.payButtonDisabled]}
+                        onPress={handleChapaPayment}
+                        disabled={isPaying}
+                      >
+                        {isPaying ? (
+                          <ActivityIndicator size="small" color={Colors.surface} />
+                        ) : (
+                          <>
+                            <Ionicons name="card" size={20} color={Colors.surface} />
+                            <Text style={styles.payButtonText}>Pay with Chapa</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
                     </>
                   )}
 

@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,6 +33,7 @@ interface EditableField {
 
 export default function CustomerProfile() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isDark, setTheme, colors } = useTheme();
   
   const styles = React.useMemo(() => getStyles(colors), [colors]);
@@ -179,20 +181,22 @@ export default function CustomerProfile() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Profile Header */}
-        <View style={styles.header}>
-          <View style={styles.profileImageContainer}>
-            <Image
-              source={{ uri: profile?.profileImage || 'https://via.placeholder.com/120' }}
-              style={styles.profileImage}
-            />
-            <TouchableOpacity style={styles.editImageButton} onPress={handlePickImage}>
-              {uploadingImage ? (
-                <ActivityIndicator size="small" color={colors.surface} />
-              ) : (
-                <Ionicons name="camera" size={20} color={colors.surface} />
-              )}
-            </TouchableOpacity>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
+          <View style={styles.headerTop}>
+            <View style={styles.profileImageContainer}>
+              <Image
+                source={{ uri: profile?.profileImage || 'https://via.placeholder.com/120' }}
+                style={styles.profileImage}
+              />
+              <TouchableOpacity style={styles.editImageButton} onPress={handlePickImage}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color={colors.surface} />
+                ) : (
+                  <Ionicons name="camera" size={20} color={colors.surface} />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
           
           <View style={styles.headerActions}>
@@ -336,11 +340,15 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    backgroundColor: colors.surface,
-    paddingVertical: 24,
+    backgroundColor: colors.primary,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  },
+  headerTop: {
+    alignItems: 'center',
+    width: '100%',
   },
   profileImageContainer: {
     position: 'relative',
