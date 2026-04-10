@@ -707,3 +707,213 @@ class PaymentController extends Controller
         return null;
     }
 }
+
+    /**
+     * Calculate deposit amount for a booking
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function calculateDeposit(Request $request)
+    {
+        $request->validate([
+            'booking_id' => 'required|integer|exists:bookings,bookingID',
+            'agreed_price' => 'required|numeric|min:0'
+        ]);
+        
+        $paymentService = app(\App\Services\PaymentService::class);
+        
+        $calculation = $paymentService->calculateDepositAmount($request->agreed_price);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $calculation
+        ]);
+    }
+
+    /**
+     * Process deposit payment
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function processDeposit(Request $request)
+    {
+        $request->validate([
+            'booking_id' => 'required|integer|exists:bookings,bookingID',
+            'amount' => 'required|numeric|min:0'
+        ]);
+        
+        try {
+            $paymentService = app(\App\Services\PaymentService::class);
+            
+            $payment = $paymentService->processDepositPayment(
+                $request->booking_id,
+                $request->amount
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Deposit payment initialized successfully',
+                'data' => [
+                    'payment_id' => $payment->paymentID,
+                    'tx_ref' => $payment->tx_ref,
+                    'checkout_url' => $payment->checkout_url,
+                    'amount' => $payment->amount,
+                    'payment_type' => $payment->payment_type
+                ]
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            Log::error('Deposit payment processing failed', [
+                'booking_id' => $request->booking_id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process deposit payment: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Process final payment
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function processFinal(Request $request)
+    {
+        $request->validate([
+            'booking_id' => 'required|integer|exists:bookings,bookingID',
+            'amount' => 'required|numeric|min:0'
+        ]);
+        
+        try {
+            $paymentService = app(\App\Services\PaymentService::class);
+            
+            $payment = $paymentService->processFinalPayment(
+                $request->booking_id,
+                $request->amount
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Final payment initialized successfully',
+                'data' => [
+                    'payment_id' => $payment->paymentID,
+                    'tx_ref' => $payment->tx_ref,
+                    'checkout_url' => $payment->checkout_url,
+                    'amount' => $payment->amount,
+                    'payment_type' => $payment->payment_type
+                ]
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            Log::error('Final payment processing failed', [
+                'booking_id' => $request->booking_id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process final payment: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get payment status for a booking
+     * 
+     * @param int $bookingId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPaymentStatus($bookingId)
+    {
+        try {
+            $booking = Booking::with(['depositPayment', 'finalPayment'])->findOrFail($bookingId);
+            
+            $depositPayment = $booking->depositPayment;
+            $finalPayment = $booking->finalPayment;
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'booking_id' => $booking->bookingID,
+                    'payment_status' => $booking->payment_status,
+                    'agreed_price' => $booking->agreed_price,
+                    'deposit_payment' => $depositPayment ? [
+                        'payment_id' => $depositPayment->paymentID,
+                        'amount' => $depositPayment->amount,
+                        'status' => $depositPayment->payment_status,
+                        'paid_at' => $depositPayment->paid_at
+                    ] : null,
+                    'final_payment' => $finalPayment ? [
+                        'payment_id' => $finalPayment->paymentID,
+                        'amount' => $finalPayment->amount,
+                        'status' => $finalPayment->payment_status,
+                        'paid_at' => $finalPayment->paid_at
+                    ] : null,
+                    'payment_deadline' => $booking->payment_deadline,
+                    'service_confirmed_at' => $booking->service_confirmed_at
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get payment status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify payment callback from Chapa
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verifyCallback(Request $request)
+    {
+        $request->validate([
+            'tx_ref' => 'required|string'
+        ]);
+        
+        try {
+            $paymentService = app(\App\Services\PaymentService::class);
+            
+            $paymentService->verifyAndCompletePayment($request->tx_ref);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment verified successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Payment verification failed', [
+                'tx_ref' => $request->tx_ref,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment verification failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}

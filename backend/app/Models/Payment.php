@@ -22,6 +22,9 @@ class Payment extends Model
         'provider_amount',
         'currency',
         'status',
+        'payment_type',
+        'payment_phase',
+        'payment_status',
         'checkout_url',
         'callback_url',
         'return_url',
@@ -45,6 +48,46 @@ class Payment extends Model
         'released_at' => 'datetime',
         'refunded_at' => 'datetime'
     ];
+
+    /**
+     * Check if this is a deposit payment
+     */
+    public function isDeposit(): bool
+    {
+        return $this->payment_type === 'deposit';
+    }
+
+    /**
+     * Check if this is a final payment
+     */
+    public function isFinal(): bool
+    {
+        return $this->payment_type === 'final';
+    }
+
+    /**
+     * Scope for deposit payments
+     */
+    public function scopeDeposits($query)
+    {
+        return $query->where('payment_type', 'deposit');
+    }
+
+    /**
+     * Scope for final payments
+     */
+    public function scopeFinalPayments($query)
+    {
+        return $query->where('payment_type', 'final');
+    }
+
+    /**
+     * Scope for completed payments
+     */
+    public function scopeCompleted($query)
+    {
+        return $query->where('payment_status', 'completed');
+    }
 
     /**
      * Get the booking for this payment

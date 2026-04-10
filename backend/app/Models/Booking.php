@@ -97,6 +97,20 @@ class Booking extends Model
         return $this->hasOne(Payment::class, 'bookingID', 'bookingID');
     }
 
+    // A booking has one deposit payment
+    public function depositPayment()
+    {
+        return $this->hasOne(Payment::class, 'bookingID', 'bookingID')
+                    ->where('payment_type', 'deposit');
+    }
+
+    // A booking has one final payment
+    public function finalPayment()
+    {
+        return $this->hasOne(Payment::class, 'bookingID', 'bookingID')
+                    ->where('payment_type', 'final');
+    }
+
     // A booking has one review
     public function review()
     {
@@ -204,5 +218,45 @@ class Booking extends Model
     {
         return $query->whereNull('paid_at')
             ->where('status', 'accepted');
+    }
+
+    /**
+     * Scope for bookings pending final payment
+     */
+    public function scopePendingFinalPayment($query)
+    {
+        return $query->where('payment_status', 'pending_final');
+    }
+
+    /**
+     * Scope for overdue payments
+     */
+    public function scopeOverduePayments($query)
+    {
+        return $query->where('payment_status', 'overdue');
+    }
+
+    /**
+     * Check if payment is overdue
+     */
+    public function isPaymentOverdue(): bool
+    {
+        return $this->payment_deadline && 
+               $this->payment_deadline < now() && 
+               $this->payment_status === 'pending_final';
+    }
+
+    /**
+     * Get remaining amount to be paid (for final payment)
+     */
+    public function getRemainingAmount(): float
+    {
+        $depositPayment = $this->depositPayment;
+        
+        if (!$depositPayment) {
+            return $this->agreed_price;
+        }
+        
+        return round($this->agreed_price - $depositPayment->amount, 2);
     }
 }

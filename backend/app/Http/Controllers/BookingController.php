@@ -105,6 +105,17 @@ class BookingController extends Controller
                     'message' => 'Customer authentication required'
                 ], 401);
             }
+            
+            // Check if customer account is frozen
+            if (isset($customer->account_status) && $customer->account_status === 'frozen') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is frozen. Please contact support or complete pending payments.',
+                    'account_status' => 'frozen',
+                    'frozen_reason' => $customer->frozen_reason ?? 'Account frozen'
+                ], 403);
+            }
 
             Log::info('Creating booking for customer:', ['customerID' => $customer->customerID]);
 
@@ -714,8 +725,16 @@ class BookingController extends Controller
             $booking->refund_amount = $refundAmount;
             $booking->save();
 
-            // Update customer wallet if refund applicable (with locking to prevent race conditions)
-            if ($refundAmount > 0) {
+            // Process refund for split payment system
+            if ($refundAmount > 0 && $booking->payment_status === 'deposit_paid') {
+                // If deposit was paid, process deposit refund
+                $paymentService = app(\App\Services\PaymentService::class);
+                $paymentService->processDepositRefund(
+                    $bookingId,
+                    $request->reason ?? 'Customer cancelled booking'
+                );
+            } elseif ($refundAmount > 0) {
+                // Legacy refund for old bookings (update customer wallet)
                 $lockedCustomer = Customer::where('customerID', $customer->customerID)
                     ->lockForUpdate()
                     ->first();
