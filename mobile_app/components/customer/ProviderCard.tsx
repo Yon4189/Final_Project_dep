@@ -8,6 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import type { ServiceProvider } from '@/app/types/customer.types';
 import { API_BASE_URL } from '@/app/config/api';
@@ -39,6 +40,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   onCallPress,
   onSharePress,
 }) => {
+  const { t } = useTranslation();
   const formatDistance = (distance?: number) => {
     if (!distance) return null;
     if (distance < 1) {
@@ -50,7 +52,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   const getPrimaryService = () => {
     if (!provider.services || provider.services.length === 0) return null;
     const service = provider.services[0];
-    return (service as any)?.serviceName || (service as any)?.name || 'Service';
+    return (service as any)?.serviceName || (service as any)?.name || t('providerProfile.categoryFallback', 'Service Provider');
   };
 
   const getServiceCount = () => {
@@ -101,10 +103,10 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={Colors.warning} />
             <Text style={styles.rating}>{provider.rating?.toFixed(1) || '0.0'}</Text>
-            <Text style={styles.reviews}>({provider.reviewCount || 0} reviews)</Text>
+            <Text style={styles.reviews}>({provider.reviewCount || 0} {t('providerCard.reviews', 'reviews')})</Text>
             {provider.completedJobs > 0 && (
               <View style={styles.jobsBadge}>
-                <Text style={styles.jobsText}>{provider.completedJobs} jobs</Text>
+                <Text style={styles.jobsText}>{provider.completedJobs} {t('providerCard.jobs', 'jobs')}</Text>
               </View>
             )}
           </View>
@@ -123,16 +125,16 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
             {getPrimaryService()}
           </Text>
           {getServiceCount() > 1 && (
-            <Text style={styles.serviceCount}>+{getServiceCount() - 1} more</Text>
+            <Text style={styles.serviceCount}>+{getServiceCount() - 1} {t('providerCard.more', 'more')}</Text>
           )}
         </View>
       )}
 
       <View style={styles.footer}>
         <View style={styles.priceContainer}>
-          <Text style={styles.priceLabel}>Starting from</Text>
+          <Text style={styles.priceLabel}>{t('providerCard.startingFrom', 'Starting from')}</Text>
           <Text style={styles.price}>
-            ETB {provider.priceRange?.min || 0}
+            {t('common.currency', 'ETB')} {provider.priceRange?.min || 0}
           </Text>
         </View>
 
@@ -156,7 +158,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
             onPress={handleBookPress}
             activeOpacity={0.7}
           >
-            <Text style={styles.bookButtonText}>{showActions ? "Book" : "Book Now"}</Text>
+            <Text style={styles.bookButtonText}>{showActions ? t('providerCard.book', 'Book') : t('providerCard.bookNow', 'Book Now')}</Text>
             {!showActions && <Ionicons name="chevron-forward" size={16} color={Colors.surface} />}
           </TouchableOpacity>
         </View>
@@ -165,7 +167,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
       {provider.isAvailable && (
         <View style={styles.availableBadge}>
           <View style={styles.availableDot} />
-          <Text style={styles.availableText}>Available Now</Text>
+          <Text style={styles.availableText}>{t('providerCard.availableNow', 'Available Now')}</Text>
         </View>
       )}
     </TouchableOpacity>

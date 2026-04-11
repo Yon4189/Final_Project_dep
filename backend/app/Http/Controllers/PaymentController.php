@@ -698,7 +698,6 @@ class PaymentController extends Controller
 
         return null;
     }
-}
 
     /**
      * Calculate deposit amount for a booking

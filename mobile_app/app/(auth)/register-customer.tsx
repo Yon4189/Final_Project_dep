@@ -2,6 +2,7 @@
 import { Platform } from 'react-native';
 import { api } from "../services/api";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, { useState, useEffect, useMemo } from "react";
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -33,6 +34,7 @@ interface City {
 
 export default function RegisterCustomerScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
@@ -84,7 +86,7 @@ export default function RegisterCustomerScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera roll permissions');
+      Alert.alert(t('auth.permissionNeeded', 'Permission needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
       return;
     }
 
@@ -120,17 +122,17 @@ export default function RegisterCustomerScreen() {
 
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
-    if (!formData.fullname.trim()) errors.fullname = "Full name is required";
-    if (!formData.email.trim()) errors.email = "Email is required";
+    if (!formData.fullname.trim()) errors.fullname = t("validation.fullNameRequired", "Full name is required");
+    if (!formData.email.trim()) errors.email = t("validation.emailRequired", "Email is required");
     if (!formData.phone.trim()) {
-      errors.phone = "Phone number is required";
+      errors.phone = t("validation.phoneRequired", "Phone number is required");
     } else {
       const { isValid } = validatePhoneNumber(formData.phone);
-      if (!isValid) errors.phone = "Invalid Ethiopian phone format";
+      if (!isValid) errors.phone = t("validation.invalidPhone", "Invalid Ethiopian phone format");
     }
-    if (!formData.location) errors.location = "Location is required";
-    if (!formData.password) errors.password = "Password is required";
-    if (formData.password !== formData.password_confirmation) errors.password_confirmation = "Passwords do not match";
+    if (!formData.location) errors.location = t("validation.locationRequired", "Location is required");
+    if (!formData.password) errors.password = t("validation.passwordRequired", "Password is required");
+    if (formData.password !== formData.password_confirmation) errors.password_confirmation = t("validation.passwordsDoNotMatch", "Passwords do not match");
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -160,10 +162,10 @@ export default function RegisterCustomerScreen() {
       if (response?.success || response?.status === 'success') {
         router.replace("/login");
       } else {
-        Alert.alert("Registration Failed", response?.message || "Something went wrong.");
+        Alert.alert(t("auth.registrationFailed", "Registration Failed"), response?.message || t("auth.somethingWentWrong", "Something went wrong."));
       }
     } catch (err: any) {
-      Alert.alert("Registration Error", err.message || "Failed to register.");
+      Alert.alert(t("auth.registrationError", "Registration Error"), err.message || t("auth.failedToRegister", "Failed to register."));
     } finally {
       setLoading(false);
     }
@@ -181,51 +183,51 @@ export default function RegisterCustomerScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Create Customer Account</Text>
-          <Text style={styles.subtitle}>Join thousands of satisfied customers</Text>
+          <Text style={styles.title}>{t("auth.createCustomerAccount", "Create Customer Account")}</Text>
+          <Text style={styles.subtitle}>{t("auth.joinKeywords", "Join thousands of satisfied customers")}</Text>
         </View>
 
         <View style={styles.formContainer}>
-          <AppInput label="Full Name" value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder="Enter your full name" required error={validationErrors.fullname} />
-          <AppInput label="Email" value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none" required error={validationErrors.email} />
-          <AppInput label="Phone Number" value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required error={validationErrors.phone} />
+          <AppInput label={t("auth.fullName", "Full Name")} value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder={t("auth.enterFullName", "Enter your full name")} required error={validationErrors.fullname} />
+          <AppInput label={t("auth.email", "Email")} value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder={t("auth.enterEmail", "Enter your email")} keyboardType="email-address" autoCapitalize="none" required error={validationErrors.email} />
+          <AppInput label={t("auth.phoneNumber", "Phone Number")} value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required error={validationErrors.phone} />
           
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Your Location <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.label}>{t("auth.yourLocation", "Your Location")} <Text style={styles.required}>*</Text></Text>
             <TouchableOpacity style={[styles.dropdown, validationErrors.location && styles.dropdownError]} onPress={() => setShowLocationModal(true)}>
-              <Text style={formData.location ? styles.dropdownText : styles.dropdownPlaceholder}>{formData.location || "Select your current location"}</Text>
+              <Text style={formData.location ? styles.dropdownText : styles.dropdownPlaceholder}>{formData.location || t("auth.selectLocation", "Select your current location")}</Text>
               <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
             </TouchableOpacity>
             {validationErrors.location && <Text style={styles.errorText}>{validationErrors.location}</Text>}
           </View>
 
-          <AppInput label="Password" value={formData.password} onChangeText={(t) => setFormData({ ...formData, password: t })} placeholder="Minimum 8 characters" secureTextEntry showPasswordToggle required error={validationErrors.password} />
-          <AppInput label="Confirm Password" value={formData.password_confirmation} onChangeText={(t) => setFormData({ ...formData, password_confirmation: t })} placeholder="Re-enter your password" secureTextEntry showPasswordToggle required error={validationErrors.password_confirmation} />
+          <AppInput label={t("auth.password", "Password")} value={formData.password} onChangeText={(t) => setFormData({ ...formData, password: t })} placeholder={t("auth.minCharacters", "Minimum 8 characters")} secureTextEntry showPasswordToggle required error={validationErrors.password} />
+          <AppInput label={t("auth.confirmPassword", "Confirm Password")} value={formData.password_confirmation} onChangeText={(t) => setFormData({ ...formData, password_confirmation: t })} placeholder={t("auth.reenterPassword", "Re-enter your password")} secureTextEntry showPasswordToggle required error={validationErrors.password_confirmation} />
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Profile Picture (Optional)</Text>
+            <Text style={styles.label}>{t("auth.profilePictureOptional", "Profile Picture (Optional)")}</Text>
             <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
               {imageUri ? <Image source={{ uri: imageUri }} style={styles.profileImage} /> : (
                 <View style={styles.imagePlaceholder}>
                   <Ionicons name="camera-outline" size={40} color={colors.text.secondary} />
-                  <Text style={styles.imagePlaceholderText}>Tap to upload photo</Text>
+                  <Text style={styles.imagePlaceholderText}>{t("auth.tapToUpload", "Tap to upload photo")}</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
 
-          <AppButton title="Create Account" onPress={handleRegister} loading={loading} fullWidth style={styles.registerButton} />
+          <AppButton title={t("auth.createAccount", "Create Account")} onPress={handleRegister} loading={loading} fullWidth style={styles.registerButton} />
 
           <View style={styles.divider}>
-            <View style={styles.dividerLine} /><Text style={styles.dividerText}>OR</Text><View style={styles.dividerLine} />
+            <View style={styles.dividerLine} /><Text style={styles.dividerText}>{t("auth.or", "OR")}</Text><View style={styles.dividerLine} />
           </View>
 
           <TouchableOpacity style={styles.linkButton} onPress={() => router.push("/register-provider")}>
-            <Text style={styles.linkText}>Want to offer services? <Text style={styles.linkHighlight}>Register as Provider</Text></Text>
+            <Text style={styles.linkText}>{t("auth.wantToOfferServices", "Want to offer services?")} <Text style={styles.linkHighlight}>{t("auth.registerAsProvider", "Register as Provider")}</Text></Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.loginLink} onPress={() => router.push("/login")}>
-            <Text style={styles.loginText}>Already have an account? <Text style={styles.loginLinkText}>Sign In</Text></Text>
+            <Text style={styles.loginText}>{t("auth.alreadyHaveAccount", "Already have an account?")} <Text style={styles.loginLinkText}>{t("auth.signIn", "Sign In")}</Text></Text>
           </TouchableOpacity>
         </View>
 
@@ -233,7 +235,7 @@ export default function RegisterCustomerScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Your Location</Text>
+                <Text style={styles.modalTitle}>{t("auth.selectYourLocation", "Select Your Location")}</Text>
                 <TouchableOpacity onPress={() => setShowLocationModal(false)}><Ionicons name="close" size={24} color={colors.text.secondary} /></TouchableOpacity>
               </View>
               <FlatList

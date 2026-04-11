@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors } from '@/app/constants/Colors';
 import AppButton from '../AppButton';
@@ -49,6 +50,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   userLocation,
   selectedService,
 }) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const createBooking = useCreateBooking();
 
@@ -158,19 +160,20 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         await loadUserData();
       } else {
         console.log('User not authenticated');
+        console.log('User not authenticated');
         Alert.alert(
-          'Authentication Required',
-          'Please log in to continue with your service request.',
+          t('booking.authRequired', 'Authentication Required'),
+          t('booking.loginToContinue', 'Please log in to continue with your service request.'),
           [
             {
-              text: 'Login',
+              text: t('login.loginButton', 'Login'),
               onPress: () => {
                 onClose();
                 router.push('/(auth)/login');
               }
             },
             {
-              text: 'Cancel',
+              text: t('common.cancel', 'Cancel'),
               style: 'cancel'
             }
           ]
@@ -243,6 +246,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           slotId: slot.id
         }));
         setAvailableTimeSlots(slots);
+          setAvailableTimeSlots(slots);
       } else {
         // Fallback to mock time slots if API fails
         setAvailableTimeSlots(generateMockTimeSlots());
@@ -278,7 +282,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
   const handleTimeSelect = (timeSlot: TimeSlot) => {
     if (!timeSlot.available) {
-      Alert.alert('Not Available', 'This time slot is already booked. Please select another time.');
+      Alert.alert(t('common.info', 'Not Available'), t('booking.errors.slotUnavailable', 'This time slot is already booked. Please select another time.'));
       return;
     }
     
@@ -290,7 +294,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
   const handleServiceSelect = (service: ProfessionalService) => {
     setSelectedServiceId(service.serviceId?.toString() || service.id?.toString() || '');
-    setSelectedServiceName(service.serviceName || service.service?.name || 'Service');
+    setSelectedServiceName(service.serviceName || service.service?.name || t('providerProfile.categoryFallback', 'Service Provider'));
     
     // Get price - check multiple possible locations
     const price = service.price || service.basePrice || service.customPrice || service.service?.basePrice || 0;
@@ -311,7 +315,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(undefined, {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
@@ -320,7 +324,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   };
 
   const formatTime = (time: Date) => {
-    return time.toLocaleTimeString('en-US', {
+    return time.toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -328,26 +332,26 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
   const validateForm = () => {
     if (!selectedServiceId) {
-      Alert.alert('Error', 'Please select a service');
+      Alert.alert(t('common.error', 'Error'), t('booking.errors.selectService', 'Please select a service'));
       return false;
     }
 
     // Validate agreed price
     if (!agreedPrice || agreedPrice.trim() === '') {
-      Alert.alert('Error', 'Please enter the agreed price');
+      Alert.alert(t('common.error', 'Error'), t('booking.errors.enterPrice', 'Please enter the agreed price'));
       return false;
     }
 
     const priceValue = parseFloat(agreedPrice);
     if (isNaN(priceValue) || priceValue <= 0) {
-      Alert.alert('Error', 'Please enter a valid price (numbers only)');
+      Alert.alert(t('common.error', 'Error'), t('booking.errors.invalidPrice', 'Please enter a valid price (numbers only)'));
       return false;
     }
     
     // Validate location differently based on selection source
     if (addressOption === 'current') {
       if (!userLocation?.latitude || !userLocation?.longitude) {
-        Alert.alert('Location Required', 'We could not detect your GPS coordinates. Please ensure location services are enabled or manually enter a new address below.');
+        Alert.alert(t('booking.address.title', 'Location Required'), t('booking.errors.locationRequired', 'We could not detect your GPS coordinates. Please ensure location services are enabled or manually enter a new address below.'));
         return false;
       }
     } else if (addressOption === 'saved') {
@@ -357,7 +361,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       }
     } else if (addressOption === 'new') {
       if (!address.trim()) {
-        Alert.alert('Error', 'Please enter your complete address details');
+        Alert.alert(t('common.error', 'Error'), t('booking.errors.enterAddress', 'Please enter your complete address details'));
         return false;
       }
     } else {
@@ -373,7 +377,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     selectedDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
     
     if (selectedDateTime < now) {
-      Alert.alert('Error', 'Please select a future date and time');
+      Alert.alert(t('common.error', 'Error'), t('booking.errors.futureDate', 'Please select a future date and time'));
       return false;
     }
     
@@ -384,7 +388,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     );
     
     if (selectedSlot && !selectedSlot.available) {
-      Alert.alert('Error', 'Selected time slot is no longer available. Please choose another time.');
+      Alert.alert(t('common.error', 'Error'), t('booking.errors.slotUnavailable', 'Selected time slot is no longer available. Please choose another time.'));
       return false;
     }
     
@@ -397,18 +401,18 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     const authenticated = await api.isAuthenticated();
     if (!authenticated) {
       Alert.alert(
-        'Session Expired',
-        'Your session has expired. Please log in again.',
+        t('booking.sessionExpired', 'Session Expired'),
+        t('booking.relogin', 'Your session has expired. Please log in again.'),
         [
           {
-            text: 'Login',
+            text: t('login.loginButton', 'Login'),
             onPress: () => {
               onClose();
               router.push('/(auth)/login');
             }
           },
           {
-            text: 'Cancel',
+            text: t('common.cancel', 'Cancel'),
             style: 'cancel'
           }
         ]
@@ -426,7 +430,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       let finalAddress = address;
 
       if (addressOption === 'current' && !address.trim()) {
-        finalAddress = 'GPS Coordinates Used';
+        finalAddress = t('common.gpsCoords', 'GPS Coordinates Used');
       }
 
       if (addressOption === 'new' && isSavingNewAddress) {
@@ -484,18 +488,18 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
       if (bookingResponse && bookingId) {
         Alert.alert(
-          'Request Sent',
-          'Your booking request was submitted. The provider will receive it and you will be notified once it is accepted. After acceptance, return here or visit the Notifications tab to proceed to payment.',
+          t('booking.successTitle', 'Request Sent'),
+          t('booking.successMessage', 'Your booking request was submitted. The provider will receive it and you will be notified once it is accepted. After acceptance, return here or visit the Notifications tab to proceed to payment.'),
           [
             {
-              text: 'View Notifications',
+              text: t('booking.viewNotifications', 'View Notifications'),
               onPress: () => {
                 onClose();
                 router.push('/(customer)/notifications');
               },
             },
             {
-              text: 'OK',
+              text: t('common.ok', 'OK'),
               style: 'default',
               onPress: () => {
                 onClose();
@@ -505,7 +509,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         );
         return;
       } else {
-        Alert.alert('Error', 'Failed to create booking. No booking ID received.');
+        Alert.alert(t('common.error', 'Error'), t('booking.errors.noBookingId', 'Failed to create booking. No booking ID received.'));
       }
     } catch (error: any) {
       console.error('Booking creation error:', error);
@@ -526,24 +530,24 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
       if (error.response?.status === 401) {
         Alert.alert(
-          'Session Expired',
-          'Your session has expired. Please log in again.',
+          t('booking.sessionExpired', 'Session Expired'),
+          t('booking.relogin', 'Your session has expired. Please log in again.'),
           [
             {
-              text: 'Login',
+              text: t('login.loginButton', 'Login'),
               onPress: () => {
                 onClose();
                 router.push('/(auth)/login');
               }
             },
             {
-              text: 'Cancel',
+              text: t('common.cancel', 'Cancel'),
               style: 'cancel'
             }
           ]
         );
       } else {
-        Alert.alert('Booking Error', errorMessage);
+        Alert.alert(t('common.error', 'Booking Error'), errorMessage);
       }
     } finally {
       setLoading(false);
@@ -555,21 +559,21 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     if (!providerServices || providerServices.length === 0) {
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service</Text>
-          <Text style={styles.serviceName}>No services available</Text>
+          <Text style={styles.sectionTitle}>{t('common.service', 'Service')}</Text>
+          <Text style={styles.serviceName}>{t('booking.noServices', 'No services available')}</Text>
         </View>
       );
     }
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Service *</Text>
+        <Text style={styles.sectionTitle}>{t('booking.selectService', 'Select Service *')}</Text>
         <TouchableOpacity
           style={styles.serviceSelector}
           onPress={() => setShowServicePicker(!showServicePicker)}
         >
           <Text style={selectedServiceId ? styles.serviceSelectorText : styles.serviceSelectorPlaceholder}>
-            {selectedServiceName || 'Choose a service'}
+            {selectedServiceName || t('booking.chooseService', 'Choose a service')}
           </Text>
           <Ionicons 
             name={showServicePicker ? 'chevron-up' : 'chevron-down'} 
@@ -610,7 +614,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                         <Text style={styles.serviceItemDuration}>{durationText}</Text>
                       ) : null}
                     </View>
-                    <Text style={styles.serviceItemPrice}>ETB {servicePrice}</Text>
+                    <Text style={styles.serviceItemPrice}>{t('common.currency', 'ETB')} {servicePrice}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -627,7 +631,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       return (
         <View style={styles.timeSlotsLoading}>
           <ActivityIndicator size="small" color={Colors.primary} />
-          <Text style={styles.timeSlotsLoadingText}>Loading available times...</Text>
+          <Text style={styles.timeSlotsLoadingText}>{t('booking.loadingTimes', 'Loading available times...')}</Text>
         </View>
       );
     }
@@ -635,7 +639,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     if (availableTimeSlots.length === 0) {
       return (
         <View style={styles.noTimeSlots}>
-          <Text style={styles.noTimeSlotsText}>No available time slots for this date</Text>
+          <Text style={styles.noTimeSlotsText}>{t('booking.noTimes', 'No available time slots for this date')}</Text>
         </View>
       );
     }
@@ -690,7 +694,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           style={styles.modalContent}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Request Service</Text>
+            <Text style={styles.modalTitle}>{t('booking.title', 'Request Service')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
@@ -705,7 +709,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={16} color={Colors.warning} />
                 <Text style={styles.ratingText}>
-                  {provider.rating?.toFixed(1) || '0.0'} • {provider.reviewCount || 0} reviews
+                  {provider.rating?.toFixed(1) || '0.0'} • {provider.reviewCount || 0} {t('providerCard.reviews', 'reviews')}
                 </Text>
               </View>
             </View>
@@ -715,7 +719,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
             {/* Date Selection - ALWAYS ACTIVE */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Select Date *</Text>
+              <Text style={styles.sectionTitle}>{t('booking.selectDate', 'Select Date *')}</Text>
               {Platform.OS === 'web' ? (
                 <input
                   type="date"
@@ -764,7 +768,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
             {/* Time Selection - ALWAYS ACTIVE */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Select Time *</Text>
+              <Text style={styles.sectionTitle}>{t('booking.selectTime', 'Select Time *')}</Text>
               {Platform.OS === 'web' ? (
                 <input
                   type="time"
@@ -816,7 +820,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
             {/* Address Selection Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📍 Where should we send the provider?</Text>
+              <Text style={styles.sectionTitle}>📍 {t('booking.address.title', 'Where should we send the provider?')}</Text>
               
               <View style={styles.optionsContainer}>
                 {/* Current Location */}
@@ -829,7 +833,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                     size={20} 
                     color={addressOption === 'current' ? Colors.primary : Colors.text.secondary} 
                   />
-                  <Text style={styles.optionText}>Use my current location</Text>
+                  <Text style={styles.optionText}>{t('booking.address.current', 'Use my current location')}</Text>
                 </TouchableOpacity>
 
                 {/* Saved Addresses */}
@@ -842,7 +846,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                     size={20} 
                     color={addressOption === 'saved' ? Colors.primary : Colors.text.secondary} 
                   />
-                  <Text style={styles.optionText}>Choose from my saved addresses</Text>
+                  <Text style={styles.optionText}>{t('booking.address.saved', 'Choose from my saved addresses')}</Text>
                 </TouchableOpacity>
 
                 {addressOption === 'saved' && (
@@ -851,15 +855,15 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                       <ActivityIndicator size="small" color={Colors.primary} />
                     ) : savedAddresses.length > 0 ? (
                       <>
-                        <TouchableOpacity
-                          style={styles.addressSelector}
-                          onPress={() => setShowSavedAddressPicker(!showSavedAddressPicker)}
-                        >
-                          <Text style={styles.addressSelectorText}>
-                            {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.label?.toUpperCase() || 'Select address'}: {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.addressLine1}
-                          </Text>
-                          <Ionicons name="chevron-down" size={16} color={Colors.text.secondary} />
-                        </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.addressSelector}
+                            onPress={() => setShowSavedAddressPicker(!showSavedAddressPicker)}
+                          >
+                            <Text style={styles.addressSelectorText}>
+                              {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.label?.toUpperCase() || t('booking.address.selectSaved', 'Select address')}: {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.addressLine1}
+                            </Text>
+                            <Ionicons name="chevron-down" size={16} color={Colors.text.secondary} />
+                          </TouchableOpacity>
                         
                         {showSavedAddressPicker && (
                           <View style={styles.savedAddressList}>
@@ -884,7 +888,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                         )}
                       </>
                     ) : (
-                      <Text style={styles.noAddressesText}>No saved addresses found.</Text>
+                      <Text style={styles.noAddressesText}>{t('booking.address.noSaved', 'No saved addresses found.')}</Text>
                     )}
                   </View>
                 )}
@@ -899,7 +903,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                     size={20} 
                     color={addressOption === 'new' ? Colors.primary : Colors.text.secondary} 
                   />
-                  <Text style={styles.optionText}>Enter new address</Text>
+                  <Text style={styles.optionText}>{t('booking.address.new', 'Enter new address')}</Text>
                 </TouchableOpacity>
 
                 {addressOption === 'new' && (
@@ -908,14 +912,14 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                       style={styles.addressInput}
                       value={address}
                       onChangeText={setAddress}
-                      placeholder="Start typing - we'll suggest"
+                      placeholder={t('booking.address.placeholder', 'Start typing - we\'ll suggest')}
                       placeholderTextColor={Colors.text.secondary}
                       multiline
                     />
                     
                     {/* Save for later sub-form */}
                     <View style={styles.saveAddressForm}>
-                      <Text style={styles.saveAddressTitle}>Save this address for later?</Text>
+                      <Text style={styles.saveAddressTitle}>{t('booking.address.saveForFuture', 'Save this address for later?')}</Text>
                       <View style={styles.saveOptionsRow}>
                         <TouchableOpacity 
                           style={styles.saveToggle} 
@@ -926,13 +930,13 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                             size={20} 
                             color={Colors.primary} 
                           />
-                          <Text style={styles.saveToggleText}>Yes, save this address</Text>
+                          <Text style={styles.saveToggleText}>{t('auth.yes', 'Yes, save this address')}</Text>
                         </TouchableOpacity>
                       </View>
 
                       {isSavingNewAddress && (
                         <View style={styles.labelSelection}>
-                          <Text style={styles.labelTitle}>Save as:</Text>
+                          <Text style={styles.labelTitle}>{t('booking.address.label', 'Save as:')}</Text>
                           <View style={styles.labelOptions}>
                             {['home', 'office', 'other'].map((label) => (
                               <TouchableOpacity
@@ -954,7 +958,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                               style={styles.customLabelInput}
                               value={customLabel}
                               onChangeText={setCustomLabel}
-                              placeholder="Specify label (e.g., Mom's house)"
+                              placeholder={t('booking.address.enterCustomLabel', 'Specify label (e.g., Mom\'s house)')}
                               placeholderTextColor={Colors.text.secondary}
                             />
                           )}
@@ -969,10 +973,10 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
             {/* Agreed Price - Shows after service is selected */}
             {selectedServiceId && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Agreed Price (ETB) *</Text>
+                <Text style={styles.sectionTitle}>{t('booking.price.agreedPrice', 'Agreed Price (ETB) *')}</Text>
                 <Text style={styles.priceHint}>
-                  Enter the price you discussed with the provider
-                  {servicePrice > 0 && ` (Base price: ETB ${servicePrice})`}
+                  {t('booking.price.note', 'Enter the price you discussed with the provider')}
+                  {servicePrice > 0 && ` (${t('providerProfile.rate', 'Base price')}: ${t('common.currency', 'ETB')} ${servicePrice})`}
                 </Text>
                 <TextInput
                   style={styles.priceInput}
@@ -994,13 +998,13 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                 />
                 {agreedPrice && parseFloat(agreedPrice) > 0 && (
                   <View style={styles.pricePreview}>
-                    <Text style={styles.pricePreviewLabel}>You will pay:</Text>
-                    <Text style={styles.pricePreviewValue}>ETB {parseFloat(agreedPrice).toFixed(2)}</Text>
+                    <Text style={styles.pricePreviewLabel}>{t('common.total', 'You will pay:')}</Text>
+                    <Text style={styles.pricePreviewValue}>{t('common.currency', 'ETB')} {parseFloat(agreedPrice).toFixed(2)}</Text>
                     {serviceDuration && (
-                      <Text style={styles.priceNote}>Estimated duration: {serviceDuration}</Text>
+                      <Text style={styles.priceNote}>{t('common.duration', 'Estimated duration')}: {serviceDuration}</Text>
                     )}
                     <Text style={styles.priceNote}>
-                      Platform fee will be added at checkout
+                      {t('payment.platformFee', 'Platform fee will be added at checkout')}
                     </Text>
                   </View>
                 )}
@@ -1009,12 +1013,12 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
             {/* Description - ALWAYS ACTIVE */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Description (Optional)</Text>
+              <Text style={styles.sectionTitle}>{t('booking.description.label', 'Description (Optional)')}</Text>
               <TextInput
                 style={styles.descriptionInput}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Describe your issue or requirements"
+                placeholder={t('booking.description.placeholder', 'Describe your issue or requirements')}
                 placeholderTextColor={Colors.text.secondary}
                 multiline
                 numberOfLines={3}
@@ -1025,11 +1029,11 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
 
             <AppButton
-              title="Send Request"
+              title={t('booking.submit', 'Send Request')}
               onPress={handleSendRequest}
               loading={loading || createBooking.isPending}
               disabled={loading || createBooking.isPending || !selectedServiceId || !agreedPrice || parseFloat(agreedPrice) <= 0}

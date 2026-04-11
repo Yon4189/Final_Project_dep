@@ -5,8 +5,7 @@ namespace App\Services;
 use App\Models\SystemSetting;
 use App\Models\Payment;
 use App\Models\Booking;
-use App\Services\ChapaService;
-use App\Services\PayoutProcessor;
+// Services in the same namespace do not need to be explicitly imported
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -61,7 +60,7 @@ class PaymentService
         $booking = Booking::findOrFail($bookingId);
         
         if ($paymentType === 'deposit') {
-            $calculation = $this->calculateDepositAmount($booking->agreed_price);
+            $calculation = $this->calculateDepositAmount((float) ($booking->agreed_price ?? 0));
             $expectedAmount = $calculation['deposit_amount'];
         } else {
             // For final payment, calculate remaining amount
@@ -71,7 +70,7 @@ class PaymentService
                     'payment' => ['Deposit payment not found for this booking']
                 ]);
             }
-            $expectedAmount = round($booking->agreed_price - $depositPayment->amount, 2);
+            $expectedAmount = round((float) ($booking->agreed_price ?? 0) - (float) ($depositPayment->amount ?? 0), 2);
         }
         
         // Allow 0.01 tolerance for rounding differences
@@ -224,7 +223,6 @@ class PaymentService
         
         return $payment;
     }
-}
 
     /**
      * Verify and complete payment after Chapa callback
@@ -295,7 +293,6 @@ class PaymentService
             ]);
         }
     }
-}
 
     /**
      * Process deposit refund (when provider cancels)
@@ -326,7 +323,7 @@ class PaymentService
             $attempt++;
             
             try {
-                DB::transaction(function () use ($depositPayment, $booking, $reason) {
+                DB::transaction(function () use ($depositPayment, $booking, $bookingId, $reason) {
                     // Update payment status to refunded
                     $depositPayment->payment_status = 'refunded';
                     $depositPayment->refunded_at = now();
@@ -355,7 +352,7 @@ class PaymentService
                     $booking->customerID,
                     'deposit_refund_processed',
                     'Deposit Refunded',
-                    'Your deposit of ' . number_format($depositPayment->amount, 2) . ' ETB for booking #' . $bookingId . ' has been refunded to your wallet.',
+                    'Your deposit of ' . number_format((float) ($depositPayment->amount ?? 0), 2) . ' ETB for booking #' . $bookingId . ' has been refunded to your wallet.',
                     [
                         'booking_id' => $bookingId,
                         'amount' => $depositPayment->amount,
@@ -413,7 +410,7 @@ class PaymentService
             throw new \Exception('Final payment not found or not completed');
         }
         
-        DB::transaction(function () use ($finalPayment, $booking, $reason) {
+        DB::transaction(function () use ($finalPayment, $booking, $bookingId, $reason) {
             // Reverse provider payouts first
             $this->payoutProcessor->reversePayoutForRefund($bookingId);
             
@@ -446,7 +443,7 @@ class PaymentService
             $booking->customerID,
             'final_payment_refund_processed',
             'Payment Refunded',
-            'Your payment of ' . number_format($finalPayment->amount, 2) . ' ETB for booking #' . $bookingId . ' has been refunded to your wallet.',
+            'Your payment of ' . number_format((float) ($finalPayment->amount ?? 0), 2) . ' ETB for booking #' . $bookingId . ' has been refunded to your wallet.',
             [
                 'booking_id' => $bookingId,
                 'amount' => $finalPayment->amount,

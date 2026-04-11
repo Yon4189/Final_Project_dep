@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import AppInput from '../../components/AppInput';
 import AppButton from '../../components/AppButton';
@@ -21,6 +22,7 @@ import { api } from '../services/api';
 
 export default function ChangePassword() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     current_password: '',
@@ -36,21 +38,21 @@ export default function ChangePassword() {
     const newErrors: {[key: string]: string} = {};
 
     if (!formData.current_password) {
-      newErrors.current_password = 'Current password is required';
+      newErrors.current_password = t('profile.currentPasswordRequired', 'Current password is required');
     }
 
     if (!formData.new_password) {
-      newErrors.new_password = 'New password is required';
+      newErrors.new_password = t('profile.newPasswordRequired', 'New password is required');
     } else if (formData.new_password.length < 8) {
-      newErrors.new_password = 'Password must be at least 8 characters';
+      newErrors.new_password = t('auth.atLeast8Chars', 'Password must be at least 8 characters');
     } else if (!/(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])/.test(formData.new_password)) {
-      newErrors.new_password = 'Password must contain uppercase, lowercase and number';
+      newErrors.new_password = t('auth.weakPasswordInstruction', 'Password must contain uppercase, lowercase and number');
     }
 
     if (!formData.confirm_password) {
-      newErrors.confirm_password = 'Please confirm your password';
+      newErrors.confirm_password = t('auth.repeatNewPassword', 'Please confirm your password');
     } else if (formData.new_password !== formData.confirm_password) {
-      newErrors.confirm_password = 'Passwords do not match';
+      newErrors.confirm_password = t('auth.passwordMismatch', 'Passwords do not match');
     }
 
     setErrors(newErrors);
@@ -72,17 +74,17 @@ export default function ChangePassword() {
 
       if (response.success) {
         Alert.alert(
-          'Success',
-          'Your password has been changed successfully',
+          t('common.success', 'Success'),
+          t('profile.passwordChangedSuccess', 'Your password has been changed successfully'),
           [
             {
-              text: 'OK',
+              text: t('common.ok', 'OK'),
               onPress: () => router.back()
             }
           ]
         );
       } else {
-        Alert.alert('Error', response.message || 'Failed to change password');
+        Alert.alert(t('common.error', 'Error'), response.message || t('profile.failedChange', 'Failed to change password'));
       }
     } catch (error: any) {
       console.error('Change password error:', error);
@@ -100,7 +102,7 @@ export default function ChangePassword() {
         errorMessage = error.response.data.message;
       }
       
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('common.error', 'Error'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -128,10 +130,10 @@ export default function ChangePassword() {
   };
 
   const getStrengthText = () => {
-    if (passwordStrength < 50) return 'Weak';
-    if (passwordStrength < 75) return 'Medium';
-    if (passwordStrength < 100) return 'Strong';
-    return 'Very Strong';
+    if (passwordStrength < 50) return t('profile.passwordStrength.weak', 'Weak');
+    if (passwordStrength < 75) return t('profile.passwordStrength.medium', 'Medium');
+    if (passwordStrength < 100) return t('profile.passwordStrength.strong', 'Strong');
+    return t('profile.passwordStrength.veryStrong', 'Very Strong');
   };
 
   return (
@@ -150,7 +152,7 @@ export default function ChangePassword() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Change Password</Text>
+          <Text style={styles.headerTitle}>{t('profile.changePassword', 'Change Password')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -159,13 +161,13 @@ export default function ChangePassword() {
           <View style={styles.infoBox}>
             <Ionicons name="shield-checkmark-outline" size={24} color={Colors.primary} />
             <Text style={styles.infoText}>
-              Choose a strong password that you don't use for other accounts
+              {t('profile.chooseStrongPassword', "Choose a strong password that you don't use for other accounts")}
             </Text>
           </View>
 
           {/* Current Password */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Current Password</Text>
+            <Text style={styles.label}>{t('profile.currentPassword', 'Current Password')}</Text>
             <View style={styles.passwordContainer}>
               <AppInput
                 value={formData.current_password}
@@ -173,7 +175,7 @@ export default function ChangePassword() {
                   setFormData({ ...formData, current_password: text });
                   setErrors({ ...errors, current_password: '' });
                 }}
-                placeholder="Enter your current password"
+                placeholder={t('auth.enterYourCurrentPassword', 'Enter your current password')}
                 secureTextEntry={!showCurrentPassword}
                 error={errors.current_password}
                 leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
@@ -193,7 +195,7 @@ export default function ChangePassword() {
 
           {/* New Password */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>New Password</Text>
+            <Text style={styles.label}>{t('profile.newPassword', 'New Password')}</Text>
             <View style={styles.passwordContainer}>
               <AppInput
                 value={formData.new_password}
@@ -201,7 +203,7 @@ export default function ChangePassword() {
                   setFormData({ ...formData, new_password: text });
                   setErrors({ ...errors, new_password: '' });
                 }}
-                placeholder="Enter new password"
+                placeholder={t('auth.enterNewPassword', 'Enter new password')}
                 secureTextEntry={!showNewPassword}
                 error={errors.new_password}
                 leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
@@ -240,14 +242,14 @@ export default function ChangePassword() {
 
             {/* Password Requirements */}
             <View style={styles.requirementsContainer}>
-              <Text style={styles.requirementsTitle}>Password must contain:</Text>
+              <Text style={styles.requirementsTitle}>{t('profile.passwordRequirements', 'Password must contain:')}</Text>
               <View style={styles.requirementItem}>
                 <Ionicons 
                   name={formData.new_password.length >= 8 ? "checkmark-circle" : "ellipse-outline"} 
                   size={16} 
                   color={formData.new_password.length >= 8 ? Colors.success : Colors.text.secondary} 
                 />
-                <Text style={styles.requirementText}>At least 8 characters</Text>
+                <Text style={styles.requirementText}>{t('profile.charCount', 'At least 8 characters')}</Text>
               </View>
               <View style={styles.requirementItem}>
                 <Ionicons 
@@ -255,7 +257,7 @@ export default function ChangePassword() {
                   size={16} 
                   color={/[A-Z]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
                 />
-                <Text style={styles.requirementText}>At least one uppercase letter</Text>
+                <Text style={styles.requirementText}>{t('profile.uppercase', 'At least one uppercase letter')}</Text>
               </View>
               <View style={styles.requirementItem}>
                 <Ionicons 
@@ -263,7 +265,7 @@ export default function ChangePassword() {
                   size={16} 
                   color={/[a-z]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
                 />
-                <Text style={styles.requirementText}>At least one lowercase letter</Text>
+                <Text style={styles.requirementText}>{t('profile.lowercase', 'At least one lowercase letter')}</Text>
               </View>
               <View style={styles.requirementItem}>
                 <Ionicons 
@@ -271,14 +273,14 @@ export default function ChangePassword() {
                   size={16} 
                   color={/[0-9]/.test(formData.new_password) ? Colors.success : Colors.text.secondary} 
                 />
-                <Text style={styles.requirementText}>At least one number</Text>
+                <Text style={styles.requirementText}>{t('profile.number', 'At least one number')}</Text>
               </View>
             </View>
           </View>
 
           {/* Confirm Password */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm New Password</Text>
+            <Text style={styles.label}>{t('profile.confirmNewPassword', 'Confirm New Password')}</Text>
             <View style={styles.passwordContainer}>
               <AppInput
                 value={formData.confirm_password}
@@ -286,7 +288,7 @@ export default function ChangePassword() {
                   setFormData({ ...formData, confirm_password: text });
                   setErrors({ ...errors, confirm_password: '' });
                 }}
-                placeholder="Re-enter new password"
+                placeholder={t('auth.repeatNewPassword', 'Re-enter new password')}
                 secureTextEntry={!showConfirmPassword}
                 error={errors.confirm_password}
                 leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.text.secondary} />}
@@ -315,7 +317,7 @@ export default function ChangePassword() {
                   styles.matchText,
                   { color: formData.new_password === formData.confirm_password ? Colors.success : Colors.error }
                 ]}>
-                  {formData.new_password === formData.confirm_password ? 'Passwords match' : 'Passwords do not match'}
+                  {formData.new_password === formData.confirm_password ? t('profile.passwordsMatch', 'Passwords match') : t('profile.passwordsDoNotMatch', 'Passwords do not match')}
                 </Text>
               </View>
             )}
@@ -327,11 +329,11 @@ export default function ChangePassword() {
               style={styles.cancelButton}
               onPress={() => router.back()}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
 
             <AppButton
-              title="Change Password"
+              title={t('profile.changePassword', 'Change Password')}
               onPress={handleChangePassword}
               loading={loading}
               disabled={loading}
@@ -341,18 +343,18 @@ export default function ChangePassword() {
 
           {/* Security Tips */}
           <View style={styles.tipsContainer}>
-            <Text style={styles.tipsTitle}>Security Tips:</Text>
+            <Text style={styles.tipsTitle}>{t('profile.securityTips', 'Security Tips:')}</Text>
             <View style={styles.tipItem}>
               <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-              <Text style={styles.tipText}>Use a unique password for this account</Text>
+              <Text style={styles.tipText}>{t('profile.uniquePassword', 'Use a unique password for this account')}</Text>
             </View>
             <View style={styles.tipItem}>
               <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-              <Text style={styles.tipText}>Don't share your password with anyone</Text>
+              <Text style={styles.tipText}>{t('profile.dontShare', "Don't share your password with anyone")}</Text>
             </View>
             <View style={styles.tipItem}>
               <Ionicons name="shield-outline" size={16} color={Colors.primary} />
-              <Text style={styles.tipText}>Change your password regularly</Text>
+              <Text style={styles.tipText}>{t('profile.changeRegularly', 'Change your password regularly')}</Text>
             </View>
           </View>
         </View>

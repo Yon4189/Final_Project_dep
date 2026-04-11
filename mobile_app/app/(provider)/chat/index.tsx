@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import { api } from '@/app/services/api';
 import { API_BASE_URL } from '@/app/config/api';
@@ -22,6 +23,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function ProviderChatList() {
     const router = useRouter();
+    const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -74,7 +76,7 @@ export default function ProviderChatList() {
                 />
                 <View style={styles.content}>
                     <View style={styles.header}>
-                        <Text style={styles.name}>{customer?.fullname || 'Customer'}</Text>
+                        <Text style={styles.name}>{customer?.fullname || t('common.customer', 'Customer')}</Text>
                         {latestMessage && (
                             <Text style={styles.time}>
                                 {formatDistanceToNow(new Date(latestMessage.created_at), { addSuffix: true })}
@@ -83,7 +85,7 @@ export default function ProviderChatList() {
                     </View>
                     <View style={styles.footer}>
                         <Text style={[styles.lastMessage, item.unread_count > 0 && styles.unreadMessage]} numberOfLines={1}>
-                            {latestMessage?.message || 'No messages yet'}
+                            {latestMessage?.message || t('chat.noMessages', 'No messages yet')}
                         </Text>
                         {item.unread_count > 0 && (
                             <View style={styles.badge}>
@@ -133,7 +135,7 @@ export default function ProviderChatList() {
                                 <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
                                 <TextInput
                                     style={styles.searchInput}
-                                    placeholder="Search customers..."
+                                    placeholder={t('chat.searchCustomers', 'Search customers...')}
                                     value={searchQuery}
                                     onChangeText={setSearchQuery}
                                     placeholderTextColor={Colors.text.secondary}
@@ -153,12 +155,12 @@ export default function ProviderChatList() {
                         <View style={styles.emptyContainer}>
                             <Ionicons name="chatbubbles-outline" size={64} color={Colors.text.secondary} />
                             <Text style={styles.emptyText}>
-                                {searchQuery ? 'No customers found' : 'No conversations yet'}
+                                {searchQuery ? t('chat.noCustomersFound', 'No customers found') : t('chat.noConversations', 'No conversations yet')}
                             </Text>
                             <Text style={styles.emptySubtitle}>
                                 {searchQuery 
-                                    ? 'Try searching for a different name.' 
-                                    : 'When customers message you, they will appear here.'}
+                                    ? t('chat.tryDifferentSearch', 'Try searching for a different name.') 
+                                    : t('chat.customerMsgAppear', 'When customers message you, they will appear here.')}
                             </Text>
                         </View>
                     }

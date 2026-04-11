@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { usePaymentMethods, useInitializeChapaPayment, useVerifyChapaPayment } from '../../hooks/usePayment';
@@ -21,6 +22,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { PriceText } from '../../components/common/PriceText';
 export default function PaymentScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
 
   // 1. Hooks
@@ -86,24 +88,24 @@ export default function PaymentScreen() {
 
         if (verification.is_successful) {
           setPaymentStatus('completed');
-          Alert.alert('Payment Successful!', 'Your payment has been processed successfully.', [
-            { text: 'View Bookings', onPress: () => router.push('/(customer)/bookings') },
-            { text: 'OK', onPress: () => router.back() },
+          Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.paymentProcessed', 'Your payment has been processed successfully.'), [
+            { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+            { text: t('common.ok', 'OK'), onPress: () => router.back() },
           ]);
         } else if (status === 'cancel') {
           setPaymentStatus('pending');
-          Alert.alert('Payment Cancelled', 'You cancelled the payment process.');
+          Alert.alert(t('payment.paymentCancelled', 'Payment Cancelled'), t('payment.cancelMsg', 'You cancelled the payment process.'));
         } else {
           setPaymentStatus('failed');
-          Alert.alert('Payment Failed', verification.message || 'Payment verification failed.');
+          Alert.alert(t('payment.statusFailed', 'Payment Failed'), verification.message || t('payment.verificationFailed', 'Payment verification failed.'));
         }
       } else {
         setPaymentStatus('failed');
-        Alert.alert('Payment Error', `No transaction reference found.\nURL: ${url}`);
+        Alert.alert(t('common.error', 'Payment Error'), `${t('payment.noTxRef', 'No transaction reference found.')}\nURL: ${url}`);
       }
     } catch (error: any) {
       setPaymentStatus('failed');
-      Alert.alert('Error', error?.message || 'Unknown error');
+      Alert.alert(t('common.error', 'Error'), error?.message || t('common.unknownError', 'Unknown error'));
     } finally {
       setIsPaying(false);
     }
@@ -118,8 +120,8 @@ export default function PaymentScreen() {
         setIsPaying(false);
         setPaymentStatus('completed');
         Alert.alert('Development Mode', 'This is a mock payment for testing.', [
-          { text: 'View Bookings', onPress: () => router.push('/(customer)/bookings') },
-          { text: 'OK', onPress: () => router.back() },
+          { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+          { text: t('common.ok', 'OK'), onPress: () => router.back() },
         ]);
       }, 1500);
       return;
@@ -139,9 +141,9 @@ export default function PaymentScreen() {
           const verification = await verifyChapaPayment.mutateAsync(txRef);
           if (verification.is_successful) {
             setPaymentStatus('completed');
-            Alert.alert('Payment Successful!', 'Processed successfully.', [
-              { text: 'View Bookings', onPress: () => router.push('/(customer)/bookings') },
-              { text: 'OK', onPress: () => router.back() },
+            Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.processedSuccessfully', 'Processed successfully.'), [
+              { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+              { text: t('common.ok', 'OK'), onPress: () => router.back() },
             ]);
             return;
           }
@@ -153,7 +155,7 @@ export default function PaymentScreen() {
       }
     } catch (error) {
       setPaymentStatus('failed');
-      Alert.alert('Error', 'Failed to open payment page.');
+      Alert.alert(t('common.error', 'Error'), t('payment.openError', 'Failed to open payment page.'));
     } finally {
       setIsPaying(false);
     }
@@ -213,26 +215,26 @@ export default function PaymentScreen() {
   const handleChapaPayment = async () => {
     if (!hasAccepted) {
       Alert.alert(
-        'Awaiting provider confirmation',
-        `${providerName} still needs to accept your ${serviceTitle} request. You will be notified once the request is approved.`,
+        t('payment.awaitingConfirmation', 'Awaiting provider confirmation'),
+        t('payment.awaitingAlertMsg', { provider: providerName, service: serviceTitle, defaultValue: `${providerName} still needs to accept your ${serviceTitle} request. You will be notified once the request is approved.` }),
         [
-          { text: 'View Notifications', onPress: () => router.push('/(customer)/notifications') },
-          { text: 'OK', style: 'default' },
+          { text: t('notifications.title', 'View Notifications'), onPress: () => router.push('/(customer)/notifications') },
+          { text: t('common.ok', 'OK'), style: 'default' },
         ],
       );
       return;
     }
 
     if (paymentAlreadyDone) {
-      Alert.alert('Already paid', 'This booking already shows a completed payment.', [
-        { text: 'View Bookings', onPress: () => router.push('/(customer)/bookings') },
-        { text: 'OK', style: 'default' },
+      Alert.alert(t('payment.alreadyPaid', 'Already paid'), t('payment.alreadyPaidMsg', 'This booking already shows a completed payment.'), [
+        { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+        { text: t('common.ok', 'OK'), style: 'default' },
       ]);
       return;
     }
 
     if (!paymentMethods || paymentMethods.length === 0) {
-      if (!loadingMethods) Alert.alert('Error', 'Payment methods could not be loaded.');
+      if (!loadingMethods) Alert.alert(t('common.error', 'Error'), t('payment.methodsError', 'Payment methods could not be loaded.'));
       return;
     }
 
@@ -268,7 +270,7 @@ export default function PaymentScreen() {
     } catch (error: any) {
       setPaymentStatus('failed');
       setIsPaying(false);
-      Alert.alert('Payment Error', error.response?.data?.message || error.message || 'Failed to initiate payment.');
+      Alert.alert(t('common.error', 'Payment Error'), error.response?.data?.message || error.message || t('payment.initiateError', 'Failed to initiate payment.'));
     }
   };
 
@@ -302,18 +304,18 @@ export default function PaymentScreen() {
 
   const renderPaymentSummary = () => (
     <View style={styles.summaryContainer}>
-      <Text style={styles.summaryTitle}>Payment Summary</Text>
+      <Text style={styles.summaryTitle}>{t('payment.summaryTitle', 'Payment Summary')}</Text>
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Service Fee</Text>
+        <Text style={styles.summaryLabel}>{t('payment.serviceFee', 'Service Fee')}</Text>
         <PriceText style={styles.summaryValue} amount={effectiveAmount} />
       </View>
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Platform Fee (5%)</Text>
+        <Text style={styles.summaryLabel}>{t('payment.platformFee', 'Platform Fee (5%)')}</Text>
         <PriceText style={styles.summaryValue} amount={platformFee} />
       </View>
       <View style={styles.summaryDivider} />
       <View style={[styles.summaryRow, styles.totalRow]}>
-        <Text style={styles.totalLabel}>Total Amount</Text>
+        <Text style={styles.totalLabel}>{t('payment.totalAmount', 'Total Amount')}</Text>
         <PriceText style={styles.totalValue} amount={totalAmount} />
       </View>
     </View>
@@ -324,21 +326,21 @@ export default function PaymentScreen() {
       return (
         <View style={[styles.statusContainer, styles.statusSuccess]}>
           <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
-          <Text style={[styles.statusText, styles.statusSuccessText]}>Payment Successful</Text>
+          <Text style={[styles.statusText, styles.statusSuccessText]}>{t('payment.statusSuccess', 'Payment Successful')}</Text>
         </View>
       );
     } else if (displayPaymentStatus === 'failed') {
       return (
         <View style={[styles.statusContainer, styles.statusError]}>
           <Ionicons name="close-circle" size={24} color="#ef4444" />
-          <Text style={[styles.statusText, styles.statusErrorText]}>Payment Failed</Text>
+          <Text style={[styles.statusText, styles.statusErrorText]}>{t('payment.statusFailed', 'Payment Failed')}</Text>
         </View>
       );
     } else if (displayPaymentStatus === 'processing') {
       return (
         <View style={styles.statusContainer}>
           <ActivityIndicator size="small" color={Colors.primary} />
-          <Text style={styles.statusText}>Processing Payment...</Text>
+          <Text style={styles.statusText}>{t('payment.statusProcessing', 'Processing Payment...')}</Text>
         </View>
       );
     }
@@ -349,22 +351,22 @@ export default function PaymentScreen() {
     <View style={styles.awaitingCard}>
       <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
       <View style={styles.awaitingBody}>
-        <Text style={styles.awaitingTitle}>Waiting for provider confirmation</Text>
+        <Text style={styles.awaitingTitle}>{t('payment.awaitingConfirmation', 'Waiting for provider confirmation')}</Text>
         <Text style={styles.awaitingMessage}>
-          {providerName} still needs to accept your {serviceTitle} request. You will receive a notification as soon as the request is approved.
+          {t('payment.awaitingMsg', { provider: providerName, service: serviceTitle, defaultValue: `${providerName} still needs to accept your ${serviceTitle} request. You will receive a notification as soon as the request is approved.` })}
         </Text>
         <View style={styles.awaitingActions}>
           <TouchableOpacity
             style={styles.awaitingActionButton}
             onPress={() => router.push('/(customer)/notifications')}
           >
-            <Text style={styles.awaitingActionText}>View Notifications</Text>
+            <Text style={styles.awaitingActionText}>{t('notifications.title', 'View Notifications')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.awaitingActionButtonSecondary}
             onPress={() => router.push('/(customer)/requests')}
           >
-            <Text style={styles.awaitingActionTextSecondary}>View My Requests</Text>
+            <Text style={styles.awaitingActionTextSecondary}>{t('requests.title', 'View My Requests')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -379,14 +381,14 @@ export default function PaymentScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment</Text>
+          <Text style={styles.headerTitle}>{t('payment.title', 'Payment')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Payment Methods - only show if no checkoutUrl */}
         {!checkoutUrl && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Payment Method</Text>
+            <Text style={styles.sectionTitle}>{t('payment.selectMethod', 'Select Payment Method')}</Text>
             {renderPaymentMethods()}
           </View>
         )}
@@ -418,7 +420,7 @@ export default function PaymentScreen() {
                       ) : (
                         <>
                           <Ionicons name="card" size={20} color={Colors.surface} />
-                          <Text style={styles.payButtonText}>Complete Payment</Text>
+                          <Text style={styles.payButtonText}>{t('payment.completePayment', 'Complete Payment')}</Text>
                         </>
                       )}
                     </TouchableOpacity>
@@ -434,7 +436,7 @@ export default function PaymentScreen() {
                         ) : (
                           <>
                             <Ionicons name="card" size={20} color={Colors.surface} />
-                            <Text style={styles.payButtonText}>Pay with Chapa</Text>
+                            <Text style={styles.payButtonText}>{t('payment.payWithChapa', 'Pay with Chapa')}</Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -446,7 +448,7 @@ export default function PaymentScreen() {
                     onPress={() => router.back()}
                     disabled={isPaying}
                   >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -456,7 +458,7 @@ export default function PaymentScreen() {
                   style={styles.doneButton}
                   onPress={() => router.push('/(customer)/bookings')}
                 >
-                  <Text style={styles.doneButtonText}>View My Bookings</Text>
+                  <Text style={styles.doneButtonText}>{t('bookings.viewMyBookings', 'View My Bookings')}</Text>
                 </TouchableOpacity>
               )}
 
@@ -467,14 +469,14 @@ export default function PaymentScreen() {
                     onPress={() => setPaymentStatus('pending')}
                     disabled={isPaying}
                   >
-                    <Text style={styles.retryButtonText}>Try Again</Text>
+                    <Text style={styles.retryButtonText}>{t('payment.tryAgain', 'Try Again')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.cancelButton, isPaying && styles.cancelButtonDisabled]}
                     onPress={() => router.back()}
                     disabled={isPaying}
                   >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
                   </TouchableOpacity>
                 </>
               )}

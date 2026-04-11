@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
 import AppInput from '@/components/AppInput';
@@ -35,6 +36,7 @@ interface ServiceFormData {
 
 export default function ProviderServicesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -82,7 +84,7 @@ export default function ProviderServicesScreen() {
 
   const handleSave = async () => {
     if (!formData.title || !formData.catagoryID || !formData.estimatedPrice) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('common.error', 'Error'), t('profile.fillRequired', 'Please fill in all required fields'));
       return;
     }
 
@@ -109,12 +111,12 @@ export default function ProviderServicesScreen() {
 
   const handleDelete = (id: string) => {
     Alert.alert(
-      'Delete Service',
-      'Are you sure you want to delete this service?',
+      t('profile.deleteService', 'Delete Service'),
+      t('profile.deleteServiceConfirm', 'Are you sure you want to delete this service?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         { 
-          text: 'Delete', 
+          text: t('profile.delete', 'Delete'), 
           style: 'destructive',
           onPress: async () => {
             try {
@@ -135,10 +137,10 @@ export default function ProviderServicesScreen() {
         <View style={styles.serviceInfo}>
           <Text style={styles.serviceTitle}>{item.title}</Text>
           <Text style={styles.serviceCategory}>
-            {item.category?.name || 'Uncategorized'}
+            {item.category?.name || t('profile.uncategorized', 'Uncategorized')}
           </Text>
         </View>
-        <Text style={styles.servicePrice}>${item.estimatedPrice}</Text>
+        <Text style={styles.servicePrice}>ETB {item.estimatedPrice}</Text>
       </View>
       
       {item.description ? (
@@ -153,7 +155,7 @@ export default function ProviderServicesScreen() {
           onPress={() => handleOpenModal(item)}
         >
           <Ionicons name="create-outline" size={18} color={colors.primary} />
-          <Text style={styles.editButtonText}>Edit</Text>
+          <Text style={styles.editButtonText}>{t('profile.edit', 'Edit')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -161,7 +163,7 @@ export default function ProviderServicesScreen() {
           onPress={() => handleDelete(item.serviceID)}
         >
           <Ionicons name="trash-outline" size={18} color={colors.error} />
-          <Text style={styles.deleteButtonText}>Delete</Text>
+          <Text style={styles.deleteButtonText}>{t('profile.delete', 'Delete')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -173,7 +175,7 @@ export default function ProviderServicesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Services</Text>
+        <Text style={styles.headerTitle}>{t('profile.servicesTitle', 'My Services')}</Text>
         <TouchableOpacity onPress={() => handleOpenModal()} style={styles.addButton}>
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
@@ -195,9 +197,9 @@ export default function ProviderServicesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="construct-outline" size={64} color={colors.text.secondary + '40'} />
-              <Text style={styles.emptyText}>No services added yet</Text>
+              <Text style={styles.emptyText}>{t('profile.noServices', 'No services added yet')}</Text>
               <AppButton 
-                title="Add Your First Service" 
+                title={t('profile.addFirstService', 'Add Your First Service')} 
                 onPress={() => handleOpenModal()}
                 style={styles.emptyAddButton}
               />
@@ -217,7 +219,7 @@ export default function ProviderServicesScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingService ? 'Edit Service' : 'Add New Service'}
+                {editingService ? t('profile.editService', 'Edit Service') : t('profile.addNewService', 'Add New Service')}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.text.primary} />
@@ -225,11 +227,11 @@ export default function ProviderServicesScreen() {
             </View>
 
             <ScrollView style={styles.modalForm}>
-              <Text style={styles.label}>Service Title *</Text>
+              <Text style={styles.label}>{t('profile.serviceTitleLabel', 'Service Title *')}</Text>
               <AppInput
                 value={formData.title}
                 onChangeText={(text) => setFormData({ ...formData, title: text })}
-                placeholder="e.g. Living Room Cleaning"
+                placeholder={t('profile.serviceTitlePlaceholder', 'e.g. Living Room Cleaning')}
               />
 
               <Text style={styles.label}>Category *</Text>
@@ -253,16 +255,16 @@ export default function ProviderServicesScreen() {
                 ))}
               </View>
 
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>{t('profile.about', 'Description')}</Text>
               <AppInput
                 value={formData.description}
                 onChangeText={(text) => setFormData({ ...formData, description: text })}
-                placeholder="What exactly is included in this service?"
+                placeholder={t('profile.serviceDescPlaceholder', 'What exactly is included in this service?')}
                 multiline
                 inputStyle={styles.textArea}
               />
 
-              <Text style={styles.label}>Estimated Price ($) *</Text>
+              <Text style={styles.label}>{t('profile.priceLabel', 'Estimated Price (ETB) *')}</Text>
               <AppInput
                 value={formData.estimatedPrice}
                 onChangeText={(text) => setFormData({ ...formData, estimatedPrice: text.replace(/[^0-9.]/g, '') })}
@@ -271,7 +273,7 @@ export default function ProviderServicesScreen() {
               />
 
               <AppButton 
-                title={editingService ? "Update Service" : "Add Service"} 
+                title={editingService ? t('profile.editService', "Update Service") : t('profile.addNewService', "Add Service")} 
                 onPress={handleSave}
                 loading={addServiceMutation.isPending || updateServiceMutation.isPending}
                 style={styles.saveButton}

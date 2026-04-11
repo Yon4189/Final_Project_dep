@@ -5,6 +5,7 @@ import {
 } from "@/app/utils/formatters";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -45,20 +46,23 @@ const STATUS_ICONS = {
   cancelled: "close-circle-outline",
 };
 
-const STATUS_STEPS = [
-  { key: "pending", label: "Requested", icon: "mail-outline" },
-  { key: "accepted", label: "Accepted", icon: "checkmark-circle-outline" },
-  { key: "arrived", label: "Arrived", icon: "pin-outline" },
-  { key: "in_progress", label: "Started", icon: "construct-outline" },
-  { key: "completed", label: "Completed", icon: "checkmark-done-outline" },
-];
+
 
 export default function RequestDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
+  const STATUS_STEPS = [
+    { key: "pending", label: t('requests.steps.pending', 'Requested'), icon: "mail-outline" },
+    { key: "accepted", label: t('requests.steps.accepted', 'Accepted'), icon: "checkmark-circle-outline" },
+    { key: "arrived", label: t('providerRequests.arrived', 'Arrived'), icon: "pin-outline" },
+    { key: "in_progress", label: t('requests.steps.in_progress', 'Started'), icon: "construct-outline" },
+    { key: "completed", label: t('requests.steps.completed', 'Completed'), icon: "checkmark-done-outline" },
+  ];
   const STATUS_COLORS = useMemo(() => ({
     pending: colors.warning,
     accepted: colors.primary,
@@ -216,18 +220,18 @@ export default function RequestDetails() {
     if (url) {
       Linking.openURL(url);
     } else {
-      Alert.alert("Error", "Location information not available for navigation.");
+      Alert.alert(t("common.error", "Error"), t("providerRequests.navigationNotAvailable", "Location information not available for navigation."));
     }
   };
 
   const handleAccept = () => {
     Alert.alert(
-      "Accept Request",
-      "Are you sure you want to accept this request?",
+      t("providerRequests.acceptConfirmTitle", "Accept Request"),
+      t("providerRequests.acceptConfirmMsg", "Are you sure you want to accept this request?"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
         {
-          text: "Accept",
+          text: t("providerRequests.accept", "Accept"),
           onPress: async () => {
             try {
               await acceptRequest.mutateAsync(id as string);
@@ -242,7 +246,7 @@ export default function RequestDetails() {
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
-      Alert.alert("Error", "Please provide a reason");
+      Alert.alert(t("common.error", "Error"), t("providerRequests.provideReason", "Please provide a reason"));
       return;
     }
 
@@ -260,7 +264,7 @@ export default function RequestDetails() {
 
   const handleReschedule = async () => {
     if (!rescheduleDate || !rescheduleTime) {
-      Alert.alert("Error", "Please select new date and time");
+      Alert.alert(t("common.error", "Error"), t("providerRequests.provideDateTime", "Please select new date and time"));
       return;
     }
 
@@ -276,23 +280,23 @@ export default function RequestDetails() {
       setShowScheduleModal(false);
       setRescheduleDate("");
       setRescheduleTime("");
-      Alert.alert("Success", "Request rescheduled");
+      Alert.alert(t("common.success", "Success"), t("providerRequests.rescheduleSuccess", "Request rescheduled"));
     } catch (error) {
-      Alert.alert("Error", "Failed to reschedule request");
+      Alert.alert(t("common.error", "Error"), t("providerRequests.rescheduleError", "Failed to reschedule request"));
     }
   };
 
   const handleArrive = () => {
-    Alert.alert("Confirm Arrival", "Have you arrived at the customer's location?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("providerRequests.confirmArrival", "Confirm Arrival"), t("providerRequests.arrivedMsg", "Have you arrived at the customer's location?"), [
+      { text: t("common.cancel", "Cancel"), style: "cancel" },
       {
-        text: "Arrived",
+        text: t("providerRequests.arrivedBtn", "Arrived"),
         onPress: async () => {
           try {
             await arriveRequest.mutateAsync(id as string);
-            Alert.alert("Success", "Arrival confirmed");
+            Alert.alert(t("common.success", "Success"), t("providerRequests.arrivalConfirmed", "Arrival confirmed"));
           } catch (error) {
-            Alert.alert("Error", "Failed to confirm arrival");
+            Alert.alert(t("common.error", "Error"), t("providerRequests.failedArrive", "Failed to confirm arrival"));
           }
         },
       },
@@ -300,16 +304,16 @@ export default function RequestDetails() {
   };
 
   const handleStart = () => {
-    Alert.alert("Start Service", "Are you ready to start this service?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("providerRequests.startConfirmTitle", "Start Service"), t("providerRequests.startConfirmMsg", "Are you ready to start this service?"), [
+      { text: t("common.cancel", "Cancel"), style: "cancel" },
       {
-        text: "Start",
+        text: t("common.start", "Start"),
         onPress: async () => {
           try {
             await startService.mutateAsync(id as string);
-            Alert.alert("Success", "Service started");
+            Alert.alert(t("common.success", "Success"), t("providerRequests.startSuccess", "Service started"));
           } catch (error) {
-            Alert.alert("Error", "Failed to start service");
+            Alert.alert(t("common.error", "Error"), t("providerRequests.startError", "Failed to start service"));
           }
         },
       },
@@ -318,21 +322,21 @@ export default function RequestDetails() {
 
   const handleComplete = () => {
     Alert.alert(
-      "Complete Service",
-      "Have you completed this service to the customer's satisfaction?",
+      t("providerRequests.completeConfirmTitle", "Complete Service"),
+      t("providerRequests.completeConfirmMsg", "Have you completed this service to the customer's satisfaction?"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
         {
-          text: "Complete",
+          text: t("providerRequests.complete", "Complete"),
           onPress: async () => {
             try {
               await completeService.mutateAsync(id as string);
               Alert.alert(
-                "Success",
-                "Service completed. Payment will be released after customer confirmation.",
+                t("common.success", "Success"),
+                t("providerRequests.completeSuccessMsg", "Service completed. Payment will be released after customer confirmation."),
               );
             } catch (error) {
-              Alert.alert("Error", "Failed to complete service");
+              Alert.alert(t("common.error", "Error"), t("providerRequests.completeError", "Failed to complete service"));
             }
           },
         },
@@ -352,7 +356,7 @@ export default function RequestDetails() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Request Details</Text>
+        <Text style={styles.headerTitle}>{t("providerRequests.title", "Request Details")}</Text>
         <TouchableOpacity style={styles.menuButton} onPress={() => setShowActionModal(true)}>
           <Ionicons name="ellipsis-vertical" size={22} color={colors.text.primary} />
         </TouchableOpacity>
@@ -368,34 +372,24 @@ export default function RequestDetails() {
             },
           ]}
         >
-          <Ionicons
-            name={getStatusIcon(request?.status || "pending") as any}
-            size={18}
-            color={getStatusColor(request?.status || "pending")}
-          />
-          <Text
-            style={[
-              styles.statusText,
-              { color: getStatusColor(request?.status || "pending") },
-            ]}
-          >
-            {(request?.status || "pending").replace("_", " ").toUpperCase()}
+          <Text style={[styles.statusText, { color: getStatusColor(request?.status || "pending") }]}>
+            {t(`bookings.status.${(request?.status || "pending").toLowerCase()}`, (request?.status || "pending").replace("_", " ").toUpperCase()) as string}
           </Text>
         </View>
-        {isTracking && (
-          <View style={styles.trackingIndicator}>
-            <View style={styles.trackingDot} />
-            <Text style={styles.trackingText}>Live Tracking Active</Text>
-          </View>
-        )}
-        <Text style={styles.requestNumber}>#{request?.requestNumber}</Text>
+          {isTracking && (
+            <View style={styles.trackingIndicator}>
+              <View style={styles.trackingDot} />
+              <Text style={styles.trackingText}>{t("providerRequests.liveTrackingActive", "Live Tracking Active")}</Text>
+            </View>
+          )}
+          <Text style={styles.requestNumber}>#{request?.requestNumber}</Text>
+        </View>
       </View>
-    </View>
-  );
+    );
 
   const renderCustomerInfo = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Customer Information</Text>
+      <Text style={styles.sectionTitle}>{t("providerRequests.customerInfo", "Customer Information")}</Text>
       <View style={styles.customerCard}>
         <View style={styles.customerHeader}>
           <Image
@@ -409,7 +403,7 @@ export default function RequestDetails() {
             <View style={styles.customerRating}>
               <Ionicons name="star" size={14} color={colors.warning} />
               <Text style={styles.ratingText}>4.8</Text>
-              <Text style={styles.reviewCount}>(127 reviews)</Text>
+              <Text style={styles.reviewCount}>(127 {t("providerProfile.reviews", "reviews")})</Text>
             </View>
           </View>
         </View>
@@ -417,11 +411,11 @@ export default function RequestDetails() {
         <View style={styles.contactButtons}>
           <TouchableOpacity style={styles.contactButton} onPress={handleCall}>
             <Ionicons name="call" size={20} color={colors.primary} />
-            <Text style={styles.contactButtonText}>Call</Text>
+            <Text style={styles.contactButtonText}>{t("providerRequests.call", "Call")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.contactButton} onPress={handleMessage}>
             <Ionicons name="chatbubble" size={20} color={colors.primary} />
-            <Text style={styles.contactButtonText}>Message</Text>
+            <Text style={styles.contactButtonText}>{t("providerRequests.message", "Message")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -430,34 +424,34 @@ export default function RequestDetails() {
 
   const renderServiceDetails = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Details</Text>
+      <Text style={styles.sectionTitle}>{t("providerRequests.serviceDetails", "Service Details")}</Text>
       <View style={styles.detailsCard}>
         <View style={styles.detailRow}>
           <Ionicons name="construct-outline" size={20} color={colors.primary} />
           <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Service</Text>
+            <Text style={styles.detailLabel}>{t("requests.service", "Service")}</Text>
             <Text style={styles.detailValue}>{request?.serviceName}</Text>
           </View>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={20} color={colors.primary} />
           <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Date & Time</Text>
+            <Text style={styles.detailLabel}>{t("requests.dateTime", "Date & Time")}</Text>
             <Text style={styles.detailValue}>{request?.scheduledDate} at {request?.scheduledTime}</Text>
           </View>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="time-outline" size={20} color={colors.primary} />
           <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Estimated Duration</Text>
-            <Text style={styles.detailValue}>{request?.estimatedDuration} minutes</Text>
+            <Text style={styles.detailLabel}>{t("providerRequests.estimatedDuration", "Estimated Duration")}</Text>
+            <Text style={styles.detailValue}>{request?.estimatedDuration} {t("providerRequests.minutes", "minutes")}</Text>
           </View>
         </View>
         {request?.description && (
           <View style={styles.detailRow}>
             <Ionicons name="document-text-outline" size={20} color={colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Description</Text>
+              <Text style={styles.detailLabel}>{t("common.description", "Description")}</Text>
               <Text style={styles.detailValue}>{request.description}</Text>
             </View>
           </View>
@@ -466,7 +460,7 @@ export default function RequestDetails() {
           <View style={styles.detailRow}>
             <Ionicons name="alert-circle-outline" size={20} color={colors.warning} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Special Instructions</Text>
+              <Text style={styles.detailLabel}>{t("requests.specialInstructions", "Special Instructions")}</Text>
               <Text style={[styles.detailValue, styles.instructionsText]}>{request.specialInstructions}</Text>
             </View>
           </View>
@@ -477,7 +471,7 @@ export default function RequestDetails() {
 
   const renderLocation = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Location</Text>
+      <Text style={styles.sectionTitle}>{t("providerRequests.serviceLocation", "Service Location")}</Text>
       <View style={styles.locationCard}>
         <View style={styles.addressContainer}>
           <Ionicons name="location-outline" size={20} color={colors.primary} />
@@ -487,11 +481,11 @@ export default function RequestDetails() {
           <View style={styles.distanceContainer}>
             <View style={styles.distanceItem}>
               <Ionicons name="navigate-outline" size={16} color={colors.text.secondary} />
-              <Text style={styles.distanceText}>{request.distance.toFixed(1)} km away</Text>
+              <Text style={styles.distanceText}>{request.distance.toFixed(1)} {t("providerRequests.away", "km away")}</Text>
             </View>
             <View style={styles.distanceItem}>
               <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
-              <Text style={styles.distanceText}>~{request.travelTime} min drive</Text>
+              <Text style={styles.distanceText}>~{request.travelTime} {t("providerRequests.minDrive", "min drive")}</Text>
             </View>
           </View>
         )}
@@ -513,20 +507,20 @@ export default function RequestDetails() {
               markers={[
                 {
                   position: [mapRegion.latitude, mapRegion.longitude],
-                  title: request?.customerName || 'Customer Location',
+                  title: request?.customerName || t("providerRequests.serviceLocation", "Customer Location"),
                   description: request?.customerAddress,
                 }
               ]}
             />
             <View style={styles.mapOverlay}>
               <Ionicons name="expand-outline" size={20} color={colors.surface} />
-              <Text style={styles.mapOverlayText}>View on map</Text>
+              <Text style={styles.mapOverlayText}>{t("providerRequests.viewOnMap", "View on map")}</Text>
             </View>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={styles.directionsButton} onPress={handleOpenMaps}>
           <Ionicons name="navigate" size={20} color={colors.surface} />
-          <Text style={styles.directionsButtonText}>Start Navigation</Text>
+          <Text style={styles.directionsButtonText}>{t("providerRequests.startNavigation", "Start Navigation")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -534,35 +528,35 @@ export default function RequestDetails() {
 
   const renderPayment = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Payment Details</Text>
+      <Text style={styles.sectionTitle}>{t("requests.paymentDetails", "Payment Details")}</Text>
       <View style={styles.paymentCard}>
         <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Estimated Price</Text>
+          <Text style={styles.priceLabel}>{t("providerRequests.estimatedPrice", "Estimated Price")}</Text>
           <PriceText style={styles.priceValue} amount={request?.estimatedPrice || 0} />
         </View>
 
         <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Service Fee</Text>
+          <Text style={styles.priceLabel}>{t("providerRequests.serviceFee", "Service Fee")}</Text>
           <PriceText style={styles.priceValue} amount={(request?.estimatedPrice || 0) * 0.05} />
         </View>
 
         <View style={styles.priceDivider} />
 
         <View style={styles.priceRow}>
-          <Text style={styles.totalLabel}>Your Earnings</Text>
+          <Text style={styles.totalLabel}>{t("providerRequests.yourEarnings", "Your Earnings")}</Text>
           <PriceText style={styles.totalValue} amount={(request?.estimatedPrice || 0) * 0.95} />
         </View>
 
         {(request?.status === "completed" || request?.status === "waiting_customer_confirmation") && (
           <View style={styles.paymentStatus}>
             <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={styles.paymentStatusText}>Payment pending customer confirmation</Text>
+            <Text style={styles.paymentStatusText}>{t("providerRequests.paymentPendingCustomer", "Payment pending customer confirmation")}</Text>
           </View>
         )}
         {request?.status === "confirmed" && (
           <View style={styles.paymentStatus}>
             <Ionicons name="card-outline" size={20} color={colors.primary} />
-            <Text style={[styles.paymentStatusText, { color: colors.primary }]}>Payment Held - Ready to start</Text>
+            <Text style={[styles.paymentStatusText, { color: colors.primary }]}>{t("providerRequests.paymentHeld", "Payment Held - Ready to start")}</Text>
           </View>
         )}
       </View>
@@ -574,7 +568,7 @@ export default function RequestDetails() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Progress Timeline</Text>
+        <Text style={styles.sectionTitle}>{t("requests.progressTimeline", "Progress Timeline")}</Text>
         <View style={styles.timelineCard}>
           {STATUS_STEPS.map((step, index) => {
             const isCompleted = index <= currentStep;
@@ -616,7 +610,7 @@ export default function RequestDetails() {
                   </Text>
                   {isCurrent && request?.status === "in_progress" && (
                     <Text style={styles.timelineTime}>
-                      Started at{" "}
+                      {t("providerRequests.startedAt", "Started at")}{" "}
                       {formatDateTime(request?.startedAt || new Date())}
                     </Text>
                   )}
@@ -649,11 +643,11 @@ export default function RequestDetails() {
           <>
             <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
               <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
-              <Text style={styles.acceptButtonText}>Accept Request</Text>
+              <Text style={styles.acceptButtonText}>{t("providerRequests.accept", "Accept Request")}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.rejectButton} onPress={() => setShowActionModal(true)}>
               <Ionicons name="close-circle" size={20} color={colors.error} />
-              <Text style={styles.rejectButtonText}>Reject</Text>
+              <Text style={styles.rejectButtonText}>{t("providerRequests.reject", "Reject")}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -661,38 +655,38 @@ export default function RequestDetails() {
           <View style={styles.confirmedActions}>
             <TouchableOpacity style={styles.rescheduleButton} onPress={() => setShowScheduleModal(true)}>
               <Ionicons name="calendar" size={20} color={colors.warning} />
-              <Text style={styles.rescheduleButtonText}>Reschedule</Text>
+              <Text style={styles.rescheduleButtonText}>{t("providerRequests.reschedule", "Reschedule")}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.arriveButton} onPress={handleArrive}>
               <Ionicons name="pin" size={20} color={colors.surface} />
-              <Text style={styles.arriveButtonText}>Mark Arrived</Text>
+              <Text style={styles.arriveButtonText}>{t("providerRequests.markArrived", "Mark Arrived")}</Text>
             </TouchableOpacity>
           </View>
         )}
         {isArrived && (
           <TouchableOpacity style={styles.startButton} onPress={handleStart}>
             <Ionicons name="play-circle" size={20} color={colors.surface} />
-            <Text style={styles.startButtonText}>Start Service</Text>
+            <Text style={styles.startButtonText}>{t("providerRequests.startServiceBtn", "Start Service")}</Text>
           </TouchableOpacity>
         )}
         {isInProgress && (
           <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
             <Ionicons name="checkmark-done-circle" size={20} color={colors.surface} />
-            <Text style={styles.completeButtonText}>Complete Service</Text>
+            <Text style={styles.completeButtonText}>{t("providerRequests.completeServiceBtn", "Complete Service")}</Text>
           </TouchableOpacity>
         )}
         {isWaitingConfirmation && (
           <View style={[styles.completedMessage, { backgroundColor: colors.info + '10' }]}>
             <Ionicons name="time-outline" size={24} color={colors.info} />
             <Text style={[styles.completedText, { color: colors.info }]}>
-              Service marked as complete. Waiting for customer to confirm and release payment.
+              {t("providerRequests.waitCustomerConfirm", "Service marked as complete. Waiting for customer to confirm and release payment.")}
             </Text>
           </View>
         )}
         {isCompleted && (
           <View style={styles.completedMessage}>
             <Ionicons name="checkmark-circle" size={24} color={colors.success} />
-            <Text style={styles.completedText}>Service completed successfully. Payment has been processed.</Text>
+            <Text style={styles.completedText}>{t("providerRequests.completeSuccessMsg", "Service completed successfully. Payment has been processed.")}</Text>
           </View>
         )}
       </View>
@@ -712,16 +706,16 @@ export default function RequestDetails() {
           style={styles.modalContent}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Reject Request</Text>
+            <Text style={styles.modalTitle}>{t("providerRequests.rejectRequest", "Reject Request")}</Text>
             <TouchableOpacity onPress={() => setShowActionModal(false)}>
               <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
           <View style={styles.modalBody}>
-            <Text style={styles.modalLabel}>Reason for rejection</Text>
+            <Text style={styles.modalLabel}>{t("providerRequests.reasonForRejection", "Reason for rejection")}</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Please provide a reason..."
+              placeholder={t("providerRequests.provideReason", "Please provide a reason...")}
               placeholderTextColor={colors.text.secondary}
               value={rejectReason}
               onChangeText={setRejectReason}
@@ -738,7 +732,7 @@ export default function RequestDetails() {
                   setRejectReason("");
                 }}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t("common.cancel", "Cancel")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -749,7 +743,7 @@ export default function RequestDetails() {
                 onPress={handleReject}
                 disabled={!rejectReason.trim()}
               >
-                <Text style={styles.modalConfirmText}>Reject Request</Text>
+                <Text style={styles.modalConfirmText}>{t("providerRequests.rejectRequest", "Reject Request")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -768,21 +762,21 @@ export default function RequestDetails() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Reschedule Service</Text>
+            <Text style={styles.modalTitle}>{t("providerRequests.rescheduleService", "Reschedule Service")}</Text>
             <TouchableOpacity onPress={() => setShowScheduleModal(false)}>
               <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
           <View style={styles.modalBody}>
-            <Text style={styles.modalLabel}>New Date</Text>
+            <Text style={styles.modalLabel}>{t("providerRequests.newDate", "New Date")}</Text>
             <TouchableOpacity style={styles.modalPicker}>
               <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-              <Text style={styles.modalPickerText}>{rescheduleDate || "Select date"}</Text>
+              <Text style={styles.modalPickerText}>{rescheduleDate || t("providerRequests.selectDate", "Select date")}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalLabel}>New Time</Text>
+            <Text style={styles.modalLabel}>{t("providerRequests.newTime", "New Time")}</Text>
             <TouchableOpacity style={styles.modalPicker}>
               <Ionicons name="time-outline" size={20} color={colors.primary} />
-              <Text style={styles.modalPickerText}>{rescheduleTime || "Select time"}</Text>
+              <Text style={styles.modalPickerText}>{rescheduleTime || t("providerRequests.selectTime", "Select time")}</Text>
             </TouchableOpacity>
 
             <View style={styles.modalActions}>
@@ -794,7 +788,7 @@ export default function RequestDetails() {
                   setRescheduleTime("");
                 }}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t("common.cancel", "Cancel")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -806,7 +800,7 @@ export default function RequestDetails() {
                 onPress={handleReschedule}
                 disabled={!rescheduleDate || !rescheduleTime}
               >
-                <Text style={styles.modalConfirmText}>Confirm Reschedule</Text>
+                <Text style={styles.modalConfirmText}>{t("providerRequests.reschedule", "Confirm Reschedule")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -831,7 +825,7 @@ export default function RequestDetails() {
           <TouchableOpacity onPress={() => setShowDirections(false)}>
             <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.directionsTitle}>Customer Location</Text>
+          <Text style={styles.directionsTitle}>{t("providerRequests.serviceLocation", "Customer Location")}</Text>
           <TouchableOpacity onPress={handleOpenMaps}>
             <Ionicons name="navigate" size={24} color={colors.primary} />
           </TouchableOpacity>

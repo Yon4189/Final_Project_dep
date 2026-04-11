@@ -2,6 +2,7 @@
 import { api } from "../services/api";
 import { useRouter } from "expo-router";
 import React, { useState, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ScrollView,
@@ -23,6 +24,7 @@ import { useTheme } from "../context/ThemeContext";
 export default function LoginScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
   const [formData, setFormData] = useState({
@@ -40,17 +42,17 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     // Validation
     if (!formData.email.trim() || !formData.password.trim()) {
-      Alert.alert("Error", "Please enter both email and password");
+      Alert.alert(t('common.error', 'Error'), t('login.validation.emailRequired', 'Email and password are required'));
       return;
     }
 
     if (!validateEmail(formData.email)) {
-      Alert.alert("Error", "Please enter a valid email address");
+      Alert.alert(t('common.error', 'Error'), t('login.invalidEmail', 'Please enter a valid email address'));
       return;
     }
 
     if (formData.password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters long");
+      Alert.alert(t('common.error', 'Error'), t('login.passwordTooShort', 'Password must be at least 6 characters long'));
       return;
     }
 
@@ -112,13 +114,13 @@ export default function LoginScreen() {
           }
         } else {
           console.error(' No token in response');
-          Alert.alert("Error", "Invalid server response: No token received");
+          Alert.alert(t('common.error', 'Error'), t('login.serverError', 'Invalid server response: No token received'));
         }
       } else {
         // Handle unsuccessful login
-        const errorMessage = response?.message || "Login failed. Please try again.";
+        const errorMessage = response?.message || t('login.loginFailed', 'Login failed. Please try again.');
         console.error(' Login failed:', errorMessage);
-        Alert.alert("Login Failed", errorMessage);
+        Alert.alert(t('login.loginFailed', 'Login Failed'), errorMessage);
       }
     } catch (error: any) {
       console.error(' Login error details:', {
@@ -133,20 +135,20 @@ export default function LoginScreen() {
 
       if (error.response) {
         // The request was made and the server responded with a status code
-        errorTitle = `Error ${error.response.status}`;
+        errorTitle = t('login.loginError', 'Login Error');
 
         // Check for specific pending approval case
         if (error.response.data?.message?.toLowerCase().includes('pending admin approval')) {
-          errorTitle = "Account Pending Approval";
-          errorMessage = "Your provider account is currently pending admin approval. You will be notified once your account is approved. Please check back later.";
+          errorTitle = t('login.pendingApproval', 'Account Pending Approval');
+          errorMessage = t('login.pendingApprovalMessage', "Your provider account is currently pending admin approval. You will be notified once your account is approved. Please check back later.");
 
           // Show a custom alert with additional options
           Alert.alert(
-            "Account Pending Approval",
-            "Your provider account is awaiting admin approval. You'll receive a notification once your account is approved.\n\nWould you like to contact support for more information?",
+            errorTitle,
+            errorMessage + "\n\n" + t('login.contactSupportPrompt', "Would you like to contact support for more information?"),
             [
               {
-                text: "Contact Support",
+                text: t('profile.contactSupport', "Contact Support"),
                 onPress: () => {
                   // You can implement contact support functionality here
                   // For example, open email, phone, or support chat
@@ -176,32 +178,32 @@ export default function LoginScreen() {
           // Fallback messages based on status code
           switch (error.response.status) {
             case 400:
-              errorMessage = "Invalid request. Please check your input.";
+              errorMessage = t('login.serverError', "Invalid request. Please check your input.");
               break;
             case 401:
-              errorMessage = "Invalid email or password. Please try again.";
+              errorMessage = t('login.invalidEmail', "Invalid email or password. Please try again.");
               break;
             case 403:
-              errorMessage = "Access forbidden. Please check your account status.";
+              errorMessage = t('login.serverError', "Access forbidden. Please check your account status.");
               break;
             case 404:
-              errorMessage = "Login service not found. Please ensure the server is running.";
+              errorMessage = t('login.serverError', "Login service not found. Please ensure the server is running.");
               break;
             case 422:
-              errorMessage = "Validation error. Please check your input.";
+              errorMessage = t('login.serverError', "Validation error. Please check your input.");
               break;
             case 500:
-              errorMessage = "Server error. Please try again later.";
+              errorMessage = t('login.serverError', "Server error. Please try again later.");
               break;
           }
         }
       } else if (error.request) {
         // The request was made but no response was received
-        errorMessage = "No response from server. Please check your internet connection.";
-        errorTitle = "Network Error";
+        errorMessage = t('login.noResponse', "No response from server. Please check your internet connection.");
+        errorTitle = t('login.networkError', "Network Error");
       } else {
         // Something happened in setting up the request
-        errorMessage = error.message || "An unexpected error occurred";
+        errorMessage = error.message || t('login.loginFailed', "An unexpected error occurred");
       }
 
       Alert.alert(errorTitle, errorMessage);
@@ -221,8 +223,8 @@ export default function LoginScreen() {
         contentContainerStyle={styles.contentContainer}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
+          <Text style={styles.title}>{t('login.welcomeTitle')}</Text>
+          <Text style={styles.subtitle}>{t('login.welcomeSubtitle')}</Text>
         </View>
 
         <View style={styles.formContainer}>
@@ -247,7 +249,7 @@ export default function LoginScreen() {
                   userType === "customer" && styles.userTypeTextActive,
                 ]}
               >
-                Customer
+                {t('landing.customerCardTitle')}
               </Text>
             </TouchableOpacity>
 
@@ -270,7 +272,7 @@ export default function LoginScreen() {
                   userType === "provider" && styles.userTypeTextActive,
                 ]}
               >
-                Provider
+                {t('landing.providerCardTitle')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -281,10 +283,10 @@ export default function LoginScreen() {
               <Ionicons name="mail-outline" size={20} color={colors.primary} style={styles.inputIcon} />
               <View style={{ flex: 1 }}>
                 <AppInput
-                  label="Email"
+                  label={t('auth.email', 'Email')}
                   value={formData.email}
                   onChangeText={(text: string) => setFormData({ ...formData, email: text })}
-                  placeholder="Enter your email"
+                  placeholder={t('login.emailPlaceholder', "Enter your email")}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   required
@@ -299,10 +301,10 @@ export default function LoginScreen() {
               <Ionicons name="lock-closed-outline" size={20} color={colors.primary} style={styles.inputIcon} />
               <View style={{ flex: 1 }}>
                 <AppInput
-                  label="Password"
+                  label={t('auth.password', 'Password')}
                   value={formData.password}
                   onChangeText={(text: string) => setFormData({ ...formData, password: text })}
-                  placeholder="Enter your password"
+                  placeholder={t('login.passwordPlaceholder', "Enter your password")}
                   secureTextEntry
                   showPasswordToggle={true}
                   required
@@ -316,11 +318,11 @@ export default function LoginScreen() {
             onPress={() => router.push("/(auth)/forgot-password")}
             disabled={loading}
           >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <Text style={styles.forgotPasswordText}>{t('login.forgotPassword')}</Text>
           </TouchableOpacity>
 
           <AppButton
-            title={loading ? "Signing In..." : "Sign In"}
+            title={loading ? t('login.loggingIn') : t('login.loginButton')}
             onPress={handleLogin}
             loading={loading}
             fullWidth
@@ -330,20 +332,20 @@ export default function LoginScreen() {
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Authenticating...</Text>
+              <Text style={styles.loadingText}>{t('login.authenticating', 'Authenticating...')}</Text>
             </View>
           )}
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
+            <Text style={styles.dividerText}>{t('auth.or', 'OR')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          <Text style={styles.registerTitle}>Don't have an account?</Text>
+          <Text style={styles.registerTitle}>{t('login.noAccount')}</Text>
 
           <AppButton
-            title="Register as Customer"
+            title={t('landing.continueAsCustomer')}
             onPress={() => router.push("/(auth)/register-customer")}
             variant="outline"
             fullWidth
@@ -352,7 +354,7 @@ export default function LoginScreen() {
           />
 
           <AppButton
-            title="Register as Service Provider"
+            title={t('landing.continueAsProvider')}
             onPress={() => router.push("/(auth)/register-provider")}
             variant="outline"
             fullWidth

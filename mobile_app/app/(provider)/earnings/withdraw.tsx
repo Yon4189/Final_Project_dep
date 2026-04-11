@@ -15,6 +15,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderEarnings } from "../../../hooks/useProviderEarnings";
 import { useTheme } from "../../context/ThemeContext";
@@ -30,6 +31,7 @@ interface BankAccount extends BankDetails {
 
 export default function WithdrawScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
@@ -98,11 +100,11 @@ export default function WithdrawScreen() {
   const validateAmount = () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount < 50) {
-      Alert.alert("Invalid Amount", "Minimum withdrawal amount is ETB 50");
+      Alert.alert(t("success.error", "Error"), t("wallet.minWithdrawal", "Minimum withdrawal amount is ETB %{amount}").replace("%{amount}", "50"));
       return false;
     }
     if (numAmount > (summary?.availableForWithdrawal || 0)) {
-      Alert.alert("Insufficient Balance", "You do not have enough balance");
+      Alert.alert(t("success.error", "Error"), t("wallet.insufficientBalance", "You do not have enough balance"));
       return false;
     }
     return true;
@@ -114,7 +116,7 @@ export default function WithdrawScreen() {
       setStep(2);
     } else if (step === 2) {
       if (!selectedBank && !bankDetails.bankName) {
-        Alert.alert("Error", "Please select or add bank details");
+        Alert.alert(t("success.error", "Error"), t("wallet.selectBank", "Please select or add bank details"));
         return;
       }
       setStep(3);
@@ -131,7 +133,7 @@ export default function WithdrawScreen() {
       !bankDetails.accountName ||
       !bankDetails.accountNumber
     ) {
-      Alert.alert("Error", "Please fill in all required fields");
+      Alert.alert(t("success.error", "Error"), t("auth.fillRequired", "Please fill in all required fields"));
       return null;
     }
 
@@ -140,14 +142,14 @@ export default function WithdrawScreen() {
       // Add a temporary id to the result
       return { ...result, id: "new-bank-" + Date.now() };
     } catch (error) {
-      Alert.alert("Error", "Failed to save bank details");
+      Alert.alert(t("success.error", "Error"), t("wallet.withdrawError", "Failed to save bank details"));
       return null;
     }
   };
 
   const handleWithdraw = async () => {
     if (!agreeTerms) {
-      Alert.alert("Error", "Please agree to the terms and conditions");
+      Alert.alert(t("success.error", "Error"), t("wallet.agreeTerms", "Please agree to the terms and conditions"));
       return;
     }
 
@@ -158,7 +160,7 @@ export default function WithdrawScreen() {
       
       // Strict frontend validation to prevent 422
       if (!bank.bankName || !bank.accountNumber || !bank.accountName) {
-        Alert.alert("Missing Information", "Please ensure Bank Name, Account Number, and Account Holder Name are all filled in.");
+        Alert.alert(t("success.error", "Error"), t("auth.fillRequired", "Please fill in all required fields"));
         return;
       }
 
@@ -176,9 +178,9 @@ export default function WithdrawScreen() {
         await requestWithdrawal.mutateAsync(withdrawalData);
       }
 
-      Alert.alert("Success", "Withdrawal request submitted successfully", [
+      Alert.alert(t("common.success", "Success"), t("wallet.withdrawSuccess", "Withdrawal request submitted successfully"), [
         {
-          text: "View Status",
+          text: t("wallet.viewStatus", "View Status"),
           onPress: () => router.push("/(provider)/earnings"),
         },
         {
@@ -187,7 +189,7 @@ export default function WithdrawScreen() {
         },
       ]);
     } catch (error) {
-      Alert.alert("Error", "Failed to process withdrawal");
+      Alert.alert(t("success.error", "Error"), t("wallet.withdrawError", "Failed to process withdrawal"));
     }
   };
 
@@ -196,9 +198,9 @@ export default function WithdrawScreen() {
 
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.stepTitle}>Enter Amount</Text>
+        <Text style={styles.stepTitle}>{t("wallet.enterAmount", "Enter Amount")}</Text>
         <Text style={styles.stepSubtitle}>
-          Available balance:{" "}
+          {t("earnings.availableBalance", "Available balance")}:{" "}
           {safeFormatCurrency(
             summary?.availableForWithdrawal || 0,
             summary?.currency,
@@ -232,14 +234,14 @@ export default function WithdrawScreen() {
 
         <View style={styles.feeBreakdown}>
           <View style={styles.feeRow}>
-            <Text style={styles.feeLabel}>Withdrawal Amount</Text>
+            <Text style={styles.feeLabel}>{t("wallet.withdrawal", "Withdrawal Amount")}</Text>
             <Text style={styles.feeValue}>
               {safeFormatCurrency(parseFloat(amount) || 0, summary?.currency)}
             </Text>
           </View>
 
           <View style={styles.feeRow}>
-            <Text style={styles.feeLabel}>Processing Fee (1%)</Text>
+            <Text style={styles.feeLabel}>{t("wallet.processingFee", "Processing Fee (1%)")}</Text>
             <Text style={styles.feeValue}>
               -{safeFormatCurrency(fee, summary?.currency)}
             </Text>
@@ -248,7 +250,7 @@ export default function WithdrawScreen() {
           <View style={styles.feeDivider} />
 
           <View style={styles.feeRow}>
-            <Text style={styles.netLabel}>You'll Receive</Text>
+            <Text style={styles.netLabel}>{t("wallet.youWillReceive", "You'll Receive")}</Text>
             <Text style={styles.netValue}>
               {safeFormatCurrency(net, summary?.currency)}
             </Text>
@@ -258,8 +260,7 @@ export default function WithdrawScreen() {
         <View style={styles.infoBox}>
           <Ionicons name="information-circle-outline" size={20} color={colors.info} />
           <Text style={styles.infoText}>
-            Withdrawals are processed within 1-3 business days to your
-            registered bank account. Minimum withdrawal: ETB 50
+            {t("wallet.ensureCorrect", "Withdrawals are processed within 1-3 business days to your registered bank account. Minimum withdrawal: ETB 50")}
           </Text>
         </View>
       </View>
@@ -269,14 +270,14 @@ export default function WithdrawScreen() {
   const renderStep2 = () => {
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.stepTitle}>Select Bank Account</Text>
+        <Text style={styles.stepTitle}>{t("wallet.selectBank", "Select Bank Account")}</Text>
         <Text style={styles.stepSubtitle}>
-          Choose where you want to receive your money
+          {t("wallet.verifyDetails", "Choose where you want to receive your money")}
         </Text>
 
         {bankAccounts.length > 0 && (
           <View style={styles.savedBanks}>
-            <Text style={styles.sectionLabel}>Saved Accounts</Text>
+            <Text style={styles.sectionLabel}>{t("wallet.savedAccounts", "Saved Accounts")}</Text>
             {bankAccounts.map((bank) => (
               <TouchableOpacity
                 key={bank.id}
@@ -313,15 +314,15 @@ export default function WithdrawScreen() {
           onPress={() => setSelectedBank(null)}
         >
           <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-          <Text style={styles.addBankText}>Add New Bank Account</Text>
+          <Text style={styles.addBankText}>{t("wallet.addNewBank", "Add New Bank Account")}</Text>
         </TouchableOpacity>
 
         {!selectedBank && (
           <View style={styles.newBankForm}>
-            <Text style={styles.sectionLabel}>New Bank Account</Text>
+            <Text style={styles.sectionLabel}>{t("wallet.addNewBank", "New Bank Account")}</Text>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Bank Name</Text>
+              <Text style={styles.formLabel}>{t("wallet.bankName", "Bank Name")}</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g., Commercial Bank of Ethiopia"
@@ -334,10 +335,10 @@ export default function WithdrawScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Account Holder Name</Text>
+              <Text style={styles.formLabel}>{t("wallet.accountName", "Account Holder Name")}</Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="Name as it appears on account"
+                placeholder={t("wallet.accountName", "Name as it appears on account")}
                 placeholderTextColor={colors.text.secondary}
                 value={bankDetails.accountName}
                 onChangeText={(text) =>
@@ -347,10 +348,10 @@ export default function WithdrawScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Account Number</Text>
+              <Text style={styles.formLabel}>{t("wallet.accountNumber", "Account Number")}</Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="Enter account number"
+                placeholder={t("wallet.accountNumber", "Enter account number")}
                 placeholderTextColor={colors.text.secondary}
                 value={bankDetails.accountNumber}
                 onChangeText={(text) =>
@@ -362,10 +363,10 @@ export default function WithdrawScreen() {
 
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.formLabel}>Branch (Optional)</Text>
+                <Text style={styles.formLabel}>{t("wallet.branch", "Branch (Optional)")}</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Branch name"
+                  placeholder={t("wallet.branch", "Branch name")}
                   placeholderTextColor={colors.text.secondary}
                   value={bankDetails.branch}
                   onChangeText={(text) =>
@@ -375,10 +376,10 @@ export default function WithdrawScreen() {
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.formLabel}>SWIFT Code (Optional)</Text>
+                <Text style={styles.formLabel}>{t("wallet.swiftCode", "SWIFT Code (Optional)")}</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="SWIFT"
+                  placeholder={t("wallet.swiftCode", "SWIFT")}
                   placeholderTextColor={colors.text.secondary}
                   value={bankDetails.swiftCode}
                   onChangeText={(text) =>
@@ -399,7 +400,7 @@ export default function WithdrawScreen() {
                 )}
               </View>
               <Text style={styles.checkboxLabel}>
-                Save this account for future withdrawals
+                {t("wallet.saveAccount", "Save this account for future withdrawals")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -418,14 +419,14 @@ export default function WithdrawScreen() {
           <Ionicons name="wallet-outline" size={60} color={colors.primary} />
         </View>
 
-        <Text style={styles.confirmTitle}>Review & Confirm</Text>
+        <Text style={styles.confirmTitle}>{t("wallet.reviewConfirm", "Review & Confirm")}</Text>
         <Text style={styles.confirmSubtitle}>
-          Please verify your withdrawal details
+          {t("wallet.verifyDetails", "Please verify your withdrawal details")}
         </Text>
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Withdrawal Amount</Text>
+            <Text style={styles.summaryLabel}>{t("wallet.withdrawal", "Withdrawal Amount")}</Text>
             <Text style={styles.summaryValue}>
               {safeFormatCurrency(parseFloat(amount) || 0, summary?.currency)}
             </Text>
@@ -443,7 +444,7 @@ export default function WithdrawScreen() {
           <View style={styles.summaryDivider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>You'll Receive</Text>
+            <Text style={styles.summaryLabel}>{t("wallet.youWillReceive", "You'll Receive")}</Text>
             <Text style={[styles.summaryValue, styles.netAmount]}>
               {safeFormatCurrency(net, summary?.currency)}
             </Text>
@@ -473,9 +474,7 @@ export default function WithdrawScreen() {
             )}
           </View>
           <Text style={styles.termsText}>
-            I agree to the{" "}
-            <Text style={styles.termsLink}>Terms and Conditions</Text> for
-            withdrawals
+            {t("wallet.agreeTerms", "I agree to the Terms and Conditions for withdrawals")}
           </Text>
         </TouchableOpacity>
 
@@ -509,7 +508,7 @@ export default function WithdrawScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Withdraw Funds</Text>
+        <Text style={styles.headerTitle}>{t("wallet.withdraw", "Withdraw Funds")}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -576,7 +575,7 @@ export default function WithdrawScreen() {
         <View style={styles.footer}>
           {step < 3 ? (
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>Continue</Text>
+              <Text style={styles.nextButtonText}>{t("common.continue", "Continue")}</Text>
               <Ionicons name="arrow-forward" size={20} color={colors.surface} />
             </TouchableOpacity>
           ) : (
@@ -592,7 +591,7 @@ export default function WithdrawScreen() {
                 <ActivityIndicator size="small" color={colors.surface} />
               ) : (
                 <>
-                  <Text style={styles.confirmButtonText}>Confirm Withdrawal</Text>
+                  <Text style={styles.confirmButtonText}>{t("wallet.withdraw", "Confirm Withdrawal")}</Text>
                   <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
                 </>
               )}

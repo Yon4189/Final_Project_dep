@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import { useProviderEarnings } from '@/hooks/useProviderEarnings';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 export default function BankDetailsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { bankDetails: savedBankDetails, updateBankDetails, isLoading } = useProviderEarnings();
   
   const [form, setForm] = useState({
@@ -44,14 +46,14 @@ export default function BankDetailsScreen() {
 
   const handleSave = async () => {
     if (!form.bankName || !form.accountName || !form.accountNumber) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('common.error', 'Error'), t('profile.fillRequired', 'Please fill in all required fields'));
       return;
     }
 
     try {
       await updateBankDetails.mutateAsync(form);
-      Alert.alert('Success', 'Bank details updated successfully', [
-        { text: 'OK', onPress: () => router.back() }
+      Alert.alert(t('common.success', 'Success'), t('profile.bankUpdated', 'Bank details updated successfully'), [
+        { text: t('common.ok', 'OK'), onPress: () => router.back() }
       ]);
     } catch (error) {
       // Error is handled by the mutation's onError
@@ -72,20 +74,20 @@ export default function BankDetailsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Update Bank Account</Text>
+          <Text style={styles.title}>{t('profile.updateBankAccount', 'Update Bank Account')}</Text>
           <Text style={styles.subtitle}>
-            Enter your bank details to receive payments for your services.
+            {t('profile.bankSubtitle', 'Enter your bank details to receive payments for your services.')}
           </Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Bank Name *</Text>
+            <Text style={styles.label}>{t('profile.bankNameLabel', 'Bank Name *')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="business-outline" size={20} color={Colors.text.secondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Commercial Bank of Ethiopia"
+                placeholder={t('profile.bankNamePlaceholder', 'e.g. Commercial Bank of Ethiopia')}
                 value={form.bankName}
                 onChangeText={(text) => setForm({ ...form, bankName: text })}
               />
@@ -93,12 +95,12 @@ export default function BankDetailsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Account Holder Name *</Text>
+            <Text style={styles.label}>{t('profile.accountHolderLabel', 'Account Holder Name *')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="person-outline" size={20} color={Colors.text.secondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Exact name as in your bank"
+                placeholder={t('profile.accountHolderLabel', 'Exact name as in your bank')}
                 value={form.accountName}
                 onChangeText={(text) => setForm({ ...form, accountName: text })}
               />
@@ -106,12 +108,12 @@ export default function BankDetailsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Account Number *</Text>
+            <Text style={styles.label}>{t('profile.accountNumberLabel', 'Account Number *')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="card-outline" size={20} color={Colors.text.secondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your account number"
+                placeholder={t('profile.accountNumberLabel', 'Enter your account number')}
                 keyboardType="numeric"
                 value={form.accountNumber}
                 onChangeText={(text) => setForm({ ...form, accountNumber: text })}
@@ -121,19 +123,19 @@ export default function BankDetailsScreen() {
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Branch (Optional)</Text>
+              <Text style={styles.label}>{t('profile.branchOptional', 'Branch (Optional)')}</Text>
               <TextInput
                 style={styles.inputSmall}
-                placeholder="Branch"
+                placeholder={t('profile.branchOptional', 'Branch')}
                 value={form.branch}
                 onChangeText={(text) => setForm({ ...form, branch: text })}
               />
             </View>
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>SWIFT (Optional)</Text>
+              <Text style={styles.label}>{t('profile.swiftOptional', 'SWIFT (Optional)')}</Text>
               <TextInput
                 style={styles.inputSmall}
-                placeholder="SWIFT"
+                placeholder={t('profile.swiftOptional', 'SWIFT')}
                 value={form.swiftCode}
                 onChangeText={(text) => setForm({ ...form, swiftCode: text })}
                 autoCapitalize="characters"
@@ -145,7 +147,7 @@ export default function BankDetailsScreen() {
         <View style={styles.infoBox}>
           <Ionicons name="shield-checkmark-outline" size={20} color={Colors.success} />
           <Text style={styles.infoText}>
-            Your banking information is encrypted and stored securely.
+            {t('profile.encryptionInfo', 'Your banking information is encrypted and stored securely.')}
           </Text>
         </View>
 
@@ -158,7 +160,7 @@ export default function BankDetailsScreen() {
             <ActivityIndicator color={Colors.surface} />
           ) : (
             <>
-              <Text style={styles.saveButtonText}>Save Account Details</Text>
+              <Text style={styles.saveButtonText}>{t('profile.saveBankDetails', 'Save Account Details')}</Text>
               <Ionicons name="checkmark-circle" size={20} color={Colors.surface} />
             </>
           )}
@@ -168,7 +170,7 @@ export default function BankDetailsScreen() {
           style={styles.cancelButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

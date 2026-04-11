@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, ThemeColors } from '@/app/constants/Colors';
@@ -27,28 +28,29 @@ import { API_BASE_URL } from '@/app/config/api';
 import { useUpdateProfile } from '@/hooks/useProviderQueries';
 
 const WEEKDAYS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
 ];
 
 export default function ProviderProfile() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { isDark, setTheme, colors } = useTheme();
   
   const styles = React.useMemo(() => getStyles(colors), [colors]);
 
   const BADGES = React.useMemo(() => [
-    { type: 'verified', label: 'Verified Professional', icon: 'checkmark-circle', color: colors.primary },
-    { type: 'top_rated', label: 'Top Rated', icon: 'star', color: colors.warning },
-    { type: 'expert', label: 'Expert', icon: 'trophy', color: colors.warning },
-    { type: 'emergency', label: 'Emergency Service', icon: 'flash', color: colors.error },
-    { type: 'insured', label: 'Fully Insured', icon: 'shield', color: colors.success },
+    { type: 'verified', label: t('providerProfile.verified', 'Verified Professional'), icon: 'checkmark-circle', color: colors.primary },
+    { type: 'top_rated', label: t('providerProfile.topRated', 'Top Rated'), icon: 'star', color: colors.warning },
+    { type: 'expert', label: t('providerProfile.expert', 'Expert'), icon: 'trophy', color: colors.warning },
+    { type: 'emergency', label: t('providerProfile.emergency', 'Emergency Service'), icon: 'flash', color: colors.error },
+    { type: 'insured', label: t('providerProfile.insured', 'Fully Insured'), icon: 'shield', color: colors.success },
   ], [colors]);
 
   const { profile, isLoading, loadProfile,stats, toggleAvailability } = useProviderStore();
@@ -66,7 +68,7 @@ export default function ProviderProfile() {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      Alert.alert(t('profile.permissionRequired', 'Permission Required'), t('profile.photoLibraryPermission', 'Please allow access to your photo library'));
       return;
     }
 
@@ -93,9 +95,9 @@ export default function ProviderProfile() {
         } as any);
         
         await updateProfileMutation.mutateAsync(formData);
-        Alert.alert('Success', 'Profile picture updated');
+        Alert.alert(t('common.success', 'Success'), t('profile.pictureUpdated', 'Profile picture updated'));
       } catch (error) {
-        Alert.alert('Error', 'Failed to update profile picture');
+        Alert.alert(t('common.error', 'Error'), t('profile.updateError', 'Failed to update profile picture'));
       } finally {
         setUploading(false);
       }
@@ -108,12 +110,12 @@ export default function ProviderProfile() {
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('common.logout', 'Logout'),
+      t('profile.logoutConfirm', 'Are you sure you want to logout?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         { 
-          text: 'Logout', 
+          text: t('common.logout', 'Logout'), 
           style: 'destructive',
           onPress: async () => {
             // Clear auth and navigate to login
@@ -131,7 +133,7 @@ export default function ProviderProfile() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.surface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Profile</Text>
+        <Text style={styles.headerTitle}>{t('providerProfile.myProfile', 'My Profile')}</Text>
         <TouchableOpacity 
           style={styles.editButton}
           onPress={() => router.push('/(provider)/profile/edit')}
@@ -170,29 +172,29 @@ export default function ProviderProfile() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.businessName}>{profile?.businessName || 'Business Name'}</Text>
-        <Text style={styles.profession}>{profile?.businessName || 'Service Provider'}</Text>
+        <Text style={styles.businessName}>{profile?.businessName || t('providerProfile.businessName', 'Business Name')}</Text>
+        <Text style={styles.profession}>{profile?.profession || t('providerProfile.serviceProvider', 'Service Provider')}</Text>
 
         <View style={styles.ratingContainer}>
           <Ionicons name="star" size={16} color={colors.warning} />
           <Text style={styles.ratingText}>{Number(profile?.rating || 0).toFixed(1) || '0.0'}</Text>
-          <Text style={styles.reviewCount}>({profile?.reviewCount || 0} reviews)</Text>
+          <Text style={styles.reviewCount}>({profile?.reviewCount || 0} {t('providerProfile.reviews', 'reviews')})</Text>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{profile?.completedJobs || 0}</Text>
-            <Text style={styles.statLabel}>Jobs</Text>
+            <Text style={styles.statLabel}>{t('providerProfile.jobs', 'Jobs')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{profile?.yearsExperience || 0}</Text>
-            <Text style={styles.statLabel}>Years</Text>
+            <Text style={styles.statLabel}>{t('providerProfile.years', 'Years')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats?.responseRate || 0}%</Text>
-            <Text style={styles.statLabel}>Response</Text>
+            <Text style={styles.statLabel}>{t('providerProfile.response', 'Response')}</Text>
           </View>
         </View>
 
@@ -202,7 +204,7 @@ export default function ProviderProfile() {
               backgroundColor: profile?.isAvailable ? colors.success : colors.error 
             }]} />
             <Text style={styles.availabilityText}>
-              {profile?.isAvailable ? 'Available for work' : 'Not available'}
+              {profile?.isAvailable ? t('providerDashboard.availableForWork', 'Available for work') : t('providerDashboard.notAvailable', 'Not available')}
             </Text>
           </View>
           
@@ -219,7 +221,7 @@ export default function ProviderProfile() {
 
   const renderBadges = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Badges & Verifications</Text>
+      <Text style={styles.sectionTitle}>{t('profile.badgesVerifications', 'Badges & Verifications')}</Text>
       <View style={styles.badgesContainer}>
         {BADGES.map((badge) => (
           <View key={badge.type} style={[styles.badge, { backgroundColor: badge.color + '20' }]}>
@@ -233,15 +235,15 @@ export default function ProviderProfile() {
 
   const renderContactInfo = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Contact Information</Text>
+      <Text style={styles.sectionTitle}>{t('providerProfile.contactInfo', 'Contact Information')}</Text>
       
       <TouchableOpacity 
         style={styles.infoRow}
-        onPress={() => Alert.alert('Info', 'Phone number')}
+        onPress={() => Alert.alert(t('common.info', 'Info'), t('profile.phone', 'Phone number'))}
       >
         <View style={styles.infoLeft}>
           <Ionicons name="call-outline" size={20} color={colors.primary} />
-          <Text style={styles.infoLabel}>Phone</Text>
+          <Text style={styles.infoLabel}>{t('profile.phone', 'Phone')}</Text>
         </View>
         <View style={styles.infoRight}>
           <Text style={styles.infoValue}>{formatPhoneNumber(profile?.phone || '')}</Text>
@@ -251,14 +253,14 @@ export default function ProviderProfile() {
 
       <TouchableOpacity 
         style={styles.infoRow}
-        onPress={() => Alert.alert('Info', 'Email address')}
+        onPress={() => Alert.alert(t('common.info', 'Info'), t('profile.email', 'Email address'))}
       >
         <View style={styles.infoLeft}>
           <Ionicons name="mail-outline" size={20} color={colors.primary} />
-          <Text style={styles.infoLabel}>Email</Text>
+          <Text style={styles.infoLabel}>{t('profile.email', 'Email')}</Text>
         </View>
         <View style={styles.infoRight}>
-          <Text style={styles.infoValue}>{profile?.email || 'Not provided'}</Text>
+          <Text style={styles.infoValue}>{profile?.email || t('common.notProvided', 'Not provided')}</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
         </View>
       </TouchableOpacity>
@@ -269,10 +271,10 @@ export default function ProviderProfile() {
       >
         <View style={styles.infoLeft}>
           <Ionicons name="location-outline" size={20} color={colors.primary} />
-          <Text style={styles.infoLabel}>Address</Text>
+          <Text style={styles.infoLabel}>{t('profile.address', 'Address')}</Text>
         </View>
         <View style={styles.infoRight}>
-          <Text style={styles.infoValue} numberOfLines={1}>{profile?.address || 'Not set'}</Text>
+          <Text style={styles.infoValue} numberOfLines={1}>{profile?.address || t('common.notSet', 'Not set')}</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
         </View>
       </TouchableOpacity>
@@ -281,16 +283,16 @@ export default function ProviderProfile() {
 
   const renderBusinessInfo = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Business Information</Text>
+      <Text style={styles.sectionTitle}>{t('providerProfile.businessInfo', 'Business Information')}</Text>
       
       <View style={styles.bioContainer}>
-        <Text style={styles.bioLabel}>About</Text>
-        <Text style={styles.bioText}>{profile?.bio || 'No bio added yet'}</Text>
+        <Text style={styles.bioLabel}>{t('profile.about', 'About')}</Text>
+        <Text style={styles.bioText}>{profile?.bio || t('profile.noBio', 'No bio added yet')}</Text>
       </View>
 
       <View style={styles.serviceArea}>
-        <Text style={styles.serviceAreaLabel}>Service Radius</Text>
-        <Text style={styles.serviceAreaValue}>{profile?.serviceRadius || 0} km</Text>
+        <Text style={styles.serviceAreaLabel}>{t('profile.serviceRadius', 'Service Radius')}</Text>
+        <Text style={styles.serviceAreaValue}>{profile?.serviceRadius || 0} {t('common.km', 'km')}</Text>
       </View>
 
       <TouchableOpacity 
@@ -298,8 +300,8 @@ export default function ProviderProfile() {
         onPress={() => router.push('/(provider)/profile/services')}
       >
         <View style={styles.servicesButtonLeft}>
-          <Text style={styles.servicesButtonLabel}>My Services</Text>
-          <Text style={styles.servicesButtonCount}>{profile?.services?.length || 0} services</Text>
+          <Text style={styles.servicesButtonLabel}>{t('profile.myServices', 'My Services')}</Text>
+          <Text style={styles.servicesButtonCount}>{t('profile.servicesCount', { count: profile?.services?.length || 0, defaultValue: `${profile?.services?.length || 0} services` })}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
       </TouchableOpacity>
@@ -312,9 +314,9 @@ export default function ProviderProfile() {
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Working Hours</Text>
+          <Text style={styles.sectionTitle}>{t('providerProfile.workingHours', 'Working Hours')}</Text>
           <TouchableOpacity onPress={() => router.push('/(provider)/profile/schedule')}>
-            <Text style={styles.editText}>Manage</Text>
+            <Text style={styles.editText}>{t('providerProfile.manage', 'Manage')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -324,7 +326,7 @@ export default function ProviderProfile() {
 
           return (
             <View key={day} style={styles.hoursRow}>
-              <Text style={styles.hoursDay}>{day}</Text>
+              <Text style={styles.hoursDay}>{t(`weekdays.${day.toLowerCase()}`, day)}</Text>
               {editingHours ? (
                 <TouchableOpacity style={styles.hoursEdit}>
                   <Text style={styles.hoursEditText}>
@@ -338,7 +340,7 @@ export default function ProviderProfile() {
                 <Text style={styles.hoursTime}>
                   {schedule?.isAvailable 
                     ? `${schedule.startTime || '09:00'} - ${schedule.endTime || '17:00'}`
-                    : 'Closed'}
+                    : t('profile.closed', 'Closed')}
                 </Text>
               )}
             </View>
@@ -350,7 +352,7 @@ export default function ProviderProfile() {
 
   const renderDocuments = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Documents & Certifications</Text>
+      <Text style={styles.sectionTitle}>{t('providerProfile.documents', 'Documents & Certifications')}</Text>
       
       <TouchableOpacity 
         style={styles.docRow}
@@ -358,14 +360,14 @@ export default function ProviderProfile() {
       >
         <View style={styles.docLeft}>
           <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-          <Text style={styles.docLabel}>Business License</Text>
+          <Text style={styles.docLabel}>{t('profile.businessLicense', 'Business License')}</Text>
         </View>
         <View style={styles.docRight}>
           {(profile?.status === 'approved' || profile?.verificationStatus === 'verified') ? (
             <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           ) : (
             <View style={styles.pendingBadge}>
-              <Text style={styles.pendingText}>Pending</Text>
+              <Text style={styles.pendingText}>{t('profile.pending', 'Pending')}</Text>
             </View>
           )}
           <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
@@ -378,14 +380,14 @@ export default function ProviderProfile() {
       >
         <View style={styles.docLeft}>
           <Ionicons name="shield-outline" size={20} color={colors.primary} />
-          <Text style={styles.docLabel}>Insurance Certificate</Text>
+          <Text style={styles.docLabel}>{t('profile.insuranceCertificate', 'Insurance Certificate')}</Text>
         </View>
         <View style={styles.docRight}>
           {(profile?.status === 'approved' || profile?.verificationStatus === 'verified') ? (
             <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           ) : (
             <View style={styles.pendingBadge}>
-              <Text style={styles.pendingText}>Pending</Text>
+              <Text style={styles.pendingText}>{t('profile.pending', 'Pending')}</Text>
             </View>
           )}
           <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
@@ -398,7 +400,7 @@ export default function ProviderProfile() {
       >
         <View style={styles.docLeft}>
           <Ionicons name="ribbon-outline" size={20} color={colors.primary} />
-          <Text style={styles.docLabel}>Certifications</Text>
+          <Text style={styles.docLabel}>{t('profile.certifications', 'Certifications')}</Text>
         </View>
         <View style={styles.docRight}>
           <Text style={styles.docCount}>{profile?.certifications?.length || 0}</Text>
@@ -410,7 +412,7 @@ export default function ProviderProfile() {
 
   const renderBankInfo = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Bank Account</Text>
+      <Text style={styles.sectionTitle}>{t('profile.bankAccount', 'Bank Account')}</Text>
       
       <TouchableOpacity 
         style={styles.bankCard}
@@ -421,7 +423,7 @@ export default function ProviderProfile() {
             <Ionicons name="business" size={24} color={colors.primary} />
           </View>
           <View style={styles.bankInfo}>
-            <Text style={styles.bankName}>{profile?.bankDetails?.bankName || 'No bank account'}</Text>
+            <Text style={styles.bankName}>{profile?.bankDetails?.bankName || t('profile.noBankAccount', 'No bank account')}</Text>
             {profile?.bankDetails?.accountNumber && (
               <Text style={styles.bankAccount}>
                 {profile.bankDetails.accountName} •••• {profile.bankDetails.accountNumber.slice(-4)}
@@ -435,7 +437,7 @@ export default function ProviderProfile() {
       {profile?.bankDetails?.isVerified && (
         <View style={styles.verifiedBadge}>
           <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-          <Text style={styles.verifiedText}>Bank account verified</Text>
+          <Text style={styles.verifiedText}>{t('profile.bankVerified', 'Bank account verified')}</Text>
         </View>
       )}
     </View>
@@ -443,12 +445,12 @@ export default function ProviderProfile() {
 
   const renderSettings = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Appearance</Text>
+      <Text style={styles.sectionTitle}>{t('profile.appearance', 'Appearance')}</Text>
       
       <View style={styles.settingRow}>
         <View style={styles.settingLeft}>
           <Ionicons name="moon-outline" size={20} color={colors.text.secondary} />
-          <Text style={styles.settingLabel}>Dark Mode</Text>
+          <Text style={styles.settingLabel}>{t('profile.darkMode', 'Dark Mode')}</Text>
         </View>
         <Switch
           value={isDark}
@@ -458,7 +460,7 @@ export default function ProviderProfile() {
         />
       </View>
 
-      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Settings</Text>
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('common.settings', 'Settings')}</Text>
       
       <TouchableOpacity 
         style={styles.settingRow}
@@ -466,7 +468,7 @@ export default function ProviderProfile() {
       >
         <View style={styles.settingLeft}>
           <Ionicons name="notifications-outline" size={20} color={colors.text.primary} />
-          <Text style={styles.settingLabel}>Notifications</Text>
+          <Text style={styles.settingLabel}>{t('notifications.title', 'Notifications')}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
       </TouchableOpacity>
@@ -477,18 +479,18 @@ export default function ProviderProfile() {
       >
         <View style={styles.settingLeft}>
           <Ionicons name="lock-closed-outline" size={20} color={colors.text.primary} />
-          <Text style={styles.settingLabel}>Privacy & Security</Text>
+          <Text style={styles.settingLabel}>{t('profile.privacySecurity', 'Privacy & Security')}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
       </TouchableOpacity>
 
       <TouchableOpacity 
         style={styles.settingRow}
-        onPress={() => Alert.alert('Help & Support', 'Our support team is currently active on Telegram: @handyman_support')}
+        onPress={() => Alert.alert(t('profile.helpSupport', 'Help & Support'), t('profile.supportTelegram', 'Our support team is currently active on Telegram: @handyman_support'))}
       >
         <View style={styles.settingLeft}>
           <Ionicons name="help-circle-outline" size={20} color={colors.text.primary} />
-          <Text style={styles.settingLabel}>Help & Support</Text>
+          <Text style={styles.settingLabel}>{t('profile.helpSupport', 'Help & Support')}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
       </TouchableOpacity>
@@ -499,7 +501,7 @@ export default function ProviderProfile() {
       >
         <View style={styles.settingLeft}>
           <Ionicons name="document-text-outline" size={20} color={colors.text.primary} />
-          <Text style={styles.settingLabel}>Terms & Conditions</Text>
+          <Text style={styles.settingLabel}>{t('profile.termsConditions', 'Terms & Conditions')}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
       </TouchableOpacity>
@@ -533,7 +535,7 @@ export default function ProviderProfile() {
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('common.logout', 'Logout')}</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomPadding} />

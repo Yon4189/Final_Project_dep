@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useBookingDetails, useCancelBooking, useBookingStatus, useTrackProvider, bookingKeys } from '@/hooks/useCustomerBookings';
@@ -79,6 +80,7 @@ const STATUS_STEPS = [
 export default function BookingDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -100,9 +102,9 @@ export default function BookingDetails() {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
-        <Text style={styles.errorText}>Booking not found</Text>
+        <Text style={styles.errorText}>{t('requests.notFound', 'Booking not found')}</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('requests.goBack', 'Go Back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -120,7 +122,7 @@ export default function BookingDetails() {
   };
 
   const getStatusLabel = (status: string) => {
-    return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status;
+    return t(`bookings.status.${status.toLowerCase()}`, status);
   };
 
   const getCurrentStep = () => {
@@ -136,7 +138,7 @@ export default function BookingDetails() {
     if (booking.provider?.phone) {
       Linking.openURL(`tel:${booking.provider.phone}`);
     } else {
-      Alert.alert('Info', 'Phone number not available');
+      Alert.alert(t('common.info', 'Info'), t('profile.phoneNotAvailable', 'Phone number not available'));
     }
   };
 
@@ -202,7 +204,7 @@ export default function BookingDetails() {
     return (
       <View style={styles.section}>
         <View style={styles.liveTrackingHeader}>
-          <Text style={styles.sectionTitle}>Live Tracking</Text>
+          <Text style={styles.sectionTitle}>{t('requests.liveTracking', 'Live Tracking')}</Text>
           <View style={styles.liveIndicator}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>LIVE</Text>
@@ -228,7 +230,7 @@ export default function BookingDetails() {
           
           {!providerPos && (
             <View style={styles.mapOverlay}>
-              <Text style={styles.mapOverlayText}>Waiting for provider location...</Text>
+              <Text style={styles.mapOverlayText}>{t('requests.waitingForLocation', 'Waiting for provider location...')}</Text>
             </View>
           )}
         </View>
@@ -236,13 +238,13 @@ export default function BookingDetails() {
         {trackingData?.data?.eta && (
           <View style={styles.etaCard}>
             <View style={styles.etaItem}>
-              <Text style={styles.etaLabel}>Distance</Text>
-              <Text style={styles.etaValue}>{trackingData.data.eta.distance_km} km</Text>
+              <Text style={styles.etaLabel}>{t('requests.distance', 'Distance')}</Text>
+              <Text style={styles.etaValue}>{trackingData.data.eta.distance_km} {t('common.km', 'km')}</Text>
             </View>
             <View style={styles.etaDivider} />
             <View style={styles.etaItem}>
-              <Text style={styles.etaLabel}>Est. Arrival</Text>
-              <Text style={styles.etaValue}>{trackingData.data.eta.minutes} min</Text>
+              <Text style={styles.etaLabel}>{t('requests.estArrival', 'Est. Arrival')}</Text>
+              <Text style={styles.etaValue}>{trackingData.data.eta.minutes} {t('common.min', 'min')}</Text>
             </View>
           </View>
         )}
@@ -299,8 +301,8 @@ export default function BookingDetails() {
 
   const handleConfirmCompletion = async () => {
     Alert.alert(
-      'Confirm Completion',
-      'By confirming, you agree that the service has been performed satisfactorily and the payment will be released to the provider.',
+      t('requests.confirmCompletion', 'Confirm Completion'),
+      t('requests.confirmCompletionMsg', 'By confirming, you agree that the service has been performed satisfactorily and the payment will be released to the provider.'),
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -332,7 +334,7 @@ export default function BookingDetails() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Booking Details</Text>
+        <Text style={styles.headerTitle}>{t('requests.requestDetails', 'Booking Details')}</Text>
         <TouchableOpacity style={styles.menuButton}>
           <Ionicons name="ellipsis-vertical" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
@@ -365,7 +367,7 @@ export default function BookingDetails() {
 
   const renderProviderInfo = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Provider</Text>
+      <Text style={styles.sectionTitle}>{t('requests.serviceProvider', 'Service Provider')}</Text>
       <View style={styles.providerCard}>
         <Image
           source={{ uri: booking.provider?.profilePicture || 'https://via.placeholder.com/60' }}
@@ -399,12 +401,12 @@ export default function BookingDetails() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Service Details</Text>
+        <Text style={styles.sectionTitle}>{t('requests.serviceDetails', 'Service Details')}</Text>
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
             <Ionicons name="construct-outline" size={20} color={Colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Service</Text>
+              <Text style={styles.detailLabel}>{t('requests.service', 'Service')}</Text>
               <Text style={styles.detailValue}>{booking.service?.title || 'Service'}</Text>
             </View>
           </View>
@@ -412,7 +414,7 @@ export default function BookingDetails() {
           <View style={styles.detailRow}>
             <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Date & Time</Text>
+              <Text style={styles.detailLabel}>{t('requests.dateTime', 'Date & Time')}</Text>
               <Text style={styles.detailValue}>
                 {scheduled.date} at {scheduled.time}
               </Text>
@@ -422,7 +424,7 @@ export default function BookingDetails() {
           <View style={styles.detailRow}>
             <Ionicons name="location-outline" size={20} color={Colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={styles.detailLabel}>{t('requests.location', 'Location')}</Text>
               <Text style={styles.detailValue}>
                 {booking.service_address || 'Location pinned on map'}
               </Text>
@@ -433,7 +435,7 @@ export default function BookingDetails() {
             <View style={styles.detailRow}>
               <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Special Instructions</Text>
+                <Text style={styles.detailLabel}>{t('requests.specialInstructions', 'Special Instructions')}</Text>
                 <Text style={styles.detailValue}>{booking.notes}</Text>
               </View>
             </View>
@@ -445,27 +447,27 @@ export default function BookingDetails() {
 
   const renderPaymentDetails = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Payment Details</Text>
+      <Text style={styles.sectionTitle}>{t('requests.paymentDetails', 'Payment Details')}</Text>
       <View style={styles.paymentCard}>
         <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Agreed Price</Text>
+          <Text style={styles.priceLabel}>{t('requests.servicePrice', 'Agreed Price')}</Text>
           <PriceText style={styles.priceValue} amount={booking.agreed_price} />
         </View>
 
         {booking.payment?.status === 'paid' ? (
           <View style={styles.paidContainer}>
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
-            <Text style={styles.paidText}>Payment Completed</Text>
+            <Text style={styles.paidText}>{t('requests.paymentCompleted', 'Payment Completed')}</Text>
           </View>
         ) : status === 'completed' ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
-            <Text style={styles.payButtonText}>Pay Now</Text>
+            <Text style={styles.payButtonText}>{t('requests.payNow', 'Pay Now')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.pendingPayment}>
             <Ionicons name="time-outline" size={20} color={Colors.warning} />
             <Text style={styles.pendingPaymentText}>
-              Payment will be processed after service completion
+              {t('requests.paymentPending', 'Payment will be processed after service completion')}
             </Text>
           </View>
         )}
@@ -487,7 +489,7 @@ export default function BookingDetails() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Progress Timeline</Text>
+        <Text style={styles.sectionTitle}>{t('requests.progressTimeline', 'Progress Timeline')}</Text>
         <View style={styles.timelineCard}>
           {STATUS_STEPS.map((step, index) => {
             const isCompleted = index <= currentStep;
@@ -519,7 +521,7 @@ export default function BookingDetails() {
                     styles.timelineLabel,
                     isCompleted && styles.timelineLabelCompleted,
                   ]}>
-                    {step.label}
+                    {t(`requests.steps.${step.key}`, step.label)}
                   </Text>
                   {isCurrent && (
                     <Text style={styles.timelineTime}>
@@ -555,7 +557,7 @@ export default function BookingDetails() {
             <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
               <Ionicons name="shield-checkmark-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
               <Text style={styles.payButtonText}>
-                {confirmCompletion.isPending ? 'Confirming...' : 'Confirm Service Completion'}
+                {confirmCompletion.isPending ? t('common.confirming', 'Confirming...') : t('requests.confirmServiceBtn', 'Confirm Service Completion')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -567,14 +569,14 @@ export default function BookingDetails() {
             onPress={handlePayNow}
           >
             <Ionicons name="card-outline" size={20} color={Colors.surface} style={{ marginRight: 8 }} />
-            <Text style={styles.payButtonText}>Pay for Service</Text>
+            <Text style={styles.payButtonText}>{t('requests.payNow', 'Pay for Service')}</Text>
           </TouchableOpacity>
         )}
 
         {['accepted', 'confirmed', 'arrived', 'in_progress'].includes(status) && (
           <TouchableOpacity style={styles.trackButton} onPress={handleTrackProvider}>
             <Ionicons name="location-outline" size={20} color={Colors.surface} />
-            <Text style={styles.trackButtonText}>Track Provider</Text>
+            <Text style={styles.trackButtonText}>{t('requests.trackProvider', 'Track Provider')}</Text>
           </TouchableOpacity>
         )}
 
@@ -584,7 +586,7 @@ export default function BookingDetails() {
             onPress={() => setShowCancelModal(true)}
           >
             <Ionicons name="close-circle" size={20} color={Colors.error} />
-            <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+            <Text style={styles.cancelButtonText}>{t('requests.cancelRequest', 'Cancel Booking')}</Text>
           </TouchableOpacity>
         )}
 
@@ -594,13 +596,13 @@ export default function BookingDetails() {
             onPress={() => setShowReviewModal(true)}
           >
             <Ionicons name="star" size={20} color={Colors.surface} />
-            <Text style={styles.trackButtonText}>Rate & Review Service</Text>
+            <Text style={styles.trackButtonText}>{t('requests.rateReviewService', 'Rate & Review Service')}</Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity style={styles.helpButton} onPress={handleReportIssue}>
           <Ionicons name="alert-circle" size={20} color={Colors.warning} />
-          <Text style={styles.helpButtonText}>Report an Issue</Text>
+          <Text style={styles.helpButtonText}>{t('requests.reportIssue', 'Report an Issue')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -621,7 +623,7 @@ export default function BookingDetails() {
             styles.tabText,
             selectedTab === tab && styles.tabTextActive,
           ]}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {t(`requests.${tab}`, tab.charAt(0).toUpperCase() + tab.slice(1))}
           </Text>
         </TouchableOpacity>
       ))}
@@ -660,28 +662,28 @@ export default function BookingDetails() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Booking</Text>
+            <Text style={styles.modalTitle}>{t('requests.cancelModalTitle', 'Cancel Booking')}</Text>
             <Text style={styles.modalSubtitle}>
-              Please tell us why you're cancelling this booking
+              {t('requests.cancelModalSubtitle', "Please tell us why you're cancelling this booking")}
             </Text>
 
             {[
-              'Changed my mind',
-              'Found another provider',
-              'Service no longer needed',
-              'Provider unresponsive',
-              'Price too high',
-              'Other',
+              { key: 'changedMind', label: t('requests.reasons.changedMind', 'Changed my mind') },
+              { key: 'foundAnother', label: t('requests.reasons.foundAnother', 'Found another provider') },
+              { key: 'noLongerNeeded', label: t('requests.reasons.noLongerNeeded', 'Service no longer needed') },
+              { key: 'unresponsive', label: t('requests.reasons.unresponsive', 'Provider unresponsive') },
+              { key: 'priceHigh', label: t('requests.reasons.priceHigh', 'Price too high') },
+              { key: 'other', label: t('requests.reasons.other', 'Other') },
             ].map((reason) => (
               <TouchableOpacity
-                key={reason}
+                key={reason.key}
                 style={styles.reasonOption}
-                onPress={() => setCancelReason(reason)}
+                onPress={() => setCancelReason(reason.label)}
               >
                 <View style={styles.radioButton}>
-                  {cancelReason === reason && <View style={styles.radioSelected} />}
+                  {cancelReason === reason.label && <View style={styles.radioSelected} />}
                 </View>
-                <Text style={styles.reasonText}>{reason}</Text>
+                <Text style={styles.reasonText}>{reason.label}</Text>
               </TouchableOpacity>
             ))}
 
@@ -690,7 +692,7 @@ export default function BookingDetails() {
                 style={styles.modalCancelButton}
                 onPress={() => setShowCancelModal(false)}
               >
-                <Text style={styles.modalCancelText}>Go Back</Text>
+                <Text style={styles.modalCancelText}>{t('requests.goBack', 'Go Back')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -701,13 +703,13 @@ export default function BookingDetails() {
                 disabled={!cancelReason || cancelBooking.isPending}
               >
                 <Text style={styles.modalConfirmText}>
-                  {cancelBooking.isPending ? 'Cancelling...' : 'Confirm Cancellation'}
+                  {cancelBooking.isPending ? t('common.cancelling', 'Cancelling...') : t('requests.cancelRequest', 'Confirm Cancellation')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <Text style={styles.refundNote}>
-              Note: Full refund before service date, 50% refund on service date
+              {t('requests.refundNote', 'Note: Full refund before service date, 50% refund on service date')}
             </Text>
           </View>
         </View>

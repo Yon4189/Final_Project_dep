@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/Colors';
@@ -46,6 +47,7 @@ type TransactionFilter = 'all' | 'completed' | 'pending' | 'failed';
 
 export default function WalletScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
@@ -136,12 +138,14 @@ export default function WalletScreen() {
 
   const handleTopUp = () => {
     const amount = parseFloat(topUpAmount);
+  const handleTopUp = () => {
+    const amount = parseFloat(topUpAmount);
     if (isNaN(amount) || amount < 10) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount (minimum ETB 10)');
+      Alert.alert(t('wallet.invalidAmount', 'Invalid Amount'), t('wallet.minAmountTopUp', 'Please enter a valid amount (minimum ETB 10)'));
       return;
     }
 
-    Alert.alert('Coming Soon', 'Wallet top up is not available yet.');
+    Alert.alert(t('common.comingSoon', 'Coming Soon'), t('wallet.topUpNotAvailable', 'Wallet top up is not available yet.'));
     setShowTopUpModal(false);
     setTopUpAmount('');
   };
@@ -149,16 +153,16 @@ export default function WalletScreen() {
   const handleWithdraw = () => {
     const amount = parseFloat(withdrawAmount);
     if (isNaN(amount) || amount < 50) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount (minimum ETB 50)');
+      Alert.alert(t('wallet.invalidAmount', 'Invalid Amount'), t('wallet.minAmountWithdraw', 'Please enter a valid amount (minimum ETB 50)'));
       return;
     }
 
     if (amount > (wallet?.balance || 0)) {
-      Alert.alert('Insufficient Balance', 'You do not have enough balance');
+      Alert.alert(t('wallet.insufficientBalanceTitle', 'Insufficient Balance'), t('wallet.insufficientBalanceMsg', 'You do not have enough balance'));
       return;
     }
 
-    Alert.alert('Coming Soon', 'Withdrawals are not available yet.');
+    Alert.alert(t('common.comingSoon', 'Coming Soon'), t('wallet.withdrawNotAvailable', 'Withdrawals are not available yet.'));
     setShowWithdrawModal(false);
     setWithdrawAmount('');
   };
@@ -174,20 +178,20 @@ export default function WalletScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.surface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Wallet</Text>
+        <Text style={styles.headerTitle}>{t('wallet.title', 'My Wallet')}</Text>
         <TouchableOpacity 
           style={styles.historyButton}
-          onPress={() => Alert.alert('Coming Soon', 'Transaction history is not available yet.')}
+          onPress={() => Alert.alert(t('common.comingSoon', 'Coming Soon'), t('wallet.historyNotAvailable', 'Transaction history is not available yet.'))}
         >
           <Ionicons name="time-outline" size={24} color={Colors.surface} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.balanceContainer}>
-        <Text style={styles.balanceLabel}>Total Balance</Text>
+        <Text style={styles.balanceLabel}>{t('wallet.totalBalance', 'Total Balance')}</Text>
         <PriceText style={styles.balanceAmount} amount={wallet?.balance || 0} />
         <Text style={styles.balanceSubtext}>
-          Pending: <PriceText amount={wallet?.pendingAmount || 0} />
+          {t('wallet.pending', 'Pending:')} <PriceText amount={wallet?.pendingAmount || 0} />
         </Text>
       </View>
 
@@ -199,7 +203,7 @@ export default function WalletScreen() {
           <View style={styles.actionIcon}>
             <Ionicons name="add" size={24} color={Colors.primary} />
           </View>
-          <Text style={styles.actionText}>Top Up</Text>
+          <Text style={styles.actionText}>{t('wallet.topUp', 'Top Up')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -209,27 +213,27 @@ export default function WalletScreen() {
           <View style={styles.actionIcon}>
             <Ionicons name="arrow-down" size={24} color={Colors.primary} />
           </View>
-          <Text style={styles.actionText}>Withdraw</Text>
+          <Text style={styles.actionText}>{t('wallet.withdraw', 'Withdraw')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => Alert.alert('Coming Soon', 'Send money is not available yet.')}
+          onPress={() => Alert.alert(t('common.comingSoon', 'Coming Soon'), t('wallet.sendNotAvailable', 'Send money is not available yet.'))}
         >
           <View style={styles.actionIcon}>
             <Ionicons name="send" size={24} color={Colors.primary} />
           </View>
-          <Text style={styles.actionText}>Send</Text>
+          <Text style={styles.actionText}>{t('wallet.send', 'Send')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => Alert.alert('Coming Soon', 'Receive money is not available yet.')}
+          onPress={() => Alert.alert(t('common.comingSoon', 'Coming Soon'), t('wallet.receiveNotAvailable', 'Receive money is not available yet.'))}
         >
           <View style={styles.actionIcon}>
             <Ionicons name="qr-code" size={24} color={Colors.primary} />
           </View>
-          <Text style={styles.actionText}>Receive</Text>
+          <Text style={styles.actionText}>{t('wallet.receive', 'Receive')}</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -242,17 +246,17 @@ export default function WalletScreen() {
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>{summary.count}</Text>
-          <Text style={styles.statLabel}>Transactions</Text>
+          <Text style={styles.statLabel}>{t('wallet.transactions', 'Transactions')}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statCard}>
           <PriceText style={[styles.statValue, { color: Colors.error }]} amount={summary.spent} />
-          <Text style={styles.statLabel}>Spent</Text>
+          <Text style={styles.statLabel}>{t('wallet.spent', 'Spent')}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statCard}>
           <PriceText style={[styles.statValue, { color: Colors.success }]} amount={summary.received} />
-          <Text style={styles.statLabel}>Received</Text>
+          <Text style={styles.statLabel}>{t('wallet.received', 'Received')}</Text>
         </View>
       </View>
     );
@@ -270,7 +274,7 @@ export default function WalletScreen() {
           onPress={() => setFilterType('all')}
         >
           <Text style={[styles.filterText, filterType === 'all' && styles.filterTextActive]}>
-            All
+            {t('wallet.filterAll', 'All')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -278,7 +282,7 @@ export default function WalletScreen() {
           onPress={() => setFilterType('completed')}
         >
           <Text style={[styles.filterText, filterType === 'completed' && styles.filterTextActive]}>
-            Completed
+            {t('wallet.filterCompleted', 'Completed')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -286,7 +290,7 @@ export default function WalletScreen() {
           onPress={() => setFilterType('pending')}
         >
           <Text style={[styles.filterText, filterType === 'pending' && styles.filterTextActive]}>
-            Pending
+            {t('wallet.filterPending', 'Pending')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -294,7 +298,7 @@ export default function WalletScreen() {
           onPress={() => setFilterType('failed')}
         >
           <Text style={[styles.filterText, filterType === 'failed' && styles.filterTextActive]}>
-            Failed
+            {t('wallet.filterFailed', 'Failed')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -305,7 +309,7 @@ export default function WalletScreen() {
           onPress={() => setSelectedPeriod('week')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'week' && styles.periodTextActive]}>
-            Week
+            {t('wallet.periodWeek', 'Week')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -313,7 +317,7 @@ export default function WalletScreen() {
           onPress={() => setSelectedPeriod('month')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'month' && styles.periodTextActive]}>
-            Month
+            {t('wallet.periodMonth', 'Month')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -321,7 +325,7 @@ export default function WalletScreen() {
           onPress={() => setSelectedPeriod('year')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'year' && styles.periodTextActive]}>
-            Year
+            {t('wallet.periodYear', 'Year')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -329,7 +333,7 @@ export default function WalletScreen() {
           onPress={() => setSelectedPeriod('all')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'all' && styles.periodTextActive]}>
-            All
+            {t('wallet.filterAll', 'All')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -339,7 +343,7 @@ export default function WalletScreen() {
   const renderTransactionItem = ({ item }: { item: Transaction }) => (
     <TouchableOpacity 
       style={styles.transactionItem}
-      onPress={() => Alert.alert('Coming Soon', 'Transaction details are not available yet.')}
+      onPress={() => Alert.alert(t('common.comingSoon', 'Coming Soon'), t('wallet.transactionDetailsNotAvailable', 'Transaction details are not available yet.'))}
     >
       <View style={[styles.transactionIcon, { backgroundColor: getTransactionColor(item.type) + '20' }]}>
         <Ionicons 
@@ -352,9 +356,9 @@ export default function WalletScreen() {
       <View style={styles.transactionInfo}>
         <View style={styles.transactionHeader}>
           <Text style={styles.transactionTitle}>
-            {item.type === 'payment' ? 'Payment for Service' : 
-             item.type === 'refund' ? 'Refund Received' :
-             item.type === 'payout' ? 'Withdrawal' : 'Service Fee'}
+            {item.type === 'payment' ? t('wallet.paymentForService', 'Payment for Service') : 
+             item.type === 'refund' ? t('wallet.refundReceived', 'Refund Received') :
+             item.type === 'payout' ? t('wallet.withdrawal', 'Withdrawal') : t('wallet.serviceFee', 'Service Fee')}
           </Text>
           <Text style={[
             styles.transactionAmount,
@@ -396,7 +400,7 @@ export default function WalletScreen() {
         </View>
 
         {item.bookingNumber && (
-          <Text style={styles.transactionReference}>Booking #{item.bookingNumber}</Text>
+          <Text style={styles.transactionReference}>{t('wallet.bookingRef', 'Booking #')}{item.bookingNumber}</Text>
         )}
       </View>
     </TouchableOpacity>
@@ -412,14 +416,14 @@ export default function WalletScreen() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Top Up Wallet</Text>
+            <Text style={styles.modalTitle}>{t('wallet.topUpTitle', 'Top Up Wallet')}</Text>
             <TouchableOpacity onPress={() => setShowTopUpModal(false)}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.modalSubtitle}>
-            Enter the amount you want to add to your wallet
+            {t('wallet.enterTopUpAmt', 'Enter the amount you want to add to your wallet')}
           </Text>
 
           <View style={styles.amountInputContainer}>
@@ -447,7 +451,7 @@ export default function WalletScreen() {
             ))}
           </View>
 
-          <Text style={styles.paymentMethodTitle}>Payment Method</Text>
+          <Text style={styles.paymentMethodTitle}>{t('wallet.paymentMethod', 'Payment Method')}</Text>
 
           <TouchableOpacity
             style={[styles.paymentMethod, selectedPaymentMethod === 'chapa' && styles.paymentMethodSelected]}
@@ -474,8 +478,8 @@ export default function WalletScreen() {
                 <MaterialCommunityIcons name="cellphone" size={24} color={Colors.primary} />
               </View>
               <View>
-                <Text style={styles.paymentMethodName}>Mobile Money</Text>
-                <Text style={styles.paymentMethodDescription}>M-Pesa, Telebirr</Text>
+                <Text style={styles.paymentMethodName}>{t('wallet.mobileMoney', 'Mobile Money')}</Text>
+                <Text style={styles.paymentMethodDescription}>{t('wallet.mobileMoneyDesc', 'M-Pesa, Telebirr')}</Text>
               </View>
             </View>
             <View style={[styles.radioButton, selectedPaymentMethod === 'mobile_money' && styles.radioSelected]} />
@@ -486,14 +490,14 @@ export default function WalletScreen() {
               style={styles.modalCancelButton}
               onPress={() => setShowTopUpModal(false)}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalConfirmButton, !topUpAmount && styles.modalConfirmDisabled]}
               onPress={handleTopUp}
               disabled={!topUpAmount}
             >
-              <Text style={styles.modalConfirmText}>Proceed to Payment</Text>
+              <Text style={styles.modalConfirmText}>{t('wallet.proceedToPayment', 'Proceed to Payment')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -511,14 +515,14 @@ export default function WalletScreen() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Withdraw Funds</Text>
+            <Text style={styles.modalTitle}>{t('wallet.withdrawFunds', 'Withdraw Funds')}</Text>
             <TouchableOpacity onPress={() => setShowWithdrawModal(false)}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.modalSubtitle}>
-            Available Balance: <PriceText amount={wallet?.balance || 0} />
+            {t('wallet.availableBalanceLabel', 'Available Balance:')} <PriceText amount={wallet?.balance || 0} />
           </Text>
 
           <View style={styles.amountInputContainer}>
@@ -538,21 +542,21 @@ export default function WalletScreen() {
             style={styles.maxButton}
             onPress={() => setWithdrawAmount(wallet?.balance.toString() || '0')}
           >
-            <Text style={styles.maxButtonText}>Max</Text>
+            <Text style={styles.maxButtonText}>{t('wallet.max', 'Max')}</Text>
           </TouchableOpacity>
 
           <View style={styles.withdrawInfo}>
             <View style={styles.withdrawInfoRow}>
-              <Text style={styles.withdrawInfoLabel}>Withdrawal Fee</Text>
+              <Text style={styles.withdrawInfoLabel}>{t('wallet.withdrawalFee', 'Withdrawal Fee')}</Text>
               <PriceText style={styles.withdrawInfoValue} amount={5.00} />
             </View>
             <View style={styles.withdrawInfoRow}>
-              <Text style={styles.withdrawInfoLabel}>You'll Receive</Text>
+              <Text style={styles.withdrawInfoLabel}>{t('wallet.youWillReceive', 'You\'ll Receive')}</Text>
               <PriceText style={styles.withdrawInfoValue} amount={Math.max(0, parseFloat(withdrawAmount || '0') - 5)} />
             </View>
             <View style={styles.withdrawInfoRow}>
-              <Text style={styles.withdrawInfoLabel}>Processing Time</Text>
-              <Text style={styles.withdrawInfoValue}>1-3 business days</Text>
+              <Text style={styles.withdrawInfoLabel}>{t('wallet.processingTime', 'Processing Time')}</Text>
+              <Text style={styles.withdrawInfoValue}>{t('wallet.businessDays', '1-3 business days')}</Text>
             </View>
           </View>
 
@@ -561,7 +565,7 @@ export default function WalletScreen() {
               style={styles.modalCancelButton}
               onPress={() => setShowWithdrawModal(false)}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -571,12 +575,12 @@ export default function WalletScreen() {
               onPress={handleWithdraw}
               disabled={!withdrawAmount || parseFloat(withdrawAmount) < 50}
             >
-              <Text style={styles.modalConfirmText}>Continue</Text>
+              <Text style={styles.modalConfirmText}>{t('common.continue', 'Continue')}</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.withdrawNote}>
-            Note: Withdrawals are processed within 1-3 business days to your registered bank account.
+            {t('wallet.withdrawNote', 'Note: Withdrawals are processed within 1-3 business days to your registered bank account.')}
           </Text>
         </View>
       </View>
@@ -611,9 +615,9 @@ export default function WalletScreen() {
 
         <View style={styles.transactionsSection}>
           <View style={styles.transactionsHeader}>
-            <Text style={styles.transactionsTitle}>Recent Transactions</Text>
-            <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Transaction history is not available yet.')}>
-              <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.transactionsTitle}>{t('wallet.recentTransactions', 'Recent Transactions')}</Text>
+            <TouchableOpacity onPress={() => Alert.alert(t('common.comingSoon', 'Coming Soon'), t('wallet.historyNotAvailable', 'Transaction history is not available yet.'))}>
+              <Text style={styles.viewAllText}>{t('wallet.viewAll', 'View All')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -630,9 +634,9 @@ export default function WalletScreen() {
           ) : (
             <EmptyState
               icon="wallet-outline"
-              title="No Transactions"
-              message="Your transaction history will appear here"
-              actionLabel="Top Up Now"
+              title={t('wallet.noTransactions', 'No Transactions')}
+              message={t('wallet.noTransactionsMsg', 'Your transaction history will appear here')}
+              actionLabel={t('wallet.topUpNow', 'Top Up Now')}
               onAction={() => setShowTopUpModal(true)}
             />
           )}
@@ -642,9 +646,9 @@ export default function WalletScreen() {
           <View style={styles.infoCard}>
             <Ionicons name="shield-checkmark" size={24} color={Colors.primary} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>Secure Payments</Text>
+              <Text style={styles.infoTitle}>{t('wallet.securePayments', 'Secure Payments')}</Text>
               <Text style={styles.infoDescription}>
-                Your money is held securely until service is completed
+                {t('wallet.securePaymentsDesc', 'Your money is held securely until service is completed')}
               </Text>
             </View>
           </View>
@@ -652,9 +656,9 @@ export default function WalletScreen() {
           <View style={styles.infoCard}>
             <Ionicons name="timer" size={24} color={Colors.primary} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>24/7 Support</Text>
+              <Text style={styles.infoTitle}>{t('wallet.supportTitle', '24/7 Support')}</Text>
               <Text style={styles.infoDescription}>
-                Contact us anytime for payment-related issues
+                {t('wallet.supportDesc', 'Contact us anytime for payment-related issues')}
               </Text>
             </View>
           </View>

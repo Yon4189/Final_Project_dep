@@ -12,6 +12,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import AppButton from '../../components/AppButton';
@@ -24,6 +25,7 @@ interface City {
 
 export default function Locations() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [currentCity, setCurrentCity] = useState<string>('');
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export default function Locations() {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      Alert.alert('Error', 'Failed to load data');
+      Alert.alert(t('common.error', 'Error'), t('chat.fetchError', 'Failed to load data'));
     } finally {
       setLoading(false);
     }
@@ -76,14 +78,14 @@ export default function Locations() {
 
       if (response.success) {
         setCurrentCity(selectedCity);
-        Alert.alert('Success', 'Service city updated successfully');
+        Alert.alert(t('common.success', 'Success'), t('locations.updateSuccess', 'Service city updated successfully'));
         setModalVisible(false);
       } else {
-        Alert.alert('Error', response.message || 'Failed to update service city');
+        Alert.alert(t('common.error', 'Error'), response.message || t('locations.updateError', 'Failed to update service city'));
       }
     } catch (error: any) {
       console.error('Error updating city:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update service city');
+      Alert.alert(t('common.error', 'Error'), error.response?.data?.message || t('locations.updateError', 'Failed to update service city'));
     } finally {
       setUpdating(false);
     }
@@ -117,7 +119,7 @@ export default function Locations() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading your service city...</Text>
+        <Text style={styles.loadingText}>{t('locations.loadingMsg', 'Loading your service city...')}</Text>
       </View>
     );
   }
@@ -129,7 +131,7 @@ export default function Locations() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Service City</Text>
+        <Text style={styles.headerTitle}>{t('profile.serviceCity', 'Service City')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -139,16 +141,16 @@ export default function Locations() {
         <View style={styles.currentCityCard}>
           <View style={styles.currentCityHeader}>
             <Ionicons name="location" size={24} color={Colors.primary} />
-            <Text style={styles.currentCityLabel}>Your Service City</Text>
+            <Text style={styles.currentCityLabel}>{t('locations.yourServiceCity', 'Your Service City')}</Text>
           </View>
           
           <View style={styles.currentCityContent}>
-            <Text style={styles.currentCityName}>{currentCity || 'Not set'}</Text>
+            <Text style={styles.currentCityName}>{currentCity || t('profile.notSet', 'Not set')}</Text>
             <TouchableOpacity 
               style={styles.changeButton}
               onPress={() => setModalVisible(true)}
             >
-              <Text style={styles.changeButtonText}>Change</Text>
+              <Text style={styles.changeButtonText}>{t('locations.change', 'Change')}</Text>
               <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
             </TouchableOpacity>
           </View>
@@ -158,7 +160,7 @@ export default function Locations() {
         <View style={styles.infoBox}>
           <Ionicons name="information-circle-outline" size={20} color={Colors.info} />
           <Text style={styles.infoText}>
-            Your service city determines which providers can serve you
+            {t('locations.cityNote', 'Your service city determines which providers can serve you')}
           </Text>
         </View>
 
@@ -166,7 +168,7 @@ export default function Locations() {
         <View style={styles.noteBox}>
           <Ionicons name="business-outline" size={20} color={Colors.success} />
           <Text style={styles.noteText}>
-            We currently serve {cities.length} cities
+            {t('locations.serveNote', { count: cities.length, defaultValue: `We currently serve ${cities.length} cities` })}
           </Text>
         </View>
       </ScrollView>
@@ -181,14 +183,14 @@ export default function Locations() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Your City</Text>
+              <Text style={styles.modalTitle}>{t('locations.selectCity', 'Select Your City')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
 
             <Text style={styles.modalSubtitle}>
-              Choose your service city from the list below
+              {t('locations.selectCitySubtitle', 'Choose your service city from the list below')}
             </Text>
 
             {cities.length > 0 ? (
@@ -202,7 +204,7 @@ export default function Locations() {
             ) : (
               <View style={styles.noCitiesContainer}>
                 <Ionicons name="alert-circle-outline" size={48} color={Colors.text.secondary} />
-                <Text style={styles.noCitiesText}>No cities available</Text>
+                <Text style={styles.noCitiesText}>{t('locations.noCities', 'No cities available')}</Text>
               </View>
             )}
 
@@ -211,7 +213,7 @@ export default function Locations() {
                 style={styles.modalCancelButton}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -225,7 +227,7 @@ export default function Locations() {
                 {updating ? (
                   <ActivityIndicator size="small" color={Colors.surface} />
                 ) : (
-                  <Text style={styles.modalConfirmText}>Update City</Text>
+                  <Text style={styles.modalConfirmText}>{t('locations.updateCity', 'Update City')}</Text>
                 )}
               </TouchableOpacity>
             </View>
