@@ -1,147 +1,247 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, Info, AlertTriangle, Wallet, BellOff, Check, ShieldCheck, Star } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Loader2, AlertTriangle, Wallet, BellOff, Check,
+  ShieldCheck, UserPlus, MessageSquare, Users, X, RefreshCw
+} from 'lucide-react';
 import api from '../api/axios';
 
-const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
+// Maps notification type → { icon, color, route }
+const TYPE_CONFIG = {
+  provider_registration: {
+    icon: ShieldCheck,
+    color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    route: '/admin/verification/pending',
+    label: 'New Provider'
+  },
+  new_provider_registration: {
+    icon: ShieldCheck,
+    color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    route: '/admin/verification/pending',
+    label: 'New Provider'
+  },
+  verification: {
+    icon: ShieldCheck,
+    color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    route: '/admin/verification/pending',
+    label: 'Verification'
+  },
+  customer_registration: {
+    icon: UserPlus,
+    color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+    route: '/admin/users/customers',
+    label: 'New Customer'
+  },
+  dispute: {
+    icon: AlertTriangle,
+    color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    route: '/admin/disputes',
+    label: 'Dispute'
+  },
+  new_dispute: {
+    icon: AlertTriangle,
+    color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    route: '/admin/disputes',
+    label: 'Dispute'
+  },
+  withdrawal_request: {
+    icon: Wallet,
+    color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+    route: '/admin/payments',
+    label: 'Withdrawal'
+  },
+  payment: {
+    icon: Wallet,
+    color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+    route: '/admin/payments',
+    label: 'Payment'
+  },
+  new_message: {
+    icon: MessageSquare,
+    color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+    route: '/admin/disputes',
+    label: 'Message'
+  },
+};
+
+const DEFAULT_CONFIG = {
+  icon: Users,
+  color: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+  route: null,
+  label: 'System'
+};
+
+const timeAgo = (date) => {
+  if (!date) return '';
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  if (seconds < 60) return `${Math.max(0, seconds)}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+};
+
+const NotificationDropdown = ({ isOpen, onUnreadCountUpdate, onClose }) => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchNotifications = useCallback(async (showLoader = false) => {
+  const fetchNotifications = useCallback(async (showLoader = false, silent = false) => {
     if (showLoader) setIsLoading(true);
+    if (!showLoader && !silent) setIsRefreshing(true);
     setError(null);
     try {
-      const response = await api.get('/admin/notifications?filter=unread');
-      const responseData = response.data;
-
-      // Backend returns: { success: true, data: { notifications: {paginated}, unread_count: N } }
-      const data = responseData?.data;
+      const response = await api.get('/admin/notifications?filter=unread&per_page=20');
+      const data = response.data?.data;
 
       let notifsArray = [];
       if (Array.isArray(data)) {
-        // Flat array response
         notifsArray = data;
       } else if (data?.notifications?.data) {
-        // Paginated response: data.notifications.data is the array
         notifsArray = data.notifications.data;
       } else if (Array.isArray(data?.notifications)) {
         notifsArray = data.notifications;
       }
 
       setNotifications(notifsArray);
-
-      // Use unread_count from backend if available
-      // Since we filter=unread, all items in the array are unread
-      const unreadCount = data?.unread_count ?? notifsArray.length;
+      const unreadCount = data?.unread_count ?? notifsArray.filter(n => !n.is_seen).length;
       onUnreadCountUpdate(unreadCount);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-      setError('Failed to load notifications.');
+      if (!silent) {
+        console.error('Failed to fetch notifications:', err);
+        setError('Failed to load notifications.');
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [onUnreadCountUpdate]);
 
-  // Fetch when the dropdown opens
+  // Fetch when dropdown opens
   useEffect(() => {
-    if (isOpen) {
-      fetchNotifications(true);
-    }
+    if (isOpen) fetchNotifications(true);
   }, [isOpen, fetchNotifications]);
 
-  // Initial fetch + polling every 60 seconds to update badge count
+  // Background poll every 30 seconds for badge count
   useEffect(() => {
-    fetchNotifications(false);
-    const intervalId = setInterval(() => fetchNotifications(false), 60000);
-    return () => clearInterval(intervalId);
+    fetchNotifications(false, true);
+    const id = setInterval(() => fetchNotifications(false, true), 30000);
+    return () => clearInterval(id);
   }, [fetchNotifications]);
+
+  const handleNotificationClick = async (notif) => {
+    // Mark as read
+    if (!notif.is_seen) {
+      try {
+        await api.post(`/admin/notifications/${notif.notificationID || notif.id}/read`);
+        setNotifications(prev =>
+          prev.map(n =>
+            (n.notificationID || n.id) === (notif.notificationID || notif.id)
+              ? { ...n, is_seen: true }
+              : n
+          )
+        );
+        const newUnread = notifications.filter(
+          n => !n.is_seen && (n.notificationID || n.id) !== (notif.notificationID || notif.id)
+        ).length;
+        onUnreadCountUpdate(newUnread);
+      } catch (e) {
+        console.error('Failed to mark notification as read:', e);
+      }
+    }
+
+    // Navigate to relevant page
+    const config = TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
+
+    // If dispute notification, navigate to specific dispute
+    if ((notif.type === 'dispute' || notif.type === 'new_dispute' || notif.type === 'new_message') && notif.data?.disputeID) {
+      navigate(`/admin/disputes/${notif.data.disputeID}`);
+    } else if (config.route) {
+      navigate(config.route);
+    }
+
+    if (onClose) onClose();
+  };
 
   const markAllAsRead = async () => {
     try {
       await api.post('/admin/notifications/read');
-      setNotifications([]);
+      setNotifications(prev => prev.map(n => ({ ...n, is_seen: true })));
       onUnreadCountUpdate(0);
     } catch (err) {
-      console.error('Failed to mark as read', err);
+      console.error('Failed to mark all as read:', err);
     }
   };
 
-  const getIcon = (type) => {
-    switch (type) {
-      case 'new_provider_registration':
-      case 'verification':
-        return (
-          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-            <ShieldCheck size={16} />
-          </div>
-        );
-      case 'dispute':
-      case 'new_dispute':
-        return (
-          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
-            <AlertTriangle size={16} />
-          </div>
-        );
-      case 'payment':
-      case 'withdrawal_request':
-        return (
-          <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
-            <Wallet size={16} />
-          </div>
-        );
-      case 'review':
-        return (
-          <div className="w-9 h-9 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 shrink-0">
-            <Star size={16} />
-          </div>
-        );
-      default:
-        return (
-          <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-            <Info size={16} />
-          </div>
-        );
+  const dismissNotification = async (e, notif) => {
+    e.stopPropagation();
+    try {
+      await api.post(`/admin/notifications/${notif.notificationID || notif.id}/read`);
+      setNotifications(prev => prev.filter(n =>
+        (n.notificationID || n.id) !== (notif.notificationID || notif.id)
+      ));
+      const newUnread = notifications.filter(
+        n => !n.is_seen && (n.notificationID || n.id) !== (notif.notificationID || notif.id)
+      ).length;
+      onUnreadCountUpdate(newUnread);
+    } catch (e) {
+      console.error('Failed to dismiss notification:', e);
     }
-  };
-
-  const timeAgo = (date) => {
-    if (!date) return '';
-    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-    if (seconds < 60) return `${Math.floor(seconds)}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 30) return `${days}d ago`;
-    const months = Math.floor(days / 30);
-    if (months < 12) return `${months}mo ago`;
-    return `${Math.floor(months / 12)}y ago`;
   };
 
   if (!isOpen) return null;
 
+  const unreadNotifs = notifications.filter(n => !n.is_seen);
+
   return (
-    <div className="absolute top-14 right-0 w-80 bg-admin-card shadow-2xl border border-admin-border overflow-hidden z-50 rounded-[2rem] transition-all duration-200 animate-in fade-in zoom-in origin-top-right">
+    <div className="absolute top-14 right-0 w-96 bg-admin-card shadow-2xl border border-admin-border overflow-hidden z-50 rounded-[2rem] animate-in fade-in zoom-in-95 origin-top-right duration-200">
 
       {/* Header */}
-      <div className="bg-slate-900 dark:bg-black p-4 flex items-center justify-between border-b border-white/5">
-        <h3 className="text-white font-bold">Notifications</h3>
-        <span className="bg-white/10 text-slate-300 text-xs px-2 py-1 rounded-full font-medium">
-          {notifications.length} New
-        </span>
+      <div className="bg-slate-900 dark:bg-black px-5 py-4 flex items-center justify-between border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <h3 className="text-white font-black text-sm tracking-tight">Notifications</h3>
+          {unreadNotifs.length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black min-w-[20px] text-center">
+              {unreadNotifs.length > 99 ? '99+' : unreadNotifs.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchNotifications(false)}
+            disabled={isRefreshing}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+            title="Refresh"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+          {unreadNotifs.length > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-lg transition-all uppercase tracking-widest"
+            >
+              <Check size={12} />
+              All Read
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}
-      <div className="max-h-[22rem] overflow-y-auto custom-scrollbar">
+      <div className="max-h-[26rem] overflow-y-auto custom-scrollbar">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-10">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
-            <p className="text-sm text-slate-400 dark:text-slate-500">Loading notifications...</p>
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading...</p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-            <AlertTriangle className="w-8 h-8 text-red-300 dark:text-red-900/50 mb-2" />
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <AlertTriangle className="w-8 h-8 text-red-300 mb-3" />
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Failed to load</p>
             <button
               onClick={() => fetchNotifications(true)}
@@ -151,51 +251,85 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate }) => {
             </button>
           </div>
         ) : notifications.length > 0 ? (
-          <div className="flex flex-col divide-y divide-slate-50 dark:divide-slate-800">
-            {notifications.map((notif) => (
-              <div
-                key={notif.notificationID || notif.id}
-                className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors flex gap-3 items-start group ${!notif.is_seen ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
-              >
-                {getIcon(notif.type)}
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-slate-800 text-admin-text leading-tight mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                    {notif.title}
-                  </h4>
-                  <p className="text-xs text-admin-text-muted line-clamp-2 leading-relaxed">{notif.message}</p>
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 block font-medium uppercase tracking-widest">
-                    {timeAgo(notif.created_at)}
-                  </span>
+          <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800/50">
+            {notifications.map((notif) => {
+              const config = TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
+              const Icon = config.icon;
+              const isUnread = !notif.is_seen;
+
+              return (
+                <div
+                  key={notif.notificationID || notif.id}
+                  onClick={() => handleNotificationClick(notif)}
+                  className={`relative px-5 py-4 cursor-pointer transition-colors flex gap-3 items-start group ${
+                    isUnread
+                      ? 'bg-blue-50/40 dark:bg-blue-900/10 hover:bg-blue-50/60 dark:hover:bg-blue-900/20'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                  }`}
+                >
+                  {/* Unread dot */}
+                  {isUnread && (
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  )}
+
+                  {/* Icon */}
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${config.color}`}>
+                    <Icon size={16} />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pr-6">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${config.color}`}>
+                        {config.label}
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                        {timeAgo(notif.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-admin-text leading-snug mb-0.5 truncate">
+                      {notif.title}
+                    </p>
+                    <p className="text-[11px] text-admin-text-muted line-clamp-2 leading-relaxed">
+                      {notif.message}
+                    </p>
+                  </div>
+
+                  {/* Dismiss button */}
+                  <button
+                    onClick={(e) => dismissNotification(e, notif)}
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-slate-500 dark:hover:text-slate-200 transition-all rounded"
+                    title="Dismiss"
+                  >
+                    <X size={12} />
+                  </button>
                 </div>
-                {!notif.is_seen && (
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0" />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-            <div className="w-12 h-12 bg-admin-card rounded-full flex items-center justify-center mb-3">
-              <BellOff className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+          <div className="flex flex-col items-center justify-center py-14 px-4 text-center">
+            <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4">
+              <BellOff className="w-7 h-7 text-slate-300 dark:text-slate-600" />
             </div>
-            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No new notifications</p>
-            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">You're all caught up!</p>
+            <p className="text-sm font-black text-slate-700 dark:text-slate-300">You're all caught up!</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No new notifications</p>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      {notifications.length > 0 && (
-        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 border-t border-admin-border">
-          <button
-            onClick={markAllAsRead}
-            className="w-full py-2 flex items-center justify-center gap-2 text-sm font-bold text-admin-text-muted hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-          >
-            <Check size={16} />
-            Mark all as Read
-          </button>
-        </div>
-      )}
+      <div className="px-5 py-3 bg-slate-50 dark:bg-slate-900/60 border-t border-admin-border flex items-center justify-between">
+        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+        </p>
+        <button
+          onClick={() => { navigate('/admin/disputes'); if (onClose) onClose(); }}
+          className="text-[10px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest transition-colors"
+        >
+          View All →
+        </button>
+      </div>
     </div>
   );
 };
