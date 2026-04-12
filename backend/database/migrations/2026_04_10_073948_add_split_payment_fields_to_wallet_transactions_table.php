@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::table('wallet_transactions', function (Blueprint $table) {
             // Add transaction_type for categorizing transactions
             $table->enum('transaction_type', [
+                'deposit_payout',
                 'immediate_payout',
                 'held_payout',
                 'withdrawal',
