@@ -46,11 +46,43 @@ export default function PaymentScreen() {
   const paymentStatusFromDB = (booking?.payment?.status ?? '').toLowerCase();
   const paymentAlreadyDone = ['paid', 'held', 'releasable', 'released'].includes(paymentStatusFromDB);
 
-  const bookingAmount = Number(booking?.agreed_price ?? booking?.payment?.amount ?? 0);
-  const safeBookingAmount = Number.isFinite(bookingAmount) ? bookingAmount : 0;
-  const effectiveAmount = Math.max(amount, safeBookingAmount, 0);
-  const platformFee = effectiveAmount * 0.05;
-  const totalAmount = effectiveAmount + platformFee;
+  // Get agreed price from multiple possible sources
+  const bookingAgreedPrice = Number(booking?.agreed_price ?? 0);
+  const bookingEstimatedPrice = Number(booking?.estimatedPrice ?? 0);
+  const bookingPaymentAmount = Number(booking?.payment?.amount ?? 0);
+  const paramsAmount = Number(amount);
+  
+  // Use the first non-zero value
+  const agreedPrice = bookingAgreedPrice || bookingEstimatedPrice || bookingPaymentAmount || paramsAmount || 0;
+  
+  console.log('Payment Debug:', {
+    bookingAgreedPrice,
+    bookingEstimatedPrice,
+    bookingPaymentAmount,
+    paramsAmount,
+    finalAgreedPrice: agreedPrice,
+    booking: booking
+  });
+  
+  // Determine payment type based on booking payment_status
+  const bookingPaymentStatus = (booking?.payment_status ?? '').toLowerCase();
+  const isDepositPayment = bookingPaymentStatus === 'pending_deposit' || bookingPaymentStatus === '' || !bookingPaymentStatus;
+  const isFinalPayment = bookingPaymentStatus === 'pending_final';
+  
+  // Calculate deposit (20%) or final payment (80%)
+  const depositPercentage = 0.20;
+  const depositAmount = Math.round(agreedPrice * depositPercentage * 100) / 100;
+  const finalPaymentAmount = Math.round((agreedPrice - depositAmount) * 100) / 100;
+  
+  // Determine what customer is paying now
+  const effectiveAmount = isDepositPayment ? depositAmount : (isFinalPayment ? finalPaymentAmount : agreedPrice);
+  
+  // Platform fee is 10% (already included in agreed price, not added on top)
+  // Customer pays the amount as-is, platform takes 10% from provider's payout
+  const platformFeePercentage = 0.10;
+  const platformFeeInfo = Math.round(agreedPrice * platformFeePercentage * 100) / 100;
+  
+  const totalAmount = effectiveAmount;
   const displayPaymentStatus = paymentAlreadyDone ? 'completed' : paymentStatus;
   const providerName = booking?.provider?.businessName || booking?.provider?.fullname || 'the provider';
   const serviceTitle = booking?.service?.title || 'your service';
@@ -303,17 +335,56 @@ export default function PaymentScreen() {
   const renderPaymentSummary = () => (
     <View style={styles.summaryContainer}>
       <Text style={styles.summaryTitle}>Payment Summary</Text>
+      
+      {/* Show agreed price */}
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Service Fee</Text>
-        <PriceText style={styles.summaryValue} amount={effectiveAmount} />
+        <Text style={styles.summaryLabel}>Agreed Price</Text>
+        <PriceText style={styles.summaryValue} amount={agreedPrice} />
       </View>
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Platform Fee (5%)</Text>
-        <PriceText style={styles.summaryValue} amount={platformFee} />
+      
+      {/* Show payment breakdown if split payment */}
+      {isDepositPayment && (
+        <>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Deposit (20%)</Text>
+            <PriceText style={styles.summaryValue} amount={depositAmount} />
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { fontSize: 12, fontStyle: 'italic' }]}>
+              Remaining (80%) - Pay after service
+            </Text>
+            <PriceText style={[styles.summaryValue, { fontSize: 12 }]} amount={finalPaymentAmount} />
+          </View>
+        </>
+      )}
+      
+      {isFinalPayment && (
+        <>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Deposit Paid (20%)</Text>
+            <PriceText style={[styles.summaryValue, { color: '#22c55e' }]} amount={depositAmount} />
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Final Payment (80%)</Text>
+            <PriceText style={styles.summaryValue} amount={finalPaymentAmount} />
+          </View>
+        </>
+      )}
+      
+      {/* Platform fee info (not added to customer payment) */}
+      <View style={[styles.summaryRow, { marginTop: 8 }]}>
+        <Text style={[styles.summaryLabel, { fontSize: 12, color: Colors.text.secondary }]}>
+          Platform Fee (10% - included)
+        </Text>
+        <PriceText style={[styles.summaryValue, { fontSize: 12, color: Colors.text.secondary }]} amount={platformFeeInfo} />
       </View>
+      
       <View style={styles.summaryDivider} />
+      
       <View style={[styles.summaryRow, styles.totalRow]}>
-        <Text style={styles.totalLabel}>Total Amount</Text>
+        <Text style={styles.totalLabel}>
+          {isDepositPayment ? 'Pay Now (Deposit)' : isFinalPayment ? 'Pay Now (Final)' : 'Total Amount'}
+        </Text>
         <PriceText style={styles.totalValue} amount={totalAmount} />
       </View>
     </View>
