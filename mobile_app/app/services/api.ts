@@ -409,6 +409,19 @@ class ApiService {
         if (status === 401 && originalConfig && !originalConfig._retry) {
           console.log('Handling 401 error, token refresh needed');
 
+          // Don't attempt token refresh for login/register endpoints
+          const isAuthEndpoint = originalConfig.url?.includes('/login') || 
+                                 originalConfig.url?.includes('/register') ||
+                                 originalConfig.url?.includes('/forgot-password');
+          
+          if (isAuthEndpoint) {
+            console.log('401 on auth endpoint, not attempting refresh');
+            const authError: any = new Error('Wrong password or email. Please try again.');
+            authError.response = error.response;
+            authError.statusCode = 401;
+            return Promise.reject(authError);
+          }
+
           if (this.isRefreshing) {
             console.log('Token refresh in progress, queueing request');
             // If refreshing, queue the request
@@ -442,15 +455,7 @@ class ApiService {
 
               const sessionError: any = new Error('Session expired. Please login again.');
               sessionError.statusCode = 401;
-
-
-
               sessionError.requiresLogin = true;
-
-
-
-
-
               return Promise.reject(sessionError);
             }
           } catch (refreshError) {
