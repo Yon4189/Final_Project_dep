@@ -137,19 +137,12 @@ class CustomerAuthController extends Controller
         // Find customer by email
         $customer = Customer::where('email', $request->email)->first();
 
-        // Check if customer exists
-        if (!$customer) {
+        // Check if customer exists and verify password
+        // Use generic error message for security (don't reveal if email exists or password is wrong)
+        if (!$customer || !Hash::check($request->password, $customer->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'No account found with this email address'
-            ], 401);
-        }
-
-        // Verify password
-        if (!Hash::check($request->password, $customer->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Incorrect password. Please try again'
+                'message' => 'Invalid email or password. Please try again'
             ], 401);
         }
 

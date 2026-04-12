@@ -156,6 +156,13 @@ Route::group(['middleware' => 'auth:customer', 'prefix' => 'customer'], function
     Route::get('/payment/history', [PaymentController::class, 'history']);
     Route::get('/payment/{tx_ref}', [PaymentController::class, 'show']);
     
+    // Customer payment routes (aliases for mobile app compatibility)
+    Route::get('/customer/payment/methods', [PaymentController::class, 'methods']);
+    Route::post('/customer/payment/booking/{bookingId}/initialize', [PaymentController::class, 'initialize']);
+    Route::get('/customer/payment/verify', [PaymentController::class, 'verify']);
+    Route::get('/customer/payment/history', [PaymentController::class, 'history']);
+    Route::get('/customer/payment/{tx_ref}', [PaymentController::class, 'show']);
+    
     // Booking Confirmation (triggers payment release)
     Route::post('/bookings/{bookingId}/confirm', [PaymentController::class, 'confirmCompletion']);
 
