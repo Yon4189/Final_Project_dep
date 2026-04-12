@@ -48,6 +48,31 @@ class PaymentService
     }
 
     /**
+     * Calculate commission amount (10% of payment)
+     * 
+     * @param float $amount
+     * @return array
+     */
+    public function calculateCommission(float $amount): array
+    {
+        // Get commission percentage from system settings (default 10%)
+        $commissionPercentage = SystemSetting::get('commission_percentage', 10);
+        
+        // Calculate commission
+        $commissionAmount = round($amount * $commissionPercentage / 100, 2);
+        
+        // Calculate provider net amount
+        $providerAmount = round($amount - $commissionAmount, 2);
+        
+        return [
+            'commission_amount' => $commissionAmount,
+            'provider_amount' => $providerAmount,
+            'commission_percentage' => $commissionPercentage,
+            'total_amount' => $amount
+        ];
+    }
+
+    /**
      * Validate payment amount matches expected amount
      * 
      * @param int $bookingId
@@ -261,10 +286,11 @@ class PaymentService
                     $booking->save();
                     
                     // Send notification to provider
-                    // TODO: Implement notification
+                    // Note: Deposit payout happens when customer confirms service completion
                     Log::info('Deposit payment completed', [
                         'booking_id' => $booking->bookingID,
-                        'amount' => $payment->amount
+                        'amount' => $payment->amount,
+                        'note' => 'Payout will be processed when customer confirms service completion'
                     ]);
                     
                 } elseif ($payment->isFinal()) {
@@ -272,12 +298,20 @@ class PaymentService
                     $booking->payment_status = 'completed';
                     $booking->save();
                     
-                    // Trigger payout processor for hybrid payout
-                    $this->payoutProcessor->processHybridPayout($booking->bookingID, $booking->agreed_price);
+                    // Calculate commission and provider amount
+                    $commission = $this->calculateCommission($payment->amount);
+                    
+                    // Trigger payout processor for hybrid payout (after commission)
+                    $this->payoutProcessor->processHybridPayout(
+                        $booking->bookingID, 
+                        $commission['provider_amount']
+                    );
                     
                     Log::info('Final payment completed and payout processed', [
                         'booking_id' => $booking->bookingID,
-                        'amount' => $payment->amount
+                        'payment_amount' => $payment->amount,
+                        'commission_amount' => $commission['commission_amount'],
+                        'provider_amount' => $commission['provider_amount']
                     ]);
                 }
             });
@@ -295,7 +329,6 @@ class PaymentService
             ]);
         }
     }
-}
 
     /**
      * Process deposit refund (when provider cancels)

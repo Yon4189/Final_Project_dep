@@ -23,13 +23,79 @@ class PayoutProcessor
     }
 
     /**
-     * Process hybrid payout (50% immediate, 50% held for 3 days)
+     * Process deposit payout when customer confirms service completion
+     * Provider receives deposit amount (after commission) immediately
      * 
      * @param int $bookingId
-     * @param float $agreedPrice
+     * @param float $amount Net amount after commission
      * @return void
      */
-    public function processHybridPayout(int $bookingId, float $agreedPrice): void
+    public function processDepositPayout(int $bookingId, float $amount): void
+    {
+        $booking = Booking::with('provider')->findOrFail($bookingId);
+        
+        DB::transaction(function () use ($booking, $amount, $bookingId) {
+            // Get or create wallet
+            $wallet = Wallet::firstOrCreate(
+                ['providerID' => $booking->providerID],
+                [
+                    'available_balance' => 0,
+                    'pending_balance' => 0
+                ]
+            );
+            
+            // Lock wallet for update to prevent race conditions
+            $lockedWallet = Wallet::where('walletID', $wallet->walletID)
+                ->lockForUpdate()
+                ->first();
+            
+            // Credit available balance
+            $lockedWallet->available_balance += $amount;
+            $lockedWallet->save();
+            
+            // Create wallet transaction
+            WalletTransaction::create([
+                'walletID' => $lockedWallet->walletID,
+                'type' => 'credit',
+                'transaction_type' => 'deposit_payout',
+                'transaction_status' => 'completed',
+                'amount' => $amount,
+                'description' => 'Deposit payout for booking #' . $bookingId . ' (service confirmed)',
+                'bookingID' => $bookingId,
+                'related_payment_id' => $booking->depositPayment->paymentID ?? null
+            ]);
+            
+            // Send notification to provider
+            $this->notificationService->toProvider(
+                $booking->providerID,
+                'deposit_payout_credited',
+                'Deposit Payout Received',
+                'You received ' . number_format($amount, 2) . ' ETB deposit payout for booking #' . $bookingId . '. Customer has confirmed service completion.',
+                [
+                    'booking_id' => $bookingId,
+                    'amount' => $amount,
+                    'payout_type' => 'deposit'
+                ],
+                $bookingId
+            );
+        });
+        
+        Log::info('Deposit payout processed', [
+            'booking_id' => $bookingId,
+            'provider_id' => $booking->providerID,
+            'amount' => $amount
+        ]);
+    }
+
+    /**
+     * Process hybrid payout (50% immediate, 50% held for 3 days)
+     * Note: Amount passed should be net amount after commission deduction
+     * 
+     * @param int $bookingId
+     * @param float $netAmount Net amount after commission
+     * @return void
+     */
+    public function processHybridPayout(int $bookingId, float $netAmount): void
     {
         $booking = Booking::with('provider')->findOrFail($bookingId);
         
@@ -39,14 +105,14 @@ class PayoutProcessor
             throw new \Exception('Final payment not completed for booking #' . $bookingId);
         }
         
-        // Calculate 50/50 split
-        $immediateAmount = round($agreedPrice * 0.50, 2);
-        $heldAmount = round($agreedPrice * 0.50, 2);
+        // Calculate 50/50 split of net amount
+        $immediateAmount = round($netAmount * 0.50, 2);
+        $heldAmount = round($netAmount * 0.50, 2);
         
-        // Adjust held amount if sum doesn't equal agreed price due to rounding
+        // Adjust held amount if sum doesn't equal net amount due to rounding
         $total = $immediateAmount + $heldAmount;
-        if ($total !== $agreedPrice) {
-            $heldAmount = round($agreedPrice - $immediateAmount, 2);
+        if ($total !== $netAmount) {
+            $heldAmount = round($netAmount - $immediateAmount, 2);
         }
         
         // Process immediate payout
@@ -59,7 +125,7 @@ class PayoutProcessor
             'booking_id' => $bookingId,
             'immediate_amount' => $immediateAmount,
             'held_amount' => $heldAmount,
-            'total' => $agreedPrice
+            'total_net_amount' => $netAmount
         ]);
     }
 

@@ -50,13 +50,14 @@ class BookingService
     /**
      * Confirm service completion (customer confirms)
      * Sets payment deadline to 48 hours from now
+     * Triggers deposit payout to provider
      * 
      * @param int $bookingId
      * @return void
      */
     public function confirmServiceCompletion(int $bookingId): void
     {
-        $booking = Booking::findOrFail($bookingId);
+        $booking = Booking::with('depositPayment')->findOrFail($bookingId);
         
         $booking->service_confirmed_at = now();
         $booking->payment_deadline = now()->addHours(48);
@@ -64,10 +65,33 @@ class BookingService
         $booking->status = 'service_confirmed';
         $booking->save();
         
-        Log::info('Service completion confirmed', [
-            'booking_id' => $bookingId,
-            'payment_deadline' => $booking->payment_deadline
-        ]);
+        // Process deposit payout to provider (after commission)
+        $depositPayment = $booking->depositPayment;
+        if ($depositPayment && $depositPayment->payment_status === 'completed') {
+            $paymentService = app(\App\Services\PaymentService::class);
+            $payoutProcessor = app(\App\Services\PayoutProcessor::class);
+            
+            // Calculate commission on deposit
+            $commission = $paymentService->calculateCommission($depositPayment->amount);
+            
+            // Pay provider the net amount (deposit minus commission)
+            $payoutProcessor->processDepositPayout(
+                $bookingId,
+                $commission['provider_amount']
+            );
+            
+            Log::info('Service completion confirmed and deposit payout processed', [
+                'booking_id' => $bookingId,
+                'payment_deadline' => $booking->payment_deadline,
+                'deposit_amount' => $depositPayment->amount,
+                'commission_amount' => $commission['commission_amount'],
+                'provider_payout' => $commission['provider_amount']
+            ]);
+        } else {
+            Log::warning('Service confirmed but deposit payment not found or not completed', [
+                'booking_id' => $bookingId
+            ]);
+        }
         
         // Payment reminder will be triggered by background job
     }
