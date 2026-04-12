@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   AlertCircle, CheckCircle, RefreshCcw, XCircle, 
   User, Wrench, MessageSquare, ExternalLink, Search,
@@ -11,6 +12,8 @@ import { disputeAPI } from '../api/dispute';
 const Disputes = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { id: urlDisputeId } = useParams();
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [resolutionData, setResolutionData] = useState({
@@ -25,6 +28,15 @@ const Disputes = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+
+  // Auto-select dispute if ID is in URL
+  React.useEffect(() => {
+    if (urlDisputeId) {
+      handleReviewCase(urlDisputeId);
+    } else {
+      setSelectedDispute(null);
+    }
+  }, [urlDisputeId]);
 
   // 1. Data Fetching with TanStack Query
   const { 
@@ -58,6 +70,11 @@ const Disputes = () => {
   });
 
   const handleReviewCase = async (disputeID) => {
+    if (urlDisputeId !== String(disputeID)) {
+      navigate(`/admin/disputes/${disputeID}`);
+      return;
+    }
+
     try {
       setModalLoading(true);
       const response = await disputeAPI.getDisputeDetails(disputeID);
@@ -75,6 +92,11 @@ const Disputes = () => {
     } finally {
       setModalLoading(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedDispute(null);
+    navigate('/admin/disputes');
   };
 
   const handleUpdateStatus = async (status, resolutionType = null) => {
@@ -276,10 +298,10 @@ const Disputes = () => {
                         <div className="space-y-1">
                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                            {dispute.raised_by?.first_name} {dispute.raised_by?.last_name || dispute.raised_by?.business_name}
+                            {dispute.raised_by?.fullname || dispute.raised_by?.name || t('dispute_unknown_user')}
                           </p>
                           <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 uppercase italic ml-2.5">
-                            vs {dispute.against?.first_name} {dispute.against?.last_name || dispute.against?.business_name}
+                            vs {dispute.against?.fullname || dispute.against?.name || t('dispute_unknown_provider')}
                           </p>
                         </div>
                       </td>
@@ -326,8 +348,8 @@ const Disputes = () => {
                   <div className="grid grid-cols-2 gap-3 pb-3 border-b border-admin-border border-dashed">
                     <div>
                       <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('dispute_parties')}</p>
-                      <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate">{dispute.raised_by?.first_name || 'User'}</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500">vs {dispute.against?.first_name || 'Provider'}</p>
+                      <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate">{dispute.raised_by?.fullname || 'User'}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">vs {dispute.against?.fullname || 'Provider'}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('dispute_priority')}</p>
@@ -371,7 +393,7 @@ const Disputes = () => {
                   {t('dispute_priority')}: <span className="text-admin-text">{getPriorityTranslation(selectedDispute.priority)}</span>
                 </p>
               </div>
-              <button onClick={() => setSelectedDispute(null)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                 <XCircle size={32} strokeWidth={1.5} />
               </button>
             </div>
@@ -388,7 +410,7 @@ const Disputes = () => {
                       </div>
                       <div>
                         <p className="font-bold text-admin-text leading-none">
-                          {selectedDispute.raised_by?.first_name || selectedDispute.raised_by?.business_name} {selectedDispute.raised_by?.last_name}
+                          {selectedDispute.raised_by?.fullname || selectedDispute.raised_by?.name || 'Unknown User'}
                         </p>
                         <p className="text-[10px] text-admin-text-muted font-medium">ID: {selectedDispute.raised_by_id}</p>
                       </div>
@@ -402,7 +424,7 @@ const Disputes = () => {
                       </div>
                       <div>
                         <p className="font-bold text-admin-text leading-none">
-                          {selectedDispute.against?.first_name || selectedDispute.against?.business_name} {selectedDispute.against?.last_name}
+                          {selectedDispute.against?.fullname || selectedDispute.against?.name || 'Unknown Provider'}
                         </p>
                         <p className="text-[10px] text-admin-text-muted font-medium">ID: {selectedDispute.against_id}</p>
                       </div>
@@ -438,7 +460,7 @@ const Disputes = () => {
                        } max-w-[90%]`}>
                          <div className="flex justify-between items-start mb-1">
                            <p className={`text-[9px] font-black uppercase tracking-widest ${msg.sender_type === 'admin' ? 'text-blue-100' : 'text-slate-400'}`}>
-                             {t(msg.sender_type?.toLowerCase())} • {msg.sender?.first_name || msg.sender?.business_name || 'System'}
+                             {t(msg.sender_type?.toLowerCase())} • {msg.sender?.fullname || msg.sender?.name || 'System'}
                            </p>
                            <div className="flex items-center gap-2">
                              <p className="text-[9px] opacity-40">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>

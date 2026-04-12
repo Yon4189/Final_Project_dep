@@ -109,10 +109,6 @@ class NotificationService
             // Trigger WebSocket broadcast
             event(new BookingUpdated($notification));
 
-            // Mark as broadcasted (optional metadata)
-            $notification->broadcasted = true;
-            $notification->save();
-            
             // Send push notification
             $this->sendPushNotification($notification);
             
