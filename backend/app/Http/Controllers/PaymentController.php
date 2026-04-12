@@ -43,14 +43,6 @@ class PaymentController extends Controller
                     'description' => 'Pay securely with Chapa',
                     'icon' => 'card-outline',
                     'enabled' => true
-                ],
-                [
-                    'id' => 'cash',
-                    'type' => 'cash',
-                    'name' => 'Cash on Service',
-                    'description' => 'Pay the provider directly after service',
-                    'icon' => 'cash-outline',
-                    'enabled' => true
                 ]
             ]
         ]);

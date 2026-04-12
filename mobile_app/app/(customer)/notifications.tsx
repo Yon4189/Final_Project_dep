@@ -9,8 +9,8 @@ import {
   RefreshControl,
   Image,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
@@ -75,6 +75,7 @@ export default function CustomerNotifications() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const insets = useSafeAreaInsets();
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -87,6 +88,10 @@ export default function CustomerNotifications() {
         const arr = Array.isArray(raw) ? raw : [];
         setNotifications(arr.map(normalizeNotification));
         setUnreadCount(response.data?.unread_count ?? 0);
+        // Automatically mark all as read after fetching unread count
+        if (response.data?.unread_count > 0) {
+          markAllAsRead();
+        }
       }
     } catch (error) {
       console.error('Failed to load notifications:', error);
@@ -258,8 +263,8 @@ export default function CustomerNotifications() {
   };
 
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <View style={styles.header}>
+    <View style={[styles.headerContainer, { paddingTop: insets.top + (insets.top > 0 ? 0 : 40) }]}>
+      <View style={[styles.header, { paddingTop: insets.top > 0 ? 10 : 0 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
@@ -312,7 +317,7 @@ export default function CustomerNotifications() {
   if (loading) return <LoadingSpinner fullScreen />;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {renderHeader()}
       {unreadCount > 0 && (
         <View style={styles.unreadBanner}>
@@ -337,7 +342,7 @@ export default function CustomerNotifications() {
         contentContainerStyle={notifications.length === 0 ? { flex: 1 } : undefined}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -356,8 +361,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingBottom: 16,
   },
   filterContainer: {
     flexDirection: 'row',

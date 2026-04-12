@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderEarnings } from "../../../hooks/useProviderEarnings";
 import { useTheme } from "../../context/ThemeContext";
@@ -30,6 +31,7 @@ interface BankAccount extends BankDetails {
 export default function WithdrawScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [step, setStep] = useState(1);
   const [amount, setAmount] = useState("");
@@ -501,7 +503,7 @@ export default function WithdrawScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
         <TouchableOpacity
           onPress={step === 1 ? () => router.back() : handleBack}
         >
@@ -605,7 +607,7 @@ export default function WithdrawScreen() {
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { flexGrow: 1 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 100, paddingBottom: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { fontSize: 18, fontWeight: "600", color: colors.text.primary },
   progressContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 40, paddingVertical: 20, backgroundColor: colors.surface },
   progressStep: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.background, borderWidth: 2, borderColor: colors.border, justifyContent: "center", alignItems: "center" },

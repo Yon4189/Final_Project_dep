@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/Colors';
@@ -45,6 +46,7 @@ type TransactionFilter = 'all' | 'completed' | 'pending' | 'failed';
 
 export default function WalletScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
   const [filterType, setFilterType] = useState<TransactionFilter>('all');
@@ -592,13 +594,19 @@ export default function WalletScreen() {
   return (
     <View style={styles.container}>
       <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {renderHeader()}
-        {renderQuickStats()}
+        <LinearGradient
+          colors={[Colors.primary, '#4338ca']}
+          style={[styles.header, { paddingTop: insets.top + (insets.top > 20 ? 10 : 30) }]}
+        >
+          {renderHeader()}
+          {renderQuickStats()}
+        </LinearGradient>
         {renderFilters()}
 
         <View style={styles.transactionsSection}>
@@ -750,7 +758,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingTop: 100,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,

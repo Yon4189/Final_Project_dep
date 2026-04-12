@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -37,6 +38,7 @@ const WEEKDAYS = [
 
 export default function ProviderProfile() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isDark, setTheme, colors } = useTheme();
   
   const styles = React.useMemo(() => getStyles(colors), [colors]);
@@ -124,7 +126,7 @@ export default function ProviderProfile() {
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
       <View style={styles.headerTop}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.surface} />
@@ -550,7 +552,6 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   header: {
     backgroundColor: colors.primary,
-    paddingTop: 100,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,

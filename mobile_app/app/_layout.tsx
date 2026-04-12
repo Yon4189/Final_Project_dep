@@ -9,6 +9,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { LogBox } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Silence the Expo SDK 53 Android push notification warning in local development
 LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
@@ -23,7 +24,11 @@ function RootLayoutContent() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar
+        style={isDark ? 'light' : 'dark'}
+        translucent={false}
+        backgroundColor={colors.background}
+      />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -53,10 +58,12 @@ export default function RootLayout() {
   useNotifications();
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <RootLayoutContent />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <RootLayoutContent />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

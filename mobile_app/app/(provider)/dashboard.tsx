@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Platform,
   View,
   Text,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   Animated,
   PanResponder,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,12 +26,16 @@ import { PriceText } from '@/components/common/PriceText';
 import { API_BASE_URL } from '@/app/config/api';
 import { useConversations } from '@/hooks/useChat';
 import { RecentMessagesModal } from '@/components/provider/RecentMessagesModal';
-import type { RequestStatus } from '../types/provider.types';
+import type { RequestStatus, ServiceRequest } from '../types/provider.types';
+import { formatCurrency, formatTimeAgo, formatDate, formatTime } from "../utils/formatters";
+import { EmptyState } from '@/components/common/EmptyState';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 const { width } = Dimensions.get('window');
 
 export default function ProviderDashboard() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
@@ -104,7 +108,7 @@ export default function ProviderDashboard() {
       colors={[colors.primary, colors.primaryDark || colors.primary]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.header}
+      style={[styles.header, { paddingTop: Math.max(insets.top + 16, 32) }]}
     >
       <View style={styles.topSection}>
         <View style={styles.welcomeSection}>
@@ -209,13 +213,94 @@ export default function ProviderDashboard() {
     </View>
   );
 
+  const renderListContent = () => {
+    if (isLoading) return <LoadingSpinner />;
+    
+    const data = selectedTab === 'pending' ? pendingRequests : todaySchedule;
+    
+    if (!data || data.length === 0) {
+      return (
+        <EmptyState 
+          icon="calendar-outline"
+          title={`No ${selectedTab === 'pending' ? 'Pending' : "Today's"} Requests`}
+          message={`You don't have any ${selectedTab} requests at the moment.`} 
+        />
+      );
+    }
+
+    return (
+      <View style={styles.listContainer}>
+        {data.map((req: ServiceRequest) => (
+          <View key={req.id} style={styles.requestCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.customerInfo}>
+                <Image 
+                  source={{ 
+                    uri: req.customerImage || 'https://via.placeholder.com/40' 
+                  }} 
+                  style={styles.customerImage} 
+                />
+                <View style={styles.customerDetails}>
+                  <Text style={styles.customerName}>{req.customerName || 'Customer'}</Text>
+                  <Text style={styles.requestNumber}>#{req.requestNumber || req.id.slice(-6)}</Text>
+                </View>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: (colors as any)[req.status] ? (colors as any)[req.status] + '15' : colors.primary + '15' }]}>
+                <Text style={[styles.statusText, { color: (colors as any)[req.status] || colors.primary }]}>{req.status.replace('_', ' ')}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.detailsContainer}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailName}>{req.serviceName}</Text>
+                <PriceText style={styles.priceValue} amount={req.estimatedPrice || req.finalPrice || 0} />
+              </View>
+              <Text style={styles.detailText}>
+                {req.scheduledDate ? formatDate(req.scheduledDate) : ''} • {req.scheduledTime ? formatTime(req.scheduledTime) : ''}
+              </Text>
+            </View>
+
+            {selectedTab === 'pending' && (
+              <View style={styles.cardActions}>
+                <View style={styles.pendingActions}>
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, styles.rejectBtn]} 
+                    onPress={() => router.push(`/(provider)/requests/${req.id}`)}
+                  >
+                    <Text style={styles.rejectBtnText}>Reject</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, styles.acceptBtn]} 
+                    onPress={() => acceptRequest.mutateAsync(req.id)}
+                  >
+                    <Text style={styles.acceptBtnText}>Accept</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
+            {selectedTab !== 'pending' && (
+              <TouchableOpacity 
+                style={styles.viewDetailsBtn}
+                onPress={() => router.push(`/(provider)/requests/${req.id}`)}
+              >
+                <Text style={styles.viewDetailsText}>View Details</Text>
+                <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.mainContainer}>
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         {renderHeader()}
         {renderTabs()}
         <View style={styles.mainContent}>
-          {/* List content would go here */}
+          {renderListContent()}
         </View>
       </ScrollView>
 
@@ -223,7 +308,12 @@ export default function ProviderDashboard() {
         <Modal transparent visible={showHamburgerMenu} animationType="none">
           <View style={styles.drawerOverlay}>
             <Animated.View {...panResponder.panHandlers} style={[styles.drawer, { transform: [{ translateX: sidebarAnim }] }]}>
-              <View style={styles.drawerHeader}>
+              <View
+                style={[
+                  styles.drawerHeader,
+                  { paddingTop: Math.max(insets.top + 24, 40) },
+                ]}
+              >
                 <Image
                   source={{ 
                     uri: (() => {
@@ -314,7 +404,7 @@ export default function ProviderDashboard() {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: colors.background },
-  header: { padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 40, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+  header: { padding: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   topSection: { alignItems: 'center', marginBottom: 20 },
   welcomeSection: { alignItems: 'center' },
   welcomeText: { fontSize: 16, color: 'rgba(255,255,255,0.8)' },
@@ -344,14 +434,38 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   tabBtnTextActive: { color: colors.surface },
   tabBadge: { position: 'absolute', top: -5, right: -5, backgroundColor: colors.error, minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
   tabBadgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
-  mainContent: { paddingHorizontal: 20 },
+  mainContent: { paddingHorizontal: 20, paddingBottom: 100 },
+  listContainer: { gap: 12, marginTop: 10 },
+  requestCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, borderWidth: 1, borderColor: colors.border },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  customerInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  customerImage: { width: 40, height: 40, borderRadius: 20 },
+  customerDetails: { gap: 2 },
+  customerName: { fontSize: 15, fontWeight: 'bold', color: colors.text.primary },
+  requestNumber: { fontSize: 11, color: colors.text.secondary },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, gap: 4 },
+  statusText: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
+  detailsContainer: { gap: 8, marginBottom: 15 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text.primary },
+  priceValue: { fontSize: 14, fontWeight: 'bold', color: colors.primary },
+  detailText: { fontSize: 13, color: colors.text.secondary },
+  cardActions: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 15 },
+  pendingActions: { flexDirection: 'row', gap: 12 },
+  actionBtn: { flex: 1, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  acceptBtn: { backgroundColor: colors.primary },
+  acceptBtnText: { color: colors.surface, fontSize: 14, fontWeight: 'bold' },
+  rejectBtn: { backgroundColor: colors.error + '15', borderWidth: 1, borderColor: colors.error + '30' },
+  rejectBtnText: { color: colors.error, fontSize: 14, fontWeight: 'bold' },
+  viewDetailsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  viewDetailsText: { fontSize: 14, fontWeight: 'bold', color: colors.primary },
   drawerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row' },
   drawer: { width: 260, backgroundColor: colors.surface, height: '100%', elevation: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 10 },
   drawerClose: { flex: 1 },
-  drawerHeader: { padding: 30, paddingTop: Platform.OS === 'ios' ? 60 : 40, backgroundColor: colors.primary, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
-  drawerAvatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)', marginBottom: 15 },
-  drawerName: { fontSize: 20, fontWeight: 'bold', color: colors.surface },
-  drawerEmail: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
+  drawerHeader: { padding: 30, backgroundColor: colors.primary, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, marginBottom: 20 },
+  drawerAvatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: colors.surface, marginBottom: 15 },
+  drawerName: { fontSize: 18, fontWeight: 'bold', color: colors.surface, marginBottom: 4 },
+  drawerEmail: { fontSize: 13, color: colors.surface + 'CC' },
   drawerContent: { flex: 1, paddingHorizontal: 15 },
   drawerItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 15, marginBottom: 5 },
   drawerItemText: { fontSize: 16, fontWeight: '500', color: colors.text.primary, marginLeft: 15 },

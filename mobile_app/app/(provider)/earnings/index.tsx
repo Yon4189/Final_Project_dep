@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LineChart } from "react-native-chart-kit";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
@@ -40,6 +41,7 @@ export default function EarningsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("week");
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
+  const insets = useSafeAreaInsets();
 
   // Map filter to transaction type - FIXED: Always provide a valid TransactionType
   const transactionType: TransactionType =
@@ -95,7 +97,7 @@ export default function EarningsScreen() {
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
       <View style={styles.headerTop}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.surface} />
@@ -453,7 +455,7 @@ export default function EarningsScreen() {
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { backgroundColor: colors.primary, paddingTop: 100, paddingBottom: 30, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+  header: { backgroundColor: colors.primary, paddingBottom: 30, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: "600", color: colors.surface },

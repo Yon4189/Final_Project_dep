@@ -9,17 +9,16 @@ import {
   FlatList,
   RefreshControl,
   Image,
-  SafeAreaView,
   Platform,
   Alert,
   Share,
   Linking,
   Dimensions,
   Modal,
-  StatusBar,
   Animated,
   PanResponder,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/app/context/ThemeContext";
 import { Colors, ThemeColors } from "@/app/constants/Colors";
@@ -56,6 +55,7 @@ if (Platform.OS === "web") {
 
 export default function CustomerDashboard() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { location, loading: locationLoading } = useLocation();
 
   console.log("Dashboard - Location:", location);
@@ -457,7 +457,17 @@ export default function CustomerDashboard() {
             ]}
             {...panResponder.panHandlers}
           >
-            <View style={[styles.menuHeader, { backgroundColor: colors.primary, flexDirection: 'column', alignItems: 'flex-start', paddingTop: 40 }]}>
+            <View
+              style={[
+                styles.menuHeader,
+                {
+                  backgroundColor: colors.primary,
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  paddingTop: Math.max(insets.top + 16, 28),
+                },
+              ]}
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center', marginBottom: 15 }}>
                 <Image
                   source={{ 
@@ -519,7 +529,15 @@ export default function CustomerDashboard() {
     }
 
     return (
-      <View style={[styles.header, { flexDirection: 'column' }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            flexDirection: 'column',
+            paddingTop: Math.max(insets.top + 16, 32),
+          },
+        ]}
+      >
         {/* Row 1: Greeting Only */}
         <View style={[styles.headerTopRow, { justifyContent: 'center', marginBottom: 12 }]}>
           <View style={styles.greetingContainer}>
@@ -896,7 +914,7 @@ export default function CustomerDashboard() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {renderHeader()}
 
       <View style={styles.searchContainer}>
@@ -1080,7 +1098,7 @@ export default function CustomerDashboard() {
       />
 
       {renderHamburgerMenu()}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1095,7 +1113,6 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     padding: 20,
     backgroundColor: colors.surface,
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -1508,7 +1525,6 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 260,
     height: '100%',
     backgroundColor: colors.surface,
-    paddingTop: 50,
     shadowColor: '#000',
     shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.1,

@@ -87,7 +87,7 @@ class AdminDisputeController extends Controller
             'booking',
             'raisedBy',
             'against',
-            'messages.sender',
+            'messages',
             'resolvedBy'
         ])->find($disputeID);
 
@@ -98,19 +98,43 @@ class AdminDisputeController extends Controller
             ], 404);
         }
 
+        // Manually resolve the sender for each message (polymorphic safe)
+        $morphMap = [
+            'customer' => [\App\Models\Customer::class, 'customerID'],
+            'provider' => [\App\Models\ServiceProvider::class, 'providerID'],
+            'admin'    => [\App\Models\Admin::class, 'adminID'],
+        ];
+
+        $messages = $dispute->messages->map(function ($msg) use ($morphMap) {
+            $map = $morphMap[$msg->sender_type] ?? null;
+            if ($map) {
+                [$modelClass, $pk] = $map;
+                try {
+                    $sender = $modelClass::select([$pk, 'fullname', 'email', 'profilePicture'])
+                        ->find($msg->sender_id);
+                    $msg->setRelation('sender', $sender);
+                } catch (\Exception $e) {
+                    $msg->setRelation('sender', null);
+                }
+            }
+            return $msg;
+        });
+
+        $dispute->setRelation('messages', $messages);
+
         // Get related payment info
-        $payment = Payment::where('bookingID', $dispute->bookingID)->first();
+        $payment = \App\Models\Payment::where('bookingID', $dispute->bookingID)->first();
         
         // Get wallet info for both parties
         $raisedByWallet = null;
-        $againstWallet = null;
+        $againstWallet  = null;
         
         if ($dispute->raised_by_type === 'provider') {
-            $raisedByWallet = Wallet::where('providerID', $dispute->raised_by_id)->first();
+            $raisedByWallet = \App\Models\Wallet::where('providerID', $dispute->raised_by_id)->first();
         }
         
         if ($dispute->against_type === 'provider') {
-            $againstWallet = Wallet::where('providerID', $dispute->against_id)->first();
+            $againstWallet = \App\Models\Wallet::where('providerID', $dispute->against_id)->first();
         }
 
         return response()->json([
@@ -120,7 +144,7 @@ class AdminDisputeController extends Controller
                 'payment' => $payment,
                 'wallets' => [
                     'raised_by' => $raisedByWallet,
-                    'against' => $againstWallet
+                    'against'   => $againstWallet
                 ]
             ]
         ]);

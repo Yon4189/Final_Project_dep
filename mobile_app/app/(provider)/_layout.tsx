@@ -38,6 +38,8 @@ export default function ProviderLayout() {
           fontSize: 18,
         },
         headerShadowVisible: false,
+        headerTopInsetEnabled: true,
+        statusBarTranslucent: false,
         contentStyle: {
           backgroundColor: colors.background,
         },
@@ -72,6 +74,7 @@ export default function ProviderLayout() {
         name="notifications"
         options={{
           title: 'Notifications',
+          headerShown: false,
         }}
       />
 
@@ -80,6 +83,7 @@ export default function ProviderLayout() {
         name="profile"
         options={{
           title: 'My Profile',
+          headerShown: false,
         }}
       />
 
@@ -102,6 +106,7 @@ export default function ProviderLayout() {
         name="requests/index"
         options={{
           title: 'Service Requests',
+          headerShown: false,
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity onPress={() => { }} style={{ marginRight: 16 }}>
@@ -130,6 +135,7 @@ export default function ProviderLayout() {
         name="earnings/index"
         options={{
           title: 'Earnings',
+          headerShown: false,
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity
@@ -164,6 +170,7 @@ export default function ProviderLayout() {
         name="earnings/withdraw"
         options={{
           title: 'Withdraw Funds',
+          headerShown: false,
         }}
       />
 
@@ -172,6 +179,7 @@ export default function ProviderLayout() {
         name="reviews/index"
         options={{
           title: 'Reviews & Ratings',
+          headerShown: false,
         }}
       />
 
@@ -188,6 +196,7 @@ export default function ProviderLayout() {
         name="disputes/index"
         options={{
           title: 'Disputes',
+          headerShown: false,
         }}
       />
 
@@ -195,6 +204,47 @@ export default function ProviderLayout() {
         name="disputes/new"
         options={{
           title: 'File a Dispute',
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="change-password"
+        options={{
+          title: 'Change Password',
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="profile/services"
+        options={{
+          title: 'My Services',
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="profile/documents"
+        options={{
+          title: 'Verification Documents',
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="profile/certifications"
+        options={{
+          title: 'Certifications',
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="profile/schedule"
+        options={{
+          title: 'My Schedule',
+          headerShown: false,
         }}
       />
 
