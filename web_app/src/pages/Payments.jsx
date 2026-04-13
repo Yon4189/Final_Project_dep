@@ -123,7 +123,9 @@ const Payments = () => {
               <thead className="bg-admin-card dark:bg-black/20 text-admin-text-muted text-[10px] uppercase font-black tracking-widest border-b border-admin-border">
                 <tr>
                   <th className="px-8 py-5">{t('pay_transaction_id')}</th>
-                  <th className="px-8 py-5">{t('pay_parties')}</th>
+                  <th className="px-8 py-5">{t('pay_customer')}</th>
+                  <th className="px-8 py-5">{t('pay_provider')}</th>
+                  <th className="px-8 py-5">{t('pay_date')}</th>
                   <th className="px-8 py-5">{t('pay_total_amount')}</th>
                   <th className="px-8 py-5">{t('pay_commission')}</th>
                   <th className="px-8 py-5">{t('pay_provider_net')}</th>
@@ -138,9 +140,16 @@ const Payments = () => {
                     </td>
                     <td className="px-8 py-5">
                       <div className="text-sm font-bold text-admin-text leading-tight">
-                        {txn.customer?.fullname || `${txn.customer_first_name || ''} ${txn.customer_last_name || ''}`.trim() || 'Unknown'} → {txn.provider?.fullname || 'Platform'}
+                        {txn.customer?.fullname || `${txn.customer_first_name || ''} ${txn.customer_last_name || ''}`.trim() || 'Unknown'}
                       </div>
-                      <div className="text-[10px] text-slate-400 uppercase font-black italic mt-1">
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="text-sm font-bold text-admin-text leading-tight">
+                        {txn.provider?.fullname || 'Platform'}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="text-[10px] text-slate-400 uppercase font-black italic">
                         {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : 'N/A'}
                       </div>
                     </td>
@@ -150,11 +159,14 @@ const Payments = () => {
                     </td>
                     <td className="px-8 py-5 text-xs text-slate-500 font-bold font-mono">{txn.provider_amount || '0.00'}</td>
                     <td className="px-8 py-5">
-                      <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase border tracking-widest italic ${txn.status === 'success' || txn.status === 'paid' || txn.status === 'released' ? 'bg-green-50 text-green-700 border-green-200' :
-                          txn.status === 'failed' || txn.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
-                        }`}>
-                        <span className="text-admin-text">{getStatusTranslation(txn.status)}</span>
+                      <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase border tracking-widest italic flex-shrink-0 whitespace-nowrap ${
+                        txn.status === 'success' || txn.status === 'paid' || txn.status === 'released' 
+                          ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' :
+                        txn.status === 'failed' || txn.status === 'cancelled' 
+                          ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' :
+                        'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                      }`}>
+                        {getStatusTranslation(txn.status)}
                       </span>
                     </td>
                   </tr>
@@ -181,16 +193,28 @@ const Payments = () => {
                       {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${txn.status === 'success' || txn.status === 'paid' || txn.status === 'released' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                    <span className="text-admin-text">{getStatusTranslation(txn.status)}</span>
+                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
+                    txn.status === 'success' || txn.status === 'paid' || txn.status === 'released' 
+                      ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' : 
+                      'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+                  }`}>
+                    {getStatusTranslation(txn.status)}
                   </span>
                 </div>
 
-                <div className="pb-3 border-b border-admin-border border-dashed">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('pay_parties')}</p>
-                  <p className="text-xs font-bold text-admin-text">
-                    {txn.customer?.fullname || `${txn.customer_first_name || ''} ${txn.customer_last_name || ''}`.trim() || 'Unknown'} → {txn.provider?.fullname || 'Platform'}
-                  </p>
+                <div className="pb-3 border-b border-admin-border border-dashed grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('pay_customer')}</p>
+                    <p className="text-xs font-bold text-admin-text">
+                      {txn.customer?.fullname || `${txn.customer_first_name || ''} ${txn.customer_last_name || ''}`.trim() || 'Unknown'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('pay_provider')}</p>
+                    <p className="text-xs font-bold text-admin-text">
+                      {txn.provider?.fullname || 'Platform'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-center">
