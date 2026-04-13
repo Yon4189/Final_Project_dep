@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Booking;
 use App\Services\ChapaService;
 use App\Services\PayoutProcessor;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -249,7 +250,6 @@ class PaymentService
         
         return $payment;
     }
-}
 
     /**
      * Verify and complete payment after Chapa callback
@@ -359,7 +359,7 @@ class PaymentService
             $attempt++;
             
             try {
-                DB::transaction(function () use ($depositPayment, $booking, $reason) {
+                DB::transaction(function () use ($depositPayment, $booking, $reason, $bookingId) {
                     // Update payment status to refunded
                     $depositPayment->payment_status = 'refunded';
                     $depositPayment->refunded_at = now();
@@ -446,7 +446,7 @@ class PaymentService
             throw new \Exception('Final payment not found or not completed');
         }
         
-        DB::transaction(function () use ($finalPayment, $booking, $reason) {
+        DB::transaction(function () use ($finalPayment, $booking, $reason, $bookingId) {
             // Reverse provider payouts first
             $this->payoutProcessor->reversePayoutForRefund($bookingId);
             

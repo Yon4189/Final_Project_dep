@@ -546,6 +546,7 @@ class PaymentController extends Controller
             'held_payments' => Payment::where('status', 'held')->count(),
             'released_payments' => Payment::where('status', 'released')->count(),
             'total_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('amount'),
+            'platform_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission'),
         ];
 
         return response()->json([
@@ -698,7 +699,6 @@ class PaymentController extends Controller
 
         return null;
     }
-}
 
     /**
      * Calculate deposit amount for a booking

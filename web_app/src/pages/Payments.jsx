@@ -39,25 +39,25 @@ const Payments = () => {
   const financialStats = [
     {
       title: t('pay_total_volume'),
-      value: stats ? `${stats.total_revenue} ETB` : '0 ETB',
+      value: stats?.total_revenue ? `${stats.total_revenue} ETB` : '0 ETB',
       icon: CreditCard,
       color: 'bg-blue-500'
     },
     {
-      title: t('pay_monthly_revenue'),
-      value: stats ? `${stats.monthly_revenue} ETB` : '0 ETB',
+      title: t('pay_total_revenue'),
+      value: stats?.platform_revenue ? `${stats.platform_revenue} ETB` : '0 ETB',
       icon: TrendingUp,
       color: 'bg-green-500'
     },
     {
       title: t('pay_pending_payments'),
-      value: stats ? stats.pending_payments : '0',
+      value: stats?.pending_payments || '0',
       icon: Wallet,
       color: 'bg-amber-500'
     },
     {
       title: t('pay_success_rate'),
-      value: stats && stats.total_payments > 0
+      value: stats?.total_payments > 0
         ? `${Math.round((stats.successful_payments / stats.total_payments) * 100)}%`
         : '0%',
       icon: History,
@@ -102,7 +102,14 @@ const Payments = () => {
         </div>
 
         <div className="flex-1 overflow-x-auto hidden lg:block">
-          {isLoading && transactions.length === 0 ? (
+          {apiError ? (
+            <div className="p-20 text-center flex flex-col items-center gap-4">
+              <span className="text-red-500 font-bold">API Error: {apiError?.message || 'Failed to fetch data'}</span>
+              <pre className="text-xs text-slate-500 mt-2 p-2 bg-slate-100 rounded text-left w-full overflow-x-auto">
+                 {JSON.stringify(apiError?.response?.data || apiError, null, 2)}
+              </pre>
+            </div>
+          ) : isLoading && transactions.length === 0 ? (
             <div className="p-20 text-center flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-blue-500" size={40} />
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('pay_syncing')}</p>
@@ -131,7 +138,7 @@ const Payments = () => {
                     </td>
                     <td className="px-8 py-5">
                       <div className="text-sm font-bold text-admin-text leading-tight">
-                        {txn.customer?.fullname || txn.customer_first_name} → {txn.provider?.fullname || 'Admin'}
+                        {txn.customer?.fullname || `${txn.customer_first_name || ''} ${txn.customer_last_name || ''}`.trim() || 'Unknown'} → {txn.provider?.fullname || 'Platform'}
                       </div>
                       <div className="text-[10px] text-slate-400 uppercase font-black italic mt-1">
                         {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : 'N/A'}
@@ -182,7 +189,7 @@ const Payments = () => {
                 <div className="pb-3 border-b border-admin-border border-dashed">
                   <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('pay_parties')}</p>
                   <p className="text-xs font-bold text-admin-text">
-                    {txn.customer?.fullname || txn.customer_first_name} → {txn.provider?.fullname || 'Admin'}
+                    {txn.customer?.fullname || `${txn.customer_first_name || ''} ${txn.customer_last_name || ''}`.trim() || 'Unknown'} → {txn.provider?.fullname || 'Platform'}
                   </p>
                 </div>
 

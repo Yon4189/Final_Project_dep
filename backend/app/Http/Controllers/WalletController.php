@@ -481,7 +481,6 @@ public function requestWithdrawal(Request $request)
             ], 500);
         }
     }
-}
 
     /**
      * Get wallet transactions with split payment filtering

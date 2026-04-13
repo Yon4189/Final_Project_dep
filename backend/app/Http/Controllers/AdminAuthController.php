@@ -85,7 +85,7 @@ class AdminAuthController extends Authenticatable
                     'rejected'   => ServiceProvider::whereIn('status', ['Rejected', 'rejected'])->count(), // Support both old and new
                     'categories' => Category::count(),
                     'services'   => Service::count(),
-                    'revenue'    => Transaction::sum('platformFee') ?? 0
+                    'revenue'    => \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission') ?? 0
                 ]
             ]);
         } catch (\Exception $e) {
