@@ -457,9 +457,10 @@ class BookingController extends Controller
                 'created_at' => $booking->created_at,
                 'expires_at' => $booking->expires_at,
                 'service_address' => $booking->service_address,
+                'address_text' => $booking->address_text ?? $booking->service_address, // Add address_text field
                 'service_latitude' => $booking->service_latitude,
                 'service_longitude' => $booking->service_longitude,
-                'customerAddress' => $booking->service_address, // Add for frontend compatibility
+                'customerAddress' => $booking->address_text ?? $booking->service_address, // Use address_text first
                 'customerLatitude' => $booking->service_latitude, // Add for frontend compatibility
                 'customerLongitude' => $booking->service_longitude, // Add for frontend compatibility
                 'customer' => $userType === 'provider' ? [

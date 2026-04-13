@@ -22,6 +22,7 @@ import AppButton from '../AppButton';
 import { useCreateBooking } from '@/hooks/useCustomerBookings';
 import { api } from '@/app/services/api';
 import { customerService } from '@/app/services/customer.service';
+import { MapLocationPicker } from './MapLocationPicker';
 import type { 
   ServiceProvider, 
   ProfessionalService, 
@@ -81,7 +82,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   // New Address selection state
-  const [addressOption, setAddressOption] = useState<'current' | 'saved' | 'new'>('current');
+  const [addressOption, setAddressOption] = useState<'current' | 'saved' | 'new' | 'map'>('current');
   const [savedAddresses, setSavedAddresses] = useState<UserLocation[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('');
@@ -89,6 +90,8 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const [addressLabel, setAddressLabel] = useState<'home' | 'office' | 'other'>('home');
   const [customLabel, setCustomLabel] = useState('');
   const [showSavedAddressPicker, setShowSavedAddressPicker] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [mapLocation, setMapLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
 
   // Get provider's services
   const providerServices = provider?.services || [];
@@ -131,13 +134,17 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     }
   }, [userLocation, addressOption]);
 
-  const handleOptionChange = (option: 'current' | 'saved' | 'new') => {
+  const handleOptionChange = (option: 'current' | 'saved' | 'new' | 'map') => {
+    console.log('Address option changed to:', option);
     setAddressOption(option);
     if (option === 'current') {
       setAddress(userLocation?.address || '');
     } else if (option === 'saved') {
       const saved = savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId);
       setAddress(saved?.addressLine1 || '');
+    } else if (option === 'map') {
+      console.log('Opening map picker, current mapLocation:', mapLocation);
+      setShowMapPicker(true);
     } else {
       setAddress('');
     }
@@ -355,6 +362,11 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         Alert.alert('Error', 'Please select a saved address');
         return false;
       }
+    } else if (addressOption === 'map') {
+      if (!mapLocation) {
+        Alert.alert('Error', 'Please pin your location on the map');
+        return false;
+      }
     } else if (addressOption === 'new') {
       if (!address.trim()) {
         Alert.alert('Error', 'Please enter your complete address details');
@@ -421,12 +433,20 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       const scheduledDate = selectedDate.toISOString().split('T')[0];
 
       // 1. If saving new address, do it first
-      let locationSource: 'gps' | 'saved' | 'new' = addressOption === 'current' ? 'gps' : (addressOption === 'saved' ? 'saved' : 'new');
+      let locationSource: 'gps' | 'saved' | 'new' | 'map' = addressOption === 'current' ? 'gps' : (addressOption === 'saved' ? 'saved' : (addressOption === 'map' ? 'map' : 'new'));
       let savedAddressId = addressOption === 'saved' ? selectedSavedAddressId : undefined;
       let finalAddress = address;
+      let finalLatitude = userLocation?.latitude;
+      let finalLongitude = userLocation?.longitude;
 
       if (addressOption === 'current' && !address.trim()) {
         finalAddress = 'GPS Coordinates Used';
+      }
+
+      if (addressOption === 'map' && mapLocation) {
+        finalAddress = mapLocation.address;
+        finalLatitude = mapLocation.latitude;
+        finalLongitude = mapLocation.longitude;
       }
 
       if (addressOption === 'new' && isSavingNewAddress) {
@@ -457,10 +477,21 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       }
 
       // Map location source to backend's expected location_type
-      let locationType: 'current' | 'saved' | 'manual' = 'current';
+      let locationType: 'current' | 'saved' | 'manual' | 'pin_on_map' = 'current';
       if (locationSource === 'gps') locationType = 'current';
       else if (locationSource === 'saved') locationType = 'saved';
+      else if (locationSource === 'map') locationType = 'pin_on_map';
       else if (locationSource === 'new') locationType = 'manual';
+
+      console.log('Booking submission debug:', {
+        addressOption,
+        locationSource,
+        locationType,
+        finalLatitude,
+        finalLongitude,
+        finalAddress,
+        mapLocation
+      });
 
       const bookingResponse = await createBooking.mutateAsync({
         providerID: Number(provider.id),
@@ -470,10 +501,11 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         notes: description,
         
         location_type: locationType,
-        latitude: locationType === 'current' ? (userLocation?.latitude || 0) : undefined,
-        longitude: locationType === 'current' ? (userLocation?.longitude || 0) : undefined,
+        latitude: (locationType === 'current' || locationType === 'pin_on_map') ? finalLatitude : undefined,
+        longitude: (locationType === 'current' || locationType === 'pin_on_map') ? finalLongitude : undefined,
         address_id: locationType === 'saved' && savedAddressId ? Number(savedAddressId) : undefined,
         manual_address: locationType === 'manual' ? finalAddress : undefined,
+        formatted_address: locationType === 'pin_on_map' ? finalAddress : undefined,
       });
 
       const bookingId =
@@ -832,6 +864,34 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                   <Text style={styles.optionText}>Use my current location</Text>
                 </TouchableOpacity>
 
+                {/* Pin on Map */}
+                <TouchableOpacity 
+                  style={styles.optionRow} 
+                  onPress={() => handleOptionChange('map')}
+                >
+                  <Ionicons 
+                    name={addressOption === 'map' ? 'radio-button-on' : 'radio-button-off'} 
+                    size={20} 
+                    color={addressOption === 'map' ? Colors.primary : Colors.text.secondary} 
+                  />
+                  <Text style={styles.optionText}>Pin on map</Text>
+                </TouchableOpacity>
+
+                {addressOption === 'map' && mapLocation && (
+                  <View style={styles.mapLocationDisplay}>
+                    <Ionicons name="location" size={20} color={Colors.primary} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text style={styles.mapLocationText}>{mapLocation.address}</Text>
+                      <Text style={styles.mapCoordinatesText}>
+                        {mapLocation.latitude.toFixed(6)}, {mapLocation.longitude.toFixed(6)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setShowMapPicker(true)}>
+                      <Text style={styles.changeLocationText}>Change</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 {/* Saved Addresses */}
                 <TouchableOpacity 
                   style={styles.optionRow} 
@@ -1038,6 +1098,32 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           </View>
         </KeyboardAvoidingView>
       </View>
+
+      {/* Map Location Picker Modal */}
+      {showMapPicker && (
+        <Modal
+          visible={showMapPicker}
+          animationType="slide"
+          onRequestClose={() => setShowMapPicker(false)}
+        >
+          <MapLocationPicker
+            initialLocation={mapLocation || userLocation}
+            onLocationSelect={(location) => {
+              console.log('Map location selected:', location);
+              setMapLocation(location);
+              setAddress(location.address);
+              setShowMapPicker(false);
+              // Show confirmation
+              Alert.alert(
+                'Location Selected',
+                `Lat: ${location.latitude.toFixed(6)}\nLng: ${location.longitude.toFixed(6)}\n${location.address}`,
+                [{ text: 'OK' }]
+              );
+            }}
+            onClose={() => setShowMapPicker(false)}
+          />
+        </Modal>
+      )}
     </Modal>
   );
 };
@@ -1457,5 +1543,30 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     fontSize: 14,
     color: Colors.text.primary,
+  },
+  mapLocationDisplay: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: Colors.primary + '10',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mapLocationText: {
+    fontSize: 14,
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  mapCoordinatesText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    fontFamily: 'monospace',
+  },
+  changeLocationText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });
