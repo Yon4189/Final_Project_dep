@@ -102,15 +102,29 @@ export default function RequestDetails() {
   // Use the data from useProviderRequest
   useEffect(() => {
     if (requestData) {
+      console.log('Provider Request Data:', {
+        notes: requestData.notes,
+        description: requestData.description,
+        specialInstructions: requestData.specialInstructions,
+        address_text: requestData.address_text,
+        customerAddress: requestData.customerAddress,
+        service_address: requestData.service_address,
+        customerLatitude: requestData.customerLatitude,
+        service_latitude: requestData.service_latitude,
+      });
       setRequest(requestData);
     }
   }, [requestData]);
 
   useEffect(() => {
-    if (request?.customerLatitude && request?.customerLongitude) {
+    // Check multiple possible coordinate fields
+    const latitude = request?.customerLatitude || request?.service_latitude;
+    const longitude = request?.customerLongitude || request?.service_longitude;
+    
+    if (latitude && longitude) {
       setMapRegion({
-        latitude: Number(request.customerLatitude),
-        longitude: Number(request.customerLongitude),
+        latitude: Number(latitude),
+        longitude: Number(longitude),
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
@@ -428,109 +442,109 @@ export default function RequestDetails() {
     </View>
   );
 
-  const renderServiceDetails = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Details</Text>
-      <View style={styles.detailsCard}>
-        <View style={styles.detailRow}>
-          <Ionicons name="construct-outline" size={20} color={colors.primary} />
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Service</Text>
-            <Text style={styles.detailValue}>{request?.serviceName}</Text>
-          </View>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Date & Time</Text>
-            <Text style={styles.detailValue}>{request?.scheduledDate} at {request?.scheduledTime}</Text>
-          </View>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="time-outline" size={20} color={colors.primary} />
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Estimated Duration</Text>
-            <Text style={styles.detailValue}>{request?.estimatedDuration} minutes</Text>
-          </View>
-        </View>
-        {request?.description && (
+  const renderServiceDetails = () => {
+    // Check for notes in multiple possible fields
+    const customerNotes = request?.notes || request?.description || request?.specialInstructions;
+    
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Service Details</Text>
+        <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
-            <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+            <Ionicons name="construct-outline" size={20} color={colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Description</Text>
-              <Text style={styles.detailValue}>{request.description}</Text>
+              <Text style={styles.detailLabel}>Service</Text>
+              <Text style={styles.detailValue}>{request?.serviceName}</Text>
             </View>
           </View>
-        )}
-        {request?.specialInstructions && (
           <View style={styles.detailRow}>
-            <Ionicons name="alert-circle-outline" size={20} color={colors.warning} />
+            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Special Instructions</Text>
-              <Text style={[styles.detailValue, styles.instructionsText]}>{request.specialInstructions}</Text>
+              <Text style={styles.detailLabel}>Scheduled Date & Time</Text>
+              <Text style={styles.detailValue}>{request?.scheduledDate} at {request?.scheduledTime}</Text>
             </View>
           </View>
-        )}
-      </View>
-    </View>
-  );
-
-  const renderLocation = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Location</Text>
-      <View style={styles.locationCard}>
-        <View style={styles.addressContainer}>
-          <Ionicons name="location-outline" size={20} color={colors.primary} />
-          <Text style={styles.addressText}>{request?.customerAddress}</Text>
+          {customerNotes && (
+            <View style={styles.detailRow}>
+              <Ionicons name="chatbox-ellipses-outline" size={20} color={colors.info} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Customer Notes</Text>
+                <Text style={[styles.detailValue, styles.customerNotesText]}>{customerNotes}</Text>
+              </View>
+            </View>
+          )}
         </View>
-        {request?.distance && (
-          <View style={styles.distanceContainer}>
-            <View style={styles.distanceItem}>
-              <Ionicons name="navigate-outline" size={16} color={colors.text.secondary} />
-              <Text style={styles.distanceText}>{request.distance.toFixed(1)} km away</Text>
-            </View>
-            <View style={styles.distanceItem}>
-              <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
-              <Text style={styles.distanceText}>~{request.travelTime} min drive</Text>
+      </View>
+    );
+  };
+
+  const renderLocation = () => {
+    // Get the address from multiple possible fields
+    const serviceAddress = request?.address_text || request?.customerAddress || request?.service_address;
+    const isPending = request?.status === 'pending';
+    
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Service Location</Text>
+        <View style={styles.locationCard}>
+          <View style={styles.addressContainer}>
+            <Ionicons name="location" size={22} color={colors.error} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.addressLabel}>Customer's Location</Text>
+              <Text style={styles.addressText}>{serviceAddress || 'Address not provided'}</Text>
             </View>
           </View>
-        )}
-
-        {mapRegion && (
-          <TouchableOpacity
-            style={styles.mapPreview}
-            onPress={() => setShowDirections(true)}
-          >
-            <Map
-              center={[mapRegion.latitude, mapRegion.longitude]}
-              userLocation={request ? {
-                latitude: request.customerLatitude,
-                longitude: request.customerLongitude
-              } : null}
-              providers={[]}
-              onProviderSelect={() => { }}
-              style={{ height: 150, width: '100%' }}
-              markers={[
-                {
-                  position: [mapRegion.latitude, mapRegion.longitude],
-                  title: request?.customerName || 'Customer Location',
-                  description: request?.customerAddress,
-                }
-              ]}
-            />
-            <View style={styles.mapOverlay}>
-              <Ionicons name="expand-outline" size={20} color={colors.surface} />
-              <Text style={styles.mapOverlayText}>View on map</Text>
+          {request?.distance && (
+            <View style={styles.distanceContainer}>
+              <View style={styles.distanceItem}>
+                <Ionicons name="navigate-outline" size={16} color={colors.text.secondary} />
+                <Text style={styles.distanceText}>{request.distance.toFixed(1)} km away</Text>
+              </View>
+              <View style={styles.distanceItem}>
+                <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
+                <Text style={styles.distanceText}>~{request.travelTime} min drive</Text>
+              </View>
             </View>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.directionsButton} onPress={handleOpenMaps}>
-          <Ionicons name="navigate" size={20} color={colors.surface} />
-          <Text style={styles.directionsButtonText}>Start Navigation</Text>
-        </TouchableOpacity>
+          )}
+
+          {mapRegion && (
+            <TouchableOpacity
+              style={styles.mapPreview}
+              onPress={() => setShowDirections(true)}
+            >
+              <Map
+                center={[mapRegion.latitude, mapRegion.longitude]}
+                userLocation={request ? {
+                  latitude: request.customerLatitude || request.service_latitude,
+                  longitude: request.customerLongitude || request.service_longitude
+                } : null}
+                providers={[]}
+                onProviderSelect={() => { }}
+                style={{ height: 150, width: '100%' }}
+                markers={[
+                  {
+                    position: [mapRegion.latitude, mapRegion.longitude],
+                    title: request?.customerName || 'Customer Location',
+                    description: serviceAddress,
+                  }
+                ]}
+              />
+              <View style={styles.mapOverlay}>
+                <Ionicons name="expand-outline" size={20} color={colors.surface} />
+                <Text style={styles.mapOverlayText}>View on map</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          {!isPending && (
+            <TouchableOpacity style={styles.directionsButton} onPress={handleOpenMaps}>
+              <Ionicons name="navigate" size={20} color={colors.surface} />
+              <Text style={styles.directionsButtonText}>Start Navigation</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderPayment = () => (
     <View style={styles.section}>
@@ -1093,6 +1107,11 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: colors.warning,
     fontStyle: "italic",
   },
+  customerNotesText: {
+    color: colors.info,
+    fontStyle: "italic",
+    lineHeight: 20,
+  },
   locationCard: {
     backgroundColor: colors.surface,
     borderRadius: 16,
@@ -1105,6 +1124,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 12,
     gap: 8,
+  },
+  addressLabel: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginBottom: 4,
+    fontWeight: "500",
   },
   addressText: {
     flex: 1,

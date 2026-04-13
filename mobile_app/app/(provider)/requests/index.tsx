@@ -398,6 +398,15 @@ export default function ProviderRequests() {
             <Text style={styles.detailText}>{(item.distance || 0).toFixed(1)} km • {item.travelTime || 0} min drive</Text>
           </View>
         )}
+
+        {(item.notes || item.description || item.specialInstructions) && (
+          <View style={[styles.detailRow, { marginTop: 4 }]}>
+            <Ionicons name="chatbox-ellipses-outline" size={14} color={colors.info} />
+            <Text style={[styles.detailText, { fontStyle: 'italic', color: colors.info }]} numberOfLines={2}>
+              {item.notes || item.description || item.specialInstructions}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.cardFooter}>
@@ -410,14 +419,20 @@ export default function ProviderRequests() {
             <>
               <TouchableOpacity
                 style={[styles.actionButton, styles.acceptButton]}
-                onPress={() => handleRequestAction(item, "accept")}
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  handleRequestAction(item, "accept");
+                }}
               >
                 <Text style={styles.acceptButtonText}>Accept</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.rejectButton]}
-                onPress={() => handleRequestAction(item, "reject")}
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  handleRequestAction(item, "reject");
+                }}
               >
                 <Text style={styles.rejectButtonText}>Reject</Text>
               </TouchableOpacity>
@@ -428,14 +443,20 @@ export default function ProviderRequests() {
             <>
               <TouchableOpacity
                 style={[styles.actionButton, styles.rescheduleButton]}
-                onPress={() => handleRequestAction(item, "reschedule")}
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  handleRequestAction(item, "reschedule");
+                }}
               >
                 <Text style={styles.rescheduleButtonText}>Reschedule</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.directionsButton]}
-                onPress={() => handleRequestAction(item, "directions")}
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  handleRequestAction(item, "directions");
+                }}
               >
                 <Ionicons name="navigate" size={14} color={colors.surface} />
                 <Text style={styles.directionsButtonText}>Go</Text>
@@ -446,7 +467,10 @@ export default function ProviderRequests() {
           {item.status === "in_progress" && (
             <TouchableOpacity
               style={[styles.actionButton, styles.completeButton]}
-              onPress={() => handleRequestAction(item, "complete")}
+              onPress={(e) => {
+                e?.stopPropagation?.();
+                handleRequestAction(item, "complete");
+              }}
             >
               <Text style={styles.completeButtonText}>Complete</Text>
             </TouchableOpacity>
