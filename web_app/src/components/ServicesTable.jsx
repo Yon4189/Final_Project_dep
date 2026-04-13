@@ -273,8 +273,8 @@ const ServicesTable = ({
                       <td className="px-6 py-4 font-mono text-sm text-admin-text-muted">#{item.catagoryID}</td>
                       <td className="px-6 py-4 font-semibold text-admin-text">{item.name}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border tracking-wider ${item.status === 'Active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'}`}>
-                          <span className="text-admin-text">{item.status === 'Active' ? t('serv_status_active') : (item.status || t('serv_status_active'))}</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider italic ${item.status === 'Active' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                          {item.status === 'Active' ? t('serv_status_active') : (item.status || t('serv_status_active'))}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-xs text-admin-text-muted max-w-xs truncate italic">
@@ -310,7 +310,7 @@ const ServicesTable = ({
                       <td className="px-6 py-4 font-mono text-sm text-admin-text-muted">#{item.serviceID}</td>
                       <td className="px-6 py-4 font-semibold text-admin-text">{item.title}</td>
                       <td className="px-6 py-4">
-                        <span className="inline-block bg-blue-50 dark:bg-blue-900/30 text-admin-text px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-blue-100 dark:border-blue-800 tracking-wider">
+                        <span className="text-blue-500 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider italic">
                           {getCategoryName(item.catagoryID)}
                         </span>
                       </td>
@@ -341,7 +341,7 @@ const ServicesTable = ({
                   </p>
                 </div>
                 {activeTab === 'categories' && (
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${item.status === 'Active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                  <span className={`text-xs font-bold italic uppercase ${item.status === 'Active' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                     {item.status === 'Active' ? t('serv_status_active') : (item.status || t('serv_status_active'))}
                   </span>
                 )}
@@ -349,7 +349,7 @@ const ServicesTable = ({
 
               {activeTab === 'services' && (
                 <div className="flex justify-between items-center">
-                  <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2.5 py-1 rounded-lg text-xs font-semibold border border-blue-100 dark:border-blue-800">
+                  <span className="text-blue-500 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider italic">
                     {getCategoryName(item.catagoryID)}
                   </span>
                   <span className="font-mono font-semibold text-emerald-600 text-sm">{item.estimatedPrice} ETB</span>

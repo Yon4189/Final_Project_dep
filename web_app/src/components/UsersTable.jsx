@@ -302,13 +302,13 @@ const UsersTable = ({
                     <span className="text-xs font-medium text-admin-text-muted bg-white border border-slate-100 px-2 py-1 rounded">{user.joined || '—'}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
-                        ['active', 'approved'].includes(user.status?.toLowerCase())
-                          ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-                          : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                      }`}>
-                        <span className="text-admin-text">{user.status ? t(user.status.toLowerCase()) : t('pending')}</span>
-                      </span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider italic ${
+                      ['active', 'approved'].includes(user.status?.toLowerCase())
+                        ? 'text-emerald-500 dark:text-emerald-400'
+                        : 'text-amber-500 dark:text-amber-400'
+                    }`}>
+                      {user.status ? t(user.status.toLowerCase()) : t('pending')}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -364,12 +364,12 @@ const UsersTable = ({
                   <p className="font-semibold text-admin-text text-sm">{user.name}</p>
                   <p className="text-xs text-slate-500">ID: {user.id}</p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
+                <span className={`text-[10px] font-black uppercase italic ${
                   ['active', 'approved'].includes(user.status?.toLowerCase())
-                    ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-                    : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                    ? 'text-emerald-500 dark:text-emerald-400'
+                    : 'text-amber-500 dark:text-amber-400'
                 }`}>
-                  <span className="text-admin-text">{user.status ? t(user.status.toLowerCase()) : t('pending')}</span>
+                  {user.status ? t(user.status.toLowerCase()) : t('pending')}
                 </span>
               </div>
               <div className="space-y-2 text-xs text-slate-600">

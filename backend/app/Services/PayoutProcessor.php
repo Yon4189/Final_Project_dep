@@ -359,7 +359,6 @@ class PayoutProcessor
             'total_amount' => $totalAmount
         ]);
     }
-}
 
     /**
      * Reverse payout for refund (when dispute resolved in customer favor)

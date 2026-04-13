@@ -317,7 +317,7 @@ const VerificationTable = ({
 
                     {/* Category */}
                     <td className="px-6 py-4">
-                      <span className="inline-block bg-admin-card text-admin-text px-2 py-1 rounded text-xs font-medium border border-admin-border">
+                      <span className="text-admin-text text-xs font-bold uppercase tracking-wider italic">
                         {item.service_type || '—'}
                       </span>
                     </td>
@@ -386,13 +386,13 @@ const VerificationTable = ({
 
                     {/* Status badge */}
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
-                        status === 'active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' :
-                        status === 'rejected' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
-                        status === 'suspended' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' :
-                        'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                      <span className={`text-[10px] font-bold uppercase tracking-wider italic ${
+                        status === 'active' ? 'text-emerald-500 dark:text-emerald-400' :
+                        status === 'rejected' ? 'text-red-500 dark:text-red-400' :
+                        status === 'suspended' ? 'text-purple-500 dark:text-purple-400' :
+                        'text-amber-500 dark:text-amber-400'
                       }`}>
-                        <span className="text-admin-text">{item.status ? t(item.status.toLowerCase()) : t('pending')}</span>
+                        {item.status ? t(item.status.toLowerCase()) : t('pending')}
                       </span>
                     </td>
 
@@ -482,13 +482,13 @@ const VerificationTable = ({
                     <p className="font-semibold text-admin-text text-sm">{item.name}</p>
                     <p className="text-xs text-slate-500 truncate">{item.email}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${
-                    status === 'active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' :
-                    status === 'rejected' ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
-                    status === 'suspended' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' :
-                    'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                  <span className={`text-[10px] font-black uppercase italic ${
+                    status === 'active' ? 'text-emerald-500 dark:text-emerald-400' :
+                    status === 'rejected' ? 'text-red-500 dark:text-red-400' :
+                    status === 'suspended' ? 'text-purple-500 dark:text-purple-400' :
+                    'text-amber-500 dark:text-amber-400'
                   }`}>
-                    <span className="text-admin-text">{item.status ? t(item.status.toLowerCase()) : t('pending')}</span>
+                    {item.status ? t(item.status.toLowerCase()) : t('pending')}
                   </span>
                 </div>
 

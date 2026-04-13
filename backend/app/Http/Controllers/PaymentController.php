@@ -514,18 +514,19 @@ class PaymentController extends Controller
     {
         $query = Payment::with(['customer', 'booking', 'provider']);
 
-        if ($request->has('status')) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('date_from')) {
+        if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
-        if ($request->has('date_to')) {
+        if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $payments = $query->orderBy('created_at', 'desc')->paginate(50);
+        $perPage = $request->input('per_page', 10);
+        $payments = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -546,6 +547,7 @@ class PaymentController extends Controller
             'held_payments' => Payment::where('status', 'held')->count(),
             'released_payments' => Payment::where('status', 'released')->count(),
             'total_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('amount'),
+            'platform_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission'),
         ];
 
         return response()->json([
@@ -698,7 +700,6 @@ class PaymentController extends Controller
 
         return null;
     }
-}
 
     /**
      * Calculate deposit amount for a booking
