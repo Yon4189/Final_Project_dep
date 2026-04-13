@@ -305,7 +305,7 @@ const VerificationQueueTable = ({
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="bg-admin-card text-admin-text px-2 py-1 rounded text-xs font-bold uppercase border border-admin-border tracking-wider">
+                        <span className="text-admin-text text-xs font-bold uppercase tracking-wider italic">
                           {item.service_type || 'Root'}
                         </span>
                       </td>

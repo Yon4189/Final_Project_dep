@@ -8,19 +8,19 @@ import {
 
 const getStatusStyle = (status) => {
   switch (status?.toLowerCase()) {
-    case 'pending': return 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+    case 'pending': return 'text-amber-500 dark:text-amber-400';
     case 'accepted': 
     case 'arrived':
     case 'in_progress':
     case 'started':
     case 'confirmed':
     case 'waiting_customer_confirmation':
-      return 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800';
-    case 'completed': return 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800';
-    case 'cancelled': return 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800';
-    case 'rejected': return 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800';
-    case 'expired': return 'bg-slate-50 dark:bg-slate-900/30 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800';
-    default: return 'bg-slate-50 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800';
+      return 'text-blue-500 dark:text-blue-400';
+    case 'completed': return 'text-emerald-500 dark:text-emerald-400';
+    case 'cancelled': return 'text-red-500 dark:text-red-400';
+    case 'rejected': return 'text-rose-500 dark:text-rose-400';
+    case 'expired': return 'text-slate-500 dark:text-slate-400';
+    default: return 'text-slate-600 dark:text-slate-400';
   }
 };
 
@@ -290,7 +290,7 @@ const BookingsTable = ({
                     <td className="px-6 py-4 font-semibold text-admin-text">{booking.customer_name}</td>
                     <td className="px-6 py-4 text-admin-text-muted">{booking.provider_name}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-block bg-blue-50 dark:bg-blue-900/30 text-admin-text px-2 py-1 rounded text-xs font-bold uppercase border border-blue-100 dark:border-blue-800 tracking-wider">
+                      <span className="text-blue-500 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider italic">
                         {booking.service_type}
                       </span>
                     </td>
@@ -304,17 +304,17 @@ const BookingsTable = ({
                       {booking.price} ETB
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                      <span className={`text-[10px] font-black uppercase tracking-wider italic ${
                         booking.payment_status?.toLowerCase() === 'paid'
-                          ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-                          : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                          ? 'text-emerald-500 dark:text-emerald-400'
+                          : 'text-amber-500 dark:text-amber-400'
                       }`}>
-                        <span className="text-admin-text">{t(`status_${booking.payment_status?.toLowerCase()}`) || booking.payment_status}</span>
+                        {t(`status_${booking.payment_status?.toLowerCase()}`) || booking.payment_status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase border ${getStatusStyle(booking.status)}`}>
-                        <span className="text-admin-text">{getStatusTranslation(booking.status)}</span>
+                      <span className={`text-[10px] font-black uppercase tracking-wider italic ${getStatusStyle(booking.status)}`}>
+                        {getStatusTranslation(booking.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -346,7 +346,7 @@ const BookingsTable = ({
                     <p className="font-semibold text-admin-text text-base">{booking.customer_name}</p>
                     <p className="text-xs text-admin-text-muted">{t('bookings_provider')}: {booking.provider_name}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(booking.status)}`}>
+                  <span className={`text-[10px] font-black uppercase italic ${getStatusStyle(booking.status)}`}>
                     {getStatusTranslation(booking.status)}
                   </span>
                 </div>
@@ -354,9 +354,20 @@ const BookingsTable = ({
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex items-center gap-1"><Calendar size={14} className="text-slate-400" /> {booking.scheduled_at}</div>
                   <div className="flex items-center gap-1"><MapPin size={14} className="text-slate-400" /> {booking.location?.split(',')[0] || 'N/A'}</div>
-                  <div className="flex items-center gap-1"><span className="font-semibold text-admin-text-muted">{t('bookings_service')}:</span> {booking.service_type}</div>
-                  <div className="flex items-center gap-1"><span className="font-semibold text-admin-text-muted">{t('bookings_price')}:</span> <span className="text-admin-text font-bold">{booking.price} ETB</span></div>
-                  <div className="flex items-center gap-1"><span className="font-semibold text-admin-text-muted">{t('bookings_payment')}:</span> {t(`status_${booking.payment_status?.toLowerCase()}`) || booking.payment_status}</div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-admin-text-muted">{t('bookings_service')}:</span> 
+                    <span className="text-blue-500 dark:text-blue-400 font-bold italic ml-1">{booking.service_type}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-admin-text-muted">{t('bookings_price')}:</span> 
+                    <span className="text-admin-text font-bold ml-1">{booking.price} ETB</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-admin-text-muted">{t('bookings_payment')}:</span> 
+                    <span className={`font-bold italic ml-1 ${booking.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                      {t(`status_${booking.payment_status?.toLowerCase()}`) || booking.payment_status}
+                    </span>
+                  </div>
                 </div>
 
                 <button

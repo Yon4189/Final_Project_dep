@@ -8,6 +8,7 @@ import {
   Loader2, Filter, ChevronRight, MessageSquareText, Trash2
 } from 'lucide-react';
 import { disputeAPI } from '../api/dispute';
+import DescriptionModal from '../components/DescriptionModal';
 
 const Disputes = () => {
   const { t } = useTranslation();
@@ -28,6 +29,17 @@ const Disputes = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [descModal, setDescModal] = useState({ show: false, content: '', title: '' });
+
+  const cleanTitle = (title) => {
+    if (!title) return '';
+    // Remove "Service Quality - ", "Payment Issue - ", etc.
+    const parts = title.split(' - ');
+    if (parts.length > 1) {
+      return parts.slice(1).join(' - ');
+    }
+    return title;
+  };
 
   // Auto-select dispute if ID is in URL
   React.useEffect(() => {
@@ -171,21 +183,21 @@ const Disputes = () => {
 
   const getStatusStyle = (status) => {
     switch (status?.toLowerCase()) {
-      case 'pending': return 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800';
-      case 'under_review': return 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
-      case 'resolved': return 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800';
-      case 'rejected': return 'bg-slate-50 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800';
-      case 'escalated': return 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800';
-      default: return 'bg-slate-50 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800';
+      case 'pending': return 'text-red-500 dark:text-red-400';
+      case 'under_review': return 'text-amber-500 dark:text-amber-400';
+      case 'resolved': return 'text-emerald-500 dark:text-emerald-400';
+      case 'rejected': return 'text-slate-500 dark:text-slate-400';
+      case 'escalated': return 'text-purple-500 dark:text-purple-400';
+      default: return 'text-slate-600 dark:text-slate-400';
     }
   };
 
   const getPriorityStyle = (priority) => {
     switch (priority?.toLowerCase()) {
-      case 'urgent': return 'bg-red-500 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-blue-500 text-white';
-      default: return 'bg-slate-500 text-white';
+      case 'urgent': return 'text-red-600 dark:text-red-400 font-black';
+      case 'high': return 'text-orange-500 dark:text-orange-400 font-bold';
+      case 'medium': return 'text-blue-500 dark:text-blue-400 font-bold';
+      default: return 'text-slate-500 dark:text-slate-400';
     }
   };
 
@@ -272,8 +284,10 @@ const Disputes = () => {
               <thead className="bg-admin-card dark:bg-admin-sidebar text-admin-text-muted text-[10px] uppercase font-black tracking-widest border-b border-admin-border">
                 <tr>
                   <th className="px-8 py-5">{t('dispute_ref_id')}</th>
-                  <th className="px-8 py-5">{t('dispute_title_cat')}</th>
-                  <th className="px-8 py-5">{t('dispute_parties')}</th>
+                  <th className="px-8 py-5">{t('dispute_table_title')}</th>
+                  <th className="px-8 py-5">{t('dispute_table_category')}</th>
+                  <th className="px-8 py-5">{t('dispute_customer')}</th>
+                  <th className="px-8 py-5">{t('dispute_provider')}</th>
                   <th className="px-8 py-5">{t('dispute_priority')}</th>
                   <th className="px-8 py-5">{t('dispute_status')}</th>
                   <th className="px-8 py-5 text-right">{t('dispute_action')}</th>
@@ -291,28 +305,43 @@ const Disputes = () => {
                     <tr key={dispute.disputeID} className="hover:bg-admin-card transition-colors group">
                       <td className="px-8 py-5 text-xs font-bold text-slate-400 dark:text-slate-500 font-mono">#{dispute.disputeID}</td>
                       <td className="px-8 py-5">
-                        <p className="font-bold text-admin-text text-sm truncate max-w-[200px]">{dispute.title}</p>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest italic">{dispute.category?.name || dispute.category}</span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                            {dispute.raised_by?.fullname || dispute.raised_by?.name || t('dispute_unknown_user')}
-                          </p>
-                          <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 uppercase italic ml-2.5">
-                            vs {dispute.against?.fullname || dispute.against?.name || t('dispute_unknown_provider')}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-admin-text truncate max-w-[150px] leading-tight">{cleanTitle(dispute.title)}</span>
+                          <button 
+                            onClick={() => setDescModal({ 
+                              show: true, 
+                              content: dispute.description, 
+                              title: cleanTitle(dispute.title) 
+                            })}
+                            className="flex items-center gap-1 text-blue-500 hover:text-blue-700 font-black text-[9px] uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 rounded whitespace-nowrap"
+                          >
+                             • {t('vqueue_read_more')}
+                          </button>
                         </div>
                       </td>
                       <td className="px-8 py-5">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${getPriorityStyle(dispute.priority)}`}>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest italic leading-none">{dispute.category?.name || dispute.category}</span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="text-xs font-bold text-admin-text flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                          {dispute.raised_by?.fullname || dispute.raised_by?.name || t('dispute_unknown_user')}
+                        </p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="text-xs font-bold text-admin-text flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                          {dispute.against?.fullname || dispute.against?.name || t('dispute_unknown_provider')}
+                        </p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={`text-[10px] uppercase tracking-wider italic ${getPriorityStyle(dispute.priority)}`}>
                           {getPriorityTranslation(dispute.priority)}
                         </span>
                       </td>
                       <td className="px-8 py-5">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusStyle(dispute.status)}`}>
-                          <span className="text-admin-text">{getStatusTranslation(dispute.status)}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-wider italic ${getStatusStyle(dispute.status)}`}>
+                          {getStatusTranslation(dispute.status)}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">
@@ -338,22 +367,41 @@ const Disputes = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="font-mono text-[9px] font-black text-slate-300 dark:text-slate-600">#{dispute.disputeID}</span>
-                      <p className="font-bold text-admin-text text-sm mt-0.5 leading-tight">{dispute.title}</p>
+                      <p className="font-bold text-admin-text text-xs mt-0.5 leading-tight">{cleanTitle(dispute.title)}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest italic">{dispute.category?.name || dispute.category}</span>
+                        <button 
+                          onClick={() => setDescModal({ 
+                            show: true, 
+                            content: dispute.description, 
+                            title: cleanTitle(dispute.title) 
+                          })}
+                          className="text-blue-500 hover:text-blue-700 font-black text-[8px] uppercase focus:outline-none"
+                        >
+                           • {t('vqueue_read_more')}
+                        </button>
+                      </div>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase border ${getStatusStyle(dispute.status)}`}>
-                      <span className="text-admin-text">{getStatusTranslation(dispute.status)}</span>
+                    <span className={`text-[10px] font-black uppercase italic ${getStatusStyle(dispute.status)}`}>
+                      {getStatusTranslation(dispute.status)}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pb-3 border-b border-admin-border border-dashed">
                     <div>
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('dispute_parties')}</p>
-                      <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate">{dispute.raised_by?.fullname || 'User'}</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500">vs {dispute.against?.fullname || 'Provider'}</p>
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('dispute_customer')}</p>
+                      <p className="text-[10px] font-bold text-admin-text truncate">{dispute.raised_by?.fullname || 'User'}</p>
                     </div>
                     <div className="text-right">
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('dispute_provider')}</p>
+                      <p className="text-[10px] font-bold text-admin-text truncate">{dispute.against?.fullname || 'Provider'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2 border-b border-admin-border border-dashed">
+                    <div>
                       <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('dispute_priority')}</p>
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${getPriorityStyle(dispute.priority)}`}>
+                      <span className={`text-[9px] font-black uppercase italic ${getPriorityStyle(dispute.priority)}`}>
                         {getPriorityTranslation(dispute.priority)}
                       </span>
                     </div>
@@ -610,6 +658,13 @@ const Disputes = () => {
           </div>
         </div>
       )}
+      {/* Simple Description Modal */}
+      <DescriptionModal 
+        show={descModal.show}
+        providerName={descModal.title}
+        description={descModal.content}
+        onClose={() => setDescModal({ ...descModal, show: false })}
+      />
     </div>
   );
 };

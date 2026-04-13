@@ -45,10 +45,10 @@ const CategoryTable = ({ categories, onEdit, onDelete, isLoading, isError }) => 
               <td className="px-8 py-4 font-mono text-xs font-bold text-admin-text-muted">#{item.catagoryID}</td>
               <td className="px-8 py-4 font-semibold text-admin-text">{item.name}</td>
               <td className="px-8 py-4">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border tracking-wider ${
-                  item.status === 'Active' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                <span className={`text-[10px] font-bold uppercase tracking-wider italic ${
+                  item.status === 'Active' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
                 }`}>
-                  <span className="text-admin-text">{item.status || 'Active'}</span>
+                  {item.status || 'Active'}
                 </span>
               </td>
                <td className="px-8 py-4 text-xs text-admin-text-muted max-w-xs truncate italic">{item.description || 'No description.'}</td>

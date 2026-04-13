@@ -4,35 +4,112 @@ import { useTranslation } from 'react-i18next';
 import {
   TrendingUp, Wallet, CreditCard, History,
   ArrowUpRight, Filter, Download,
-  Loader2
+  Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import api from '../api/axios';
 
 const Payments = () => {
   const { t } = useTranslation();
+  const [statusFilter, setStatusFilter] = React.useState('');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  // Reset to page 1 when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
 
   // 1. Data Fetching with TanStack Query
   const { 
-    data: { transactions = [], stats = null } = {}, 
+    data: { transactions = [], stats = null, pagination = null } = {}, 
     isLoading: loading, 
     error: apiError,
   } = useQuery({
-    queryKey: ['paymentsSystem'],
+    queryKey: ['paymentsSystem', statusFilter, currentPage],
     queryFn: async () => {
+      const params = { page: currentPage };
+      if (statusFilter) params.status = statusFilter;
+
       const [txRes, statsRes] = await Promise.all([
-        api.get('/admin/payments'),
+        api.get('/admin/payments', { params }),
         api.get('/admin/payments/stats')
       ]);
 
-      const transactions = txRes.data.success ? (txRes.data.data.data || txRes.data.data) : [];
+      const txData = txRes.data.data;
+      const transactions = txRes.data.success ? (txData.data || txData) : [];
+      
+      const paginationData = txRes.data.success && txData.current_page ? {
+        total: txData.total,
+        current_page: txData.current_page,
+        last_page: txData.last_page,
+        from: txData.from,
+        to: txData.to
+      } : null;
+
       const stats = statsRes.data.success ? statsRes.data.data : null;
 
-      return { transactions, stats };
+      return { transactions, stats, pagination: paginationData };
     },
     staleTime: 60000,
-    refetchInterval: 30000,
   });
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const params = { per_page: 1000 };
+      if (statusFilter) params.status = statusFilter;
+      
+      const res = await api.get('/admin/payments', { params });
+      
+      const resData = res.data;
+      if (!resData.success) {
+        alert('Failed to fetch data for export');
+        return;
+      }
+
+      // Handle Laravel pagination structure
+      const data = resData.data?.data || resData.data || [];
+      
+      if (!Array.isArray(data) || data.length === 0) {
+        alert(t('pay_no_data_export') || 'No data to export for the selected filter');
+        return;
+      }
+
+      // CSV Content Generation
+      const headers = ['Transaction ID', 'Status', 'Amount', 'Currency', 'Commission', 'Customer', 'Provider', 'Date'];
+      const csvRows = data.map(txn => [
+        txn.tx_ref,
+        txn.status?.toUpperCase(),
+        txn.amount,
+        txn.currency,
+        txn.platform_commission || '0',
+        txn.customer?.fullname || 'N/A',
+        txn.provider?.fullname || 'Platform',
+        new Date(txn.created_at).toLocaleString()
+      ]);
+
+      const csvContent = [headers, ...csvRows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      // Download execution
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `payment_report_${statusFilter || 'all'}_${new Date().toISOString().slice(0,10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const isLoading = loading; // Alias for JSX
 
@@ -78,10 +155,18 @@ const Payments = () => {
           <p className="text-admin-text-muted text-xs font-black uppercase tracking-widest italic mt-1">{t('pay_subtitle')}</p>
         </div>
 
-        <button className="flex items-center justify-center gap-2 bg-slate-900 bg-admin-card text-white px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-black dark:hover:bg-slate-700 transition-all active:scale-95">
-          <Download size={18} />
-          {t('pay_export')}
-        </button>
+          <button 
+            disabled={isExporting}
+            onClick={handleExport}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 dark:shadow-none active:scale-95 disabled:opacity-50"
+          >
+            {isExporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
+            {t('pay_export_report')}
+          </button>
       </div>
 
       {/* Financial Overview Cards */}
@@ -95,9 +180,23 @@ const Payments = () => {
       <div className="bg-admin-card rounded-[2.5rem] shadow-sm border border-admin-border overflow-hidden flex flex-col min-h-[500px]">
         <div className="p-6 border-b border-admin-border bg-admin-card flex justify-between items-center">
           <h2 className="font-black text-admin-text text-sm uppercase italic tracking-tight">{t('pay_recent_transactions')}</h2>
-          <div className="flex items-center gap-2 text-slate-400">
-            <Filter size={14} />
-            <span className="text-[10px] font-black uppercase tracking-widest">{t('serv_filter_by')}</span>
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2 text-slate-400">
+               <Filter size={14} />
+               <span className="text-[10px] font-black uppercase tracking-widest">{t('serv_filter_by')}</span>
+             </div>
+             <select 
+               className="px-4 py-2 bg-admin-card border border-admin-border rounded-xl text-[10px] font-black uppercase tracking-widest outline-none text-admin-text-muted hover:text-admin-text transition-all focus:ring-2 focus:ring-blue-500 shadow-sm"
+               value={statusFilter}
+               onChange={(e) => setStatusFilter(e.target.value)}
+             >
+               <option value="">{t('common_all') || 'All Statuses'}</option>
+               <option value="pending">{t('status_pending') || 'Pending'}</option>
+               <option value="held">{t('status_held') || 'Held'}</option>
+               <option value="released">{t('status_released') || 'Released'}</option>
+               <option value="failed">{t('status_failed') || 'Failed'}</option>
+               <option value="refunded">{t('status_refunded') || 'Refunded'}</option>
+             </select>
           </div>
         </div>
 
@@ -159,12 +258,12 @@ const Payments = () => {
                     </td>
                     <td className="px-8 py-5 text-xs text-slate-500 font-bold font-mono">{txn.provider_amount || '0.00'}</td>
                     <td className="px-8 py-5">
-                      <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase border tracking-widest italic flex-shrink-0 whitespace-nowrap ${
+                      <span className={`text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap ${
                         txn.status === 'success' || txn.status === 'paid' || txn.status === 'released' 
-                          ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' :
+                          ? 'text-emerald-600 dark:text-emerald-400' :
                         txn.status === 'failed' || txn.status === 'cancelled' 
-                          ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' :
-                        'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                          ? 'text-red-600 dark:text-red-400' :
+                        'text-amber-600 dark:text-amber-400'
                       }`}>
                         {getStatusTranslation(txn.status)}
                       </span>
@@ -193,10 +292,12 @@ const Payments = () => {
                       {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
+                  <span className={`text-[9px] font-black uppercase italic ${
                     txn.status === 'success' || txn.status === 'paid' || txn.status === 'released' 
-                      ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' : 
-                      'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+                      ? 'text-emerald-600 dark:text-emerald-400' : 
+                    txn.status === 'failed' || txn.status === 'cancelled'
+                      ? 'text-red-600 dark:text-red-400' :
+                      'text-amber-600 dark:text-amber-400'
                   }`}>
                     {getStatusTranslation(txn.status)}
                   </span>
@@ -233,6 +334,81 @@ const Payments = () => {
             <div className="py-10 text-center text-[10px] font-black text-slate-400 uppercase">{t('pay_no_transactions')}</div>
           )}
         </div>
+
+        {/* Pagination Section */}
+        {pagination && pagination.total > 0 && (
+          <div className="p-6 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs font-semibold text-admin-text-muted uppercase tracking-widest italic">
+              {t('serv_showing_x_of_y', { 
+                start: pagination.from || 0, 
+                end: pagination.to || 0, 
+                total: pagination.total || 0 
+              })}
+            </span>
+            
+            {pagination.last_page > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(1, prev - 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="p-2 rounded-xl bg-admin-card border border-admin-border text-admin-text-muted hover:text-admin-text disabled:opacity-30 transition-all shadow-sm active:scale-95"
+                  title={t('common_previous')}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+
+                <div className="flex items-center gap-1.5 px-2">
+                  {[...Array(pagination.last_page)].map((_, i) => {
+                    const pageNum = i + 1;
+                    if (
+                      pageNum === 1 || 
+                      pageNum === pagination.last_page || 
+                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => {
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className={`w-9 h-9 rounded-xl text-xs font-black transition-all active:scale-95 shadow-sm ${
+                            currentPage === pageNum
+                              ? 'bg-blue-600 text-white shadow-blue-100 dark:shadow-none'
+                              : 'bg-admin-card text-admin-text-muted hover:text-admin-text border border-admin-border'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (
+                      (pageNum === 2 && currentPage > 3) || 
+                      (pageNum === pagination.last_page - 1 && currentPage < pagination.last_page - 2)
+                    ) {
+                      return <span key={pageNum} className="text-slate-400">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  disabled={currentPage === pagination.last_page}
+                  onClick={() => {
+                    setCurrentPage(prev => Math.min(pagination.last_page, prev + 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="p-2 rounded-xl bg-admin-card border border-admin-border text-admin-text-muted hover:text-admin-text disabled:opacity-30 transition-all shadow-sm active:scale-95"
+                  title={t('common_next')}
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
