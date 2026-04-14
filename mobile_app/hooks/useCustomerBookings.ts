@@ -57,13 +57,33 @@ export const useCreateBooking = () => {
   
   return useMutation({
     mutationFn: async (data: CreateBookingDTO) => {
-      const response = await api.post<any>('/customer/bookings', data);
-      
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to create booking');
+      try {
+        console.log('🔵 useCreateBooking: Sending request with data:', data);
+        const response = await api.post<any>('/customer/bookings', data);
+        
+        console.log('🔵 useCreateBooking: Received response:', {
+          success: response.success,
+          message: response.message,
+          data: response.data
+        });
+        
+        if (!response.success) {
+          console.log('🔴 useCreateBooking: Response indicates failure, throwing error');
+          throw new Error(response.message || 'Failed to create booking');
+        }
+        
+        console.log('🟢 useCreateBooking: Success, returning data');
+        return response.data;
+      } catch (error: any) {
+        console.log('🔴 useCreateBooking: Caught error:', {
+          message: error.message,
+          response: error.response,
+          responseData: error.responseData,
+          statusCode: error.statusCode,
+          errors: error.errors
+        });
+        throw error;
       }
-      
-      return response.data;
     },
     onSuccess: () => {
       // Invalidate bookings list

@@ -17,6 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
 import { Colors } from '@/app/constants/Colors';
 import AppButton from '../AppButton';
 import { useCreateBooking } from '@/hooks/useCustomerBookings';
@@ -82,7 +83,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   // New Address selection state
-  const [addressOption, setAddressOption] = useState<'current' | 'saved' | 'new' | 'map'>('current');
+  const [addressOption, setAddressOption] = useState<'current' | 'saved' | 'new' | 'map' | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<UserLocation[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('');
@@ -92,6 +93,8 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const [showSavedAddressPicker, setShowSavedAddressPicker] = useState(false);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [mapLocation, setMapLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number; address?: string } | null>(userLocation || null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   // Get provider's services
   const providerServices = provider?.services || [];
@@ -131,14 +134,102 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   useEffect(() => {
     if (userLocation?.address && addressOption === 'current') {
       setAddress(userLocation.address);
+      setCurrentLocation(userLocation);
     }
   }, [userLocation, addressOption]);
 
-  const handleOptionChange = (option: 'current' | 'saved' | 'new' | 'map') => {
+  const requestCurrentLocation = async () => {
+    setLoadingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Location permission is required to use your current location. Please enable it in your device settings.',
+          [{ text: 'OK' }]
+        );
+        setLoadingLocation(false);
+        return null;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const { latitude, longitude } = location.coords;
+
+      console.log('📍 Current Location Fetched:', {
+        latitude,
+        longitude,
+        googleMapsLink: `https://www.google.com/maps?q=${latitude},${longitude}`
+      });
+
+      // Try to get address from coordinates
+      try {
+        const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (addresses && addresses.length > 0) {
+          const addr = addresses[0];
+          
+          console.log('🏠 Reverse Geocode Result:', {
+            street: addr.street,
+            name: addr.name,
+            city: addr.city,
+            region: addr.region,
+            country: addr.country,
+            postalCode: addr.postalCode,
+            district: addr.district,
+            fullObject: addr
+          });
+          
+          const addressString = [
+            addr.street,
+            addr.city,
+            addr.region,
+            addr.country
+          ].filter(Boolean).join(', ');
+
+          const locationData = {
+            latitude,
+            longitude,
+            address: addressString || 'Current Location'
+          };
+          
+          setCurrentLocation(locationData);
+          setAddress(addressString || 'Current Location');
+          setLoadingLocation(false);
+          return locationData;
+        }
+      } catch (geocodeError) {
+        console.error('Geocoding error:', geocodeError);
+      }
+
+      const locationData = {
+        latitude,
+        longitude,
+        address: 'Current Location'
+      };
+      
+      setCurrentLocation(locationData);
+      setAddress('Current Location');
+      setLoadingLocation(false);
+      return locationData;
+
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Failed to get your current location. Please try again or select a different address option.');
+      setLoadingLocation(false);
+      return null;
+    }
+  };
+
+  const handleOptionChange = async (option: 'current' | 'saved' | 'new' | 'map') => {
     console.log('Address option changed to:', option);
     setAddressOption(option);
+    
     if (option === 'current') {
-      setAddress(userLocation?.address || '');
+      // Request location permission and get current location
+      await requestCurrentLocation();
     } else if (option === 'saved') {
       const saved = savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId);
       setAddress(saved?.addressLine1 || '');
@@ -353,8 +444,8 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     
     // Validate location differently based on selection source
     if (addressOption === 'current') {
-      if (!userLocation?.latitude || !userLocation?.longitude) {
-        Alert.alert('Location Required', 'We could not detect your GPS coordinates. Please ensure location services are enabled or manually enter a new address below.');
+      if (!currentLocation?.latitude || !currentLocation?.longitude) {
+        Alert.alert('Location Required', 'Please wait while we get your current location, or select a different address option.');
         return false;
       }
     } else if (addressOption === 'saved') {
@@ -436,11 +527,11 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       let locationSource: 'gps' | 'saved' | 'new' | 'map' = addressOption === 'current' ? 'gps' : (addressOption === 'saved' ? 'saved' : (addressOption === 'map' ? 'map' : 'new'));
       let savedAddressId = addressOption === 'saved' ? selectedSavedAddressId : undefined;
       let finalAddress = address;
-      let finalLatitude = userLocation?.latitude;
-      let finalLongitude = userLocation?.longitude;
+      let finalLatitude = currentLocation?.latitude;
+      let finalLongitude = currentLocation?.longitude;
 
       if (addressOption === 'current' && !address.trim()) {
-        finalAddress = 'GPS Coordinates Used';
+        finalAddress = currentLocation?.address || 'GPS Coordinates Used';
       }
 
       if (addressOption === 'map' && mapLocation) {
@@ -541,22 +632,42 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       }
     } catch (error: any) {
       console.error('Booking creation error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        responseData: error.responseData,
+        statusCode: error.statusCode,
+        errors: error.errors
+      });
       
       let errorMessage = 'An unexpected error occurred. Please try again.';
       
-      if (error.response?.data?.errors ) {
+      // Check multiple possible error structures
+      if (error.errors) {
+        // Validation errors from axios interceptor
+        const firstKey = Object.keys(error.errors)[0];
+        if (firstKey && Array.isArray(error.errors[firstKey]) && error.errors[firstKey].length > 0) {
+          errorMessage = error.errors[firstKey][0];
+        }
+      } else if (error.response?.data?.errors) {
+        // Validation errors from response
         const errors = error.response.data.errors;
         const firstKey = Object.keys(errors)[0];
         if (firstKey && Array.isArray(errors[firstKey]) && errors[firstKey].length > 0) {
           errorMessage = errors[firstKey][0];
         }
+      } else if (error.responseData?.message) {
+        // Error message from responseData (set by axios interceptor)
+        errorMessage = error.responseData.message;
       } else if (error.response?.data?.message) {
+        // Error message from response
         errorMessage = error.response.data.message;
       } else if (error.message) {
+        // Generic error message
         errorMessage = error.message;
       }
 
-      if (error.response?.status === 401) {
+      if (error.response?.status === 401 || error.statusCode === 401) {
         Alert.alert(
           'Session Expired',
           'Your session has expired. Please log in again.',
@@ -855,6 +966,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                 <TouchableOpacity 
                   style={styles.optionRow} 
                   onPress={() => handleOptionChange('current')}
+                  disabled={loadingLocation}
                 >
                   <Ionicons 
                     name={addressOption === 'current' ? 'radio-button-on' : 'radio-button-off'} 
@@ -862,6 +974,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                     color={addressOption === 'current' ? Colors.primary : Colors.text.secondary} 
                   />
                   <Text style={styles.optionText}>Use my current location</Text>
+                  {loadingLocation && addressOption === 'current' && (
+                    <ActivityIndicator size="small" color={Colors.primary} style={{ marginLeft: 8 }} />
+                  )}
                 </TouchableOpacity>
 
                 {/* Pin on Map */}
