@@ -29,6 +29,8 @@ interface RecentMessagesModalProps {
 
 export function RecentMessagesModal({
   visible,
+  onClose,
+  conversations,
   onSelectConversation,
   onSeeAll,
 }: RecentMessagesModalProps) {

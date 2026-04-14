@@ -5,16 +5,21 @@ import { api } from './api';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 
+const isExpoGo = Constants.appOwnership === 'expo';
+
 // Configure how notifications are handled when the app is in the foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Skip in Expo Go (SDK 53+) — remote notifications are not supported there
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 class NotificationService {
   /**
@@ -112,6 +117,7 @@ class NotificationService {
    * Handle incoming notifications
    */
   addNotificationListener(callback: (notification: Notifications.Notification) => void) {
+    if (isExpoGo) return { remove: () => {} } as Notifications.Subscription;
     return Notifications.addNotificationReceivedListener(callback);
   }
 
@@ -119,6 +125,7 @@ class NotificationService {
    * Handle user tapping on a notification
    */
   addNotificationResponseListener(callback: (response: Notifications.NotificationResponse) => void) {
+    if (isExpoGo) return { remove: () => {} } as Notifications.Subscription;
     return Notifications.addNotificationResponseReceivedListener(callback);
   }
 }

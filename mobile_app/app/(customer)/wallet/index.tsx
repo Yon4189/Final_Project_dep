@@ -1242,4 +1242,4 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontStyle: 'italic',
   },
-});
+})};
