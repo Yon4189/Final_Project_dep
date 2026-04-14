@@ -114,10 +114,10 @@ const Login = () => {
           <div className="w-20 h-20 bg-white rounded-3xl mx-auto flex items-center justify-center shadow-xl p-2 mb-6 transform hover:scale-105 transition-transform duration-300">
             <img src={logo} alt={t('project_logo')} className="w-full h-full object-contain rounded-2xl" />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-3xl font-black text-admin-text tracking-tight">
             {viewMode === 'login' ? t('welcome_back') : t('recover_access')}
           </h2>
-          <p className="text-slate-500 dark:text-admin-text-muted text-sm font-medium">
+          <p className="text-admin-text-muted text-sm font-medium">
             {viewMode === 'login'
               ? t('login_subtitle')
               : t('forgot_subtitle')}
@@ -142,11 +142,11 @@ const Login = () => {
           /* LOGIN FORM */
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('admin_email')}</label>
+              <label className="text-xs font-bold text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('admin_email')}</label>
               <div className="relative">
                 <input
                   type="email" required placeholder="Admin@gmail.com"
-                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-slate-900 dark:text-white transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
+                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-admin-text transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
                   value={email} onChange={(e) => setEmail(e.target.value)}
                 />
                 <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
@@ -154,13 +154,13 @@ const Login = () => {
             </div>
 
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('password')}</label>
+              <label className="text-xs font-bold text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"} required placeholder="••••••••"
                   name="admin_password_unique"
                   autoComplete="new-password"
-                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-slate-900 dark:text-white transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md tracking-wider font-medium"
+                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-admin-text transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md tracking-wider font-medium"
                   value={password} onChange={(e) => setPassword(e.target.value)}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
@@ -188,11 +188,11 @@ const Login = () => {
           /* FORGOT PASSWORD FORM */
           <form onSubmit={handleForgotPassword} className="space-y-6">
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('registered_email')}</label>
+              <label className="text-xs font-bold text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('registered_email')}</label>
               <div className="relative">
                 <input
                   type="email" required placeholder="Admin@gmail.com"
-                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-slate-900 dark:text-white transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
+                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-admin-text transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
                   value={email} onChange={(e) => setEmail(e.target.value)}
                 />
                 <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
