@@ -119,6 +119,29 @@ class BookingController extends Controller
 
             Log::info('Creating booking for customer:', ['customerID' => $customer->customerID]);
 
+            // Check for duplicate pending booking with same provider
+            $existingBooking = Booking::where('customerID', $customer->customerID)
+                ->where('providerID', $request->providerID)
+                ->whereIn('status', ['pending', 'accepted'])
+                ->first();
+
+            if ($existingBooking) {
+                Log::warning('Duplicate booking attempt detected:', [
+                    'customerID' => $customer->customerID,
+                    'providerID' => $request->providerID,
+                    'existingBookingID' => $existingBooking->bookingID,
+                    'existingStatus' => $existingBooking->status
+                ]);
+                
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have a pending or active booking with this provider. Please wait for it to be completed or cancel it before creating a new one.'
+                ], 422);
+            }
+
+            Log::info('No duplicate booking found, proceeding with creation');
+
             // Validate and process location data
             try {
                 $locationData = $this->locationValidator->validateLocationInput($request, $customer->customerID);
