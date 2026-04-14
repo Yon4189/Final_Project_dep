@@ -4,12 +4,14 @@ import axios from 'axios';
 import AppInput from '../../components/AppInput';
 import { API_BASE_URL } from '../config/api';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from "../context/ThemeContext";
 import { ThemeColors } from "../constants/Colors";
 
 export default function ForgotPassword() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
   const [email, setEmail] = useState('');
@@ -21,7 +23,7 @@ export default function ForgotPassword() {
 
   // STEP 1: Request Reset
   const handleRequestLink = async () => {
-    if (!email) return Alert.alert("Error", "Please enter your email");
+    if (!email) return Alert.alert(t("auth.error", "Error"), t("validation.enterEmail", "Please enter your email"));
     
     setLoading(true);
     try {
@@ -29,15 +31,15 @@ export default function ForgotPassword() {
       
       if (response.data.success) {
         Alert.alert(
-          "Email Sent", 
-          "We found your account. Please check your email for the verification code and enter it below."
+          t("auth.emailSent", "Email Sent"), 
+          t("auth.checkEmailCode", "We found your account. Please check your email for the verification code and enter it below.")
         );
         setStep(2);
       } else {
-        Alert.alert("Error", response.data.message || "Email not found");
+        Alert.alert(t("auth.error", "Error"), response.data.message || t("auth.emailNotFound", "Email not found"));
       }
     } catch (error: any) {
-      Alert.alert("Error", "Server connection failed.");
+      Alert.alert(t("auth.error", "Error"), t("auth.serverConnectionFailed", "Server connection failed."));
     } finally {
       setLoading(false);
     }
@@ -46,13 +48,13 @@ export default function ForgotPassword() {
   // STEP 2: Update Password using the entered code
   const handleResetPassword = async () => {
     if (token.length !== 6) {
-      return Alert.alert("Error", "Please enter the 6-digit verification code");
+      return Alert.alert(t("auth.error", "Error"), t("validation.enterCode", "Please enter the 6-digit verification code"));
     }
     if (password.length < 8) {
-      return Alert.alert("Error", "Password must be at least 8 characters");
+      return Alert.alert(t("auth.error", "Error"), t("validation.passwordLength", "Password must be at least 8 characters"));
     }
     if (password !== passwordConfirmation) {
-      return Alert.alert("Error", "Passwords do not match");
+      return Alert.alert(t("auth.error", "Error"), t("validation.passwordsDoNotMatch", "Passwords do not match"));
     }
 
     setLoading(true);
@@ -65,14 +67,14 @@ export default function ForgotPassword() {
       });
 
       if (response.data.success) {
-        Alert.alert("Success", "Your password has been changed!", [
-          { text: "Login Now", onPress: () => router.replace('/(auth)/login') }
+        Alert.alert(t("auth.success", "Success"), t("auth.passwordChanged", "Your password has been changed!"), [
+          { text: t("auth.loginNow", "Login Now"), onPress: () => router.replace('/(auth)/login') }
         ]);
       } else {
-        Alert.alert("Error", response.data.message || "Invalid or expired session");
+        Alert.alert(t("auth.error", "Error"), response.data.message || t("auth.invalidSession", "Invalid or expired session"));
       }
     } catch (error: any) {
-      Alert.alert("Error", "Reset failed. Please try again.");
+      Alert.alert(t("auth.error", "Error"), t("auth.resetFailed", "Reset failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -88,28 +90,28 @@ export default function ForgotPassword() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-      <Text style={styles.title}>{step === 1 ? "Forgot Password" : "Set New Password"}</Text>
+      <Text style={styles.title}>{step === 1 ? t("auth.forgotPassword", "Forgot Password") : t("auth.setNewPassword", "Set New Password")}</Text>
       
       {step === 1 ? (
         <View style={styles.card}>
           <AppInput
-            label="Email Address"
-            placeholder="Enter your registered email"
+            label={t("auth.emailAddress", "Email Address")}
+            placeholder={t("auth.enterRegisteredEmail", "Enter your registered email")}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
           <TouchableOpacity style={styles.button} onPress={handleRequestLink} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verify Email</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("auth.verifyEmail", "Verify Email")}</Text>}
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.card}>
-          <Text style={styles.label}>6-Digit Verification Code</Text>
+          <Text style={styles.label}>{t("auth.verificationCode", "6-Digit Verification Code")}</Text>
           <TextInput 
             style={styles.input} 
-            placeholder="Enter the code sent to your email" 
+            placeholder={t("auth.enterVerificationCode", "Enter the code sent to your email")} 
             value={token} 
             onChangeText={setToken} 
             keyboardType="number-pad"
@@ -119,8 +121,8 @@ export default function ForgotPassword() {
           />
 
           <AppInput
-            label="New Password"
-            placeholder="At least 8 characters"
+            label={t("auth.newPassword", "New Password")}
+            placeholder={t("auth.atLeast8Chars", "At least 8 characters")}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -128,8 +130,8 @@ export default function ForgotPassword() {
           />
           
           <AppInput
-            label="Confirm Password"
-            placeholder="Repeat new password"
+            label={t("auth.confirmPassword", "Confirm Password")}
+            placeholder={t("auth.repeatNewPassword", "Repeat new password")}
             value={passwordConfirmation}
             onChangeText={setPasswordConfirmation}
             secureTextEntry
@@ -137,11 +139,11 @@ export default function ForgotPassword() {
           />
 
           <TouchableOpacity style={styles.button} onPress={handleResetPassword} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Update Password</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("auth.updatePassword", "Update Password")}</Text>}
           </TouchableOpacity>
           
           <TouchableOpacity onPress={() => setStep(1)} style={styles.backButton}>
-             <Text style={styles.backText}>Change Email</Text>
+             <Text style={styles.backText}>{t("auth.changeEmail", "Change Email")}</Text>
           </TouchableOpacity>
         </View>
       )}

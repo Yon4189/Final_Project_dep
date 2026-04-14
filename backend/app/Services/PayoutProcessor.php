@@ -278,6 +278,7 @@ class PayoutProcessor
         $failedCount = 0;
         $totalAmount = 0;
         
+        /** @var \App\Models\WalletTransaction $transaction */
         foreach ($pendingPayouts as $transaction) {
             try {
                 DB::transaction(function () use ($transaction, &$processedCount, &$totalAmount) {

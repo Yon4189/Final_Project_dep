@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/app/context/ThemeContext";
 import { Colors, ThemeColors } from "@/app/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -55,6 +56,7 @@ if (Platform.OS === "web") {
 
 export default function CustomerDashboard() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { location, loading: locationLoading } = useLocation();
 
@@ -360,10 +362,10 @@ export default function CustomerDashboard() {
 
   const handleLogout = async () => {
     closeMenu();
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('common.logout', 'Logout'), t('auth.confirmLogout', 'Are you sure you want to logout?'), [
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       { 
-        text: 'Logout', 
+        text: t('common.logout', 'Logout'), 
         style: 'destructive',
         onPress: async () => {
           try {
@@ -382,7 +384,7 @@ export default function CustomerDashboard() {
   const renderHamburgerMenu = () => {
     const menuItems = [
       {
-        label: 'Home',
+        label: t('common.home', 'Home'),
         icon: 'home' as const,
         color: Colors.primary,
         onPress: () => {
@@ -391,7 +393,7 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: 'Messages',
+        label: t('common.messages', 'Messages'),
         icon: 'chatbubble-ellipses-outline' as const,
         color: Colors.info || '#007AFF',
         onPress: () => {
@@ -400,7 +402,7 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: 'Bookings',
+        label: t('common.bookings', 'Bookings'),
         icon: 'calendar-outline' as const,
         color: Colors.primary,
         onPress: () => {
@@ -409,7 +411,7 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: 'Disputes',
+        label: t('common.disputes', 'Disputes'),
         icon: 'warning-outline' as const,
         color: Colors.warning || '#FF9500',
         onPress: () => {
@@ -418,7 +420,7 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: 'Wallet',
+        label: t('common.wallet', 'Wallet'),
         icon: 'wallet-outline' as const,
         color: Colors.success || '#34C759',
         onPress: () => {
@@ -427,7 +429,7 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: 'Logout',
+        label: t('common.logout', 'Logout'),
         icon: 'log-out-outline' as const,
         color: Colors.error || '#FF3B30',
         onPress: handleLogout,
@@ -542,9 +544,9 @@ export default function CustomerDashboard() {
         <View style={[styles.headerTopRow, { justifyContent: 'center', marginBottom: 12 }]}>
           <View style={styles.greetingContainer}>
             <Text style={styles.greeting}>
-              Welcome back, {loadingUser ? "👋" : displayName}
+              {t("customerDashboard.welcomeBack", "Welcome back,")} {loadingUser ? "👋" : displayName}
             </Text>
-            <Text style={styles.subtitle}>Find trusted service providers</Text>
+            <Text style={styles.subtitle}>{t("customerDashboard.findProviders", "Find trusted service providers")}</Text>
           </View>
         </View>
 
@@ -621,7 +623,7 @@ export default function CustomerDashboard() {
       return (
         <View style={styles.categoriesSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Service Categories</Text>
+            <Text style={styles.sectionTitle}>{t("customerDashboard.serviceCategories", "Service Categories")}</Text>
           </View>
           <ScrollView
             horizontal
@@ -649,9 +651,9 @@ export default function CustomerDashboard() {
     return (
       <View style={styles.categoriesSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Service Categories</Text>
+          <Text style={styles.sectionTitle}>{t("customerDashboard.serviceCategories", "Service Categories")}</Text>
           <TouchableOpacity onPress={handleViewAllCategories}>
-            <Text style={styles.seeAllText}>See All</Text>
+            <Text style={styles.seeAllText}>{t("common.seeAll", "See All")}</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -687,10 +689,10 @@ export default function CustomerDashboard() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleContainer}>
             <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Recent Chats</Text>
+            <Text style={styles.sectionTitle}>{t("customerDashboard.recentChats", "Recent Chats")}</Text>
           </View>
           <TouchableOpacity onPress={() => router.push("/(customer)/chat/index")}>
-            <Text style={styles.seeAllText}>See All</Text>
+            <Text style={styles.seeAllText}>{t("common.seeAll", "See All")}</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -764,10 +766,10 @@ export default function CustomerDashboard() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleContainer}>
             <Ionicons name="star" size={20} color={colors.warning} />
-            <Text style={styles.sectionTitle}>Top Rated Pros</Text>
+            <Text style={styles.sectionTitle}>{t("customerDashboard.topRatedPros", "Top Rated Pros")}</Text>
           </View>
           <TouchableOpacity onPress={handleViewAllTopRated}>
-            <Text style={styles.seeAllText}>View All</Text>
+            <Text style={styles.seeAllText}>{t("common.viewAll", "View All")}</Text>
           </TouchableOpacity>
         </View>
 

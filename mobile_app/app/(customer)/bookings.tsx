@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { useMyRequests } from '../../hooks/useCustomerQueries';
@@ -26,6 +27,7 @@ const { width } = Dimensions.get('window');
 export default function BookingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -44,12 +46,12 @@ export default function BookingsScreen() {
 
   const handleCancelBooking = (booking: ServiceRequest) => {
     Alert.alert(
-      'Cancel Booking',
-      'Are you sure you want to cancel this booking?',
+      t('bookings.cancelBooking', 'Cancel Booking'),
+      t('bookings.cancelConfirm', 'Are you sure you want to cancel this booking?'),
       [
-        { text: 'No', style: 'cancel' },
+        { text: t('common.cancel', 'No'), style: 'cancel' },
         {
-          text: 'Yes',
+          text: t('common.accept', 'Yes'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -59,7 +61,7 @@ export default function BookingsScreen() {
               });
               await refetch();
             } catch (e) {
-              Alert.alert('Error', 'Failed to cancel booking. Please try again.');
+              Alert.alert(t('common.error', 'Error'), t('bookings.cancelError', 'Failed to cancel booking. Please try again.'));
             }
           },
         },
@@ -116,7 +118,7 @@ export default function BookingsScreen() {
             styles.statusTabText,
             selectedStatus === status && styles.statusTabTextActive
           ]}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {t(`bookings.status.${status}`, status.charAt(0).toUpperCase() + status.slice(1))}
           </Text>
         </TouchableOpacity>
       ))}
@@ -141,7 +143,7 @@ export default function BookingsScreen() {
         <View style={[styles.statusBadge, { borderColor: getStatusColor(booking.status) }]}>
           <Ionicons name={getStatusIcon(booking.status)} size={14} color={getStatusColor(booking.status)} />
           <Text style={[styles.statusText, { color: getStatusColor(booking.status) }]}>
-            {booking.status}
+            {t(`bookings.status.${booking.status.toLowerCase()}`, booking.status)}
           </Text>
         </View>
       </View>
@@ -150,7 +152,7 @@ export default function BookingsScreen() {
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={16} color={Colors.text.secondary} />
           <Text style={styles.detailText}>
-            {new Date(booking.scheduledDate).toLocaleDateString()} at {booking.scheduledTime}
+            {new Date(booking.scheduledDate).toLocaleDateString()} {t('common.at', 'at')} {booking.scheduledTime}
           </Text>
         </View>
         <View style={styles.detailRow}>
@@ -162,35 +164,36 @@ export default function BookingsScreen() {
         <View style={styles.detailRow}>
           <Ionicons name="pricetag-outline" size={16} color={Colors.text.secondary} />
           <Text style={styles.detailText}>
-            ETB {booking.estimatedPrice?.toFixed(2) || '0.00'}
+            {t('common.currency', 'ETB')} {booking.estimatedPrice?.toFixed(2) || '0.00'}
           </Text>
         </View>
+
       </View>
 
       <View style={styles.bookingActions}>
         {booking.status === 'pending' && (
           <>
             <TouchableOpacity style={styles.actionButton} onPress={() => handleCancelBooking(booking)}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.viewButton]}
               onPress={() => handleBookingPress(booking)}
             >
-              <Text style={styles.viewButtonText}>View Details</Text>
+              <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
             </TouchableOpacity>
           </>
         )}
         {booking.status === 'confirmed' && (
           <>
             <TouchableOpacity style={styles.actionButton} onPress={() => handleCancelBooking(booking)}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.viewButton]}
               onPress={() => handleBookingPress(booking)}
             >
-              <Text style={styles.viewButtonText}>View Details</Text>
+              <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -200,13 +203,13 @@ export default function BookingsScreen() {
               style={[styles.actionButton, styles.rateButton]}
               onPress={() => handleRateProvider(booking)}
             >
-              <Text style={styles.rateButtonText}>Rate Provider</Text>
+              <Text style={styles.rateButtonText}>{t('bookings.rateProvider', 'Rate Provider')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.viewButton]}
               onPress={() => handleBookingPress(booking)}
             >
-              <Text style={styles.viewButtonText}>View Details</Text>
+              <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -215,7 +218,7 @@ export default function BookingsScreen() {
             style={[styles.actionButton, styles.viewButton]}
             onPress={() => handleBookingPress(booking)}
           >
-            <Text style={styles.viewButtonText}>View Details</Text>
+            <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
           </TouchableOpacity>
         )}
         {(booking.status as any) === 'rejected' && (
@@ -223,7 +226,7 @@ export default function BookingsScreen() {
             style={[styles.actionButton, styles.viewButton]}
             onPress={() => handleBookingPress(booking)}
           >
-            <Text style={styles.viewButtonText}>View Details</Text>
+            <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -233,12 +236,12 @@ export default function BookingsScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
-          <Text style={styles.headerTitle}>My Bookings</Text>
-          <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
-            <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
+        <Text style={styles.headerTitle}>{t('bookings.myBookings', 'My Bookings')}</Text>
+        <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
+          <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+      </View>
         <LoadingSpinner />
       </View>
     );
@@ -247,20 +250,20 @@ export default function BookingsScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
-          <Text style={styles.headerTitle}>My Bookings</Text>
-          <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
-            <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
-          <Text style={styles.errorTitle}>Failed to Load Bookings</Text>
-          <Text style={styles.errorText}>Please check your internet connection and try again.</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
+        <Text style={styles.headerTitle}>{t('bookings.myBookings', 'My Bookings')}</Text>
+        <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
+          <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
+        <Text style={styles.errorTitle}>{t('bookings.failedToLoad', 'Failed to Load Bookings')}</Text>
+        <Text style={styles.errorText}>{t('bookings.checkConnection', 'Please check your internet connection and try again.')}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+          <Text style={styles.retryButtonText}>{t('bookings.tryAgain', 'Try Again')}</Text>
+        </TouchableOpacity>
+      </View>
       </View>
     );
   }
@@ -269,12 +272,12 @@ export default function BookingsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
-        <Text style={styles.headerTitle}>My Bookings</Text>
-        <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
-          <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
+      <Text style={styles.headerTitle}>{t('bookings.myBookings', 'My Bookings')}</Text>
+      <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
+        <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
+      </TouchableOpacity>
+    </View>
 
       {renderStatusTabs()}
 
@@ -290,8 +293,11 @@ export default function BookingsScreen() {
         ) : (
           <EmptyState
             icon="calendar-outline"
-            title="No Bookings Found"
-            message={`No ${selectedStatus} bookings found. Start by searching for services to book.`}
+            title={t('bookings.noBookings', 'No Bookings Found')}
+            message={t('bookings.noBookingsMessage', { 
+                          status: t(`bookings.status.${selectedStatus}`, selectedStatus),
+                          defaultValue: `No ${selectedStatus} bookings found. Start by searching for services to book.`
+                        })}
           />
         )}
       </ScrollView>

@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { useServiceRequests } from '../../../hooks/useCustomerQueries';
@@ -29,6 +30,7 @@ const FILTERS: { label: string; value: FilterType; icon: keyof typeof Ionicons.g
 
 export default function MyRequests() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -79,7 +81,7 @@ export default function MyRequests() {
           styles.filterText,
           isActive && styles.filterTextActive,
         ]}>
-          {filter.label} {count > 0 && `(${count})`}
+          {t(`bookings.status.${filter.value}`, filter.label)} {count > 0 && `(${count})`}
         </Text>
       </TouchableOpacity>
     );
@@ -91,7 +93,7 @@ export default function MyRequests() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Requests</Text>
+        <Text style={styles.headerTitle}>{t('requests.myRequests', 'My Requests')}</Text>
         <TouchableOpacity style={styles.searchButton}>
           <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
@@ -127,9 +129,9 @@ export default function MyRequests() {
     return (
       <EmptyState
         icon="document-text-outline"
-        title="No requests found"
-        message={messages[activeFilter]}
-        actionLabel="Browse Services"
+        title={t('requests.noRequests', 'No requests found')}
+        message={t(`requests.empty.${activeFilter}`, 'No requests found')}
+        actionLabel={t('requests.browseServices', 'Browse Services')}
         onAction={() => router.push('/(customer)/dashboard')}
       />
     );
@@ -151,17 +153,17 @@ export default function MyRequests() {
         <View style={styles.summaryCard}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{requests.length}</Text>
-            <Text style={styles.summaryLabel}>Total</Text>
+            <Text style={styles.summaryLabel}>{t('requests.total', 'Total')}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{activeRequests}</Text>
-            <Text style={styles.summaryLabel}>Active</Text>
+            <Text style={styles.summaryLabel}>{t('requests.active', 'Active')}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>${totalSpent}</Text>
-            <Text style={styles.summaryLabel}>Spent</Text>
+            <Text style={styles.summaryValue}>ETB {totalSpent}</Text>
+            <Text style={styles.summaryLabel}>{t('requests.spent', 'Spent')}</Text>
           </View>
         </View>
       </View>

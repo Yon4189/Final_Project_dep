@@ -17,6 +17,7 @@ import {
   Share,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { api } from '@/app/services/api';
@@ -62,6 +63,7 @@ interface ProviderInfo {
 export default function ChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { id: providerId } = useLocalSearchParams<{ id: string }>();
   const flatListRef = useRef<FlatList>(null);
   const appState = useRef(AppState.currentState);
@@ -167,7 +169,7 @@ export default function ChatScreen() {
     } catch (error) {
       console.error('Error loading chat data:', error);
       if (isMounted.current) {
-        Alert.alert('Error', 'Failed to load chat. Please try again.');
+        Alert.alert(t('common.error', 'Error'), t('chat.loadError', 'Failed to load chat. Please try again.'));
       }
     } finally {
       if (isMounted.current) setIsLoading(false);
@@ -193,7 +195,7 @@ export default function ChatScreen() {
       } else {
         if (isMounted.current) {
           setConversationError(true);
-          Alert.alert('Error', response.message || 'Failed to start conversation');
+          Alert.alert(t('common.error', 'Error'), response.message || t('chat.failStart', 'Failed to start conversation'));
         }
       }
     } catch (error: any) {
@@ -201,11 +203,11 @@ export default function ChatScreen() {
       if (!isMounted.current) return;
       setConversationError(true);
       if (error.response?.status === 403) {
-        Alert.alert('Access Denied', 'You do not have permission to chat with this provider');
+        Alert.alert(t('common.accessDenied', 'Access Denied'), t('chat.noPermission', 'You do not have permission to chat with this provider'));
       } else if (error.response?.status === 422) {
-        Alert.alert('Validation Error', 'Invalid provider information');
+        Alert.alert(t('common.error', 'Validation Error'), t('chat.invalidInfo', 'Invalid provider information'));
       } else {
-        Alert.alert('Error', 'Failed to start conversation. Please try again.');
+        Alert.alert(t('common.error', 'Error'), t('chat.failStart', 'Failed to start conversation. Please try again.'));
       }
     }
   };
@@ -218,7 +220,7 @@ export default function ChatScreen() {
         if (isMounted.current) {
           setProvider({
             providerID: parseInt(providerId),
-            fullname: response.data.fullname || response.data.name || 'Provider',
+            fullname: response.data.fullname || response.data.name || t('common.provider', 'Provider'),
             businessName: response.data.businessName,
             profileImage: response.data.profileImage || response.data.profilePicture,
           });
@@ -321,7 +323,7 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (!inputText.trim() || isSending || !isMounted.current) return;
     if (!conversation?.conversationID) {
-      Alert.alert('Not Ready', 'The conversation is still loading. Please wait a moment and try again.');
+      Alert.alert(t('common.info', 'Not Ready'), t('chat.loadingWait', 'The conversation is still loading. Please wait a moment and try again.'));
       return;
     }
 
@@ -357,7 +359,7 @@ export default function ChatScreen() {
         // Remove optimistic on failure
         if (isMounted.current) {
           setMessages(prev => prev.filter(msg => msg.id !== tempId));
-          Alert.alert('Error', 'Failed to send message. Please try again.');
+          Alert.alert(t('common.error', 'Error'), t('chat.sendError', 'Failed to send message. Please try again.'));
         }
       }
     } catch (error: any) {
@@ -365,9 +367,9 @@ export default function ChatScreen() {
       if (isMounted.current) {
         setMessages(prev => prev.filter(msg => msg.id !== tempId));
         if (error.response?.status === 403) {
-          Alert.alert('Access Denied', 'You do not have permission to send messages in this conversation');
+          Alert.alert(t('common.accessDenied', 'Access Denied'), t('chat.noPermissionSend', 'You do not have permission to send messages in this conversation'));
         } else {
-          Alert.alert('Error', 'Failed to send message. Please check your connection.');
+          Alert.alert(t('common.error', 'Error'), t('chat.sendErrorConnection', 'Failed to send message. Please check your connection.'));
         }
       }
     } finally {
@@ -379,19 +381,19 @@ export default function ChatScreen() {
   const handleCall = () => {
     const phoneNumber = provider?.phone || provider?.phoneNumber;
     if (!phoneNumber) {
-      Alert.alert('Info', 'Phone number not available for this provider');
+      Alert.alert(t('common.info', 'Info'), t('profile.phoneNotAvailable', 'Phone number not available for this provider'));
       return;
     }
     Alert.alert(
-      'Call Provider',
-      `Call ${provider?.businessName || provider?.fullname} at ${phoneNumber}?`,
+      t('chat.callProvider', 'Call Provider'),
+      t('chat.callConfirm', { name: provider?.businessName || provider?.fullname, phone: phoneNumber, defaultValue: `Call ${provider?.businessName || provider?.fullname} at ${phoneNumber}?` }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Call',
+          text: t('providerRequests.call', 'Call'),
           onPress: () => {
             const url = Platform.OS === 'android' ? `tel:${phoneNumber}` : `telprompt:${phoneNumber}`;
-            Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not initiate call'));
+            Linking.openURL(url).catch(() => Alert.alert(t('common.error', 'Error'), t('chat.callFail', 'Could not initiate call')));
           }
         },
       ]
@@ -429,8 +431,8 @@ export default function ChatScreen() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    if (date.toDateString() === today.toDateString()) return t('providerDashboard.today', 'Today');
+    if (date.toDateString() === yesterday.toDateString()) return t('chat.yesterday', 'Yesterday');
     return date.toLocaleDateString();
   };
 
@@ -497,14 +499,14 @@ export default function ChatScreen() {
         </View>
         <View style={styles.profileInfo}>
           <Text style={styles.providerName} numberOfLines={1}>
-            {provider?.businessName || provider?.fullname || 'Loading...'}
+            {provider?.businessName || provider?.fullname || t('common.loading', 'Loading...')}
           </Text>
           {conversation?.bookingID ? (
             <TouchableOpacity onPress={handleViewBooking}>
               <Text style={styles.bookingInfo}>Booking #{conversation.bookingID}</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.onlineStatus}>Online</Text>
+            <Text style={styles.onlineStatus}>{t('providerDashboard.online', 'Online')}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -518,10 +520,10 @@ export default function ChatScreen() {
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => {
-            Alert.alert('Chat Options', 'Choose an option', [
-              { text: 'View Provider Profile', onPress: handleViewProfile },
-              ...(conversation?.bookingID ? [{ text: 'View Booking Details', onPress: handleViewBooking }] : []),
-              { text: 'Cancel', style: 'cancel' },
+            Alert.alert(t('chat.options', 'Chat Options'), t('chat.chooseOption', 'Choose an option'), [
+              { text: t('chat.viewProviderProfile', 'View Provider Profile'), onPress: handleViewProfile },
+              ...(conversation?.bookingID ? [{ text: t('chat.viewBookingDetails', 'View Booking Details'), onPress: handleViewBooking }] : []),
+              { text: t('common.cancel', 'Cancel'), style: 'cancel' },
             ]);
           }}
         >
@@ -537,7 +539,7 @@ export default function ChatScreen() {
         {renderHeader()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading conversation...</Text>
+          <Text style={styles.loadingText}>{t('chat.loadingConversation', 'Loading conversation...')}</Text>
         </View>
       </View>
     );
@@ -549,12 +551,12 @@ export default function ChatScreen() {
         {renderHeader()}
         <View style={styles.loadingContainer}>
           <Ionicons name="cloud-offline-outline" size={64} color={Colors.text.secondary} />
-          <Text style={[styles.loadingText, { marginTop: 16 }]}>Could not load conversation</Text>
+          <Text style={[styles.loadingText, { marginTop: 16 }]}>{t('chat.loadFail', 'Could not load conversation')}</Text>
           <TouchableOpacity
             style={{ marginTop: 20, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
             onPress={() => { setConversationError(false); getOrCreateConversation(); }}
           >
-            <Text style={{ color: 'white', fontWeight: '600' }}>Retry</Text>
+            <Text style={{ color: 'white', fontWeight: '600' }}>{t('bookings.tryAgain', 'Retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -591,7 +593,7 @@ export default function ChatScreen() {
           style={styles.input}
           value={inputText}
           onChangeText={setInputText}
-          placeholder="Type a message..."
+          placeholder={t('chat.typeMessage', 'Type a message...')}
           placeholderTextColor={Colors.text.secondary}
           multiline
           maxLength={1001}

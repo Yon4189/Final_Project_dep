@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/app/constants/Colors';
@@ -37,23 +38,6 @@ interface ComplaintForm {
   attachments: string[];
 }
 
-const ISSUE_TYPES = [
-  { id: 'service_quality', label: 'Poor Service Quality', icon: 'construct-outline', description: 'Work was not up to expected standards' },
-  { id: 'professionalism', label: 'Unprofessional Behavior', icon: 'people-outline', description: 'Rude, disrespectful, or inappropriate conduct' },
-  { id: 'late_arrival', label: 'Late Arrival / No Show', icon: 'time-outline', description: 'Provider arrived late or didn\'t show up' },
-  { id: 'overcharging', label: 'Overcharging', icon: 'cash-outline', description: 'Charged more than agreed or quoted' },
-  { id: 'damage', label: 'Property Damage', icon: 'warning-outline', description: 'Caused damage to property during service' },
-  { id: 'incomplete', label: 'Incomplete Work', icon: 'close-circle-outline', description: 'Work was not completed as agreed' },
-  { id: 'communication', label: 'Poor Communication', icon: 'chatbubble-outline', description: 'Failed to communicate properly' },
-  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal-outline', description: 'Other issues not listed' },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', description: 'Minor issue, can wait', color: Colors.success, icon: 'flag-outline' },
-  { value: 'medium', label: 'Medium', description: 'Needs attention soon', color: Colors.warning, icon: 'flag' },
-  { value: 'high', label: 'High', description: 'Urgent - needs immediate attention', color: Colors.error, icon: 'flag' },
-];
-
 export const ComplaintModal: React.FC<ComplaintModalProps> = ({
   visible,
   onClose,
@@ -63,7 +47,25 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
   serviceName,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
+  
+  const ISSUE_TYPES = [
+    { id: 'service_quality', label: t('complaints.issueTypes.service_quality', 'Poor Service Quality'), icon: 'construct-outline', description: t('complaints.issueTypes.service_quality_desc', 'Work was not up to expected standards') },
+    { id: 'professionalism', label: t('complaints.issueTypes.professionalism', 'Unprofessional Behavior'), icon: 'people-outline', description: t('complaints.issueTypes.professionalism_desc', 'Rude, disrespectful, or inappropriate conduct') },
+    { id: 'late_arrival', label: t('complaints.issueTypes.late_arrival', 'Late Arrival / No Show'), icon: 'time-outline', description: t('complaints.issueTypes.late_arrival_desc', 'Provider arrived late or didn\'t show up') },
+    { id: 'overcharging', label: t('complaints.issueTypes.overcharging', 'Overcharging'), icon: 'cash-outline', description: t('complaints.issueTypes.overcharging_desc', 'Charged more than agreed or quoted') },
+    { id: 'damage', label: t('complaints.issueTypes.damage', 'Property Damage'), icon: 'warning-outline', description: t('complaints.issueTypes.damage_desc', 'Caused damage to property during service') },
+    { id: 'incomplete', label: t('complaints.issueTypes.incomplete', 'Incomplete Work'), icon: 'close-circle-outline', description: t('complaints.issueTypes.incomplete_desc', 'Work was not completed as agreed') },
+    { id: 'communication', label: t('complaints.issueTypes.communication', 'Poor Communication'), icon: 'chatbubble-outline', description: t('complaints.issueTypes.communication_desc', 'Failed to communicate properly') },
+    { id: 'other', label: t('complaints.issueTypes.other', 'Other'), icon: 'ellipsis-horizontal-outline', description: t('complaints.issueTypes.other_desc', 'Other issues not listed') },
+  ];
+
+  const PRIORITY_OPTIONS = [
+    { value: 'low', label: t('complaints.priorities.low', 'Low'), description: t('complaints.priorities.low_desc', 'Minor issue, can wait'), color: Colors.success, icon: 'flag-outline' },
+    { value: 'medium', label: t('complaints.priorities.medium', 'Medium'), description: t('complaints.priorities.medium_desc', 'Needs attention soon'), color: Colors.warning, icon: 'flag' },
+    { value: 'high', label: t('complaints.priorities.high', 'High'), description: t('complaints.priorities.high_desc', 'Urgent - needs immediate attention'), color: Colors.error, icon: 'flag' },
+  ];
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<ComplaintForm>({
     subject: '',
@@ -89,15 +91,15 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
 
   const handleNext = () => {
     if (step === 1 && !form.issueType) {
-      Alert.alert('Error', 'Please select an issue type');
+      Alert.alert(t('complaints.form.errorTitle', 'Error'), t('complaints.form.selectIssueTypeError', 'Please select an issue type'));
       return;
     }
     if (step === 2 && !form.subject.trim()) {
-      Alert.alert('Error', 'Please enter a subject');
+      Alert.alert(t('complaints.form.errorTitle', 'Error'), t('complaints.form.subjectRequiredError', 'Please enter a subject'));
       return;
     }
     if (step === 2 && !form.description.trim()) {
-      Alert.alert('Error', 'Please describe the issue');
+      Alert.alert(t('complaints.form.errorTitle', 'Error'), t('complaints.form.descriptionRequiredError', 'Please describe the issue'));
       return;
     }
     setStep(step + 1);
@@ -111,7 +113,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      Alert.alert(t('complaints.form.permissionRequired', 'Permission Required'), t('complaints.form.photoLibraryPermission', 'Please allow access to your photo library'));
       return;
     }
 
@@ -154,25 +156,25 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
       });
 
       Alert.alert(
-        'Complaint Submitted',
-        'Your complaint has been submitted successfully. Our team will review it within 24-48 hours.',
+        t('complaints.form.submittedTitle', 'Complaint Submitted'),
+        t('complaints.form.submittedMessage', 'Your complaint has been submitted successfully. Our team will review it within 24-48 hours.'),
         [
           {
-            text: 'View Complaints',
+            text: t('complaints.form.viewComplaints', 'View Complaints'),
             onPress: () => {
               handleClose();
               onSuccess?.();
             },
           },
           {
-            text: 'Close',
+            text: t('common.close', 'Close'),
             onPress: handleClose,
           },
         ]
       );
     } catch (error) {
       console.error('Complaint submission error:', error);
-      Alert.alert('Error', 'Failed to submit complaint. Please try again.');
+      Alert.alert(t('complaints.form.errorTitle', 'Error'), t('complaints.form.submitError', 'Failed to submit complaint. Please try again.'));
     }
   };
 
@@ -194,9 +196,9 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>What's the issue?</Text>
+      <Text style={styles.stepTitle}>{t('complaints.form.whatIssue', 'What\'s the issue?')}</Text>
       <Text style={styles.stepSubtitle}>
-        Select the type of issue you're experiencing with {providerName}
+        {t('complaints.form.selectType', 'Select the type of issue you\'re experiencing with {{provider}}', { provider: providerName })}
       </Text>
 
       <ScrollView style={styles.issueTypesList} showsVerticalScrollIndicator={false}>
@@ -233,17 +235,17 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
         <TouchableOpacity onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.stepTitle}>Describe the Issue</Text>
+        <Text style={styles.stepTitle}>{t('complaints.form.describeIssue', 'Describe the Issue')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Subject */}
         <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Subject</Text>
+          <Text style={styles.formLabel}>{t('complaints.form.subject', 'Subject')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Brief summary of the issue"
+            placeholder={t('complaints.form.subjectPlaceholder', 'Brief summary of the issue')}
             placeholderTextColor={Colors.text.secondary}
             value={form.subject}
             onChangeText={(text) => setForm({ ...form, subject: text })}
@@ -254,10 +256,10 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
 
         {/* Description */}
         <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Detailed Description</Text>
+          <Text style={styles.formLabel}>{t('complaints.form.detailedDescription', 'Detailed Description')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Please provide as much detail as possible..."
+            placeholder={t('complaints.form.detailedDescriptionPlaceholder', 'Please provide as much detail as possible...')}
             placeholderTextColor={Colors.text.secondary}
             value={form.description}
             onChangeText={(text) => setForm({ ...form, description: text })}
@@ -269,8 +271,8 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
 
         {/* Priority */}
         <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Priority</Text>
-          <Text style={styles.formHint}>How urgent is this issue?</Text>
+          <Text style={styles.formLabel}>{t('complaints.form.priority', 'Priority')}</Text>
+          <Text style={styles.formHint}>{t('complaints.form.howUrgent', 'How urgent is this issue?')}</Text>
           <View style={styles.priorityContainer}>
             {PRIORITY_OPTIONS.map((priority) => (
               <TouchableOpacity
@@ -310,13 +312,13 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
         <TouchableOpacity onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.stepTitle}>Add Evidence</Text>
+        <Text style={styles.stepTitle}>{t('complaints.form.addEvidence', 'Add Evidence')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.stepSubtitle}>
-          Upload photos or screenshots as evidence (optional)
+          {t('complaints.form.uploadEvidenceSubtitle', 'Upload photos or screenshots as evidence (optional)')}
         </Text>
 
         {/* Attachments */}
@@ -344,7 +346,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
               ) : (
                 <>
                   <Ionicons name="camera-outline" size={32} color={Colors.primary} />
-                  <Text style={styles.addAttachmentText}>Add Photo</Text>
+                  <Text style={styles.addAttachmentText}>{t('complaints.form.addPhoto', 'Add Photo')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -353,36 +355,36 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
 
         {/* Tips */}
         <View style={styles.tipsContainer}>
-          <Text style={styles.tipsTitle}>📸 Tips for good evidence:</Text>
+          <Text style={styles.tipsTitle}>{t('complaints.form.tipsTitle', '📸 Tips for good evidence:')}</Text>
           <View style={styles.tipItem}>
             <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-            <Text style={styles.tipText}>Take clear, well-lit photos</Text>
+            <Text style={styles.tipText}>{t('complaints.form.tip1', 'Take clear, well-lit photos')}</Text>
           </View>
           <View style={styles.tipItem}>
             <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-            <Text style={styles.tipText}>Include screenshots of messages if relevant</Text>
+            <Text style={styles.tipText}>{t('complaints.form.tip2', 'Include screenshots of messages if relevant')}</Text>
           </View>
           <View style={styles.tipItem}>
             <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-            <Text style={styles.tipText}>Show the issue from multiple angles</Text>
+            <Text style={styles.tipText}>{t('complaints.form.tip3', 'Show the issue from multiple angles')}</Text>
           </View>
         </View>
 
         {/* Summary */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Complaint Summary</Text>
+          <Text style={styles.summaryTitle}>{t('complaints.form.summary', 'Complaint Summary')}</Text>
           
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Issue Type:</Text>
+            <Text style={styles.summaryLabel}>{t('complaints.issueTypeLabel', 'Issue Type')}:</Text>
             <Text style={styles.summaryValue}>
-              {ISSUE_TYPES.find(t => t.id === form.issueType)?.label || 'Not selected'}
+              {ISSUE_TYPES.find(t => t.id === form.issueType)?.label || t('common.notSelected', 'Not selected')}
             </Text>
           </View>
           
           <View style={styles.summaryDivider} />
           
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Priority:</Text>
+            <Text style={styles.summaryLabel}>{t('complaints.priorityLabel', 'Priority')}:</Text>
             <View style={[styles.priorityBadge, { 
               backgroundColor: 
                 form.priority === 'high' ? Colors.error + '20' :
@@ -403,8 +405,8 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
           <View style={styles.summaryDivider} />
           
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Attachments:</Text>
-            <Text style={styles.summaryValue}>{form.attachments.length} file(s)</Text>
+            <Text style={styles.summaryLabel}>{t('complaints.attachmentsLabel', 'Attachments')}:</Text>
+            <Text style={styles.summaryValue}>{t('complaints.form.filesSelected', '{{count}} file(s)', { count: form.attachments.length })}</Text>
           </View>
         </View>
       </ScrollView>
@@ -428,7 +430,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
             <TouchableOpacity onPress={handleClose}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>File a Complaint</Text>
+            <Text style={styles.modalTitle}>{t('complaints.submitNew', 'File a Complaint')}</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -456,7 +458,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
           <View style={styles.modalFooter}>
             {step < 3 ? (
               <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                <Text style={styles.nextButtonText}>Next</Text>
+                <Text style={styles.nextButtonText}>{t('complaints.form.next', 'Next')}</Text>
                 <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
               </TouchableOpacity>
             ) : (
@@ -465,7 +467,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
                   style={styles.cancelButton}
                   onPress={handleClose}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.submitButton, createComplaint.isPending && styles.submitButtonDisabled]}
@@ -476,7 +478,7 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
                     <ActivityIndicator size="small" color={Colors.surface} />
                   ) : (
                     <>
-                      <Text style={styles.submitButtonText}>Submit</Text>
+                      <Text style={styles.submitButtonText}>{t('complaints.form.submit', 'Submit')}</Text>
                       <Ionicons name="send" size={20} color={Colors.surface} />
                     </>
                   )}

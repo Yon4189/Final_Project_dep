@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/app/constants/Colors';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -23,49 +24,50 @@ import { useProviderQueries } from '@/hooks/useProviderQueries';
 import { useCreateDispute } from '@/hooks/useProviderDisputes';
 import type { DisputeReason } from '@/app/types/provider.types';
 
-const DISPUTE_REASONS: { value: DisputeReason; label: string; icon: string; description: string }[] = [
-  {
-    value: 'non_payment',
-    label: 'Non-Payment',
-    icon: 'cash-outline',
-    description: "Customer hasn't paid for completed service",
-  },
-  {
-    value: 'customer_no_show',
-    label: 'Customer No-Show',
-    icon: 'person-outline',
-    description: "Customer wasn't present at scheduled time",
-  },
-  {
-    value: 'unreasonable_demands',
-    label: 'Unreasonable Demands',
-    icon: 'alert-circle-outline',
-    description: 'Customer making unreasonable requests',
-  },
-  {
-    value: 'harassment',
-    label: 'Harassment',
-    icon: 'hand-left-outline',
-    description: 'Customer harassing or abusive behavior',
-  },
-  {
-    value: 'property_issues',
-    label: 'Property Issues',
-    icon: 'home-outline',
-    description: "Issues with customer's property affecting work",
-  },
-  {
-    value: 'other',
-    label: 'Other',
-    icon: 'ellipsis-horizontal-outline',
-    description: 'Other dispute reasons not listed',
-  },
-];
-
 export default function NewDispute() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+
+  const DISPUTE_REASONS: { value: DisputeReason; label: string; icon: string; description: string }[] = [
+    {
+      value: 'non_payment',
+      label: t('disputes.reasons.non_payment', 'Non-Payment'),
+      icon: 'cash-outline',
+      description: t('disputes.reasonDescriptions.non_payment', "Customer hasn't paid for completed service"),
+    },
+    {
+      value: 'customer_no_show',
+      label: t('disputes.reasons.customer_no_show', 'Customer No-Show'),
+      icon: 'person-outline',
+      description: t('disputes.reasonDescriptions.customer_no_show', "Customer wasn't present at scheduled time"),
+    },
+    {
+      value: 'unreasonable_demands',
+      label: t('disputes.reasons.unreasonable_demands', 'Unreasonable Demands'),
+      icon: 'alert-circle-outline',
+      description: t('disputes.reasonDescriptions.unreasonable_demands', 'Customer making unreasonable requests'),
+    },
+    {
+      value: 'harassment',
+      label: t('disputes.reasons.harassment', 'Harassment'),
+      icon: 'hand-left-outline',
+      description: t('disputes.reasonDescriptions.harassment', 'Customer harassing or abusive behavior'),
+    },
+    {
+      value: 'property_issues',
+      label: t('disputes.reasons.property_issues', 'Property Issues'),
+      icon: 'home-outline',
+      description: t('disputes.reasonDescriptions.property_issues', "Issues with customer's property affecting work"),
+    },
+    {
+      value: 'other',
+      label: t('disputes.reasons.other', 'Other'),
+      icon: 'ellipsis-horizontal-outline',
+      description: t('disputes.reasonDescriptions.other', 'Other dispute reasons not listed'),
+    },
+  ];
   const [selectedReason, setSelectedReason] = useState<DisputeReason | null>(null);
   const [description, setDescription] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -84,11 +86,11 @@ export default function NewDispute() {
 
   const handleNext = () => {
     if (step === 2 && !selectedReason) {
-      Alert.alert('Error', 'Please select a reason');
+      Alert.alert(t('success.error', 'Error'), t('disputes.selectReason', 'Please select a reason'));
       return;
     }
     if (step === 3 && !description.trim()) {
-      Alert.alert('Error', 'Please describe the issue');
+      Alert.alert(t('success.error', 'Error'), t('disputes.describeIssue', 'Please describe the issue'));
       return;
     }
     setStep(step + 1);
@@ -102,7 +104,7 @@ export default function NewDispute() {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      Alert.alert(t('profile.permissionRequired', 'Permission Required'), t('profile.photoLibraryPermission', 'Please allow access to your photo library'));
       return;
     }
 
@@ -128,7 +130,7 @@ export default function NewDispute() {
 
   const handleSubmit = async () => {
     if (!selectedBooking || !selectedReason || !description.trim()) {
-      Alert.alert('Error', 'Please complete all required fields');
+      Alert.alert(t('success.error', 'Error'), t('auth.fillRequired', 'Please complete all required fields'));
       return;
     }
 
@@ -141,17 +143,17 @@ export default function NewDispute() {
       });
 
       Alert.alert(
-        'Dispute Filed',
-        'Your dispute has been submitted successfully. Our team will review it within 24-48 hours.',
+        t('disputes.disputeFiled', 'Dispute Filed'),
+        t('disputes.disputeSuccessMsg', 'Your dispute has been submitted successfully. Our team will review it within 24-48 hours.'),
         [
           {
-            text: 'View Disputes',
+            text: t('disputes.viewDisputes', 'View Disputes'),
             onPress: () => router.push('/(provider)/disputes'),
           },
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to file dispute. Please try again.');
+      Alert.alert(t('success.error', 'Error'), t('providerRequests.startError', 'Failed to file dispute. Please try again.'));
     }
   };
 
@@ -177,9 +179,9 @@ export default function NewDispute() {
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Select Booking</Text>
+      <Text style={styles.stepTitle}>{t('disputes.selectBooking', 'Select Booking')}</Text>
       <Text style={styles.stepSubtitle}>
-        Choose the completed service you want to dispute
+        {t('disputes.selectBookingSub', 'Choose the completed service you want to dispute')}
       </Text>
 
       {loadingBookings ? (
@@ -187,9 +189,9 @@ export default function NewDispute() {
       ) : completedRequests.length === 0 ? (
         <View style={styles.noBookings}>
           <Ionicons name="calendar-outline" size={48} color={Colors.text.secondary} />
-          <Text style={styles.noBookingsText}>No completed bookings</Text>
+          <Text style={styles.noBookingsText}>{t('disputes.noCompletedBookings', 'No completed bookings')}</Text>
           <Text style={styles.noBookingsSubtext}>
-            You can only dispute completed services
+            {t('disputes.disputeOnlyCompleted', 'You can only dispute completed services')}
           </Text>
         </View>
       ) : (
@@ -223,12 +225,12 @@ export default function NewDispute() {
     <View style={styles.stepContainer}>
       <TouchableOpacity style={styles.backButton} onPress={handleBack}>
         <Ionicons name="arrow-back" size={20} color={Colors.text.secondary} />
-        <Text style={styles.backButtonText}>Change Booking</Text>
+        <Text style={styles.backButtonText}>{t('disputes.selectBooking', 'Change Booking')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.stepTitle}>Select Reason</Text>
+      <Text style={styles.stepTitle}>{t('disputes.selectReason', 'Select Reason')}</Text>
       <Text style={styles.stepSubtitle}>
-        What is the reason for this dispute?
+        {t('disputes.selectReasonSub', 'What is the reason for this dispute?')}
       </Text>
 
       <ScrollView style={styles.reasonsList} showsVerticalScrollIndicator={false}>
@@ -263,19 +265,19 @@ export default function NewDispute() {
     <View style={styles.stepContainer}>
       <TouchableOpacity style={styles.backButton} onPress={handleBack}>
         <Ionicons name="arrow-back" size={20} color={Colors.text.secondary} />
-        <Text style={styles.backButtonText}>Change Reason</Text>
+        <Text style={styles.backButtonText}>{t('disputes.selectReason', 'Change Reason')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.stepTitle}>Describe the Issue</Text>
+      <Text style={styles.stepTitle}>{t('disputes.describeIssue', 'Describe the Issue')}</Text>
       <Text style={styles.stepSubtitle}>
-        Provide as much detail as possible to help us investigate
+        {t('disputes.describeIssueSub', 'Provide as much detail as possible to help us investigate')}
       </Text>
 
       <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>Description</Text>
+        <Text style={styles.formLabel}>{t('disputes.description', 'Description')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Describe what happened in detail..."
+          placeholder={t('disputes.describeIssueSub', 'Describe what happened in detail...')}
           placeholderTextColor={Colors.text.secondary}
           value={description}
           onChangeText={setDescription}
@@ -286,9 +288,9 @@ export default function NewDispute() {
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>Evidence (Optional)</Text>
+        <Text style={styles.formLabel}>{t('disputes.evidence', 'Evidence (Optional)')}</Text>
         <Text style={styles.attachmentHint}>
-          Upload photos, screenshots, or messages as evidence
+          {t('disputes.uploadEvidenceSub', 'Upload photos, screenshots, or messages as evidence')}
         </Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.attachmentsScroll}>
@@ -314,7 +316,7 @@ export default function NewDispute() {
             ) : (
               <>
                 <Ionicons name="camera-outline" size={32} color={Colors.primary} />
-                <Text style={styles.addAttachmentText}>Add Photo</Text>
+                <Text style={styles.addAttachmentText}>{t('disputes.addPhoto', 'Add Photo')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -324,7 +326,7 @@ export default function NewDispute() {
       <View style={styles.tipBox}>
         <Ionicons name="information-circle-outline" size={20} color={Colors.info} />
         <Text style={styles.tipText}>
-          Include relevant details like dates, times, and any communication with the customer.
+          {t('disputes.guideline1', 'Include relevant details like dates, times, and any communication with the customer.')}
         </Text>
       </View>
     </View>
@@ -334,22 +336,22 @@ export default function NewDispute() {
     <View style={styles.stepContainer}>
       <TouchableOpacity style={styles.backButton} onPress={handleBack}>
         <Ionicons name="arrow-back" size={20} color={Colors.text.secondary} />
-        <Text style={styles.backButtonText}>Edit Details</Text>
+        <Text style={styles.backButtonText}>{t('common.edit', 'Edit Details')}</Text>
       </TouchableOpacity>
 
       <View style={styles.successIcon}>
         <Ionicons name="alert-circle" size={60} color={Colors.warning} />
       </View>
 
-      <Text style={styles.confirmTitle}>Review Dispute</Text>
+      <Text style={styles.confirmTitle}>{t('disputes.reviewDispute', 'Review Dispute')}</Text>
       <Text style={styles.confirmSubtitle}>
-        Please verify all information before submitting
+        {t('disputes.verifyInfo', 'Please verify all information before submitting')}
       </Text>
 
       <View style={styles.summaryCard}>
         <View style={styles.summarySection}>
-          <Text style={styles.summaryLabel}>Booking</Text>
-          <Text style={styles.summaryValue}>{selectedBooking?.serviceName || 'N/A'}</Text>
+          <Text style={styles.summaryLabel}>{t('navigation.bookings', 'Booking')}</Text>
+          <Text style={styles.summaryValue}>{selectedBooking?.serviceName || t('common.na', 'N/A')}</Text>
           <Text style={styles.summaryDetail}>
             {selectedBooking?.customerName || 'Unknown'} • {selectedBooking?.scheduledDate || 'N/A'}
           </Text>
@@ -358,17 +360,17 @@ export default function NewDispute() {
         <View style={styles.summaryDivider} />
 
         <View style={styles.summarySection}>
-          <Text style={styles.summaryLabel}>Reason</Text>
+          <Text style={styles.summaryLabel}>{t('disputes.reason', 'Reason')}</Text>
           <Text style={styles.summaryValue}>
-            {DISPUTE_REASONS.find(r => r.value === selectedReason)?.label || 'N/A'}
+            {selectedReason ? t(`disputes.reasons.${selectedReason}`, selectedReason.replace('_', ' ')) : t('common.na', 'N/A')}
           </Text>
         </View>
 
         <View style={styles.summaryDivider} />
 
         <View style={styles.summarySection}>
-          <Text style={styles.summaryLabel}>Description</Text>
-          <Text style={styles.summaryDescription}>{description || 'No description provided'}</Text>
+          <Text style={styles.summaryLabel}>{t('disputes.description', 'Description')}</Text>
+          <Text style={styles.summaryDescription}>{description || t('profile.noBio', 'No description provided')}</Text>
         </View>
 
         {attachments.length > 0 && (
@@ -389,7 +391,7 @@ export default function NewDispute() {
       <View style={styles.warningBox}>
         <Ionicons name="alert-circle-outline" size={20} color={Colors.warning} />
         <Text style={styles.warningText}>
-          Filing a false dispute may result in account suspension. Please ensure all information is accurate.
+          {t('disputes.falseDisputeWarning', 'Filing a false dispute may result in account suspension. Please ensure all information is accurate.')}
         </Text>
       </View>
     </View>
@@ -413,7 +415,7 @@ export default function NewDispute() {
         >
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>File a Dispute</Text>
+        <Text style={styles.headerTitle}>{t('disputes.newDispute', 'File a Dispute')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -444,7 +446,7 @@ export default function NewDispute() {
             onPress={handleNext}
             disabled={(step === 2 && !selectedReason) || (step === 3 && !description.trim())}
           >
-            <Text style={styles.nextButtonText}>Continue</Text>
+            <Text style={styles.nextButtonText}>{t('common.continue', 'Continue')}</Text>
             <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
           </TouchableOpacity>
         ) : (
@@ -457,7 +459,7 @@ export default function NewDispute() {
               <ActivityIndicator size="small" color={Colors.surface} />
             ) : (
               <>
-                <Text style={styles.submitButtonText}>Submit Dispute</Text>
+                <Text style={styles.submitButtonText}>{t('disputes.submitDispute', 'Submit Dispute')}</Text>
                 <Ionicons name="send" size={20} color={Colors.surface} />
               </>
             )}

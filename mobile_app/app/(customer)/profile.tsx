@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, ThemeColors } from '@/app/constants/Colors';
@@ -33,6 +34,7 @@ interface EditableField {
 
 export default function CustomerProfile() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { isDark, setTheme, colors } = useTheme();
   
@@ -55,9 +57,9 @@ export default function CustomerProfile() {
   }
 
   const fields: EditableField[] = [
-    { key: 'name', label: 'Full Name', value: profile?.name || '', icon: 'person-outline' },
-    { key: 'email', label: 'Email Address', value: profile?.email || '', icon: 'mail-outline', type: 'email' },
-    { key: 'phone', label: 'Phone Number', value: profile?.phone || '', icon: 'call-outline', type: 'phone' },
+    { key: 'name', label: t('auth.fullName', 'Full Name'), value: profile?.name || '', icon: 'person-outline' },
+    { key: 'email', label: t('auth.emailAddress', 'Email Address'), value: profile?.email || '', icon: 'mail-outline', type: 'email' },
+    { key: 'phone', label: t('auth.phoneNumber', 'Phone Number'), value: profile?.phone || '', icon: 'call-outline', type: 'phone' },
   ];
 
   const handleEdit = () => {
@@ -69,9 +71,9 @@ export default function CustomerProfile() {
     try {
       await updateProfile.mutateAsync(editedProfile);
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      Alert.alert(t('common.success', 'Success'), t('profile.updateSuccess', 'Profile updated successfully'));
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert(t('common.error', 'Error'), t('profile.updateError', 'Failed to update profile'));
     }
   };
 
@@ -107,19 +109,19 @@ export default function CustomerProfile() {
       // Upload image to server
       setTimeout(() => {
         setUploadingImage(false);
-        Alert.alert('Success', 'Profile picture updated');
+        Alert.alert(t('common.success', 'Success'), t('profile.pictureUpdated', 'Profile picture updated'));
       }, 1500);
     }
   };
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('common.logout', 'Logout'),
+      t('auth.confirmLogout', 'Are you sure you want to logout?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         { 
-          text: 'Logout', 
+          text: t('common.logout', 'Logout'), 
           style: 'destructive',
           onPress: () => {
             // Clear auth token and navigate to login
@@ -147,7 +149,7 @@ export default function CustomerProfile() {
           placeholderTextColor={colors.text.secondary}
         />
       ) : (
-        <Text style={styles.fieldValue}>{field.value || 'Not set'}</Text>
+        <Text style={styles.fieldValue}>{field.value || t('profile.notSet', 'Not set')}</Text>
       )}
     </View>
   );
@@ -203,7 +205,7 @@ export default function CustomerProfile() {
             {isEditing ? (
               <>
                 <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.saveButton} 
@@ -213,14 +215,14 @@ export default function CustomerProfile() {
                   {updateProfile.isPending ? (
                     <ActivityIndicator size="small" color={colors.surface} />
                   ) : (
-                    <Text style={styles.saveButtonText}>Save</Text>
+                    <Text style={styles.saveButtonText}>{t('common.save', 'Save')}</Text>
                   )}
                 </TouchableOpacity>
               </>
             ) : (
               <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
                 <Ionicons name="pencil" size={18} color={colors.surface} />
-                <Text style={styles.editButtonText}>Edit Profile</Text>
+                <Text style={styles.editButtonText}>{t('profile.editProfile', 'Edit Profile')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -228,7 +230,7 @@ export default function CustomerProfile() {
 
         {/* Personal Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.sectionTitle}>{t('profile.personalInfo', 'Personal Information')}</Text>
           <View style={styles.sectionContent}>
             {fields.map(renderEditableField)}
           </View>
@@ -236,22 +238,22 @@ export default function CustomerProfile() {
 
         {/* Account Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
+          <Text style={styles.sectionTitle}>{t('profile.accountSettings', 'Account Settings')}</Text>
           <View style={styles.sectionContent}>
-            {renderSettingItem('lock-closed-outline', 'Change Password', handleChangePassword)}
-            {renderSettingItem('location-outline', 'Manage Addresses', handleManageLocations)}
-            {renderSettingItem('card-outline', 'Payment Methods', () => Alert.alert('Coming Soon', 'Payment methods are not available yet.'))}
+            {renderSettingItem('lock-closed-outline', t('profile.changePassword', 'Change Password'), handleChangePassword)}
+            {renderSettingItem('location-outline', t('profile.manageAddresses', 'Manage Addresses'), handleManageLocations)}
+            {renderSettingItem('card-outline', t('profile.paymentMethods', 'Payment Methods'), () => Alert.alert('Coming Soon', 'Payment methods are not available yet.'))}
           </View>
         </View>
 
         {/* Appearance */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
+          <Text style={styles.sectionTitle}>{t('profile.appearance', 'Appearance')}</Text>
           <View style={styles.sectionContent}>
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
                 <Ionicons name="moon-outline" size={22} color={colors.text.secondary} />
-                <Text style={styles.settingLabel}>Dark Mode</Text>
+                <Text style={styles.settingLabel}>{t('profile.darkMode', 'Dark Mode')}</Text>
               </View>
               <Switch
                 value={isDark}
@@ -265,12 +267,12 @@ export default function CustomerProfile() {
 
         {/* Notifications */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
+          <Text style={styles.sectionTitle}>{t('profile.notifications', 'Notifications')}</Text>
           <View style={styles.sectionContent}>
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
                 <Ionicons name="mail-outline" size={22} color={colors.text.secondary} />
-                <Text style={styles.settingLabel}>Email Notifications</Text>
+                <Text style={styles.settingLabel}>{t('profile.emailNotifications', 'Email Notifications')}</Text>
               </View>
               <Switch
                 value={notifications.email}
@@ -283,7 +285,7 @@ export default function CustomerProfile() {
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
                 <Ionicons name="notifications-outline" size={22} color={colors.text.secondary} />
-                <Text style={styles.settingLabel}>Push Notifications</Text>
+                <Text style={styles.settingLabel}>{t('profile.pushNotifications', 'Push Notifications')}</Text>
               </View>
               <Switch
                 value={notifications.push}
@@ -296,7 +298,7 @@ export default function CustomerProfile() {
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
                 <Ionicons name="chatbubble-outline" size={22} color={colors.text.secondary} />
-                <Text style={styles.settingLabel}>SMS Notifications</Text>
+                <Text style={styles.settingLabel}>{t('profile.smsNotifications', 'SMS Notifications')}</Text>
               </View>
               <Switch
                 value={notifications.sms}
@@ -310,19 +312,19 @@ export default function CustomerProfile() {
 
         {/* Support */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
+          <Text style={styles.sectionTitle}>{t('profile.support', 'Support')}</Text>
           <View style={styles.sectionContent}>
-            {renderSettingItem('help-circle-outline', 'Help Center', () => Alert.alert('Coming Soon', 'Help center is not available yet.'))}
-            {renderSettingItem('chatbubble-outline', 'Contact Support', () => Alert.alert('Coming Soon', 'Support chat is not available yet.'))}
-            {renderSettingItem('document-text-outline', 'Terms & Conditions', () => Alert.alert('Coming Soon', 'Terms page is not available yet.'))}
-            {renderSettingItem('shield-outline', 'Privacy Policy', () => Alert.alert('Coming Soon', 'Privacy policy page is not available yet.'))}
+            {renderSettingItem('help-circle-outline', t('profile.helpCenter', 'Help Center'), () => Alert.alert('Coming Soon', 'Help center is not available yet.'))}
+            {renderSettingItem('chatbubble-outline', t('profile.contactSupport', 'Contact Support'), () => Alert.alert('Coming Soon', 'Support chat is not available yet.'))}
+            {renderSettingItem('document-text-outline', t('profile.terms', 'Terms & Conditions'), () => Alert.alert('Coming Soon', 'Terms page is not available yet.'))}
+            {renderSettingItem('shield-outline', t('profile.privacy', 'Privacy Policy'), () => Alert.alert('Coming Soon', 'Privacy policy page is not available yet.'))}
           </View>
         </View>
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('common.logout', 'Logout')}</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomPadding} />

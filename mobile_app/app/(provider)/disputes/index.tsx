@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import { useProviderDisputes } from '@/hooks/useProviderQueries';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -33,17 +34,18 @@ const STATUS_ICONS: Record<DisputeStatus, keyof typeof Ionicons.glyphMap> = {
   rejected: 'close-circle-outline',
 };
 
-const STATUS_LABELS: Record<DisputeStatus, string> = {
-  pending: 'Pending Review',
-  under_review: 'Under Review',
-  resolved: 'Resolved',
-  rejected: 'Rejected',
-};
-
 export default function DisputesList() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [filterStatus, setFilterStatus] = useState<DisputeStatus | 'all'>('all');
+
+  const STATUS_LABELS: Record<DisputeStatus, string> = {
+    pending: t('disputes.pending', 'Pending Review'),
+    under_review: t('disputes.underReview', 'Under Review'),
+    resolved: t('disputes.resolved', 'Resolved'),
+    rejected: t('disputes.rejected', 'Rejected'),
+  };
 
  const { data: disputes, isLoading, refetch } = useProviderDisputes();
 
@@ -77,7 +79,7 @@ export default function DisputesList() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Disputes</Text>
+        <Text style={styles.headerTitle}>{t('disputes.title', 'Disputes')}</Text>
         <TouchableOpacity 
           style={styles.newButton}
           onPress={() => router.push('/(provider)/disputes/new')}
@@ -87,26 +89,26 @@ export default function DisputesList() {
       </View>
 
       <Text style={styles.headerSubtitle}>
-        Track and manage disputes with customers
+        {t('disputes.subtitle', 'Track and manage disputes with customers')}
       </Text>
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{disputes?.length || 0}</Text>
-          <Text style={styles.statLabel}>Total</Text>
+          <Text style={styles.statLabel}>{t('disputes.total', 'Total')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={[styles.statNumber, { color: Colors.warning }]}>
             {disputes?.filter(d => d.status === 'pending').length || 0}
           </Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={styles.statLabel}>{t('disputes.pending', 'Pending')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={[styles.statNumber, { color: Colors.success }]}>
             {disputes?.filter(d => d.status === 'resolved').length || 0}
           </Text>
-          <Text style={styles.statLabel}>Resolved</Text>
+          <Text style={styles.statLabel}>{t('disputes.resolved', 'Resolved')}</Text>
         </View>
       </View>
 
@@ -128,7 +130,7 @@ export default function DisputesList() {
             styles.filterText,
             filterStatus === 'all' && styles.filterTextActive,
           ]}>
-            All
+            {t('wallet.filterAll', 'All')}
           </Text>
         </TouchableOpacity>
 
@@ -179,18 +181,18 @@ export default function DisputesList() {
         </Text>
       </View>
       <Text style={styles.disputeReason} numberOfLines={1}>
-        <Text style={styles.reasonLabel}>Reason: </Text>
-        {item.reason?.replace('_', ' ') || 'Not specified'}
+        <Text style={styles.reasonLabel}>{t('disputes.reason', 'Reason')}: </Text>
+        {item.reason ? t(`disputes.reasons.${item.reason}`, item.reason.replace('_', ' ')) : t('common.na', 'Not specified')}
       </Text>
 
       <Text style={styles.disputeDescription} numberOfLines={2}>
-        {item.description || 'No description provided'}
+        {item.description || t('profile.noBio', 'No description provided')}
       </Text>
 
       {item.adminResponse && (
         <View style={styles.responseIndicator}>
           <Ionicons name="chatbubble" size={14} color={Colors.primary} />
-          <Text style={styles.responseText}>Admin responded</Text>
+          <Text style={styles.responseText}>{t('disputes.adminResponded', 'Admin responded')}</Text>
         </View>
       )}
 
@@ -198,7 +200,7 @@ export default function DisputesList() {
         <View style={styles.resolvedContainer}>
           <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
           <Text style={styles.resolvedText}>
-            Resolved {formatTimeAgo(item.resolvedAt)}
+            {t('disputes.resolvedAt', 'Resolved %{date}').replace('%{date}', formatTimeAgo(item.resolvedAt))}
           </Text>
         </View>
       )}
@@ -208,9 +210,9 @@ export default function DisputesList() {
   const renderEmptyState = () => (
     <EmptyState
       icon="alert-circle-outline"
-      title="No disputes"
-      message="You haven't filed any disputes yet"
-      actionLabel="File a Dispute"
+      title={t('disputes.noDisputes', 'No disputes')}
+      message={t('disputes.noDisputesMsg', "You haven't filed any disputes yet")}
+      actionLabel={t('disputes.fileDispute', 'File a Dispute')}
       onAction={() => router.push('/(provider)/disputes/new')}
       variant="default"
     />
@@ -218,18 +220,18 @@ export default function DisputesList() {
 
   const renderTips = () => (
     <View style={styles.tipsContainer}>
-      <Text style={styles.tipsTitle}>📋 Dispute Guidelines</Text>
+      <Text style={styles.tipsTitle}>📋 {t('disputes.guidelines', 'Dispute Guidelines')}</Text>
       <View style={styles.tipItem}>
         <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-        <Text style={styles.tipText}>Provide clear details about the issue</Text>
+        <Text style={styles.tipText}>{t('disputes.guideline1', 'Provide clear details about the issue')}</Text>
       </View>
       <View style={styles.tipItem}>
         <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-        <Text style={styles.tipText}>Upload evidence like photos or messages</Text>
+        <Text style={styles.tipText}>{t('disputes.guideline2', 'Upload evidence like photos or messages')}</Text>
       </View>
       <View style={styles.tipItem}>
         <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-        <Text style={styles.tipText}>Our team will review within 24-48 hours</Text>
+        <Text style={styles.tipText}>{t('disputes.guideline3', 'Our team will review within 24-48 hours')}</Text>
       </View>
     </View>
   );

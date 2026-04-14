@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -57,6 +58,7 @@ const normalizeNotification = (notification: ProviderNotificationRaw): ProviderN
 
 export default function ProviderNotifications() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [notifications, setNotifications] = useState<ProviderNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
@@ -287,10 +289,10 @@ export default function ProviderNotifications() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('notifications.title', 'Notifications')}</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
-            <Text style={styles.markAllText}>Mark all read</Text>
+            <Text style={styles.markAllText}>{t('notifications.markAllRead', 'Mark all read')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -302,7 +304,7 @@ export default function ProviderNotifications() {
           onPress={() => setFilter('all')}
         >
           <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
-            All
+            {t('notifications.filterAll', 'All')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -310,7 +312,7 @@ export default function ProviderNotifications() {
           onPress={() => setFilter('unread')}
         >
           <Text style={[styles.filterText, filter === 'unread' && styles.activeFilterText]}>
-            Unread ({unreadCount})
+            {t('notifications.filterUnread', 'Unread')} ({unreadCount})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -318,7 +320,7 @@ export default function ProviderNotifications() {
           onPress={() => setFilter('read')}
         >
           <Text style={[styles.filterText, filter === 'read' && styles.activeFilterText]}>
-            Read
+            {t('notifications.filterRead', 'Read')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -344,10 +346,10 @@ export default function ProviderNotifications() {
         ListEmptyComponent={
           <EmptyState
             icon="notifications-outline"
-            title="No notifications"
+            title={t('notifications.noNotifications', 'No notifications')}
             message={filter === 'unread' 
-              ? "You don't have any unread notifications" 
-              : "You don't have any notifications yet"}
+              ? t('notifications.noUnread', "You don't have any unread notifications")
+              : t('notifications.noNotificationsAny', "You don't have any notifications yet")}
           />
         }
         ListFooterComponent={<View style={styles.bottomPadding} />}

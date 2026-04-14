@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import { api } from '@/app/services/api';
 import { API_BASE_URL } from '@/app/config/api';
@@ -58,6 +59,7 @@ interface CustomerInfo {
 
 export default function ProviderChatScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const { id: conversationIdParam } = useLocalSearchParams<{ id: string }>();
     const flatListRef = useRef<FlatList>(null);
@@ -173,7 +175,7 @@ export default function ProviderChatScreen() {
         } catch (error) {
             console.error('Error loading chat data:', error);
             if (isMounted.current) {
-                Alert.alert('Error', 'Failed to load chat. Please try again.');
+                Alert.alert(t('success.error', 'Error'), t('providerRequests.startError', 'Failed to load chat. Please try again.'));
             }
         } finally {
             if (isMounted.current) setIsLoading(false);
@@ -321,14 +323,14 @@ export default function ProviderChatScreen() {
             } else {
                 if (isMounted.current) {
                     setMessages(prev => prev.filter(msg => msg.id !== tempId));
-                    Alert.alert('Error', 'Failed to send message');
+                    Alert.alert(t('success.error', 'Error'), t('providerRequests.startError', 'Failed to send message'));
                 }
             }
         } catch (error) {
             console.error('Error sending message:', error);
             if (isMounted.current) {
                 setMessages(prev => prev.filter(msg => msg.id !== tempId));
-                Alert.alert('Error', 'Failed to send message. Please check connection.');
+                Alert.alert(t('success.error', 'Error'), t('auth.serverConnectionFailed', 'Failed to send message. Please check connection.'));
             }
         } finally {
             if (isMounted.current) setIsSending(false);
@@ -339,7 +341,7 @@ export default function ProviderChatScreen() {
         if (customer?.phone) {
             Linking.openURL(`tel:${customer.phone}`);
         } else {
-            Alert.alert('Error', 'Customer phone number not available');
+            Alert.alert(t('success.error', 'Error'), t('providerRegistration.invalidPhoneTitle', 'Customer phone number not available'));
         }
     };
 
@@ -354,8 +356,8 @@ export default function ProviderChatScreen() {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
 
-        if (date.toDateString() === today.toDateString()) return 'Today';
-        if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        if (date.toDateString() === today.toDateString()) return t('schedule.today', 'Today');
+        if (date.toDateString() === yesterday.toDateString()) return t('schedule.yesterday', 'Yesterday');
         return date.toLocaleDateString();
     };
 
@@ -413,8 +415,8 @@ export default function ProviderChatScreen() {
                     style={styles.avatar}
                 />
                 <View style={styles.profileInfo}>
-                    <Text style={styles.customerName} numberOfLines={1}>{customer?.fullname || 'Loading...'}</Text>
-                    <Text style={styles.onlineStatus}>Customer</Text>
+                    <Text style={styles.customerName} numberOfLines={1}>{customer?.fullname || t('common.loading', 'Loading...')}</Text>
+                    <Text style={styles.onlineStatus}>{t('common.customer', 'Customer')}</Text>
                 </View>
             </View>
 
@@ -422,7 +424,7 @@ export default function ProviderChatScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleCall} disabled={!customer?.phone}>
                     <Ionicons name="call-outline" size={22} color={customer?.phone ? Colors.primary : Colors.text.secondary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.headerButton} onPress={() => Alert.alert('Options', 'Block Customer / Report')}>
+                <TouchableOpacity style={styles.headerButton} onPress={() => Alert.alert(t('common.options', 'Options'), t('profile.editProfile', 'Block Customer / Report'))}>
                     <Ionicons name="ellipsis-vertical" size={20} color={Colors.text.primary} />
                 </TouchableOpacity>
             </View>
@@ -436,13 +438,13 @@ export default function ProviderChatScreen() {
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Invalid Conversation</Text>
+                    <Text style={styles.headerTitle}>{t('chat.noConversations', 'Invalid Conversation')}</Text>
                 </View>
                 <View style={styles.errorContainer}>
                     <Ionicons name="alert-circle-outline" size={64} color={Colors.text.secondary} />
-                    <Text style={styles.errorText}>This conversation does not exist.</Text>
+                    <Text style={styles.errorText}>{t('chat.noCustomersFound', 'This conversation does not exist.')}</Text>
                     <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
-                        <Text style={styles.errorButtonText}>Go Back</Text>
+                        <Text style={styles.errorButtonText}>{t('common.goBack', 'Go Back')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -455,7 +457,7 @@ export default function ProviderChatScreen() {
                 {renderHeader()}
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={Colors.primary} />
-                    <Text style={styles.loadingText}>Loading conversation...</Text>
+                    <Text style={styles.loadingText}>{t('common.loading', 'Loading conversation...')}</Text>
                 </View>
             </View>
         );
@@ -492,7 +494,7 @@ export default function ProviderChatScreen() {
                     style={styles.input}
                     value={inputText}
                     onChangeText={setInputText}
-                    placeholder="Type a message..."
+                    placeholder={t('chat.typeMessage', 'Type a message...')}
                     placeholderTextColor={Colors.text.secondary}
                     multiline
                     maxLength={1000}
