@@ -426,6 +426,16 @@ const Disputes = () => {
         </div>
       )}
 
+      {/* Loading Overlay for Dispute Details */}
+      {modalLoading && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md flex items-center justify-center z-[60]">
+           <div className="bg-admin-card p-10 rounded-[2.5rem] shadow-2xl flex flex-col items-center border border-admin-border animate-in zoom-in duration-300">
+              <Loader2 size={40} className="text-blue-600 animate-spin mb-4" />
+              <p className="text-[10px] font-black text-admin-text-muted uppercase tracking-[0.2em] animate-pulse">{t('dispute_fetching')}</p>
+           </div>
+        </div>
+      )}
+
       {/* --- REVIEW MODAL --- */}
       {selectedDispute && (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -436,9 +446,9 @@ const Disputes = () => {
                    <AlertCircle size={20} className="text-red-400" />
                    <h2 className="text-lg font-black uppercase tracking-tight">{t('dispute_case_review')}: #{selectedDispute.disputeID}</h2>
                 </div>
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest leading-none">
-                  {t('dispute_status')}: <span className="text-admin-text">{getStatusTranslation(selectedDispute.status)}</span> | 
-                  {t('dispute_priority')}: <span className="text-admin-text">{getPriorityTranslation(selectedDispute.priority)}</span>
+                <p className="text-admin-text font-bold text-xs uppercase tracking-widest leading-none opacity-80">
+                  {t('dispute_status')}: <span className="text-admin-text font-black">{getStatusTranslation(selectedDispute.status)}</span> | 
+                  {t('dispute_priority')}: <span className="text-admin-text font-black">{getPriorityTranslation(selectedDispute.priority)}</span>
                 </p>
               </div>
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -450,8 +460,8 @@ const Disputes = () => {
               {/* Left Column: Details & Parties */}
               <div className="lg:col-span-2 p-8 space-y-8">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 dark:bg-admin-sidebar rounded-2xl border border-admin-border">
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Complainant ({t(selectedDispute.raised_by_type?.toLowerCase())})</p>
+                  <div className="p-4 bg-admin-sidebar/5 dark:bg-admin-sidebar/20 rounded-2xl border border-admin-border">
+                    <p className="text-xs font-bold text-admin-text uppercase mb-2">Complainant ({t(selectedDispute.raised_by_type?.toLowerCase())})</p>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
                         <User size={20} />
@@ -460,12 +470,12 @@ const Disputes = () => {
                         <p className="font-bold text-admin-text leading-none">
                           {selectedDispute.raised_by?.fullname || selectedDispute.raised_by?.name || 'Unknown User'}
                         </p>
-                        <p className="text-[10px] text-admin-text-muted font-medium">ID: {selectedDispute.raised_by_id}</p>
+                        <p className="text-[10px] text-admin-text-muted font-medium mt-1">ID: {selectedDispute.raised_by_id}</p>
                       </div>
                     </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-admin-sidebar rounded-2xl border border-admin-border">
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Against ({t(selectedDispute.against_type?.toLowerCase())})</p>
+                  <div className="p-4 bg-admin-sidebar/5 dark:bg-admin-sidebar/20 rounded-2xl border border-admin-border">
+                    <p className="text-xs font-bold text-admin-text uppercase mb-2">Against ({t(selectedDispute.against_type?.toLowerCase())})</p>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
                         <Wrench size={20} />
@@ -474,7 +484,7 @@ const Disputes = () => {
                         <p className="font-bold text-admin-text leading-none">
                           {selectedDispute.against?.fullname || selectedDispute.against?.name || 'Unknown Provider'}
                         </p>
-                        <p className="text-[10px] text-admin-text-muted font-medium">ID: {selectedDispute.against_id}</p>
+                        <p className="text-[10px] text-admin-text-muted font-medium mt-1">ID: {selectedDispute.against_id}</p>
                       </div>
                     </div>
                   </div>
@@ -483,10 +493,10 @@ const Disputes = () => {
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-xs font-black text-admin-text uppercase mb-2">{t('dispute_subject')}</h3>
-                    <p className="text-lg font-bold text-slate-800 text-admin-text">{selectedDispute.title}</p>
+                    <p className="text-lg font-bold text-admin-text">{selectedDispute.title}</p>
                   </div>
                   <div>
-                    <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase mb-2">{t('dispute_description')}</h3>
+                    <h3 className="text-xs font-bold text-admin-text uppercase mb-2">{t('dispute_description')}</h3>
                     <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 text-blue-900 dark:text-blue-300 rounded-2xl border border-blue-100/50 dark:border-blue-900/50 leading-relaxed italic">
                       "{selectedDispute.description}"
                     </div>
@@ -499,37 +509,62 @@ const Disputes = () => {
                      <MessageSquareText size={16} className="text-blue-500" />
                      {t('dispute_msg_history')}
                    </h3>
-                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                     {selectedDispute.messages?.map((msg, idx) => (
-                       <div key={msg.messageID || idx} className={`p-4 rounded-2xl border shadow-sm group/msg relative ${
-                         msg.sender_type === 'admin' 
-                         ? 'bg-blue-600 dark:bg-black text-white ml-auto border-blue-700 dark:border-slate-700' 
-                         : 'bg-admin-card border-admin-border text-slate-800 text-admin-text'
-                       } max-w-[90%]`}>
-                         <div className="flex justify-between items-start mb-1">
-                           <p className={`text-[9px] font-black uppercase tracking-widest ${msg.sender_type === 'admin' ? 'text-blue-100' : 'text-slate-400'}`}>
-                             {t(msg.sender_type?.toLowerCase())} • {msg.sender?.fullname || msg.sender?.name || 'System'}
-                           </p>
-                           <div className="flex items-center gap-2">
-                             <p className="text-[9px] opacity-40">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                             <button 
-                               onClick={() => handleDeleteMessage(msg.messageID)}
-                               className="opacity-0 group-hover/msg:opacity-100 text-red-400 hover:text-red-500 transition-all p-1"
-                               title="Delete message"
-                             >
-                               <Trash2 size={12} />
-                             </button>
-                           </div>
-                         </div>
-                         <p className="text-xs leading-relaxed">{msg.message}</p>
-                       </div>
-                     ))}
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                      {selectedDispute.messages
+                        ?.filter(msg => {
+                          if (recipientType === 'admin') return msg.is_admin_only || msg.recipient_type === 'admin';
+                          if (recipientType === 'customer') {
+                            return msg.sender_type === 'customer' || (msg.sender_type === 'admin' && msg.recipient_type === 'customer' && !msg.is_admin_only);
+                          }
+                          if (recipientType === 'provider') {
+                            return msg.sender_type === 'provider' || (msg.sender_type === 'admin' && msg.recipient_type === 'provider' && !msg.is_admin_only);
+                          }
+                          return true;
+                        })
+                        .map((msg, idx) => (
+                        <div key={msg.messageID || idx} className={`p-4 rounded-2xl border shadow-sm group/msg relative ${
+                          msg.sender_type === 'admin' 
+                          ? 'bg-blue-600 dark:bg-black text-white ml-auto border-blue-700 dark:border-slate-700' 
+                          : 'bg-admin-card border-admin-border text-admin-text'
+                        } max-w-[90%]`}>
+                          <div className="flex justify-between items-start mb-1">
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${msg.sender_type === 'admin' ? 'text-blue-100' : 'text-admin-text-muted'}`}>
+                              {t(msg.sender_type?.toLowerCase())} • {msg.sender?.fullname || msg.sender?.name || 'System'}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-[9px] opacity-40">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                              <button 
+                                onClick={() => handleDeleteMessage(msg.messageID)}
+                                className="opacity-0 group-hover/msg:opacity-100 text-red-400 hover:text-red-500 transition-all p-1"
+                                title="Delete message"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs leading-relaxed">{msg.message}</p>
+                        </div>
+                      ))}
+                      {selectedDispute.messages?.filter(msg => {
+                        if (recipientType === 'admin') return msg.is_admin_only || msg.recipient_type === 'admin';
+                        if (recipientType === 'customer') {
+                          return msg.sender_type === 'customer' || (msg.sender_type === 'admin' && msg.recipient_type === 'customer' && !msg.is_admin_only);
+                        }
+                        if (recipientType === 'provider') {
+                          return msg.sender_type === 'provider' || (msg.sender_type === 'admin' && msg.recipient_type === 'provider' && !msg.is_admin_only);
+                        }
+                        return true;
+                      }).length === 0 && (
+                        <div className="py-10 text-center">
+                          <p className="text-[10px] font-black text-admin-text-muted uppercase tracking-widest italic">{t('dispute_no_messages') || 'No messages in this thread'}</p>
+                        </div>
+                      )}
                     </div>
                      {/* Chat Input */}
                     <div className="mt-4 pt-4 border-t border-admin-border">
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Recipient:</span>
+                          <span className="text-[9px] font-black text-admin-text-muted uppercase tracking-widest">Recipient:</span>
                           <div className="flex gap-1">
                             {['customer', 'provider', 'admin'].map((type) => (
                               <button 
@@ -538,7 +573,7 @@ const Disputes = () => {
                                 className={`px-2 py-1 rounded text-[8px] font-black uppercase transition-all ${
                                   recipientType === type 
                                   ? 'bg-blue-600 text-white shadow-md' 
-                                  : 'bg-slate-100 dark:bg-admin-sidebar text-slate-400 hover:text-slate-600'
+                                  : 'bg-slate-100 dark:bg-admin-sidebar text-admin-text-muted hover:text-admin-text'
                                 }`}
                               >
                                 {t(type)}
@@ -574,7 +609,7 @@ const Disputes = () => {
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase block mb-1">{t('dispute_admin_notes')}</label>
+                    <label className="text-xs font-bold text-admin-text uppercase block mb-2">{t('dispute_admin_notes')}</label>
                     <textarea 
                       placeholder="Enter internal resolution notes..."
                       className="w-full h-32 p-3 bg-admin-card border border-admin-border rounded-2xl text-xs focus:ring-2 focus:ring-blue-500 outline-none text-admin-text transition-all resize-none"
@@ -585,9 +620,9 @@ const Disputes = () => {
 
                   {selectedDispute.status !== 'resolved' && (
                     <div className="space-y-4">                       <div>
-                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase block mb-1">{t('dispute_resolution_type')}</label>
+                            <label className="text-xs font-bold text-admin-text uppercase block mb-2">{t('dispute_resolution_type')}</label>
                         <select 
-                          className="w-full p-3 bg-admin-card border border-admin-border rounded-xl text-xs font-bold outline-none dark:text-white"
+                          className="w-full p-3 bg-admin-card border border-admin-border rounded-xl text-xs font-bold outline-none text-admin-text"
                           value={resolutionData.resolution_type}
                           onChange={(e) => setResolutionData({...resolutionData, resolution_type: e.target.value})}
                         >
@@ -603,10 +638,10 @@ const Disputes = () => {
 
                       {(resolutionData.resolution_type === 'refund' || resolutionData.resolution_type === 'partial_refund') && (
                         <div>
-                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase block mb-1">{t('dispute_refund_amount')}</label>
+                          <label className="text-xs font-bold text-admin-text uppercase block mb-2">{t('dispute_refund_amount')}</label>
                           <input 
                             type="number"
-                            className="w-full p-3 bg-admin-card border border-admin-border rounded-xl text-xs font-bold outline-none dark:text-white"
+                            className="w-full p-3 bg-admin-card border border-admin-border rounded-xl text-xs font-bold outline-none text-admin-text"
                             value={resolutionData.refund_amount}
                             onChange={(e) => setResolutionData({...resolutionData, refund_amount: e.target.value})}
                           />
