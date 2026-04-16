@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useServiceRequest, useCancelRequest, useConfirmCompletion } from '../../../hooks/useCustomerQueries';
@@ -20,6 +21,7 @@ import { api } from "@/app/services/api";
 import { ReviewModal } from '../../../components/customer/ReviewModal';
 import { ComplaintModal } from '../../../components/customer/ComplaintModal';
 import { format } from 'date-fns';
+import { formatDate } from '../../utils/formatters';
 import { useQueryClient } from '@tanstack/react-query';
 import Map from '../../../components/Map/index';
 import { useTrackProvider, bookingKeys } from '@/hooks/useCustomerBookings';
@@ -60,11 +62,21 @@ const STATUS_STEPS = [
 export default function RequestDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedTab, setSelectedTab] = useState<'details' | 'timeline' | 'messages'>('details');
+
+  const STATUS_STEPS = [
+    { key: 'pending', label: t('requests.steps.pending', 'Request Sent'), icon: 'send-outline' },
+    { key: 'accepted', label: t('requests.steps.accepted', 'Accepted'), icon: 'checkmark-circle-outline' },
+    { key: 'confirmed', label: t('requests.steps.confirmed', 'Confirmed'), icon: 'checkmark-circle-outline' },
+    { key: 'in_progress', label: t('requests.steps.in_progress', 'In Progress'), icon: 'construct-outline' },
+    { key: 'waiting_customer_confirmation', label: t('requests.steps.waiting_customer_confirmation', 'Job Done'), icon: 'shield-checkmark-outline' },
+    { key: 'completed', label: t('requests.steps.completed', 'Finalized'), icon: 'checkmark-done-outline' },
+  ];
 
   const { data: request, isLoading } = useServiceRequest(id as string);
   const cancelRequest = useCancelRequest();
@@ -111,9 +123,9 @@ export default function RequestDetails() {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
-        <Text style={styles.errorText}>Request not found</Text>
+        <Text style={styles.errorText}>{t('requests.notFound', 'Request not found')}</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('requests.goBack', 'Go Back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -170,21 +182,21 @@ export default function RequestDetails() {
   const handleTrackProvider = () => {
     setSelectedTab('details');
     // We could scroll to map here if needed
-    Alert.alert('Tracking Active', 'You can now view the provider location on the map below.');
+    Alert.alert(t('requests.trackingActive', 'Tracking Active'), t('requests.trackingMessage', 'You can now view the provider location on the map below.'));
   };
 
   const handleCancelRequest = async () => {
     if (!cancelReason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for cancellation');
+      Alert.alert(t('common.error', 'Error'), t('requests.cancelReasonRequired', 'Please provide a reason for cancellation'));
       return;
     }
 
     try {
       await cancelRequest.mutateAsync({ id: id as string, reason: cancelReason });
       setShowCancelModal(false);
-      Alert.alert('Success', 'Request cancelled successfully');
+      Alert.alert(t('common.success', 'Success'), t('requests.cancelSuccess', 'Request cancelled successfully'));
     } catch (error) {
-      Alert.alert('Error', 'Failed to cancel request');
+      Alert.alert(t('common.error', 'Error'), t('requests.cancelError', 'Failed to cancel request'));
     }
   };
 
@@ -210,19 +222,19 @@ export default function RequestDetails() {
 
   const handleConfirmCompletion = async () => {
     Alert.alert(
-      'Confirm Completion',
-      'By confirming, you agree that the service has been performed satisfactorily and the payment will be released to the provider.',
+      t('requests.confirmCompletion', 'Confirm Completion'),
+      t('requests.confirmCompletionMsg', 'By confirming, you agree that the service has been performed satisfactorily and the payment will be released to the provider.'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Confirm',
+          text: t('common.confirm', 'Confirm'),
           onPress: async () => {
             try {
               await confirmCompletion.mutateAsync(id as string);
               // Instantly pop the review modal!
               setShowReviewModal(true);
             } catch (error) {
-              Alert.alert('Error', 'Failed to confirm completion. Please try again.');
+              Alert.alert(t('common.error', 'Error'), t('common.failedToConfirm', 'Failed to confirm completion. Please try again.'));
             }
           },
         },
@@ -236,7 +248,7 @@ export default function RequestDetails() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Request Details</Text>
+        <Text style={styles.headerTitle}>{t('requests.requestDetails', 'Request Details')}</Text>
         <TouchableOpacity style={styles.menuButton}>
           <Ionicons name="ellipsis-vertical" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
@@ -250,7 +262,7 @@ export default function RequestDetails() {
             color={getStatusColor(request.status)}
           />
           <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
-            {request.status.replace('_', ' ').toUpperCase()}
+            {t(`bookings.status.${request.status.toLowerCase()}`, request.status.replace('_', ' ').toUpperCase())}
           </Text>
         </View>
         <Text style={styles.requestNumber}>#{request.requestNumber}</Text>
@@ -260,7 +272,7 @@ export default function RequestDetails() {
 
   const renderProviderInfo = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Provider</Text>
+      <Text style={styles.sectionTitle}>{t('requests.serviceProvider', 'Service Provider')}</Text>
       <View style={styles.providerCard}>
         <Image
           source={{ uri: request.providerImage || 'https://via.placeholder.com/60' }}
@@ -271,17 +283,17 @@ export default function RequestDetails() {
           <View style={styles.providerRating}>
             <Ionicons name="star" size={16} color={Colors.warning} />
             <Text style={styles.ratingText}>{request.providerRating?.toFixed(1) || '4.8'}</Text>
-            <Text style={styles.reviewCount}>({request.providerReviewCount || 127} reviews)</Text>
+            <Text style={styles.reviewCount}>({request.providerReviewCount || 127} {t('providerProfile.reviews', 'reviews')})</Text>
           </View>
           <View style={styles.providerStats}>
             <View style={styles.statItem}>
               <Ionicons name="briefcase-outline" size={14} color={Colors.text.secondary} />
-              <Text style={styles.statText}>{request.providerJobs || 150}+ jobs</Text>
+              <Text style={styles.statText}>{request.providerJobs || 150}+ {t('providerProfile.jobs', 'jobs')}</Text>
             </View>
             {request.providerVerified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
-                <Text style={styles.verifiedText}>Verified</Text>
+                <Text style={styles.verifiedText}>{t('requests.verified', 'Verified')}</Text>
               </View>
             )}
           </View>
@@ -302,12 +314,12 @@ export default function RequestDetails() {
     <View style={styles.tabContent}>
       {renderLiveTracking()}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Service Details</Text>
+        <Text style={styles.sectionTitle}>{t('requests.serviceDetails', 'Service Details')}</Text>
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
             <Ionicons name="construct-outline" size={20} color={Colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Service</Text>
+              <Text style={styles.detailLabel}>{t('requests.service', 'Service')}</Text>
               <Text style={styles.detailValue}>{request.serviceName}</Text>
             </View>
           </View>
@@ -315,9 +327,9 @@ export default function RequestDetails() {
           <View style={styles.detailRow}>
             <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Date & Time</Text>
+              <Text style={styles.detailLabel}>{t('requests.dateTime', 'Date & Time')}</Text>
               <Text style={styles.detailValue}>
-                {format(new Date(request.scheduledDate), 'MMMM d, yyyy')} at {request.scheduledTime}
+                {formatDate(request.scheduledDate)} at {request.scheduledTime}
               </Text>
             </View>
           </View>
@@ -325,7 +337,7 @@ export default function RequestDetails() {
           <View style={styles.detailRow}>
             <Ionicons name="location-outline" size={20} color={Colors.primary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={styles.detailLabel}>{t('requests.location', 'Location')}</Text>
               <Text style={styles.detailValue}>{request.address}</Text>
             </View>
           </View>
@@ -334,7 +346,7 @@ export default function RequestDetails() {
             <View style={styles.detailRow}>
               <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Special Instructions</Text>
+                <Text style={styles.detailLabel}>{t('requests.specialInstructions', 'Special Instructions')}</Text>
                 <Text style={styles.detailValue}>{request.specialInstructions}</Text>
               </View>
             </View>
@@ -363,10 +375,10 @@ export default function RequestDetails() {
     return (
       <View style={styles.section}>
         <View style={styles.liveTrackingHeader}>
-          <Text style={styles.sectionTitle}>Live Tracking</Text>
+          <Text style={styles.sectionTitle}>{t('requests.liveTracking', 'Live Tracking')}</Text>
           <View style={styles.liveIndicator}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
+            <Text style={styles.liveText}>{t('requests.live', 'LIVE')}</Text>
           </View>
         </View>
         
@@ -386,7 +398,7 @@ export default function RequestDetails() {
           
           {!providerPos && (
             <View style={styles.mapOverlay}>
-              <Text style={styles.mapOverlayText}>Waiting for provider location...</Text>
+              <Text style={styles.mapOverlayText}>{t('requests.waitingForLocation', 'Waiting for provider location...')}</Text>
             </View>
           )}
         </View>
@@ -394,13 +406,13 @@ export default function RequestDetails() {
         {trackingData?.eta && (
           <View style={styles.etaCard}>
             <View style={styles.etaItem}>
-              <Text style={styles.etaLabel}>Distance</Text>
-              <Text style={styles.etaValue}>{trackingData.eta.distance_km || '0'} km</Text>
+              <Text style={styles.etaLabel}>{t('requests.distance', 'Distance')}</Text>
+              <Text style={styles.etaValue}>{trackingData.eta.distance_km || '0'} {t('common.km', 'km')}</Text>
             </View>
             <View style={styles.etaDivider} />
             <View style={styles.etaItem}>
-              <Text style={styles.etaLabel}>Est. Arrival</Text>
-              <Text style={styles.etaValue}>{trackingData.eta.minutes || '?' } min</Text>
+              <Text style={styles.etaLabel}>{t('requests.estArrival', 'Est. Arrival')}</Text>
+              <Text style={styles.etaValue}>{trackingData.eta.minutes || '?' } {t('common.min', 'min')}</Text>
             </View>
           </View>
         )}
@@ -410,24 +422,24 @@ export default function RequestDetails() {
 
   const renderPaymentDetails = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Payment Details</Text>
+      <Text style={styles.sectionTitle}>{t('requests.paymentDetails', 'Payment Details')}</Text>
       <View style={styles.paymentCard}>
         <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Service Price</Text>
-          <Text style={styles.priceValue}>${request.estimatedPrice.toFixed(2)}</Text>
+          <Text style={styles.priceLabel}>{t('requests.servicePrice', 'Service Price')}</Text>
+          <Text style={styles.priceValue}>ETB {request.estimatedPrice.toFixed(2)}</Text>
         </View>
 
         {request.paymentStatus === 'paid' ? (
           <View style={styles.paidContainer}>
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
-            <Text style={styles.paidText}>Payment Completed</Text>
+            <Text style={styles.paidText}>{t('requests.paymentCompleted', 'Payment Completed')}</Text>
           </View>
         ) : request.status === 'waiting_customer_confirmation' ? (
           <View style={styles.confirmationRequired}>
             <View style={styles.pendingPayment}>
               <Ionicons name="information-circle-outline" size={20} color={Colors.info} />
               <Text style={[styles.pendingPaymentText, { color: Colors.info }]}>
-                Provider marked job as done. Please confirm completion.
+                {t('requests.providerMarkedDone', 'Provider marked job as done. Please confirm completion.')}
               </Text>
             </View>
             <TouchableOpacity 
@@ -437,27 +449,27 @@ export default function RequestDetails() {
             >
               <Ionicons name="shield-checkmark-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
               <Text style={styles.payButtonText}>
-                {confirmCompletion.isPending ? 'Confirming...' : 'Confirm Service Completion'}
+                {confirmCompletion.isPending ? t('requests.confirming', 'Confirming...') : t('requests.confirmServiceBtn', 'Confirm Service Completion')}
               </Text>
             </TouchableOpacity>
           </View>
         ) : (['accepted', 'confirmed'].includes(request.status as string)) ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
             <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
-            <Text style={styles.payButtonText}>Pay Now — ETB {request.estimatedPrice?.toFixed(2)}</Text>
+            <Text style={styles.payButtonText}>{t('requests.payNow', 'Pay Now')} — ETB {request.estimatedPrice?.toFixed(2)}</Text>
           </TouchableOpacity>
         ) : request.status === 'completed' && (request.paymentStatus as string) !== 'paid' ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
             <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
-            <Text style={styles.payButtonText}>Pay Now — ETB {request.estimatedPrice?.toFixed(2)}</Text>
+            <Text style={styles.payButtonText}>{t('requests.payNow', 'Pay Now')} — ETB {request.estimatedPrice?.toFixed(2)}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.pendingPayment}>
             <Ionicons name="time-outline" size={20} color={Colors.warning} />
             <Text style={styles.pendingPaymentText}>
               {request.status === 'pending'
-                ? 'Waiting for provider to accept your request'
-                : 'Payment pending after service completion'}
+                ? t('requests.waitingAcceptance', 'Waiting for provider to accept your request')
+                : t('requests.paymentPending', 'Payment pending after service completion')}
             </Text>
           </View>
         )}
@@ -470,7 +482,7 @@ export default function RequestDetails() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Progress Timeline</Text>
+        <Text style={styles.sectionTitle}>{t('requests.progressTimeline', 'Progress Timeline')}</Text>
         <View style={styles.timelineCard}>
           {STATUS_STEPS.map((step, index) => {
             const isCompleted = index <= currentStep;
@@ -506,7 +518,7 @@ export default function RequestDetails() {
                   </Text>
                   {isCurrent && (
                     <Text style={styles.timelineTime}>
-                      {request.status === 'in_progress' ? 'In progress now' : 'Current step'}
+                      {request.status === 'in_progress' ? t('requests.inProgressNow', 'In progress now') : t('requests.currentStep', 'Current step')}
                     </Text>
                   )}
                 </View>
@@ -532,14 +544,14 @@ export default function RequestDetails() {
         {request.status === 'confirmed' && (
           <TouchableOpacity style={styles.trackButton} onPress={handleTrackProvider}>
             <Ionicons name="location" size={20} color={Colors.surface} />
-            <Text style={styles.trackButtonText}>Track Provider</Text>
+            <Text style={styles.trackButtonText}>{t('requests.trackProvider', 'Track Provider')}</Text>
           </TouchableOpacity>
         )}
 
         {request.status === 'in_progress' && (
           <TouchableOpacity style={styles.trackButton} onPress={handleTrackProvider}>
             <Ionicons name="location" size={20} color={Colors.surface} />
-            <Text style={styles.trackButtonText}>Track Live Location</Text>
+            <Text style={styles.trackButtonText}>{t('requests.trackLive', 'Track Live Location')}</Text>
           </TouchableOpacity>
         )}
 
@@ -549,13 +561,13 @@ export default function RequestDetails() {
             onPress={() => setShowCancelModal(true)}
           >
             <Ionicons name="close-circle" size={20} color={Colors.error} />
-            <Text style={styles.cancelButtonText}>Cancel Request</Text>
+            <Text style={styles.cancelButtonText}>{t('requests.cancelRequest', 'Cancel Request')}</Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity style={styles.helpButton} onPress={handleReportIssue}>
           <Ionicons name="alert-circle" size={20} color={Colors.warning} />
-          <Text style={styles.helpButtonText}>Report an Issue</Text>
+          <Text style={styles.helpButtonText}>{t('requests.reportIssue', 'Report an Issue')}</Text>
         </TouchableOpacity>
 
         {request.status === 'completed' && !request.review && (
@@ -564,7 +576,7 @@ export default function RequestDetails() {
             onPress={() => setShowReviewModal(true)}
           >
             <Ionicons name="star" size={20} color={Colors.surface} />
-            <Text style={styles.reviewButtonText}>Rate & Review Service</Text>
+            <Text style={styles.reviewButtonText}>{t('requests.rateReviewService', 'Rate & Review Service')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -576,7 +588,7 @@ export default function RequestDetails() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Review</Text>
+        <Text style={styles.sectionTitle}>{t('requests.yourReview', 'Your Review')}</Text>
         <View style={styles.reviewCard}>
           <View style={styles.reviewHeader}>
             <View style={styles.starsRow}>
@@ -597,7 +609,7 @@ export default function RequestDetails() {
             <Text style={styles.reviewComment}>{request.review.comment}</Text>
           )}
           {request.review.is_anonymous && (
-            <Text style={styles.anonymousBadge}>Submitted Anonymously</Text>
+            <Text style={styles.anonymousBadge}>{t('requests.submittedAnonymously', 'Submitted Anonymously')}</Text>
           )}
         </View>
       </View>
@@ -619,7 +631,7 @@ export default function RequestDetails() {
             styles.tabText,
             selectedTab === tab && styles.tabTextActive,
           ]}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {t(`requests.${tab}`, tab.charAt(0).toUpperCase() + tab.slice(1))}
           </Text>
         </TouchableOpacity>
       ))}
@@ -646,12 +658,12 @@ export default function RequestDetails() {
         {selectedTab === 'messages' && (
           <View style={styles.messagesPlaceholder}>
             <Ionicons name="chatbubbles-outline" size={48} color={Colors.text.secondary} />
-            <Text style={styles.messagesTitle}>No messages yet</Text>
+            <Text style={styles.messagesTitle}>{t('requests.noMessages', 'No messages yet')}</Text>
             <Text style={styles.messagesSubtitle}>
-              Start a conversation with {request.providerName}
+              {t('requests.startConversation', { name: request.providerName, defaultValue: `Start a conversation with ${request.providerName}` })}
             </Text>
             <TouchableOpacity style={styles.startChatButton} onPress={handleMessageProvider}>
-              <Text style={styles.startChatButtonText}>Send Message</Text>
+              <Text style={styles.startChatButtonText}>{t('requests.sendMessage', 'Send Message')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -672,28 +684,28 @@ export default function RequestDetails() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Request</Text>
+            <Text style={styles.modalTitle}>{t('requests.cancelModalTitle', 'Cancel Request')}</Text>
             <Text style={styles.modalSubtitle}>
-              Please tell us why you're cancelling this request
+              {t('requests.cancelModalSubtitle', "Please tell us why you're cancelling this request")}
             </Text>
 
             {[
-              'Changed my mind',
-              'Found another provider',
-              'Service no longer needed',
-              'Provider unresponsive',
-              'Price too high',
-              'Other',
-            ].map((reason) => (
+              { key: 'changedMind', label: t('requests.reasons.changedMind', 'Changed my mind') },
+              { key: 'foundAnother', label: t('requests.reasons.foundAnother', 'Found another provider') },
+              { key: 'noLongerNeeded', label: t('requests.reasons.noLongerNeeded', 'Service no longer needed') },
+              { key: 'unresponsive', label: t('requests.reasons.unresponsive', 'Provider unresponsive') },
+              { key: 'priceHigh', label: t('requests.reasons.priceHigh', 'Price too high') },
+              { key: 'other', label: t('requests.reasons.other', 'Other') },
+            ].map((option) => (
               <TouchableOpacity
-                key={reason}
+                key={option.key}
                 style={styles.reasonOption}
-                onPress={() => setCancelReason(reason)}
+                onPress={() => setCancelReason(option.label)}
               >
                 <View style={styles.radioButton}>
-                  {cancelReason === reason && <View style={styles.radioSelected} />}
+                  {cancelReason === option.label && <View style={styles.radioSelected} />}
                 </View>
-                <Text style={styles.reasonText}>{reason}</Text>
+                <Text style={styles.reasonText}>{option.label}</Text>
               </TouchableOpacity>
             ))}
 
@@ -702,7 +714,7 @@ export default function RequestDetails() {
                 style={styles.modalCancelButton}
                 onPress={() => setShowCancelModal(false)}
               >
-                <Text style={styles.modalCancelText}>Go Back</Text>
+                <Text style={styles.modalCancelText}>{t('requests.goBack', 'Go Back')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -713,7 +725,7 @@ export default function RequestDetails() {
                 disabled={!cancelReason || cancelRequest.isPending}
               >
                 <Text style={styles.modalConfirmText}>
-                  {cancelRequest.isPending ? 'Cancelling...' : 'Confirm Cancellation'}
+                  {cancelRequest.isPending ? t('requests.confirming', 'Cancelling...') : t('requests.cancelRequest', 'Confirm Cancellation')}
                 </Text>
               </TouchableOpacity>
             </View>

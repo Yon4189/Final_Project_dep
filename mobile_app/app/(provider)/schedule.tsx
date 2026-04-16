@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { Colors } from "../constants/Colors";
 import { useProviderRequests, useProviderQueries } from "../../hooks/useProviderQueries";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
@@ -21,6 +22,7 @@ import type { ServiceRequest } from "../types/provider.types";
 
 export default function ScheduleScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
 
   // Fetch all requests to filter for the schedule
@@ -68,37 +70,45 @@ export default function ScheduleScreen() {
   }, [allRequests]);
 
   const handleStart = async (request: ServiceRequest) => {
-    Alert.alert("Start Service", "Are you ready to start this service?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Start",
-        onPress: async () => {
-          try {
-            await startService.mutateAsync(request.id);
-            Alert.alert("Success", "Service started");
-          } catch (error) {
-            Alert.alert("Error", "Failed to start service");
-          }
+    Alert.alert(
+      t("providerRequests.startConfirmTitle", "Start Service"),
+      t("providerRequests.startConfirmMsg", "Are you ready to start this service?"),
+      [
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
+        {
+          text: t("common.start", "Start"),
+          onPress: async () => {
+            try {
+              await startService.mutateAsync(request.id);
+              Alert.alert(t("common.success", "Success"), t("providerRequests.startSuccess", "Service started"));
+            } catch (error) {
+              Alert.alert(t("common.error", "Error"), t("providerRequests.startError", "Failed to start service"));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleComplete = async (request: ServiceRequest) => {
-    Alert.alert("Complete Service", "Have you finished this service?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Complete",
-        onPress: async () => {
-          try {
-            await completeService.mutateAsync(request.id);
-            Alert.alert("Success", "Service completed");
-          } catch (error) {
-            Alert.alert("Error", "Failed to complete service");
-          }
+    Alert.alert(
+      t("providerRequests.completeConfirmTitle", "Complete Service"),
+      t("providerRequests.completeConfirmMsg", "Have you finished this service?"),
+      [
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
+        {
+          text: t("providerRequests.complete", "Complete"),
+          onPress: async () => {
+            try {
+              await completeService.mutateAsync(request.id);
+              Alert.alert(t("common.success", "Success"), t("providerRequests.completeSuccess", "Service completed"));
+            } catch (error) {
+              Alert.alert(t("common.error", "Error"), t("providerRequests.completeError", "Failed to complete service"));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const renderRequestItem = ({ item }: { item: ServiceRequest }) => (
@@ -108,7 +118,7 @@ export default function ScheduleScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.timeSection}>
-        <Text style={styles.timeText}>{item.scheduledTime || "N/A"}</Text>
+        <Text style={styles.timeText}>{item.scheduledTime || t("common.na", "N/A")}</Text>
         <View style={[styles.statusLine, { backgroundColor: getStatusColor(item.status) }]} />
       </View>
 
@@ -117,7 +127,7 @@ export default function ScheduleScreen() {
           <Text style={styles.customerName}>{item.customerName}</Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + "20" }]}>
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-              {item.status.replace("_", " ")}
+              {t(`bookings.status.${item.status.toLowerCase()}`, item.status.replace("_", " "))}
             </Text>
           </View>
         </View>
@@ -140,7 +150,7 @@ export default function ScheduleScreen() {
                 style={[styles.actionButton, styles.startButton]}
                 onPress={() => handleStart(item)}
               >
-                <Text style={styles.actionButtonText}>Start</Text>
+                <Text style={styles.actionButtonText}>{t("common.start", "Start")}</Text>
               </TouchableOpacity>
             )}
             {item.status === "in_progress" && (
@@ -148,7 +158,7 @@ export default function ScheduleScreen() {
                 style={[styles.actionButton, styles.completeButton]}
                 onPress={() => handleComplete(item)}
               >
-                <Text style={styles.actionButtonText}>Complete</Text>
+                <Text style={styles.actionButtonText}>{t("providerRequests.complete", "Complete")}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -179,7 +189,7 @@ export default function ScheduleScreen() {
           <View style={styles.dateGroup}>
             <View style={styles.dateHeader}>
               <Text style={styles.dateHeaderText}>{item.date}</Text>
-              <Text style={styles.jobCountText}>{item.data.length} jobs</Text>
+              <Text style={styles.jobCountText}>{t("providerRequests.jobsCount", { count: item.data.length, defaultValue: `${item.data.length} jobs` })}</Text>
             </View>
             {item.data.map((request) => (
               <React.Fragment key={request.id}>
@@ -195,9 +205,9 @@ export default function ScheduleScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="calendar-outline"
-            title="Your schedule is clear"
-            message="You have no confirmed or upcoming jobs at the moment."
-            actionLabel="View Requests"
+            title={t("providerRequests.scheduleClear", "Your schedule is clear")}
+            message={t("providerRequests.noUpcomingJobs", "You have no confirmed or upcoming jobs at the moment.")}
+            actionLabel={t("providerRequests.viewRequests", "View Requests")}
             onAction={() => router.push("/(provider)/requests")}
           />
         }

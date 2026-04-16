@@ -1,6 +1,7 @@
 // app/(auth)/register-provider.tsx
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Alert,
@@ -44,6 +45,7 @@ interface ServiceOffering {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function RegisterProviderScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
@@ -119,9 +121,9 @@ export default function RegisterProviderScreen() {
         setServiceCategories([]);
       }
     } catch (err: any) {
-      setCategoriesError(err.message || 'Failed to load categories');
+      setCategoriesError(err.message || t('auth.categoryLoadError', 'Failed to load categories'));
       setServiceCategories([]);
-      Alert.alert('Warning', 'Could not load categories. Please try again later.');
+      Alert.alert(t('common.warning', 'Warning'), t('auth.categoryLoadError', 'Could not load categories. Please try again later.'));
     } finally {
       setLoadingCategories(false);
     }
@@ -140,7 +142,7 @@ export default function RegisterProviderScreen() {
       updated.splice(index, 1);
       setServiceOfferings(updated);
     } else {
-      Alert.alert('Info', 'You need at least one service offering.');
+      Alert.alert(t('common.info', 'Info'), t('auth.minOneService', 'You need at least one service offering.'));
     }
   };
 
@@ -159,7 +161,7 @@ export default function RegisterProviderScreen() {
   const pickImage = async (type: 'profile' | 'id' | 'credential') => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera roll permissions');
+      Alert.alert(t('auth.permissionNeeded', 'Permission needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
       return;
     }
 
@@ -189,25 +191,25 @@ export default function RegisterProviderScreen() {
 
   const registerProvider = async () => {
     if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType || !idPhoto) {
-      Alert.alert('Error', 'Please fill all required fields and upload your ID card photo.');
+      Alert.alert(t('common.error', 'Error'), t('auth.fillRequiredFields', 'Please fill all required fields and upload your ID card photo.'));
       return;
     }
 
     // Client-side validation
     const phoneRegex = /^(09|07)[0-9]{8}$/;
     if (!phoneRegex.test(formData.phone)) {
-      Alert.alert('Invalid Phone', 'Phone number must start with 09 or 07 and be 10 digits long.');
+      Alert.alert(t('auth.invalidPhoneTitle', 'Invalid Phone'), t('validation.invalidPhone', 'Phone number must start with 09 or 07 and be 10 digits long.'));
       return;
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
     if (!passwordRegex.test(formData.password)) {
-      Alert.alert('Weak Password', 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.');
+      Alert.alert(t('auth.weakPassword', 'Weak Password'), t('auth.weakPasswordInstruction', 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.'));
       return;
     }
 
     if (formData.password !== formData.password_confirmation) {
-      Alert.alert('Password Mismatch', 'Passwords do not match.');
+      Alert.alert(t('auth.passwordMismatch', 'Password Mismatch'), t('validation.passwordsDoNotMatch', 'Passwords do not match.'));
       return;
     }
 
@@ -256,7 +258,7 @@ export default function RegisterProviderScreen() {
         }
       }
       
-      Alert.alert('Registration Error', errorMessage);
+      Alert.alert(t('auth.registrationError', 'Registration Error'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -266,12 +268,12 @@ export default function RegisterProviderScreen() {
     return (
       <View style={styles.successContainer}>
         <Ionicons name="checkmark-circle" size={80} color={colors.success} />
-        <Text style={styles.successTitle}>Registration Submitted!</Text>
+        <Text style={styles.successTitle}>{t("auth.registrationSubmitted", "Registration Submitted!")}</Text>
         <Text style={styles.successSubtitle}>
-          Your application is under review. We'll notify you once your account is verified.
+          {t("auth.applicationUnderReview", "Your application is under review. We'll notify you once your account is verified.")}
         </Text>
         <AppButton
-          title="Go to Login"
+          title={t("auth.goToLogin", "Go to Login")}
           onPress={() => router.replace('/login')}
           fullWidth
           style={{ marginTop: 20 }}
@@ -293,7 +295,7 @@ export default function RegisterProviderScreen() {
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Choose Service Category</Text>
+            <Text style={styles.modalTitle}>{t("auth.chooseServiceCategory", "Choose Service Category")}</Text>
             <TouchableOpacity onPress={() => setShowServiceCategoryModal(null)}>
               <Ionicons name="close" size={24} color={colors.text.secondary} />
             </TouchableOpacity>
@@ -321,7 +323,7 @@ export default function RegisterProviderScreen() {
               )}
             />
           )}
-          <AppButton title="Cancel" onPress={() => setShowServiceCategoryModal(null)} variant="outline" style={{ marginTop: 10 }} />
+          <AppButton title={t("common.cancel", "Cancel")} onPress={() => setShowServiceCategoryModal(null)} variant="outline" style={{ marginTop: 10 }} />
         </View>
       </View>
     </Modal>
@@ -331,84 +333,84 @@ export default function RegisterProviderScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.title}>Provider Registration</Text>
-          <Text style={styles.subtitle}>Join as a service provider</Text>
+          <Text style={styles.title}>{t("auth.providerRegistration", "Provider Registration")}</Text>
+          <Text style={styles.subtitle}>{t("auth.joinAsProvider", "Join as a service provider")}</Text>
         </View>
 
         <View style={styles.formContainer}>
           <View style={styles.uploadContainer}>
-            <Text style={styles.label}>Profile Picture <Text style={styles.optional}>(Optional)</Text></Text>
+            <Text style={styles.label}>{t("auth.profilePicture", "Profile Picture")} <Text style={styles.optional}>{t("auth.optional", "(Optional)")}</Text></Text>
             <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage('profile')}>
               {profilePictureUri ? <Image source={{ uri: profilePictureUri }} style={styles.profileImage} /> : (
                 <View style={styles.imagePlaceholder}>
                   <Ionicons name="camera-outline" size={40} color={colors.text.secondary} />
-                  <Text style={styles.imagePlaceholderText}>Upload Photo</Text>
+                  <Text style={styles.imagePlaceholderText}>{t("auth.uploadPhoto", "Upload Photo")}</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
 
-          <AppInput label="Full Name" value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder="John Doe" required />
-          <AppInput label="Email" value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder="email@example.com" autoCapitalize="none" keyboardType="email-address" required />
-          <AppInput label="Phone Number" value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required />
+          <AppInput label={t("auth.fullName", "Full Name")} value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder={t("auth.fullNamePlaceholder", "John Doe")} required />
+          <AppInput label={t("auth.email", "Email")} value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder={t("login.emailPlaceholder", "email@example.com")} autoCapitalize="none" keyboardType="email-address" required />
+          <AppInput label={t("auth.phoneNumber", "Phone Number")} value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required />
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Service City <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.label}>{t("auth.serviceCity", "Service City")} <Text style={styles.required}>*</Text></Text>
             <TouchableOpacity style={styles.dropdown} onPress={() => setShowCityModal(true)}>
-              <Text style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}>{formData.service_city || "Select your service city"}</Text>
+              <Text style={formData.service_city ? styles.dropdownText : styles.dropdownPlaceholder}>{formData.service_city || t("auth.selectServiceCity", "Select your service city")}</Text>
               <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.servicesSection}>
-            <Text style={styles.sectionTitle}>Services You Offer <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.sectionTitle}>{t("auth.servicesYouOffer", "Services You Offer")} <Text style={styles.required}>*</Text></Text>
             {serviceOfferings.map((offering, index) => (
               <View key={index} style={styles.serviceCard}>
                 <View style={styles.serviceCardHeader}>
-                  <Text style={styles.serviceCardTitle}>Service #{index + 1}</Text>
+                  <Text style={styles.serviceCardTitle}>{t("auth.serviceLabel", "Service #")}{index + 1}</Text>
                   {serviceOfferings.length > 1 && <TouchableOpacity onPress={() => removeServiceOffering(index)}><Ionicons name="close-circle" size={24} color={colors.error} /></TouchableOpacity>}
                 </View>
                 <TouchableOpacity style={styles.dropdown} onPress={() => setShowServiceCategoryModal(index)}>
-                  <Text style={offering.categoryId ? styles.dropdownText : styles.dropdownPlaceholder}>{offering.categoryName || "Select a category"}</Text>
+                  <Text style={offering.categoryId ? styles.dropdownText : styles.dropdownPlaceholder}>{offering.categoryName || t("auth.selectCategory", "Select a category")}</Text>
                   <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
                 </TouchableOpacity>
-                <AppInput label="Service Name" value={offering.serviceName} onChangeText={(t) => updateServiceOffering(index, 'serviceName', t)} placeholder="e.g., Plumbing" required />
-                <AppInput label="Base Price (ETB)" value={offering.basePrice} onChangeText={(t) => updateServiceOffering(index, 'basePrice', t.replace(/[^0-9]/g, ''))} placeholder="1000" keyboardType="numeric" required />
+                <AppInput label={t("auth.serviceName", "Service Name")} value={offering.serviceName} onChangeText={(t) => updateServiceOffering(index, 'serviceName', t)} placeholder={t("auth.egPlumbing", "e.g., Plumbing")} required />
+                <AppInput label={t("auth.basePrice", "Base Price (ETB)")} value={offering.basePrice} onChangeText={(t) => updateServiceOffering(index, 'basePrice', t.replace(/[^0-9]/g, ''))} placeholder="1000" keyboardType="numeric" required />
               </View>
             ))}
             <TouchableOpacity style={styles.addServiceButton} onPress={addServiceOffering}>
               <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
-              <Text style={styles.addServiceText}>Add Another Service</Text>
+              <Text style={styles.addServiceText}>{t("auth.addAnotherService", "Add Another Service")}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>ID Document Type <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.label}>{t("auth.idDocumentType", "ID Document Type")} <Text style={styles.required}>*</Text></Text>
             <TouchableOpacity style={styles.dropdown} onPress={() => setShowIdTypeModal(true)}>
-              <Text style={formData.idPhotoType ? styles.dropdownText : styles.dropdownPlaceholder}>{formData.idPhotoType || "Select ID type"}</Text>
+              <Text style={formData.idPhotoType ? styles.dropdownText : styles.dropdownPlaceholder}>{formData.idPhotoType || t("auth.selectIdType", "Select ID type")}</Text>
               <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.uploadContainer}>
-            <Text style={styles.label}>ID Card Photo <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.label}>{t("auth.idCardPhoto", "ID Card Photo")} <Text style={styles.required}>*</Text></Text>
             <TouchableOpacity style={styles.idImagePicker} onPress={() => pickImage('id')}>
               {idPhotoUri ? <Image source={{ uri: idPhotoUri }} style={styles.idImage} /> : (
                 <View style={styles.imagePlaceholder}>
                   <Ionicons name="id-card-outline" size={40} color={colors.text.secondary} />
-                  <Text style={styles.imagePlaceholderText}>Upload ID Card</Text>
+                  <Text style={styles.imagePlaceholderText}>{t("auth.uploadIdCard", "Upload ID Card")}</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
 
-          <AppInput label="Password" value={formData.password} onChangeText={(t) => setFormData({ ...formData, password: t })} secureTextEntry showPasswordToggle={true} placeholder="Minimum 8 characters" required />
-          <AppInput label="Confirm Password" value={formData.password_confirmation} onChangeText={(t) => setFormData({ ...formData, password_confirmation: t })} secureTextEntry showPasswordToggle={true} placeholder="Re-enter password" required />
+          <AppInput label={t("auth.password", "Password")} value={formData.password} onChangeText={(t) => setFormData({ ...formData, password: t })} secureTextEntry showPasswordToggle={true} placeholder={t("auth.minCharacters", "Minimum 8 characters")} required />
+          <AppInput label={t("auth.confirmPassword", "Confirm Password")} value={formData.password_confirmation} onChangeText={(t) => setFormData({ ...formData, password_confirmation: t })} secureTextEntry showPasswordToggle={true} placeholder={t("auth.reenterPasswordPlaceholder", "Re-enter password")} required />
 
-          <AppButton title="Register as Provider" onPress={registerProvider} loading={loading} disabled={loading} fullWidth style={{ marginTop: 20 }} />
+          <AppButton title={t("auth.registerAsProviderBtn", "Register as Provider")} onPress={registerProvider} loading={loading} disabled={loading} fullWidth style={{ marginTop: 20 }} />
 
           <TouchableOpacity style={styles.loginLink} onPress={() => router.push('/login')}>
-            <Text style={styles.loginText}>Already have an account? <Text style={styles.loginLinkText}>Sign In</Text></Text>
+            <Text style={styles.loginText}>{t("auth.alreadyHaveAccount", "Already have an account?")} <Text style={styles.loginLinkText}>{t("auth.signIn", "Sign In")}</Text></Text>
           </TouchableOpacity>
         </View>
 
@@ -416,11 +418,11 @@ export default function RegisterProviderScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select ID Type</Text>
+                <Text style={styles.modalTitle}>{t("auth.selectIdTypeModal", "Select ID Type")}</Text>
                 <TouchableOpacity onPress={() => setShowIdTypeModal(false)}><Ionicons name="close" size={24} color={colors.text.secondary} /></TouchableOpacity>
               </View>
               <FlatList data={ID_PHOTO_TYPES} keyExtractor={(item) => item} renderItem={({ item }) => renderModalItem(item, () => { setFormData({ ...formData, idPhotoType: item }); setShowIdTypeModal(false); })} />
-              <AppButton title="Cancel" onPress={() => setShowIdTypeModal(false)} variant="outline" style={{ marginTop: 10 }} />
+              <AppButton title={t("common.cancel", "Cancel")} onPress={() => setShowIdTypeModal(false)} variant="outline" style={{ marginTop: 10 }} />
             </View>
           </View>
         </Modal>
@@ -429,11 +431,11 @@ export default function RegisterProviderScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Service City</Text>
+                <Text style={styles.modalTitle}>{t("auth.selectServiceCityModal", "Select Service City")}</Text>
                 <TouchableOpacity onPress={() => setShowCityModal(false)}><Ionicons name="close" size={24} color={colors.text.secondary} /></TouchableOpacity>
               </View>
               <FlatList data={cities} keyExtractor={(item) => (item.cityID || item.id || Math.random()).toString()} renderItem={({ item }) => renderModalItem(item.name || item, () => { setFormData({ ...formData, service_city: item.name || item }); setShowCityModal(false); })} />
-              <AppButton title="Cancel" onPress={() => setShowCityModal(false)} variant="outline" style={{ marginTop: 10 }} />
+              <AppButton title={t("common.cancel", "Cancel")} onPress={() => setShowCityModal(false)} variant="outline" style={{ marginTop: 10 }} />
             </View>
           </View>
         </Modal>

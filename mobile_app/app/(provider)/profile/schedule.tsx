@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/app/config/api';
@@ -32,6 +33,7 @@ interface ScheduleDay {
 
 export default function ManageScheduleScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,10 +55,10 @@ export default function ManageScheduleScreen() {
       if (json.success) {
         setSchedule(json.data);
       } else {
-        Alert.alert('Error', json.message || 'Failed to load schedule');
+        Alert.alert(t('common.error', 'Error'), json.message || t('profile.scheduleLoadError', 'Failed to load schedule'));
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error');
+      Alert.alert(t('common.error', 'Error'), t('login.networkError', 'Network error'));
     } finally {
       setIsLoading(false);
     }
@@ -77,14 +79,14 @@ export default function ManageScheduleScreen() {
       });
       const json = await response.json();
       if (json.success) {
-        Alert.alert('Success', 'Working hours updated successfully', [
-          { text: 'OK', onPress: () => router.back() }
+        Alert.alert(t('common.success', 'Success'), t('profile.scheduleUpdated', 'Working hours updated successfully'), [
+          { text: t('common.ok', 'OK'), onPress: () => router.back() }
         ]);
       } else {
-        Alert.alert('Validation Error', json.message || 'Check your times (HH:MM format). End time must be after start time.');
+        Alert.alert(t('common.error', 'Validation Error'), json.message || t('profile.timeFormatAdvice', 'Check your times (HH:MM format). End time must be after start time.'));
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error while saving');
+      Alert.alert(t('common.error', 'Error'), t('profile.saveError', 'Network error while saving'));
     } finally {
       setIsSaving(false);
     }
@@ -115,14 +117,14 @@ export default function ManageScheduleScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Configure Standard Schedule</Text>
+          <Text style={styles.headerTitle}>{t('profile.configureScheduleTitle', 'Configure Standard Schedule')}</Text>
           <View style={{ width: 24 }} />
         </View>
       </View>
 
       <ScrollView style={styles.scrollContent}>
         <Text style={styles.subtitle}>
-          Set your standard weekly working hours. Our system will generate 1-hour slots inside these ranges for customers to book!
+          {t('profile.scheduleSubtitle', 'Set your standard weekly working hours. Our system will generate 1-hour slots inside these ranges for customers to book!')}
         </Text>
 
         {WEEKDAYS.map((dayName, index) => {
@@ -132,7 +134,7 @@ export default function ManageScheduleScreen() {
           return (
             <View key={index} style={[styles.dayCard, !dayData.is_active && styles.dayCardInactive]}>
               <View style={styles.dayHeader}>
-                <Text style={styles.dayTitle}>{dayName}</Text>
+                <Text style={styles.dayTitle}>{t(`profile.weekdays.${dayName.toLowerCase()}`, dayName)}</Text>
                 <Switch
                   value={dayData.is_active}
                   onValueChange={(val) => updateDay(index, 'is_active', val)}
@@ -143,7 +145,7 @@ export default function ManageScheduleScreen() {
               {dayData.is_active && (
                 <View style={styles.inputsRow}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Start Time</Text>
+                    <Text style={styles.inputLabel}>{t('profile.startTimeLabel', 'Start Time')}</Text>
                     <TextInput
                       style={styles.timeInput}
                       value={dayData.start_time}
@@ -155,7 +157,7 @@ export default function ManageScheduleScreen() {
                   </View>
                   <Ionicons name="arrow-forward" size={20} color={Colors.text.secondary} style={{ marginTop: 24 }} />
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>End Time</Text>
+                    <Text style={styles.inputLabel}>{t('profile.endTimeLabel', 'End Time')}</Text>
                     <TextInput
                       style={styles.timeInput}
                       value={dayData.end_time}
@@ -181,7 +183,7 @@ export default function ManageScheduleScreen() {
           {isSaving ? (
             <ActivityIndicator color={Colors.surface} />
           ) : (
-            <Text style={styles.saveButtonText}>Save Schedule</Text>
+            <Text style={styles.saveButtonText}>{t('profile.saveSchedule', 'Save Schedule')}</Text>
           )}
         </TouchableOpacity>
       </View>

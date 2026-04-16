@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/app/constants/Colors';
@@ -32,24 +33,25 @@ interface ComplaintForm {
 }
 
 const ISSUE_TYPES = [
-  { id: 'service_quality', label: 'Poor Service Quality', icon: 'construct-outline' },
-  { id: 'professionalism', label: 'Unprofessional Behavior', icon: 'people-outline' },
-  { id: 'late_arrival', label: 'Late Arrival / No Show', icon: 'time-outline' },
-  { id: 'overcharging', label: 'Overcharging', icon: 'cash-outline' },
-  { id: 'damage', label: 'Property Damage', icon: 'warning-outline' },
-  { id: 'incomplete', label: 'Incomplete Work', icon: 'close-circle-outline' },
-  { id: 'communication', label: 'Poor Communication', icon: 'chatbubble-outline' },
-  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal-outline' },
+  { id: 'service_quality', label: 'complaints.issueTypes.service_quality', icon: 'construct-outline' },
+  { id: 'professionalism', label: 'complaints.issueTypes.professionalism', icon: 'people-outline' },
+  { id: 'late_arrival', label: 'complaints.issueTypes.late_arrival', icon: 'time-outline' },
+  { id: 'overcharging', label: 'complaints.issueTypes.overcharging', icon: 'cash-outline' },
+  { id: 'damage', label: 'complaints.issueTypes.damage', icon: 'warning-outline' },
+  { id: 'incomplete', label: 'complaints.issueTypes.incomplete', icon: 'close-circle-outline' },
+  { id: 'communication', label: 'complaints.issueTypes.communication', icon: 'chatbubble-outline' },
+  { id: 'other', label: 'complaints.issueTypes.other', icon: 'ellipsis-horizontal-outline' },
 ];
 
 const PRIORITIES = [
-  { value: 'low', label: 'Low', color: Colors.success },
-  { value: 'medium', label: 'Medium', color: Colors.warning },
-  { value: 'high', label: 'High', color: Colors.error },
+  { value: 'low', label: 'complaints.priorities.low', color: Colors.success },
+  { value: 'medium', label: 'complaints.priorities.medium', color: Colors.warning },
+  { value: 'high', label: 'complaints.priorities.high', color: Colors.error },
 ];
 
 export default function NewComplaint() {
   const router = useRouter();
+  const { t } = useTranslation();
   // Fetch completed service requests
 
   const { data: requests } = useServiceRequests('completed');
@@ -85,7 +87,7 @@ export default function NewComplaint() {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      Alert.alert(t('common.info', 'Permission Required'), t('profile.allowPhotoLibrary', 'Please allow access to your photo library'));
       return;
     }
 
@@ -117,15 +119,15 @@ export default function NewComplaint() {
 
   const validateStep2 = () => {
     if (!form.subject.trim()) {
-      Alert.alert('Error', 'Please enter a subject');
+      Alert.alert(t('common.error', 'Error'), t('complaints.enterSubject', 'Please enter a subject'));
       return false;
     }
     if (!form.description.trim()) {
-      Alert.alert('Error', 'Please describe the issue');
+      Alert.alert(t('common.error', 'Error'), t('complaints.enterDescription', 'Please describe the issue'));
       return false;
     }
     if (!form.issueType) {
-      Alert.alert('Error', 'Please select an issue type');
+      Alert.alert(t('common.error', 'Error'), t('complaints.selectIssueType', 'Please select an issue type'));
       return false;
     }
     return true;
@@ -146,33 +148,33 @@ export default function NewComplaint() {
       });
 
       Alert.alert(
-        'Complaint Submitted',
-        'Your complaint has been submitted successfully. We will review it within 24-48 hours.',
+        t('complaints.filedSuccessTitle', 'Complaint Submitted'),
+        t('complaints.filedSuccessMsg', 'Your complaint has been submitted successfully. We will review it within 24-48 hours.'),
         [
           {
-            text: 'View Complaints',
+            text: t('complaints.viewDisputes', 'View Complaints'),
             onPress: () => router.push('/(customer)/complaints'),
           },
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to submit complaint');
+      Alert.alert(t('common.error', 'Error'), t('complaints.submitError', 'Failed to submit complaint'));
     }
   };
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Select the service request</Text>
+      <Text style={styles.stepTitle}>{t('complaints.selectBookingTitle', 'Select the service request')}</Text>
       <Text style={styles.stepSubtitle}>
-        Choose the completed service you want to report an issue about
+        {t('complaints.selectBookingSubtitle', 'Choose the completed service you want to report an issue about')}
       </Text>
 
       {requests?.length === 0 ? (
         <View style={styles.noBookings}>
           <Ionicons name="calendar-outline" size={48} color={Colors.text.secondary} />
-          <Text style={styles.noBookingsText}>No completed services found</Text>
+          <Text style={styles.noBookingsText}>{t('complaints.noCompletedServices', 'No completed services found')}</Text>
           <Text style={styles.noBookingsSubtext}>
-            You can only file complaints for completed services
+            {t('complaints.disputeOnlyCompleted', 'You can only file complaints for completed services')}
           </Text>
         </View>
       ) : (
@@ -207,16 +209,16 @@ export default function NewComplaint() {
         onPress={() => setStep(1)}
       >
         <Ionicons name="arrow-back" size={20} color={Colors.text.secondary} />
-        <Text style={styles.backButtonText}>Change Booking</Text>
+        <Text style={styles.backButtonText}>{t('complaints.changeBooking', 'Change Booking')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.stepTitle}>Tell us what happened</Text>
+      <Text style={styles.stepTitle}>{t('complaints.tellUsWhatHappened', 'Tell us what happened')}</Text>
       <Text style={styles.stepSubtitle}>
-        Provide as much detail as possible to help us investigate
+        {t('complaints.investigateDesc', 'Provide as much detail as possible to help us investigate')}
       </Text>
 
       {/* Issue Type Selection */}
-      <Text style={styles.inputLabel}>Issue Type</Text>
+      <Text style={styles.inputLabel}>{t('complaints.issueTypeLabel', 'Issue Type')}</Text>
       <View style={styles.issueTypesGrid}>
         {ISSUE_TYPES.map((type) => (
           <TouchableOpacity
@@ -236,7 +238,7 @@ export default function NewComplaint() {
               styles.issueTypeLabel,
               form.issueType === type.id && styles.issueTypeLabelSelected,
             ]}>
-              {type.label}
+              {t(type.label)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -244,10 +246,10 @@ export default function NewComplaint() {
 
       {/* Subject */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Subject</Text>
+        <Text style={styles.inputLabel}>{t('complaints.subjectLabel', 'Subject')}</Text>
         <TextInput
           style={styles.input}
-          placeholder="Brief summary of the issue"
+          placeholder={t('complaints.subjectPlaceholder', 'Brief summary of the issue')}
           placeholderTextColor={Colors.text.secondary}
           value={form.subject}
           onChangeText={(text) => setForm({ ...form, subject: text })}
@@ -258,10 +260,10 @@ export default function NewComplaint() {
 
       {/* Description */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Detailed Description</Text>
+        <Text style={styles.inputLabel}>{t('complaints.descriptionLabel', 'Detailed Description')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Describe what happened in detail..."
+          placeholder={t('complaints.descriptionPlaceholder', 'Describe what happened in detail...')}
           placeholderTextColor={Colors.text.secondary}
           value={form.description}
           onChangeText={(text) => setForm({ ...form, description: text })}
@@ -273,7 +275,7 @@ export default function NewComplaint() {
 
       {/* Priority */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Priority</Text>
+        <Text style={styles.inputLabel}>{t('complaints.priorityLabel', 'Priority')}</Text>
         <View style={styles.priorityContainer}>
           {PRIORITIES.map((priority) => (
             <TouchableOpacity
@@ -290,7 +292,7 @@ export default function NewComplaint() {
                 styles.priorityText,
                 form.priority === priority.value && { color: priority.color }
               ]}>
-                {priority.label}
+                {t(priority.label)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -299,9 +301,9 @@ export default function NewComplaint() {
 
       {/* Attachments */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Attachments (Optional)</Text>
+        <Text style={styles.inputLabel}>{t('complaints.attachmentsLabel', 'Attachments (Optional)')}</Text>
         <Text style={styles.attachmentHint}>
-          Upload photos as evidence (screenshots, photos of damage, etc.)
+          {t('complaints.attachmentHint', 'Upload photos as evidence (screenshots, photos of damage, etc.)')}
         </Text>
 
         <ScrollView 
@@ -332,7 +334,7 @@ export default function NewComplaint() {
             ) : (
               <>
                 <Ionicons name="camera-outline" size={24} color={Colors.primary} />
-                <Text style={styles.addAttachmentText}>Add Photo</Text>
+                <Text style={styles.addAttachmentText}>{t('chat.addPhoto', 'Add Photo')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -345,7 +347,7 @@ export default function NewComplaint() {
           style={styles.cancelButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -356,7 +358,7 @@ export default function NewComplaint() {
             }
           }}
         >
-          <Text style={styles.nextButtonText}>Review Complaint</Text>
+          <Text style={styles.nextButtonText}>{t('complaints.reviewTitle', 'Review Complaint')}</Text>
           <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
         </TouchableOpacity>
       </View>
@@ -374,34 +376,34 @@ export default function NewComplaint() {
         onPress={() => setStep(2)}
       >
         <Ionicons name="arrow-back" size={20} color={Colors.text.secondary} />
-        <Text style={styles.backButtonText}>Edit Details</Text>
+        <Text style={styles.backButtonText}>{t('common.edit', 'Edit Details')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.stepTitle}>Review Your Complaint</Text>
+      <Text style={styles.stepTitle}>{t('complaints.reviewTitle', 'Review Your Complaint')}</Text>
       <Text style={styles.stepSubtitle}>
-        Please verify all information before submitting
+        {t('complaints.verifyInfo', 'Please verify all information before submitting')}
       </Text>
 
       <View style={styles.reviewCard}>
         <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Issue Type</Text>
+          <Text style={styles.reviewLabel}>{t('complaints.issueTypeLabel', 'Issue Type')}</Text>
           <Text style={styles.reviewValue}>
-            {ISSUE_TYPES.find(t => t.id === form.issueType)?.label}
+            {t(ISSUE_TYPES.find(t => t.id === form.issueType)?.label || '')}
           </Text>
         </View>
 
         <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Subject</Text>
+          <Text style={styles.reviewLabel}>{t('complaints.subjectLabel', 'Subject')}</Text>
           <Text style={styles.reviewValue}>{form.subject}</Text>
         </View>
 
         <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Description</Text>
+          <Text style={styles.reviewLabel}>{t('complaints.descriptionLabel', 'Description')}</Text>
           <Text style={styles.reviewValue}>{form.description}</Text>
         </View>
 
         <View style={styles.reviewSection}>
-          <Text style={styles.reviewLabel}>Priority</Text>
+          <Text style={styles.reviewLabel}>{t('complaints.priorityLabel', 'Priority')}</Text>
           <View style={[styles.priorityBadge, { 
             backgroundColor: 
               form.priority === 'high' ? Colors.error + '20' :
@@ -414,7 +416,7 @@ export default function NewComplaint() {
                 form.priority === 'medium' ? Colors.warning :
                 Colors.success
             }]}>
-              {form.priority.toUpperCase()}
+              {t(`complaints.priorities.${form.priority}`, form.priority.toUpperCase())}
             </Text>
           </View>
         </View>
@@ -438,7 +440,7 @@ export default function NewComplaint() {
       <View style={styles.disclaimer}>
         <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
         <Text style={styles.disclaimerText}>
-          By submitting this complaint, you confirm that all information provided is accurate to the best of your knowledge. False reports may result in account suspension.
+          {t('complaints.disclaimerNotice', 'By submitting this complaint, you confirm that all information provided is accurate to the best of your knowledge. False reports may result in account suspension.')}
         </Text>
       </View>
 
@@ -447,7 +449,7 @@ export default function NewComplaint() {
           style={styles.cancelButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -459,7 +461,7 @@ export default function NewComplaint() {
             <ActivityIndicator size="small" color={Colors.surface} />
           ) : (
             <>
-              <Text style={styles.submitButtonText}>Submit Complaint</Text>
+              <Text style={styles.submitButtonText}>{t('complaints.submitNew', 'Submit Complaint')}</Text>
               <Ionicons name="send" size={20} color={Colors.surface} />
             </>
           )}

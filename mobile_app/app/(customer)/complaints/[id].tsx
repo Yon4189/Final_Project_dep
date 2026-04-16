@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import {Colors} from '../../constants/Colors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -62,15 +63,16 @@ const STATUS_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const STATUS_LABELS = {
-  pending: 'Pending Review',
-  under_review: 'Under Review',
-  resolved: 'Resolved',
-  rejected: 'Rejected',
+  pending: 'complaints.status.pending',
+  under_review: 'complaints.status.underReview',
+  resolved: 'complaints.status.resolved',
+  rejected: 'complaints.status.rejected',
 };
 
 export default function ComplaintDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [responseMessage, setResponseMessage] = useState('');
   const [isAddingResponse, setIsAddingResponse] = useState(false);
@@ -93,10 +95,10 @@ export default function ComplaintDetails() {
       queryClient.invalidateQueries({ queryKey: ['complaint', id] });
       setResponseMessage('');
       setIsAddingResponse(false);
-      Alert.alert('Success', 'Response added successfully');
+      Alert.alert(t('common.success', 'Success'), t('complaints.addResponseSuccess', 'Response added successfully'));
     },
     onError: (error) => {
-      Alert.alert('Error', error.message || 'Failed to add response');
+      Alert.alert(t('common.error', 'Error'), error.message || t('chat.sendError', 'Failed to add response'));
     },
   });
 
@@ -108,9 +110,9 @@ export default function ComplaintDetails() {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
-        <Text style={styles.errorText}>Complaint not found</Text>
+        <Text style={styles.errorText}>{t('complaints.notFound', 'Complaint not found')}</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('complaints.goBack', 'Go Back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -125,12 +127,12 @@ export default function ComplaintDetails() {
   };
 
   const getStatusLabel = (status: string) => {
-    return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status;
+    return t(STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status);
   };
 
   const handleAddResponse = () => {
     if (!responseMessage.trim()) {
-      Alert.alert('Error', 'Please enter a message');
+      Alert.alert(t('common.error', 'Error'), t('complaints.enterMessage', 'Please enter a message'));
       return;
     }
     addResponseMutation.mutate(responseMessage);
@@ -142,13 +144,13 @@ export default function ComplaintDetails() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Complaint Details</Text>
+        <Text style={styles.headerTitle}>{t('complaints.detailsTitle', 'Complaint Details')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.complaintHeader}>
         <View style={styles.complaintNumberContainer}>
-          <Text style={styles.complaintNumberLabel}>Complaint #</Text>
+          <Text style={styles.complaintNumberLabel}>{t('complaints.numberLabel', 'Complaint #')}</Text>
           <Text style={styles.complaintNumber}>{complaint.complaintNumber}</Text>
         </View>
 
@@ -163,7 +165,7 @@ export default function ComplaintDetails() {
       <View style={styles.dateContainer}>
         <Ionicons name="calendar-outline" size={14} color={Colors.text.secondary} />
         <Text style={styles.dateText}>
-          Submitted on {format(new Date(complaint.createdAt), 'MMMM d, yyyy')}
+        {t('complaints.submittedOn', { date: format(new Date(complaint.createdAt), 'MMMM d, yyyy'), defaultValue: `Submitted on ${format(new Date(complaint.createdAt), 'MMMM d, yyyy')}` })}
         </Text>
       </View>
     </View>
@@ -171,7 +173,7 @@ export default function ComplaintDetails() {
 
   const renderProviderInfo = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Service Provider</Text>
+      <Text style={styles.sectionTitle}>{t('complaints.serviceProvider', 'Service Provider')}</Text>
       <View style={styles.providerCard}>
         <Image
           source={{ uri: complaint.providerImage || 'https://via.placeholder.com/50' }}
@@ -179,12 +181,12 @@ export default function ComplaintDetails() {
         />
         <View style={styles.providerInfo}>
           <Text style={styles.providerName}>{complaint.providerName}</Text>
-          <Text style={styles.providerService}>{complaint.serviceName || 'Service not specified'}</Text>
+          <Text style={styles.providerService}>{complaint.serviceName || t('complaints.serviceNotSpecified', 'Service not specified')}</Text>
           <TouchableOpacity 
             style={styles.viewBookingButton}
             onPress={() => router.push(`/(customer)/requests/${complaint.bookingId}`)}
           >
-            <Text style={styles.viewBookingText}>View Booking</Text>
+            <Text style={styles.viewBookingText}>{t('complaints.viewBooking', 'View Booking')}</Text>
             <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
           </TouchableOpacity>
         </View>
@@ -194,16 +196,16 @@ export default function ComplaintDetails() {
 
   const renderComplaintDetails = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Complaint Details</Text>
+      <Text style={styles.sectionTitle}>{t('complaints.detailsLabel', 'Complaint Details')}</Text>
       
       <View style={styles.detailsCard}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Issue Type</Text>
+          <Text style={styles.detailLabel}>{t('complaints.issueTypeLabel', 'Issue Type')}</Text>
           <Text style={styles.detailValue}>{complaint.issueType}</Text>
         </View>
 
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Priority</Text>
+          <Text style={styles.detailLabel}>{t('complaints.priorityLabel', 'Priority')}</Text>
           <View style={[styles.priorityBadge, { 
             backgroundColor: 
               complaint.priority === 'high' ? Colors.error + '20' :
@@ -216,24 +218,24 @@ export default function ComplaintDetails() {
                 complaint.priority === 'medium' ? Colors.warning :
                 Colors.success
             }]}>
-              {complaint.priority?.toUpperCase() || 'MEDIUM'}
+              {t(`complaints.priorities.${complaint.priority?.toLowerCase() || 'medium'}`, complaint.priority?.toUpperCase() || 'MEDIUM')}
             </Text>
           </View>
         </View>
 
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Subject</Text>
+          <Text style={styles.detailLabel}>{t('complaints.subjectLabel', 'Subject')}</Text>
           <Text style={styles.detailValue}>{complaint.subject}</Text>
         </View>
 
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Description</Text>
+          <Text style={styles.detailLabel}>{t('complaints.descriptionLabel', 'Description')}</Text>
           <Text style={styles.detailValue}>{complaint.description}</Text>
         </View>
 
         {complaint.attachments && complaint.attachments.length > 0 && (
           <View style={styles.attachmentsContainer}>
-            <Text style={styles.detailLabel}>Attachments</Text>
+            <Text style={styles.detailLabel}>{t('complaints.attachmentsLabel', 'Attachments')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {complaint.attachments.map((uri: string, index: number) => (
                 <TouchableOpacity key={index} style={styles.attachmentItem}>
@@ -249,7 +251,7 @@ export default function ComplaintDetails() {
 
   const renderTimeline = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Timeline</Text>
+      <Text style={styles.sectionTitle}>{t('complaints.timelineLabel', 'Timeline')}</Text>
       
       <View style={styles.timelineCard}>
         {/* Submitted Event */}
@@ -261,7 +263,7 @@ export default function ComplaintDetails() {
             <View style={styles.timelineLine} />
           </View>
           <View style={styles.timelineContent}>
-            <Text style={styles.timelineTitle}>Complaint Submitted</Text>
+            <Text style={styles.timelineTitle}>{t('complaints.submittedEvent', 'Complaint Submitted')}</Text>
             <Text style={styles.timelineTime}>
               {format(new Date(complaint.createdAt), 'MMM d, yyyy • h:mm a')}
             </Text>
@@ -278,9 +280,9 @@ export default function ComplaintDetails() {
               <View style={styles.timelineLine} />
             </View>
             <View style={styles.timelineContent}>
-              <Text style={styles.timelineTitle}>Under Review</Text>
+              <Text style={styles.timelineTitle}>{t('complaints.underReviewEvent', 'Under Review')}</Text>
               <Text style={styles.timelineTime}>
-                Our team is investigating your complaint
+                {t('complaints.underReviewDesc', 'Our team is investigating your complaint')}
               </Text>
             </View>
           </View>
@@ -294,7 +296,7 @@ export default function ComplaintDetails() {
               </View>
             </View>
             <View style={styles.timelineContent}>
-              <Text style={styles.timelineTitle}>Resolved</Text>
+              <Text style={styles.timelineTitle}>{t('complaints.resolvedEvent', 'Resolved')}</Text>
               <Text style={styles.timelineTime}>
                 {format(new Date(complaint.resolvedAt), 'MMM d, yyyy • h:mm a')}
               </Text>
@@ -313,7 +315,7 @@ export default function ComplaintDetails() {
               </View>
             </View>
             <View style={styles.timelineContent}>
-              <Text style={styles.timelineTitle}>Rejected</Text>
+              <Text style={styles.timelineTitle}>{t('complaints.rejectedEvent', 'Rejected')}</Text>
               <Text style={styles.timelineTime}>
                 {complaint.rejectedAt ? format(new Date(complaint.rejectedAt), 'MMM d, yyyy') : ''}
               </Text>
@@ -334,14 +336,14 @@ export default function ComplaintDetails() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Admin Responses</Text>
+        <Text style={styles.sectionTitle}>{t('complaints.adminResponses', 'Admin Responses')}</Text>
         
         {complaint.responses.map((response: any, index: number) => (
           <View key={index} style={styles.responseCard}>
             <View style={styles.responseHeader}>
               <View style={styles.responseAuthor}>
                 <Ionicons name="shield-checkmark" size={20} color={Colors.primary} />
-                <Text style={styles.responseAuthorName}>HomeLink Support</Text>
+                <Text style={styles.responseAuthorName}>{t('complaints.supportName', 'HomeLink Support')}</Text>
               </View>
               <Text style={styles.responseTime}>
                 {format(new Date(response.createdAt), 'MMM d, h:mm a')}
@@ -361,14 +363,14 @@ export default function ComplaintDetails() {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Responses</Text>
+        <Text style={styles.sectionTitle}>{t('complaints.yourResponses', 'Your Responses')}</Text>
         
         {complaint.userResponses.map((response: any, index: number) => (
           <View key={index} style={[styles.responseCard, styles.userResponseCard]}>
             <View style={styles.responseHeader}>
               <View style={styles.responseAuthor}>
                 <Ionicons name="person-circle" size={20} color={Colors.text.secondary} />
-                <Text style={styles.responseAuthorName}>You</Text>
+                <Text style={styles.responseAuthorName}>{t('complaints.you', 'You')}</Text>
               </View>
               <Text style={styles.responseTime}>
                 {format(new Date(response.createdAt), 'MMM d, h:mm a')}
@@ -391,7 +393,7 @@ export default function ComplaintDetails() {
             color={complaint.status === 'resolved' ? Colors.success : Colors.error} 
           />
           <Text style={styles.closedText}>
-            This complaint is {complaint.status}. No further responses can be added.
+            {t('complaints.closedMsg', { status: t(STATUS_LABELS[complaint.status as keyof typeof STATUS_LABELS] || complaint.status), defaultValue: `This complaint is ${complaint.status}. No further responses can be added.` })}
           </Text>
         </View>
       );
@@ -399,13 +401,13 @@ export default function ComplaintDetails() {
 
     return (
       <View style={styles.addResponseSection}>
-        <Text style={styles.sectionTitle}>Add Response</Text>
+        <Text style={styles.sectionTitle}>{t('complaints.addResponse', 'Add Response')}</Text>
         
         {isAddingResponse ? (
           <View style={styles.addResponseContainer}>
             <TextInput
               style={styles.responseInput}
-              placeholder="Type your response..."
+              placeholder={t('chat.typeMessage', 'Type your response...')}
               placeholderTextColor={Colors.text.secondary}
               value={responseMessage}
               onChangeText={setResponseMessage}
@@ -422,7 +424,7 @@ export default function ComplaintDetails() {
                   setResponseMessage('');
                 }}
               >
-                <Text style={styles.cancelResponseText}>Cancel</Text>
+                <Text style={styles.cancelResponseText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -437,7 +439,7 @@ export default function ComplaintDetails() {
                   <ActivityIndicator size="small" color={Colors.surface} />
                 ) : (
                   <>
-                    <Text style={styles.sendResponseText}>Send</Text>
+                    <Text style={styles.sendResponseText}>{t('chat.send', 'Send')}</Text>
                     <Ionicons name="send" size={16} color={Colors.surface} />
                   </>
                 )}
@@ -450,7 +452,7 @@ export default function ComplaintDetails() {
             onPress={() => setIsAddingResponse(true)}
           >
             <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
-            <Text style={styles.addResponseText}>Add a response</Text>
+            <Text style={styles.addResponseText}>{t('complaints.addResponse', 'Add a response')}</Text>
           </TouchableOpacity>
         )}
       </View>

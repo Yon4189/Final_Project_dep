@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/app/constants/Colors';
 import { API_BASE_URL } from '@/app/config/api';
@@ -20,6 +21,7 @@ import AppButton from '@/components/AppButton';
 
 export default function DocumentsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { profile } = useProviderStore();
   const updateProfileMutation = useUpdateProfile();
   
@@ -29,7 +31,7 @@ export default function DocumentsScreen() {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library to upload documents.');
+      Alert.alert(t('profile.permissionRequired', 'Permission Required'), t('profile.photoLibraryPermission', 'Please allow access to your photo library to upload documents.'));
       return;
     }
 
@@ -59,11 +61,11 @@ export default function DocumentsScreen() {
       } as any);
 
       await updateProfileMutation.mutateAsync(formData);
-      Alert.alert('Success', 'Document uploaded successfully.');
+      Alert.alert(t('common.success', 'Success'), t('profile.docUploaded', 'Document uploaded successfully.'));
     } catch (error: any) {
       console.error('Upload error detail:', error);
       const serverMessage = error.responseData?.message || error.message;
-      Alert.alert('Upload Failed', `Error: ${serverMessage}. Please check if the file is an image or PDF and under 4MB.`);
+      Alert.alert(t('profile.uploadFailed', 'Upload Failed'), `${t('common.error', 'Error')}: ${serverMessage}. ${t('profile.uploadFailedAdvice', 'Please check if the file is an image or PDF and under 4MB.')}`);
     } finally {
       setUploading(null);
     }
@@ -87,7 +89,7 @@ export default function DocumentsScreen() {
           <View style={styles.headerText}>
             <Text style={styles.cardTitle}>{title}</Text>
             <Text style={styles.cardStatus}>
-              {isUploaded ? 'Uploaded' : 'Action Required'}
+              {isUploaded ? t('profile.uploaded', 'Uploaded') : t('profile.actionRequired', 'Action Required')}
             </Text>
           </View>
           {isUploaded && (
@@ -122,7 +124,7 @@ export default function DocumentsScreen() {
                 color={isUploaded ? Colors.primary : Colors.surface} 
               />
               <Text style={[styles.uploadButtonText, isUploaded && styles.uploadButtonTextSecondary]}>
-                {isUploaded ? 'Update Document' : 'Upload Document'}
+                {isUploaded ? t('profile.updateDoc', 'Update Document') : t('profile.uploadDoc', 'Upload Document')}
               </Text>
             </>
           )}
@@ -137,34 +139,34 @@ export default function DocumentsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Verification Documents</Text>
+        <Text style={styles.title}>{t('profile.verificationDocsTitle', 'Verification Documents')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
           <Text style={styles.infoText}>
-            Please upload clear copies of your legal documents to maintain your verified status and visibility to customers.
+            {t('profile.uploadInstructions', 'Please upload clear copies of your legal documents to maintain your verified status and visibility to customers.')}
           </Text>
         </View>
 
         {renderDocCard(
-          'Business License',
+          t('profile.businessLicense', 'Business License'),
           'business_license',
-          'A valid municipal or trade license allowing you to operate your business.',
+          t('profile.licenseDesc', 'A valid municipal or trade license allowing you to operate your business.'),
           'business'
         )}
 
         {renderDocCard(
-          'Insurance Certificate',
+          t('profile.insuranceCertificate', 'Insurance Certificate'),
           'insurance_certificate',
-          'Proof of professional liability or general business insurance.',
+          t('profile.insuranceDesc', 'Proof of professional liability or general business insurance.'),
           'shield-checkmark'
         )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Our compliance team will review your documents within 24-48 hours of upload.
+            {t('profile.complianceNotice', 'Our compliance team will review your documents within 24-48 hours of upload.')}
           </Text>
         </View>
       </ScrollView>

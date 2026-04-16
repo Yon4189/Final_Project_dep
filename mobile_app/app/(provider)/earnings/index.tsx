@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LineChart } from "react-native-chart-kit";
+import { useTranslation } from "react-i18next";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 import { useProviderEarnings } from "../../../hooks/useProviderEarnings";
@@ -36,6 +37,7 @@ interface ChartData {
 
 export default function EarningsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,10 +104,10 @@ export default function EarningsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.surface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Earnings</Text>
+        <Text style={styles.headerTitle}>{t("earnings.title", "Earnings")}</Text>
         <TouchableOpacity style={styles.withdrawButton} onPress={() => router.push("/(provider)/earnings/withdraw")}>
           <Ionicons name="wallet-outline" size={20} color={colors.surface} />
-          <Text style={styles.withdrawButtonText}>Withdraw</Text>
+          <Text style={styles.withdrawButtonText}>{t("wallet.withdraw", "Withdraw")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -113,7 +115,7 @@ export default function EarningsScreen() {
 
   const renderBalanceCard = () => (
     <View style={styles.balanceCard}>
-      <Text style={styles.balanceLabel}>Available Balance</Text>
+      <Text style={styles.balanceLabel}>{t("earnings.availableBalance", "Available Balance")}</Text>
       <Text style={styles.balanceAmount}>
         {safeFormatCurrency(
           safeSummary.availableForWithdrawal,
@@ -123,7 +125,7 @@ export default function EarningsScreen() {
 
       <View style={styles.balanceDetails}>
         <View style={styles.balanceDetailItem}>
-          <Text style={styles.balanceDetailLabel}>Total Earned</Text>
+          <Text style={styles.balanceDetailLabel}>{t("earnings.totalEarned", "Total Earned")}</Text>
           <Text style={styles.balanceDetailValue}>
             {safeFormatCurrency(
               safeSummary.totalEarnings,
@@ -135,7 +137,7 @@ export default function EarningsScreen() {
         <View style={styles.balanceDetailDivider} />
 
         <View style={styles.balanceDetailItem}>
-          <Text style={styles.balanceDetailLabel}>Pending</Text>
+          <Text style={styles.balanceDetailLabel}>{t("wallet.filterPending", "Pending")}</Text>
           <Text style={styles.balanceDetailValue}>
             {safeFormatCurrency(
               safeSummary.pendingEarnings,
@@ -147,7 +149,7 @@ export default function EarningsScreen() {
         <View style={styles.balanceDetailDivider} />
 
         <View style={styles.balanceDetailItem}>
-          <Text style={styles.balanceDetailLabel}>Withdrawn</Text>
+          <Text style={styles.balanceDetailLabel}>{t("earnings.withdrawn", "Withdrawn")}</Text>
           <Text style={styles.balanceDetailValue}>
             {safeFormatCurrency(
               safeSummary.withdrawnTotal,
@@ -162,7 +164,7 @@ export default function EarningsScreen() {
   const renderPeriodSummary = () => (
     <View style={styles.periodSummary}>
       <View style={styles.periodItem}>
-        <Text style={styles.periodLabel}>This Week</Text>
+        <Text style={styles.periodLabel}>{t("earnings.thisWeek", "This Week")}</Text>
         <Text style={styles.periodValue}>
           {safeFormatCurrency(safeSummary.thisWeek, safeSummary.currency)}
         </Text>
@@ -171,7 +173,7 @@ export default function EarningsScreen() {
       <View style={styles.periodDivider} />
 
       <View style={styles.periodItem}>
-        <Text style={styles.periodLabel}>This Month</Text>
+        <Text style={styles.periodLabel}>{t("earnings.thisMonth", "This Month")}</Text>
         <Text style={styles.periodValue}>
           {safeFormatCurrency(safeSummary.thisMonth, safeSummary.currency)}
         </Text>
@@ -180,7 +182,7 @@ export default function EarningsScreen() {
       <View style={styles.periodDivider} />
 
       <View style={styles.periodItem}>
-        <Text style={styles.periodLabel}>Last Month</Text>
+        <Text style={styles.periodLabel}>{t("earnings.lastMonth", "Last Month")}</Text>
         <Text style={styles.periodValue}>
           {safeFormatCurrency(safeSummary.lastMonth, safeSummary.currency)}
         </Text>
@@ -197,7 +199,7 @@ export default function EarningsScreen() {
 
     return (
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Earnings Overview</Text>
+        <Text style={styles.chartTitle}>{t("earnings.overview", "Earnings Overview")}</Text>
 
         <ScrollView
           horizontal
@@ -219,7 +221,7 @@ export default function EarningsScreen() {
                   selectedPeriod === period && styles.periodChipTextActive,
                 ]}
               >
-                {period.charAt(0).toUpperCase() + period.slice(1)}
+                {t(`wallet.period${period.charAt(0).toUpperCase() + period.slice(1)}`, period.charAt(0).toUpperCase() + period.slice(1))}
               </Text>
             </TouchableOpacity>
           ))}
@@ -269,7 +271,9 @@ export default function EarningsScreen() {
                   selectedFilter === filter && styles.typeChipTextActive,
                 ]}
               >
-                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                {filter === "all" ? t("wallet.filterAll", "All") :
+                 filter === "payment" ? t("wallet.paymentForService", "Payment") :
+                 filter === "withdrawal" ? t("wallet.withdrawal", "Withdrawal") : t("earnings.refund", "Refund")}
               </Text>
             </TouchableOpacity>
           ),
@@ -290,13 +294,13 @@ export default function EarningsScreen() {
   const getTransactionTitle = (type: string) => {
     switch (type) {
       case "payment":
-        return "Payment Received";
+        return t("earnings.paymentReceived", "Payment Received");
       case "withdrawal":
-        return "Withdrawal";
+        return t("wallet.withdrawal", "Withdrawal");
       case "refund":
-        return "Refund";
+        return t("earnings.refund", "Refund");
       default:
-        return "Transaction";
+        return t("earnings.transaction", "Transaction");
     }
   };
 
@@ -343,7 +347,7 @@ export default function EarningsScreen() {
           </View>
 
           <Text style={styles.transactionDescription}>
-            {item.serviceName || "Service"} • {item.customerName || "Customer"}
+            {item.serviceName || t("earnings.service", "Service")} • {item.customerName || t("earnings.customer", "Customer")}
           </Text>
 
           <View style={styles.transactionFooter}>
@@ -370,7 +374,7 @@ export default function EarningsScreen() {
                   },
                 ]}
               >
-                {(item.status || "completed").charAt(0).toUpperCase() + (item.status || "completed").slice(1)}
+                {t(`bookings.status.${(item.status || "completed").toLowerCase()}`, (item.status || "completed").charAt(0).toUpperCase() + (item.status || "completed").slice(1))}
               </Text>
             </View>
           </View>
@@ -398,7 +402,7 @@ export default function EarningsScreen() {
         {renderFilters()}
 
         <View style={styles.transactionsSection}>
-          <Text style={styles.transactionsTitle}>Recent Transactions</Text>
+          <Text style={styles.transactionsTitle}>{t("wallet.recentTransactions", "Recent Transactions")}</Text>
 
           {safeTransactions.length > 0 ? (
             <View>
@@ -408,41 +412,41 @@ export default function EarningsScreen() {
                   style={styles.loadMoreButton}
                   onPress={handleLoadMore}
                 >
-                  <Text style={styles.loadMoreText}>Load More</Text>
+                  <Text style={styles.loadMoreText}>{t("earnings.loadMore", "Load More")}</Text>
                 </TouchableOpacity>
               )}
             </View>
           ) : (
             <EmptyState
               icon="receipt-outline"
-              title="No transactions"
-              message="Your transaction history will appear here"
+              title={t("wallet.noTransactions", "No transactions")}
+              message={t("earnings.noTransactionsSub", "Your transaction history will appear here")}
             />
           )}
         </View>
 
         <View style={styles.statsSection}>
-          <Text style={styles.statsTitle}>Quick Stats</Text>
+          <Text style={styles.statsTitle}>{t("earnings.stats", "Quick Stats")}</Text>
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <MaterialCommunityIcons name="calendar-check" size={24} color={colors.primary} />
                 <Text style={styles.statValue}>{safeSummary.completedJobs || 0}</Text>
-                <Text style={styles.statLabel}>Jobs Completed</Text>
+                <Text style={styles.statLabel}>{t("earnings.jobsCompleted", "Jobs Completed")}</Text>
               </View>
               <View style={styles.statCard}>
                 <MaterialCommunityIcons name="star" size={24} color={colors.warning} />
                 <Text style={styles.statValue}>{safeSummary.avgRating?.toFixed(1) || "0.0"}</Text>
-                <Text style={styles.statLabel}>Average Rating</Text>
+                <Text style={styles.statLabel}>{t("earnings.avgRating", "Average Rating")}</Text>
               </View>
               <View style={styles.statCard}>
                 <MaterialCommunityIcons name="clock-outline" size={24} color={colors.info} />
                 <Text style={styles.statValue}>{safeSummary.responseRate || 0}%</Text>
-                <Text style={styles.statLabel}>Response Rate</Text>
+                <Text style={styles.statLabel}>{t("earnings.responseRate", "Response Rate")}</Text>
               </View>
               <View style={styles.statCard}>
                 <MaterialCommunityIcons name="trophy" size={24} color={colors.warning} />
                 <Text style={styles.statValue}>{safeSummary.rank || "#"}</Text>
-                <Text style={styles.statLabel}>Provider Rank</Text>
+                <Text style={styles.statLabel}>{t("earnings.providerRank", "Provider Rank")}</Text>
               </View>
             </View>
         </View>

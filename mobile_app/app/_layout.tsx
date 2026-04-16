@@ -10,6 +10,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import './i18n';
+import LanguageToggleButton from '../components/LanguageToggleButton';
 
 // Silence the Expo SDK 53 Android push notification warning in local development
 LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
@@ -29,6 +31,7 @@ function RootLayoutContent() {
         translucent={false}
         backgroundColor={colors.background}
       />
+      <LanguageToggleButton />
       <Stack
         screenOptions={{
           headerShown: false,

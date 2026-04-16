@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { API_BASE_URL } from '@/app/config/api';
+import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 
 const { width, height } = Dimensions.get('window');
@@ -33,6 +34,7 @@ export function RecentMessagesModal({
   onSelectConversation,
   onSeeAll,
 }: RecentMessagesModalProps) {
+  const { t } = useTranslation();
   
   const renderItem = ({ item }: { item: any }) => {
     const provider = item.other_party;
@@ -60,7 +62,7 @@ export function RecentMessagesModal({
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.name} numberOfLines={1}>
-              {provider.businessName || provider.fullname || 'Provider'}
+              {provider.businessName || provider.fullname || t('common.provider', 'Provider')}
             </Text>
             {latestMessage && (
               <Text style={styles.time}>
@@ -72,7 +74,7 @@ export function RecentMessagesModal({
             style={[styles.lastMessage, item.unread_count > 0 && styles.unreadMessage]} 
             numberOfLines={1}
           >
-            {latestMessage?.message || 'No messages yet'}
+            {latestMessage?.message || t('chat.noMessagesYet', 'No messages yet')}
           </Text>
         </View>
         {item.unread_count > 0 && (
@@ -96,7 +98,7 @@ export function RecentMessagesModal({
               <View style={styles.modalHeader}>
                 <View style={styles.modalTitleContainer}>
                   <Ionicons name="chatbubbles" size={20} color={Colors.primary} />
-                  <Text style={styles.modalTitle}>Recent Messages</Text>
+                  <Text style={styles.modalTitle}>{t('chat.recentMessages', 'Recent Messages')}</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                   <Ionicons name="close" size={24} color={Colors.text.secondary} />
@@ -112,16 +114,16 @@ export function RecentMessagesModal({
                     scrollEnabled={false}
                   />
                   <TouchableOpacity style={styles.seeAllButton} onPress={onSeeAll}>
-                    <Text style={styles.seeAllText}>See All Messages</Text>
+                    <Text style={styles.seeAllText}>{t('chat.seeAllMessages', 'See All Messages')}</Text>
                     <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
                   </TouchableOpacity>
                 </>
               ) : (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="chatbubble-outline" size={48} color={Colors.text.disabled} />
-                  <Text style={styles.emptyText}>No recent messages</Text>
+                  <Text style={styles.emptyText}>{t('chat.noRecentMessages', 'No recent messages')}</Text>
                   <TouchableOpacity style={styles.startChatButton} onPress={onSeeAll}>
-                    <Text style={styles.startChatText}>Browse Providers</Text>
+                    <Text style={styles.startChatText}>{t('chat.browseProviders', 'Browse Providers')}</Text>
                   </TouchableOpacity>
                 </View>
               )}

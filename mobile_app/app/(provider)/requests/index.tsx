@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useProviderQueries, useProviderRequests } from "@/hooks/useProviderQueries";
@@ -31,18 +32,7 @@ type FilterType =
   | "completed"
   | "cancelled";
 
-const FILTERS: {
-  label: string;
-  value: FilterType;
-  icon: keyof typeof Ionicons.glyphMap;
-}[] = [
-  { label: "All", value: "all", icon: "apps-outline" },
-  { label: "Pending", value: "pending", icon: "time-outline" },
-  { label: "Confirmed", value: "confirmed", icon: "checkmark-circle-outline" },
-  { label: "In Progress", value: "in_progress", icon: "construct-outline" },
-  { label: "Completed", value: "completed", icon: "checkmark-done-outline" },
-  { label: "Cancelled", value: "cancelled", icon: "close-circle-outline" },
-];
+
 
 const STATUS_ICONS = {
   pending: "time-outline",
@@ -59,7 +49,21 @@ const STATUS_ICONS = {
 export default function ProviderRequests() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
+  const FILTERS: {
+    label: string;
+    value: FilterType;
+    icon: keyof typeof Ionicons.glyphMap;
+  }[] = [
+    { label: t("common.all", "All"), value: "all", icon: "apps-outline" },
+    { label: t("bookings.status.pending", "Pending"), value: "pending", icon: "time-outline" },
+    { label: t("bookings.status.confirmed", "Confirmed"), value: "confirmed", icon: "checkmark-circle-outline" },
+    { label: t("bookings.status.in_progress", "In Progress"), value: "in_progress", icon: "construct-outline" },
+    { label: t("bookings.status.completed", "Completed"), value: "completed", icon: "checkmark-done-outline" },
+    { label: t("bookings.status.cancelled", "Cancelled"), value: "cancelled", icon: "close-circle-outline" },
+  ];
 
   const STATUS_COLORS = useMemo(() => ({
     pending: colors.warning,
@@ -166,18 +170,18 @@ export default function ProviderRequests() {
 
   const handleAccept = async (request: ServiceRequest) => {
     Alert.alert(
-      "Accept Request",
-      "Are you sure you want to accept this request?",
+      t("providerRequests.acceptConfirmTitle", "Accept Request"),
+      t("providerRequests.acceptConfirmMsg", "Are you sure you want to accept this request?"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
         {
-          text: "Accept",
+          text: t("providerRequests.accept", "Accept"),
           onPress: async () => {
             try {
               await acceptRequest.mutateAsync(request.id);
-              Alert.alert("Success", "Request accepted successfully");
+              Alert.alert(t("common.success", "Success"), t("providerRequests.acceptSuccess", "Request accepted successfully"));
             } catch (error) {
-              Alert.alert("Error", "Failed to accept request");
+              Alert.alert(t("common.error", "Error"), t("providerRequests.acceptError", "Failed to accept request"));
             }
           },
         },
@@ -223,36 +227,40 @@ export default function ProviderRequests() {
   };
 
   const handleStart = async (request: ServiceRequest) => {
-    Alert.alert("Start Service", "Are you ready to start this service?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Start",
-        onPress: async () => {
-          try {
-            await startService.mutateAsync(request.id);
-            Alert.alert("Success", "Service started");
-          } catch (error) {
-            Alert.alert("Error", "Failed to start service");
-          }
+    Alert.alert(
+      t("providerRequests.startConfirmTitle", "Start Service"),
+      t("providerRequests.startConfirmMsg", "Are you ready to start this service?"),
+      [
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
+        {
+          text: t("common.start", "Start"),
+          onPress: async () => {
+            try {
+              await startService.mutateAsync(request.id);
+              Alert.alert(t("common.success", "Success"), t("providerRequests.startSuccess", "Service started"));
+            } catch (error) {
+              Alert.alert(t("common.error", "Error"), t("providerRequests.startError", "Failed to start service"));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleComplete = async (request: ServiceRequest) => {
     Alert.alert(
-      "Complete Service",
-      "Have you completed this service to the customer's satisfaction?",
+      t("providerRequests.completeConfirmTitle", "Complete Service"),
+      t("providerRequests.completeConfirmMsg", "Have you completed this service to the customer's satisfaction?"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
         {
-          text: "Complete",
+          text: t("providerRequests.complete", "Complete"),
           onPress: async () => {
             try {
               await completeService.mutateAsync(request.id);
-              Alert.alert("Success", "Service completed");
+              Alert.alert(t("common.success", "Success"), t("providerRequests.completeSuccess", "Service completed"));
             } catch (error) {
-              Alert.alert("Error", "Failed to complete service");
+              Alert.alert(t("common.error", "Error"), t("providerRequests.completeError", "Failed to complete service"));
             }
           },
         },
@@ -266,7 +274,7 @@ export default function ProviderRequests() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Service Requests</Text>
+        <Text style={styles.headerTitle}>{t("providerRequests.title", "Service Requests")}</Text>
         <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilterModal(true)}>
           <Ionicons name="options-outline" size={22} color={colors.text.primary} />
         </TouchableOpacity>
@@ -276,7 +284,7 @@ export default function ProviderRequests() {
         <Ionicons name="search-outline" size={20} color={colors.text.secondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by customer or service..."
+          placeholder={t("providerRequests.searchPlaceholder", "Search by customer or service...")}
           placeholderTextColor={colors.text.secondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -339,7 +347,7 @@ export default function ProviderRequests() {
           {item.payment && (item.status === 'confirmed' || item.payment.status === 'held' || item.payment.status === 'paid') && (
             <View style={[styles.statusBadge, { backgroundColor: colors.success + '20' }]}>
               <Ionicons name="card" size={12} color={colors.success} />
-              <Text style={[styles.statusText, { color: colors.success }]}>PAID</Text>
+              <Text style={[styles.statusText, { color: colors.success }]}>{t("providerRequests.paid", "PAID")}</Text>
             </View>
           )}
           <View
@@ -353,10 +361,8 @@ export default function ProviderRequests() {
               size={12}
               color={getStatusColor(item.status)}
             />
-            <Text
-              style={[styles.statusText, { color: getStatusColor(item.status) }]}
-            >
-              {(item.status || "").replace("_", " ")}
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+              {t(`bookings.status.${item.status?.toLowerCase()}`, (item.status || "").replace("_", " "))}
             </Text>
           </View>
         </View>
@@ -367,7 +373,7 @@ export default function ProviderRequests() {
           <Ionicons name="construct-outline" size={14} color={colors.text.secondary} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.detailText, { fontSize: 11, color: colors.text.secondary, marginBottom: 2 }]}>
-              Requested Service:
+              {t("providerRequests.requestedService", "Requested Service:")}
             </Text>
             <Text style={[styles.detailText, { fontWeight: '600', color: colors.text.primary }]}>
               {item.serviceName || ""}
@@ -395,7 +401,7 @@ export default function ProviderRequests() {
         {item.distance && (
           <View style={styles.detailRow}>
             <Ionicons name="navigate-outline" size={14} color={colors.text.secondary} />
-            <Text style={styles.detailText}>{(item.distance || 0).toFixed(1)} km • {item.travelTime || 0} min drive</Text>
+            <Text style={styles.detailText}>{(item.distance || 0).toFixed(1)} {t("common.km", "km")} • {item.travelTime || 0} {t("common.minDrive", "min drive")}</Text>
           </View>
         )}
 
@@ -424,7 +430,7 @@ export default function ProviderRequests() {
                   handleRequestAction(item, "accept");
                 }}
               >
-                <Text style={styles.acceptButtonText}>Accept</Text>
+                <Text style={styles.acceptButtonText}>{t("providerRequests.accept", "Accept")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -434,7 +440,7 @@ export default function ProviderRequests() {
                   handleRequestAction(item, "reject");
                 }}
               >
-                <Text style={styles.rejectButtonText}>Reject</Text>
+                <Text style={styles.rejectButtonText}>{t("providerRequests.reject", "Reject")}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -448,7 +454,7 @@ export default function ProviderRequests() {
                   handleRequestAction(item, "reschedule");
                 }}
               >
-                <Text style={styles.rescheduleButtonText}>Reschedule</Text>
+                <Text style={styles.rescheduleButtonText}>{t("providerRequests.reschedule", "Reschedule")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -459,7 +465,7 @@ export default function ProviderRequests() {
                 }}
               >
                 <Ionicons name="navigate" size={14} color={colors.surface} />
-                <Text style={styles.directionsButtonText}>Go</Text>
+                <Text style={styles.directionsButtonText}>{t("providerRequests.go", "Go")}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -485,13 +491,13 @@ export default function ProviderRequests() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filter Requests</Text>
+            <Text style={styles.modalTitle}>{t("providerRequests.filterTitle", "Filter Requests")}</Text>
             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
               <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
           <View style={styles.modalBody}>
-            <Text style={styles.filterSectionTitle}>Status</Text>
+            <Text style={styles.filterSectionTitle}>{t("providerRequests.status", "Status")}</Text>
             <View style={styles.filterOptions}>
               {FILTERS.map((filter) => (
                 <TouchableOpacity
@@ -537,13 +543,13 @@ export default function ProviderRequests() {
         ListEmptyComponent={
           <EmptyState
             icon="document-text-outline"
-            title="No requests found"
+            title={t("providerRequests.noRequests", "No requests found")}
             message={
               searchQuery
-                ? "Try adjusting your search"
-                : `You have no ${activeFilter} requests`
+                ? t("providerRequests.adjustSearch", "Try adjusting your search")
+                : t("providerRequests.noFilteredRequests", { status: t(`bookings.status.${activeFilter}`, activeFilter), defaultValue: `You have no ${activeFilter} requests` })
             }
-            actionLabel={searchQuery ? "Clear Search" : undefined}
+            actionLabel={searchQuery ? t("providerRequests.clearSearch", "Clear Search") : undefined}
             onAction={searchQuery ? () => setSearchQuery("") : undefined}
           />
         }

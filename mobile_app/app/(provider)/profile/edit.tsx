@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
 import { useProviderQueries } from '@/hooks/useProviderQueries';
@@ -21,6 +22,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { profile, updateProfile, isLoading } = useProviderQueries();
@@ -51,7 +53,7 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!form.businessName || !form.phone) {
-      Alert.alert('Error', 'Business Name and Phone are required');
+      Alert.alert(t('common.error', 'Error'), t('profile.namePhoneRequired', 'Business Name and Phone are required'));
       return;
     }
 
@@ -85,28 +87,28 @@ export default function EditProfileScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Edit Profile</Text>
+          <Text style={styles.title}>{t('profile.editTitle', 'Edit Profile')}</Text>
           <Text style={styles.subtitle}>
-            Update your business information and contact details.
+            {t('profile.editSubtitle', 'Update your business information and contact details.')}
           </Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Business/Full Name *</Text>
+            <Text style={styles.label}>{t('profile.businessNameLabel', 'Business/Full Name *')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Your business name"
+              placeholder={t('profile.businessNamePlaceholder', 'Your business name')}
               value={form.businessName}
               onChangeText={(text) => setForm({ ...form, businessName: text })}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Professional Bio</Text>
+            <Text style={styles.label}>{t('profile.bioLabel', 'Professional Bio')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Tell customers about your expertise"
+              placeholder={t('profile.bioPlaceholder', 'Tell customers about your expertise')}
               multiline
               numberOfLines={4}
               value={form.bio}
@@ -116,20 +118,20 @@ export default function EditProfileScreen() {
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Experience (Years)</Text>
+              <Text style={styles.label}>{t('profile.yearsExperienceLabel', 'Experience (Years)')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Years"
+                placeholder={t('profile.years', 'Years')}
                 keyboardType="numeric"
                 value={form.yearsExperience}
                 onChangeText={(text) => setForm({ ...form, yearsExperience: text })}
               />
             </View>
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>Hourly Rate (ETB)</Text>
+              <Text style={styles.label}>{t('profile.hourlyRateLabel', 'Hourly Rate (ETB)')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Rate"
+                placeholder={t('profile.rate', 'Rate')}
                 keyboardType="numeric"
                 value={form.hourlyRate}
                 onChangeText={(text) => setForm({ ...form, hourlyRate: text })}
@@ -138,13 +140,13 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Contact Info</Text>
+        <Text style={styles.sectionTitle}>{t('profile.contactInfo', 'Contact Info')}</Text>
         <View style={styles.card}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number *</Text>
+            <Text style={styles.label}>{t('profile.phone', 'Phone Number *')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter phone number"
+              placeholder={t('auth.phoneNumber', 'Enter phone number')}
               keyboardType="phone-pad"
               value={form.phone}
               onChangeText={(text) => setForm({ ...form, phone: text })}
@@ -152,10 +154,10 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>{t('profile.email', 'Email Address')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter email"
+              placeholder={t('auth.enterEmail', 'Enter email')}
               keyboardType="email-address"
               autoCapitalize="none"
               value={form.email}
@@ -164,10 +166,10 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Physical Address</Text>
+            <Text style={styles.label}>{t('profile.address', 'Physical Address')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter business address"
+              placeholder={t('profile.addressPlaceholder', 'Enter business address')}
               value={form.address}
               onChangeText={(text) => setForm({ ...form, address: text })}
             />
@@ -178,7 +180,7 @@ export default function EditProfileScreen() {
           style={styles.saveButton}
           onPress={handleSave}
         >
-          <Text style={styles.saveButtonText}>Save Changes</Text>
+          <Text style={styles.saveButtonText}>{t('profile.saveChanges', 'Save Changes')}</Text>
           <Ionicons name="save-outline" size={20} color={colors.surface} />
         </TouchableOpacity>
 
@@ -186,7 +188,7 @@ export default function EditProfileScreen() {
           style={styles.cancelButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />

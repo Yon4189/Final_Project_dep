@@ -14,6 +14,7 @@ import {
     Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
@@ -26,6 +27,7 @@ import type { ServiceProvider } from '@/app/types/customer.types';
 export default function CustomerChatList() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
     const [conversations, setConversations] = useState<any[]>([]);
     const [providers, setProviders] = useState<ServiceProvider[]>([]);
     const [loading, setLoading] = useState(true);
@@ -107,7 +109,7 @@ export default function CustomerChatList() {
                 />
                 <View style={styles.content}>
                     <View style={styles.header}>
-                        <Text style={styles.name}>{provider?.fullname || provider?.businessName || 'Provider'}</Text>
+                        <Text style={styles.name}>{provider?.fullname || provider?.businessName || t('common.provider', 'Provider')}</Text>
                         {latestMessage && (
                             <Text style={styles.time}>
                                 {formatDistanceToNow(new Date(latestMessage.created_at), { addSuffix: true })}
@@ -116,7 +118,7 @@ export default function CustomerChatList() {
                     </View>
                     <View style={styles.footer}>
                         <Text style={[styles.lastMessage, item.unread_count > 0 && styles.unreadMessage]} numberOfLines={1}>
-                            {latestMessage?.message || 'No messages yet'}
+                            {latestMessage?.message || t('requests.noMessages', 'No messages yet')}
                         </Text>
                         {item.unread_count > 0 && (
                             <View style={styles.badge}>
@@ -148,18 +150,18 @@ export default function CustomerChatList() {
                 />
                 <View style={styles.content}>
                     <View style={styles.header}>
-                        <Text style={styles.name}>{item.businessName || item.fullname || 'Provider'}</Text>
+                        <Text style={styles.name}>{item.businessName || item.fullname || t('common.provider', 'Provider')}</Text>
                         {item.isAvailable && (
                             <View style={styles.onlineBadge} />
                         )}
                     </View>
                     <Text style={styles.lastMessage} numberOfLines={1}>
-                        {item.about || 'Professional Service Provider'}
+                        {item.about || t('providerProfile.serviceProvider', 'Professional Service Provider')}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                         <Ionicons name="star" size={14} color={Colors.warning} />
                         <Text style={{ fontSize: 12, marginLeft: 4, color: Colors.text.secondary }}>
-                            {item.rating?.toFixed(1) || '0.0'} • {item.location?.address || 'Location not set'}
+                            {item.rating?.toFixed(1) || '0.0'} • {item.location?.address || t('profile.notSet', 'Location not set')}
                         </Text>
                     </View>
                 </View>
@@ -200,7 +202,7 @@ export default function CustomerChatList() {
                                     <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
                                     <TextInput
                                         style={styles.searchInput}
-                                        placeholder="Search providers..."
+                                        placeholder={t('chat.searchCustomers', 'Search providers...')}
                                         value={searchQuery}
                                         onChangeText={setSearchQuery}
                                         placeholderTextColor={Colors.text.secondary}
@@ -218,13 +220,13 @@ export default function CustomerChatList() {
                                     style={[styles.tab, activeTab === 'chats' && styles.activeTab]}
                                     onPress={() => setActiveTab('chats')}
                                 >
-                                    <Text style={[styles.tabText, activeTab === 'chats' && styles.activeTabText]}>Messages</Text>
+                                    <Text style={[styles.tabText, activeTab === 'chats' && styles.activeTabText]}>{t('chat.title', 'Messages')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[styles.tab, activeTab === 'providers' && styles.activeTab]}
                                     onPress={() => setActiveTab('providers')}
                                 >
-                                    <Text style={[styles.tabText, activeTab === 'providers' && styles.activeTabText]}>All Providers</Text>
+                                    <Text style={[styles.tabText, activeTab === 'providers' && styles.activeTabText]}>{t('landing.stats.providers', 'All Providers')}</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -246,12 +248,12 @@ export default function CustomerChatList() {
                                 color={Colors.text.secondary}
                             />
                             <Text style={styles.emptyText}>
-                                {activeTab === 'chats' ? 'No messages yet' : 'No providers found'}
+                                {activeTab === 'chats' ? t('chat.noConversations', 'No messages yet') : t('chat.noCustomersFound', 'No providers found')}
                             </Text>
                             <Text style={styles.emptySubtitle}>
                                 {activeTab === 'chats'
-                                    ? 'Start a chat by visiting a provider\'s profile.'
-                                    : 'Try searching for a different name or category.'}
+                                    ? t('chat.customerMsgAppear', 'Start a chat by visiting a provider\'s profile.')
+                                    : t('chat.tryDifferentSearch', 'Try searching for a different name or category.')}
                             </Text>
                         </View>
                     }

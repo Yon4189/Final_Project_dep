@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
@@ -25,6 +26,7 @@ import AppInput from '@/components/AppInput';
 
 export default function CertificationsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { profile } = useProviderStore();
@@ -56,7 +58,7 @@ export default function CertificationsScreen() {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library.');
+      Alert.alert(t('profile.permissionRequired', 'Permission Required'), t('profile.photoLibraryPermission', 'Please allow access to your photo library.'));
       return;
     }
 
@@ -73,7 +75,7 @@ export default function CertificationsScreen() {
 
   const handleSave = async () => {
     if (!certName.trim()) {
-      Alert.alert('Error', 'Please enter certification name.');
+      Alert.alert(t('common.error', 'Error'), t('profile.fillRequired', 'Please enter certification name.'));
       return;
     }
 
@@ -107,7 +109,7 @@ export default function CertificationsScreen() {
       await updateProfileMutation.mutateAsync(formData);
       setModalVisible(false);
     } catch (error) {
-      Alert.alert('Error', 'Failed to save certification.');
+      Alert.alert(t('common.error', 'Error'), t('profile.updateError', 'Failed to save certification.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -115,12 +117,12 @@ export default function CertificationsScreen() {
 
   const handleDelete = (id: string) => {
     Alert.alert(
-      'Delete Certification',
-      'Are you sure you want to remove this certification?',
+      t('profile.certificationsTitle', 'Delete Certification'),
+      t('profile.deleteCertConfirm', 'Are you sure you want to remove this certification?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         { 
-          text: 'Delete', 
+          text: t('profile.delete', 'Delete'), 
           style: 'destructive',
           onPress: async () => {
             try {
@@ -129,7 +131,7 @@ export default function CertificationsScreen() {
               formData.append('certifications', JSON.stringify(updatedCerts));
               await updateProfileMutation.mutateAsync(formData);
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete certification.');
+              Alert.alert(t('common.error', 'Error'), t('profile.updateError', 'Failed to delete certification.'));
             }
           }
         }
@@ -143,7 +145,7 @@ export default function CertificationsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Certifications</Text>
+        <Text style={styles.title}>{t('profile.certificationsTitle', 'Certifications')}</Text>
         <TouchableOpacity onPress={handleAddCert} style={styles.addButton}>
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
@@ -153,12 +155,12 @@ export default function CertificationsScreen() {
         {certifications.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="ribbon-outline" size={80} color={colors.border} />
-            <Text style={styles.emptyStateTitle}>No Certifications Yet</Text>
+            <Text style={styles.emptyStateTitle}>{t('profile.noCertsTitle', 'No Certifications Yet')}</Text>
             <Text style={styles.emptyStateText}>
-              Add professional certifications, awards, or training certificates to showcase your expertise.
+              {t('profile.noCertsDesc', 'Add professional certifications, awards, or training certificates to showcase your expertise.')}
             </Text>
             <AppButton 
-              title="Add Your First Certification" 
+              title={t('profile.addFirstCert', 'Add Your First Certification')} 
               onPress={handleAddCert}
               style={styles.emptyStateButton}
             />
@@ -182,10 +184,10 @@ export default function CertificationsScreen() {
                 <Text style={styles.certName}>{cert.name}</Text>
                 <View style={styles.certActions}>
                   <TouchableOpacity onPress={() => handleEditCert(cert)} style={styles.actionButton}>
-                    <Text style={styles.actionText}>Edit</Text>
+                    <Text style={styles.actionText}>{t('profile.edit', 'Edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleDelete(cert.id)} style={styles.actionButton}>
-                    <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
+                    <Text style={[styles.actionText, { color: colors.error }]}>{t('profile.delete', 'Delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -204,7 +206,7 @@ export default function CertificationsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingCert ? 'Edit Certification' : 'Add Certification'}
+                {editingCert ? t('profile.editCertification', 'Edit Certification') : t('profile.addCertification', 'Add Certification')}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.text.primary} />
@@ -213,21 +215,21 @@ export default function CertificationsScreen() {
 
             <ScrollView style={styles.modalBody}>
               <AppInput
-                label="Certification Name"
+                label={t('profile.certNameLabel', 'Certification Name')}
                 value={certName}
                 onChangeText={setCertName}
-                placeholder="e.g. Certified Professional Handyman"
+                placeholder={t('profile.certNamePlaceholder', 'e.g. Certified Professional Handyman')}
                 required
               />
 
-              <Text style={styles.label}>Certificate Image (Optional)</Text>
+              <Text style={styles.label}>{t('profile.certImageLabel', 'Certificate Image (Optional)')}</Text>
               <TouchableOpacity style={styles.imageSelector} onPress={handlePickImage}>
                 {certImage ? (
                   <Image source={{ uri: certImage }} style={styles.selectedImage} />
                 ) : (
                   <View style={styles.imagePlaceholder}>
                     <Ionicons name="camera-outline" size={32} color={colors.text.secondary} />
-                    <Text style={styles.imagePlaceholderText}>Click to upload photo</Text>
+                    <Text style={styles.imagePlaceholderText}>{t('profile.clickToUpload', 'Click to upload photo')}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -235,13 +237,13 @@ export default function CertificationsScreen() {
 
             <View style={styles.modalFooter}>
               <AppButton 
-                title="Cancel" 
+                title={t('common.cancel', 'Cancel')} 
                 onPress={() => setModalVisible(false)} 
                 variant="outline"
                 style={styles.footerButton}
               />
               <AppButton 
-                title="Save Changes" 
+                title={t('profile.saveChanges', 'Save Changes')} 
                 onPress={handleSave} 
                 loading={isSubmitting}
                 style={styles.footerButton}

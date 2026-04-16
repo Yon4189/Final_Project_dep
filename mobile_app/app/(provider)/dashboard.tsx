@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/app/context/ThemeContext';
@@ -35,6 +36,7 @@ const { width } = Dimensions.get('window');
 
 export default function ProviderDashboard() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
@@ -124,7 +126,7 @@ export default function ProviderDashboard() {
     >
       <View style={styles.topSection}>
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
+          <Text style={styles.welcomeText}>{t("providerDashboard.welcomeBack", "Welcome back,")}</Text>
           <Text style={styles.profileName}>
             {profile?.fullname || profile?.businessName || 'Provider'}
           </Text>
@@ -177,14 +179,14 @@ export default function ProviderDashboard() {
       <View style={styles.availabilityCard}>
         <View style={styles.availabilityInfo}>
           <View style={[styles.dot, { backgroundColor: profile?.isAvailable ? colors.success : colors.error }]} />
-          <Text style={styles.availabilityLabel}>{profile?.isAvailable ? 'Available for work' : 'Not available'}</Text>
+          <Text style={styles.availabilityLabel}>{profile?.isAvailable ? t("providerDashboard.availableForWork", "Available for work") : t("providerDashboard.notAvailable", "Not available")}</Text>
         </View>
         <TouchableOpacity 
           style={[styles.toggleBtn, { backgroundColor: profile?.isAvailable ? colors.success + '20' : colors.error + '20' }]} 
           onPress={toggleAvailability}
         >
           <Text style={[styles.toggleText, { color: profile?.isAvailable ? colors.success : colors.error }]}>
-            {profile?.isAvailable ? 'Online' : 'Offline'}
+            {profile?.isAvailable ? t("providerDashboard.online", "Online") : t("providerDashboard.offline", "Offline")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -192,15 +194,15 @@ export default function ProviderDashboard() {
       <View style={styles.statsRow}>
         <TouchableOpacity style={styles.statBox} onPress={() => router.push('/(provider)/earnings')}>
           <PriceText style={styles.statAmount} amount={earnings?.today || 0} />
-          <Text style={styles.statPeriod}>Today</Text>
+          <Text style={styles.statPeriod}>{t("providerDashboard.today", "Today")}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.statBox} onPress={() => router.push('/(provider)/earnings')}>
           <PriceText style={styles.statAmount} amount={earnings?.week || 0} />
-          <Text style={styles.statPeriod}>Week</Text>
+          <Text style={styles.statPeriod}>{t("providerDashboard.week", "Week")}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.statBox} onPress={() => router.push('/(provider)/earnings')}>
           <PriceText style={styles.statAmount} amount={earnings?.month || 0} />
-          <Text style={styles.statPeriod}>Month</Text>
+          <Text style={styles.statPeriod}>{t("providerDashboard.month", "Month")}</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -215,7 +217,7 @@ export default function ProviderDashboard() {
           onPress={() => setSelectedTab(tab as any)}
         >
           <Text style={[styles.tabBtnText, selectedTab === tab && styles.tabBtnTextActive]}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {t(`providerDashboard.tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`, tab.charAt(0).toUpperCase() + tab.slice(1))}
           </Text>
           {tab === 'pending' && (pendingRequests?.length || 0) > 0 && (
             <View style={styles.tabBadge}><Text style={styles.tabBadgeText}>{pendingRequests.length}</Text></View>
@@ -284,7 +286,9 @@ export default function ProviderDashboard() {
                 </View>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: (colors as any)[req.status] ? (colors as any)[req.status] + '15' : colors.primary + '15' }]}>
-                <Text style={[styles.statusText, { color: (colors as any)[req.status] || colors.primary }]}>{req.status.replace('_', ' ')}</Text>
+                <Text style={[styles.statusText, { color: (colors as any)[req.status] || colors.primary }]}>
+                  {t(`bookings.status.${req.status.toLowerCase()}`, req.status.replace('_', ' '))}
+                </Text>
               </View>
             </View>
             
@@ -323,13 +327,13 @@ export default function ProviderDashboard() {
                     style={[styles.actionBtn, styles.rejectBtn]} 
                     onPress={() => router.push(`/(provider)/requests/${req.id}`)}
                   >
-                    <Text style={styles.rejectBtnText}>Reject</Text>
+                    <Text style={styles.rejectBtnText}>{t("common.reject", "Reject")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.actionBtn, styles.acceptBtn]} 
                     onPress={() => acceptRequest.mutateAsync(req.id)}
                   >
-                    <Text style={styles.acceptBtnText}>Accept</Text>
+                    <Text style={styles.acceptBtnText}>{t("common.accept", "Accept")}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -340,7 +344,7 @@ export default function ProviderDashboard() {
                 style={styles.viewDetailsBtn}
                 onPress={() => router.push(`/(provider)/requests/${req.id}`)}
               >
-                <Text style={styles.viewDetailsText}>View Details</Text>
+                <Text style={styles.viewDetailsText}>{t("common.viewDetails", "View Details")}</Text>
                 <Ionicons name="arrow-forward" size={14} color={colors.primary} />
               </TouchableOpacity>
             )}
@@ -389,42 +393,42 @@ export default function ProviderDashboard() {
               <ScrollView style={styles.drawerContent}>
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/'); }}>
                   <Ionicons name="home-outline" size={22} color={colors.text.primary} />
-                  <Text style={styles.drawerItemText}>Home</Text>
+                  <Text style={styles.drawerItemText}>{t("common.home", "Home")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/dashboard'); }}>
                   <Ionicons name="grid-outline" size={22} color={colors.primary} />
-                  <Text style={styles.drawerItemText}>Dashboard</Text>
+                  <Text style={styles.drawerItemText}>{t("providerDashboard.dashboard", "Dashboard")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/profile'); }}>
                   <Ionicons name="person-outline" size={22} color={colors.text.primary} />
-                  <Text style={styles.drawerItemText}>My Profile</Text>
+                  <Text style={styles.drawerItemText}>{t("providerDashboard.myProfile", "My Profile")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/earnings'); }}>
                   <Ionicons name="wallet-outline" size={22} color={colors.text.primary} />
-                  <Text style={styles.drawerItemText}>Earnings</Text>
+                  <Text style={styles.drawerItemText}>{t("providerDashboard.earnings", "Earnings")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/requests'); }}>
                   <Ionicons name="list-outline" size={22} color={colors.text.primary} />
-                  <Text style={styles.drawerItemText}>Service Requests</Text>
+                  <Text style={styles.drawerItemText}>{t("providerDashboard.serviceRequests", "Service Requests")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/schedule'); }}>
                   <Ionicons name="calendar-outline" size={22} color={colors.text.primary} />
-                  <Text style={styles.drawerItemText}>My Schedule</Text>
+                  <Text style={styles.drawerItemText}>{t("providerDashboard.mySchedule", "My Schedule")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/reviews'); }}>
                   <Ionicons name="star-outline" size={22} color={colors.text.primary} />
-                  <Text style={styles.drawerItemText}>Reviews & Ratings</Text>
+                  <Text style={styles.drawerItemText}>{t("providerDashboard.reviewsAndRatings", "Reviews & Ratings")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/disputes'); }}>
                   <Ionicons name="alert-circle-outline" size={22} color={colors.text.primary} />
-                  <Text style={styles.drawerItemText}>Disputes</Text>
+                  <Text style={styles.drawerItemText}>{t("providerDashboard.disputes", "Disputes")}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.drawerDivider} />
@@ -437,7 +441,7 @@ export default function ProviderDashboard() {
                   router.replace('/login'); 
                 }}>
                   <Ionicons name="log-out-outline" size={22} color={colors.error} />
-                  <Text style={[styles.drawerItemText, { color: colors.error }]}>Logout</Text>
+                  <Text style={[styles.drawerItemText, { color: colors.error }]}>{t("common.logout", "Logout")}</Text>
                 </TouchableOpacity>
               </ScrollView>
             </Animated.View>

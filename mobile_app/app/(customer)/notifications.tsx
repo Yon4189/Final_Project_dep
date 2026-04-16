@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -70,6 +71,7 @@ const normalizeNotification = (n: any): CustomerNotification => ({
 
 export default function CustomerNotifications() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
@@ -220,7 +222,7 @@ export default function CustomerNotifications() {
           <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
           {item.type === 'booking_rejected' && item.data?.reason && (
             <View style={styles.reasonContainer}>
-              <Text style={styles.reasonLabel}>Reason:</Text>
+              <Text style={styles.reasonLabel}>{t('notifications.reason', 'Reason:')}</Text>
               <Text style={styles.reasonText}>{item.data.reason}</Text>
             </View>
           )}
@@ -233,13 +235,13 @@ export default function CustomerNotifications() {
                 onPress={() => handlePayNow(item)}
               >
                 <Ionicons name="card-outline" size={14} color={Colors.surface} />
-                <Text style={styles.payNowText}> Pay Now</Text>
+                <Text style={styles.payNowText}> {t('notifications.payNow', 'Pay Now')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.viewRequestButton}
                 onPress={() => router.push(`/(customer)/requests/${bookingId}`)}
               >
-                <Text style={styles.viewRequestText}>View Request</Text>
+                <Text style={styles.viewRequestText}>{t('notifications.viewRequest', 'View Request')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -250,7 +252,7 @@ export default function CustomerNotifications() {
                 style={styles.viewRequestButton}
                 onPress={() => router.push(`/(customer)/requests/${bookingId}`)}
               >
-                <Text style={styles.viewRequestText}>View Details</Text>
+                <Text style={styles.viewRequestText}>{t('notifications.viewDetails', 'View Details')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -268,10 +270,10 @@ export default function CustomerNotifications() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('notifications.title', 'Notifications')}</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
-            <Text style={styles.markAllText}>Mark all read</Text>
+            <Text style={styles.markAllText}>{t('notifications.markAllRead', 'Mark all read')}</Text>
           </TouchableOpacity>
         )}
         {unreadCount === 0 && <View style={{ width: 80 }} />}
@@ -284,7 +286,7 @@ export default function CustomerNotifications() {
           onPress={() => setFilter('all')}
         >
           <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
-            All
+            {t('notifications.filterAll', 'All')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -292,7 +294,7 @@ export default function CustomerNotifications() {
           onPress={() => setFilter('unread')}
         >
           <Text style={[styles.filterText, filter === 'unread' && styles.activeFilterText]}>
-            Unread {unreadCount > 0 ? `(${unreadCount})` : ''}
+            {t('notifications.filterUnread', 'Unread')} {unreadCount > 0 ? `(${unreadCount})` : ''}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -300,7 +302,7 @@ export default function CustomerNotifications() {
           onPress={() => setFilter('read')}
         >
           <Text style={[styles.filterText, filter === 'read' && styles.activeFilterText]}>
-            Read
+            {t('notifications.filterRead', 'Read')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -322,7 +324,7 @@ export default function CustomerNotifications() {
       {unreadCount > 0 && (
         <View style={styles.unreadBanner}>
           <Ionicons name="mail-unread-outline" size={16} color={Colors.primary} />
-          <Text style={styles.unreadBannerText}> {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</Text>
+          <Text style={styles.unreadBannerText}> {unreadCount} {unreadCount !== 1 ? t('notifications.unreadMessages', 'unread notifications') : t('notifications.unreadMessage', 'unread notification')}</Text>
         </View>
       )}
       <FlatList
@@ -335,8 +337,8 @@ export default function CustomerNotifications() {
         ListEmptyComponent={
           <EmptyState
             icon="notifications-off-outline"
-            title="No notifications"
-            message="You'll be notified when providers respond to your requests"
+            title={t('notifications.noNotifications', 'No notifications')}
+            message={t('notifications.noNotificationsSub', "You'll be notified when providers respond to your requests")}
           />
         }
         contentContainerStyle={notifications.length === 0 ? { flex: 1 } : undefined}

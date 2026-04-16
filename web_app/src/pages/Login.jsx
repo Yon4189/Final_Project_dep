@@ -114,10 +114,10 @@ const Login = () => {
           <div className="w-20 h-20 bg-white rounded-3xl mx-auto flex items-center justify-center shadow-xl p-2 mb-6 transform hover:scale-105 transition-transform duration-300">
             <img src={logo} alt={t('project_logo')} className="w-full h-full object-contain rounded-2xl" />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-3xl font-black text-admin-text tracking-tight">
             {viewMode === 'login' ? t('welcome_back') : t('recover_access')}
           </h2>
-          <p className="text-slate-500 dark:text-admin-text-muted text-sm font-medium">
+          <p className="text-admin-text-muted text-sm font-medium">
             {viewMode === 'login'
               ? t('login_subtitle')
               : t('forgot_subtitle')}

@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from './services/api';
 import {
   Dimensions,
@@ -34,6 +35,7 @@ const getCategoryIcon = (name: string) => {
 export default function LandingScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = React.useMemo(() => getStyles(colors), [colors]);
   const [selectedRole, setSelectedRole] = useState<'customer' | 'provider' | null>(null);
 
@@ -100,10 +102,10 @@ export default function LandingScreen() {
       {/* Header */}
       <View style={[styles.header, { marginTop: 100 }]}>
         <Text style={styles.title}>
-          <Text>HomeService Pro</Text>
+          <Text>{t('landing.title')}</Text>
         </Text>
         <Text style={styles.subtitle}>
-          <Text>Find Trusted Home Service Providers</Text>
+          <Text>{t('landing.subtitle')}</Text>
         </Text>
       </View>
 
@@ -118,7 +120,7 @@ export default function LandingScreen() {
       {/* Services Section */}
       <View style={styles.servicesSection}>
         <Text style={styles.sectionTitle}>
-          <Text>Our Services</Text>
+          <Text>{t('landing.servicesTitle')}</Text>
         </Text>
         <View style={styles.servicesGrid}>
           {categories.length > 0 ? (
@@ -132,7 +134,7 @@ export default function LandingScreen() {
             ))
           ) : (
             <Text style={{ textAlign: 'center', width: '100%', color: colors.text.secondary }}>
-              <Text>Loading services...</Text>
+              <Text>{t('landing.loadingServices')}</Text>
             </Text>
           )}
         </View>
@@ -141,19 +143,19 @@ export default function LandingScreen() {
       {/* Role Selection */}
       <View style={styles.roleSection}>
         <Text style={styles.sectionTitle}>
-          <Text>Join HomeService Pro</Text>
+          <Text>{t('landing.joinTitle')}</Text>
         </Text>
         <View style={styles.roleContainer}>
           <RoleCard
-            title="I Need Service"
-            description="Find reliable professionals for your home needs"
+            title={t('landing.customerCardTitle')}
+            description={t('landing.customerCardDesc')}
             icon="👨‍💼"
             isSelected={selectedRole === 'customer'}
             onPress={() => setSelectedRole('customer')}
           />
           <RoleCard
-            title="I Provide Service"
-            description="Offer your skills and grow your business"
+            title={t('landing.providerCardTitle')}
+            description={t('landing.providerCardDesc')}
             icon="👨‍🔧"
             isSelected={selectedRole === 'provider'}
             onPress={() => setSelectedRole('provider')}
@@ -162,7 +164,7 @@ export default function LandingScreen() {
 
         {selectedRole && (
           <AppButton
-            title={`Continue as ${selectedRole === 'customer' ? 'Customer' : 'Provider'} `}
+            title={selectedRole === 'customer' ? t('landing.continueAsCustomer') : t('landing.continueAsProvider')}
             onPress={handleContinue}
             fullWidth
             style={styles.continueButton}
@@ -172,25 +174,32 @@ export default function LandingScreen() {
 
       {/* Stats Section */}
       <View style={styles.statsSection}>
-        {stats.map((stat, index) => (
-          <View key={index} style={styles.statItem}>
-            <Text style={styles.statNumber}>
-              <Text>{stat.value}</Text>
-            </Text>
-            <Text style={styles.statLabel}>
-              <Text>{stat.label}</Text>
-            </Text>
-          </View>
-        ))}
+        {stats.map((stat, index) => {
+          let labelKey = '';
+          if (stat.label === 'Service Providers') labelKey = 'providers';
+          else if (stat.label === 'Happy Customers') labelKey = 'customers';
+          else if (stat.label === 'Service Available') labelKey = 'available';
+          
+          return (
+            <View key={index} style={styles.statItem}>
+              <Text style={styles.statNumber}>
+                <Text>{stat.value}</Text>
+              </Text>
+              <Text style={styles.statLabel}>
+                <Text>{labelKey ? t(`landing.stats.${labelKey}`) : stat.label}</Text>
+              </Text>
+            </View>
+          );
+        })}
       </View>
 
       {/* CTA Section */}
       <View style={styles.ctaSection}>
         <Text style={styles.ctaTitle}>
-          <Text>Already have an account?</Text>
+          <Text>{t('landing.alreadyHaveAccount')}</Text>
         </Text>
         <AppButton
-          title="Sign In"
+          title={t('landing.signIn')}
           onPress={() => router.push('/login')}
           variant="outline"
           fullWidth
@@ -199,10 +208,10 @@ export default function LandingScreen() {
       </View>
        <View style={styles.ctaSection}>
         <Text style={styles.ctaTitle}>
-          <Text>What do you want to know about us?</Text>
+          <Text>{t('landing.aboutUsTitle')}</Text>
         </Text>
         <AppButton
-          title="about us"
+          title={t('landing.aboutUs')}
           onPress={() => router.push('./about')}
           variant="outline"
           fullWidth

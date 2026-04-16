@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import type { ServiceRequest } from '@/app/types/customer.types';
 import { API_BASE_URL } from '@/app/config/api';
@@ -55,14 +56,24 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   showActions = true,
 }) => {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    const locale = i18n.language === 'am' ? 'am-ET' : 'en-US';
+    try {
+      return date.toLocaleDateString(locale, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch (e) {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
   };
 
   const formatTime = (timeString: string) => {
@@ -78,7 +89,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   };
 
   const getStatusLabel = (status: string) => {
-    return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status;
+    return t(`bookings.status.${status}`, status.charAt(0).toUpperCase() + status.slice(1));
   };
 
   const handlePress = () => {
@@ -115,14 +126,14 @@ export const RequestCard: React.FC<RequestCardProps> = ({
               style={[styles.actionButton, styles.cancelButton]}
               onPress={() => handleActionPress('cancel')}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.messageButton]}
               onPress={() => handleActionPress('message')}
             >
               <Ionicons name="chatbubble-outline" size={16} color={Colors.primary} />
-              <Text style={styles.messageButtonText}>Message</Text>
+              <Text style={styles.messageButtonText}>{t('requests.message', 'Message')}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -137,7 +148,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
                 onPress={() => handleActionPress('pay')}
               >
                 <Ionicons name="card-outline" size={16} color={Colors.surface} />
-                <Text style={styles.trackButtonText}>Pay Now</Text>
+                <Text style={styles.trackButtonText}>{t('requests.payNow', 'Pay Now')}</Text>
               </TouchableOpacity>
             )}
             {request.status === 'confirmed' && (
@@ -146,7 +157,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
                 onPress={() => handleActionPress('track')}
               >
                 <Ionicons name="location-outline" size={16} color={Colors.surface} />
-                <Text style={styles.trackButtonText}>Track</Text>
+                <Text style={styles.trackButtonText}>{t('requests.track', 'Track')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -154,7 +165,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
               onPress={() => handleActionPress('message')}
             >
               <Ionicons name="chatbubble-outline" size={16} color={Colors.primary} />
-              <Text style={styles.messageButtonText}>Message</Text>
+              <Text style={styles.messageButtonText}>{t('requests.message', 'Message')}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -167,14 +178,14 @@ export const RequestCard: React.FC<RequestCardProps> = ({
               onPress={() => handleActionPress('track')}
             >
               <Ionicons name="location-outline" size={16} color={Colors.surface} />
-              <Text style={styles.trackButtonText}>Track</Text>
+              <Text style={styles.trackButtonText}>{t('requests.track', 'Track')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.messageButton]}
               onPress={() => handleActionPress('message')}
             >
               <Ionicons name="chatbubble-outline" size={16} color={Colors.primary} />
-              <Text style={styles.messageButtonText}>Message</Text>
+              <Text style={styles.messageButtonText}>{t('requests.message', 'Message')}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -186,7 +197,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
             onPress={() => handleActionPress('view-review')}
           >
             <Ionicons name="star" size={16} color={Colors.warning} />
-            <Text style={styles.reviewButtonText}>View Review</Text>
+            <Text style={styles.reviewButtonText}>{t('requests.viewReview', 'View Review')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -194,7 +205,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
             onPress={() => handleActionPress('review')}
           >
             <Ionicons name="star-outline" size={16} color={Colors.warning} />
-            <Text style={styles.reviewButtonText}>Write Review</Text>
+            <Text style={styles.reviewButtonText}>{t('requests.writeReview', 'Write Review')}</Text>
           </TouchableOpacity>
         );
 
@@ -258,9 +269,9 @@ export const RequestCard: React.FC<RequestCardProps> = ({
         <View style={styles.detailRow}>
           <Ionicons name="cash-outline" size={16} color={Colors.text.secondary} />
           <Text style={styles.priceText}>
-            ${request.estimatedPrice.toFixed(2)}
+            ETB {request.estimatedPrice.toFixed(2)}
             {request.paymentStatus === 'paid' && (
-              <Text style={styles.paidText}> • Paid</Text>
+              <Text style={styles.paidText}> • {t('requests.paid', 'Paid')}</Text>
             )}
           </Text>
         </View>
@@ -280,7 +291,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
 
       {/* Request Number */}
       <Text style={styles.requestNumber}>
-        Request #{request.requestNumber}
+        {t('requests.requestNumber', 'Request #')}{request.requestNumber}
       </Text>
     </TouchableOpacity>
   );

@@ -12,6 +12,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
 import { useSubmitReview } from '@/hooks/useCustomerQueries';
@@ -26,6 +27,7 @@ interface ReviewModalProps {
 }
 
 export function ReviewModal({ visible, onClose, bookingId, providerName, serviceName, onSuccess }: ReviewModalProps) {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -35,7 +37,7 @@ export function ReviewModal({ visible, onClose, bookingId, providerName, service
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      setError('Please select a rating');
+      setError(t('reviews.selectRatingError', 'Please select a rating'));
       return;
     }
 
@@ -53,7 +55,7 @@ export function ReviewModal({ visible, onClose, bookingId, providerName, service
       setComment('');
       setIsAnonymous(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to submit review');
+      setError(err.message || t('reviews.submitError', 'Failed to submit review'));
     }
   };
 
@@ -87,24 +89,24 @@ export function ReviewModal({ visible, onClose, bookingId, providerName, service
       >
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Rate Your Experience</Text>
+            <Text style={styles.title}>{t('reviews.rateExperience', 'Rate Your Experience')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.subtitle}>How was your service with {providerName}?</Text>
+            <Text style={styles.subtitle}>{t('reviews.howWasService', 'How was your service with {{provider}}?', { provider: providerName })}</Text>
             
             <View style={styles.starsContainer}>
               {renderStars()}
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Your Review (Optional)</Text>
+              <Text style={styles.label}>{t('reviews.yourReviewLabel', 'Your Review (Optional)')}</Text>
               <TextInput
                 style={styles.textArea}
-                placeholder="Share your experience with others..."
+                placeholder={t('reviews.shareExperience', 'Share your experience with others...')}
                 placeholderTextColor={Colors.text.secondary}
                 multiline
                 numberOfLines={4}
@@ -116,8 +118,8 @@ export function ReviewModal({ visible, onClose, bookingId, providerName, service
 
             <View style={styles.switchGroup}>
               <View style={styles.switchTextContainer}>
-                <Text style={styles.switchLabel}>Submit Anonymously</Text>
-                <Text style={styles.switchDescription}>Your name won't be visible on the review</Text>
+                <Text style={styles.switchLabel}>{t('reviews.submitAnonymously', 'Submit Anonymously')}</Text>
+                <Text style={styles.switchDescription}>{t('reviews.anonymousNotice', 'Your name won\'t be visible on the review')}</Text>
               </View>
               <Switch
                 value={isAnonymous}
@@ -136,7 +138,7 @@ export function ReviewModal({ visible, onClose, bookingId, providerName, service
               {submitReview.isPending ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.submitButtonText}>Submit Review</Text>
+                <Text style={styles.submitButtonText}>{t('reviews.submitReview', 'Submit Review')}</Text>
               )}
             </TouchableOpacity>
           </ScrollView>

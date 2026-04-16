@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { Colors } from "@/app/constants/Colors";
 
 interface ServiceSearchProps {
@@ -36,8 +37,9 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   suggestions = [],
   searchResults = [],
   categories = [],
-  placeholder = "Search for services...",
+  placeholder,
 }) => {
+  const { t } = useTranslation();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
@@ -79,7 +81,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
             style={styles.searchInput}
             value={value}
             onChangeText={onChangeText}
-            placeholder={placeholder}
+            placeholder={placeholder || t('search.placeholder', 'Search for services...')}
             placeholderTextColor={Colors.text.secondary}
             returnKeyType="search"
             onSubmitEditing={onSearch}
@@ -169,7 +171,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
               </TouchableOpacity>
             )}
             ListHeaderComponent={
-              <Text style={styles.suggestionsHeader}>Suggestions</Text>
+              <Text style={styles.suggestionsHeader}>{t('search.suggestions', 'Suggestions')}</Text>
             }
           />
         </View>

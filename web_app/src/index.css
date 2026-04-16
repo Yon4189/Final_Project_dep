@@ -151,9 +151,14 @@ main thead tr {
 }
 
 /* --- Dropdown / select option --- */
+main select option {
+  background-color: var(--admin-card) !important;
+  color: var(--admin-text) !important;
+}
+
 .dark main option {
   background-color: #111 !important;
-  color: var(--admin-text) !important;
+  color: #fff !important;
 }
 
 /* --- Typography Improvements --- */

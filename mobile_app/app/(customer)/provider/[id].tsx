@@ -13,6 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors } from "@/app/constants/Colors";
 import {
@@ -27,6 +28,7 @@ import { API_BASE_URL } from "@/app/config/api";
 
 export default function ProviderProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id: string }>();
   const providerId = params.id || "";
 
@@ -58,11 +60,11 @@ export default function ProviderProfileScreen() {
   };
 
   const formatDistance = (distance?: number) => {
-    if (!distance) return "Distance unknown";
+    if (!distance) return t('providerProfile.distanceUnknown', 'Distance unknown');
     if (distance < 1) {
-      return `${(distance * 1000).toFixed(0)}m away`;
+      return t('providerProfile.distanceAwayM', { count: Math.round(distance * 1000), defaultValue: `${(distance * 1000).toFixed(0)}m away` });
     }
-    return `${distance.toFixed(1)}km away`;
+    return t('providerProfile.distanceAwayKm', { count: parseFloat(distance.toFixed(1)), defaultValue: `${distance.toFixed(1)}km away` });
   };
 
   const formatCurrency = (amount?: number | string) => {
@@ -85,7 +87,7 @@ export default function ProviderProfileScreen() {
     const categoryName =
       (firstService as any)?.category?.name ||
       (firstService as any)?.service?.category?.name ||
-      "Service Provider";
+      t('providerProfile.categoryFallback', 'Service Provider');
     return categoryName;
   };
 
@@ -129,7 +131,7 @@ export default function ProviderProfileScreen() {
         } else {
           // Fallback for browsers that don't support Web Share API
           await navigator.clipboard.writeText(`${message}\n${shareUrl}`);
-          Alert.alert("Success", "Provider info copied to clipboard!");
+          Alert.alert(t('common.success', 'Success'), t('providerProfile.copied', 'Provider info copied to clipboard!'));
         }
       } else {
         await Share.share({
@@ -139,7 +141,7 @@ export default function ProviderProfileScreen() {
       }
     } catch (error: any) {
       console.error('Share error:', error);
-      Alert.alert("Error", "Could not share provider info");
+      Alert.alert(t('common.error', 'Error'), t('providerProfile.shareError', 'Could not share provider info'));
     }
   };
 
@@ -150,9 +152,9 @@ export default function ProviderProfileScreen() {
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Services Offered</Text>
+          <Text style={styles.sectionTitle}>{t('providerProfile.servicesOffered', 'Services Offered')}</Text>
           <Text style={styles.sectionCount}>
-            {providerData.services.length} services
+            {t('providerProfile.servicesCount', { count: providerData.services.length, defaultValue: `${providerData.services.length} services` })}
           </Text>
         </View>
 
@@ -175,7 +177,7 @@ export default function ProviderProfileScreen() {
                 />
               </View>
               <Text style={styles.serviceName} numberOfLines={1}>
-                {service?.name || service?.serviceName || service?.service?.name || "Service"}
+                {service?.name || service?.serviceName || service?.service?.name || t('common.service', "Service")}
               </Text>
               <Text style={styles.servicePrice}>
                 {formatCurrency(
@@ -183,10 +185,10 @@ export default function ProviderProfileScreen() {
                 )}
               </Text>
               <Text style={styles.serviceDuration} numberOfLines={2}>
-                {service?.description || service?.service?.description || "Professional service"}
+                {service?.description || service?.service?.description || t('providerProfile.serviceDescFallback', "Professional service")}
               </Text>
               <View style={styles.bookButton}>
-                <Text style={styles.bookButtonText}>Book Now</Text>
+                <Text style={styles.bookButtonText}>{t('providerProfile.bookNow', 'Book Now')}</Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -205,12 +207,12 @@ export default function ProviderProfileScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Provider Profile</Text>
+          <Text style={styles.headerTitle}>{t('providerProfile.header', 'Provider Profile')}</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.loadingContainer}>
           <LoadingSpinner />
-          <Text style={styles.loadingText}>Loading provider details...</Text>
+          <Text style={styles.loadingText}>{t('providerProfile.loadingDetails', 'Loading provider details...')}</Text>
         </View>
       </View>
     );
@@ -226,7 +228,7 @@ export default function ProviderProfileScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Provider Profile</Text>
+          <Text style={styles.headerTitle}>{t('providerProfile.header', 'Provider Profile')}</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.errorContainer}>
@@ -235,15 +237,15 @@ export default function ProviderProfileScreen() {
             size={48}
             color={Colors.error}
           />
-          <Text style={styles.errorTitle}>Provider Not Found</Text>
+          <Text style={styles.errorTitle}>{t('providerProfile.notFound', 'Provider Not Found')}</Text>
           <Text style={styles.errorText}>
-            The provider you're looking for doesn't exist or has been removed.
+            {t('providerProfile.removedMsg', "The provider you're looking for doesn't exist or has been removed.")}
           </Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.retryButtonText}>Go Back</Text>
+            <Text style={styles.retryButtonText}>{t('common.goBack', 'Go Back')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -263,7 +265,7 @@ export default function ProviderProfileScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Provider Profile</Text>
+          <Text style={styles.headerTitle}>{t('providerProfile.header', 'Provider Profile')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -283,7 +285,7 @@ export default function ProviderProfileScreen() {
             {providerData.verified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-                <Text style={styles.verifiedText}>Verified</Text>
+                <Text style={styles.verifiedText}>{t('providerProfile.verified', 'Verified')}</Text>
               </View>
             )}
           </View>
@@ -296,7 +298,7 @@ export default function ProviderProfileScreen() {
               <Ionicons name="star" size={16} color={Colors.warning} />
               <Text style={styles.ratingText}>
                 {providerData.rating?.toFixed(1) || "0.0"} •{" "}
-                {providerData.reviewCount || 0} reviews
+                {t('providerProfile.reviewsCount', { count: providerData.reviewCount || 0, defaultValue: `${providerData.reviewCount || 0} reviews` })}
               </Text>
             </View>
             <Text style={styles.categoryText}>{getPrimaryCategory()}</Text>
@@ -312,21 +314,21 @@ export default function ProviderProfileScreen() {
               <Text style={styles.statValue}>
                 {providerData.completedJobs || 0}
               </Text>
-              <Text style={styles.statLabel}>Jobs Done</Text>
+              <Text style={styles.statLabel}>{t('providerProfile.jobsDone', 'Jobs Done')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
                 {providerData.successRate || 98}%
               </Text>
-              <Text style={styles.statLabel}>Success Rate</Text>
+              <Text style={styles.statLabel}>{t('providerProfile.successRate', 'Success Rate')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
                 {providerData.responseTime || "<1h"}
               </Text>
-              <Text style={styles.statLabel}>Response</Text>
+              <Text style={styles.statLabel}>{t('providerProfile.responseTime', 'Response')}</Text>
             </View>
           </View>
         </View>
@@ -336,7 +338,7 @@ export default function ProviderProfileScreen() {
         {/* About */}
         {(providerData.bio || providerData.about) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>{t('providerProfile.about', 'About')}</Text>
             <Text style={styles.aboutText}>
               {providerData.bio ||
                 providerData.about ||
@@ -348,7 +350,7 @@ export default function ProviderProfileScreen() {
         {/* Location */}
         {(providerData.location?.address || providerData.distance) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Location</Text>
+            <Text style={styles.sectionTitle}>{t('providerProfile.location', 'Location')}</Text>
             <View style={styles.locationContainer}>
               <Ionicons
                 name="location-outline"
@@ -356,7 +358,7 @@ export default function ProviderProfileScreen() {
                 color={Colors.primary}
               />
               <Text style={styles.locationText}>
-                {providerData.location?.address || "Location not specified"}
+                {providerData.location?.address || t('providerProfile.locationNotSpecified', "Location not specified")}
               </Text>
             </View>
             {providerData.distance && (
@@ -371,13 +373,13 @@ export default function ProviderProfileScreen() {
         {providerData.reviews && providerData.reviews.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Reviews</Text>
+              <Text style={styles.sectionTitle}>{t('providerProfile.recentReviews', 'Recent Reviews')}</Text>
               <TouchableOpacity
                 onPress={() =>
                   router.push(`/(customer)/provider/${providerId}/reviews`)
                 }
               >
-                <Text style={styles.seeAllText}>View All</Text>
+                <Text style={styles.seeAllText}>{t('providerProfile.viewAll', 'View All')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -407,7 +409,7 @@ export default function ProviderProfileScreen() {
                   </View>
                   <Text style={styles.reviewText}>{review.comment}</Text>
                   {review.isRecommended && (
-                    <Text style={styles.recommendedText}>✓ Recommended</Text>
+                    <Text style={styles.recommendedText}>✓ {t('providerProfile.recommended', 'Recommended')}</Text>
                   )}
                 </View>
               ))}
@@ -421,7 +423,7 @@ export default function ProviderProfileScreen() {
               style={styles.similarProvidersHeader}
               onPress={handleSimilarProvidersToggle}
             >
-              <Text style={styles.sectionTitle}>Similar Providers</Text>
+              <Text style={styles.sectionTitle}>{t('providerProfile.similarProviders', 'Similar Providers')}</Text>
               <Ionicons
                 name={showSimilarProviders ? "chevron-up" : "chevron-down"}
                 size={20}
@@ -494,7 +496,7 @@ export default function ProviderProfileScreen() {
       <View style={styles.contactActions}>
         <TouchableOpacity style={styles.contactButton} onPress={handleCall}>
           <Ionicons name="call-outline" size={20} color={Colors.primary} />
-          <Text style={styles.contactButtonText}>Call</Text>
+          <Text style={styles.contactButtonText}>{t('providerProfile.call', 'Call')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.contactButton} onPress={handleMessage}>
@@ -503,7 +505,7 @@ export default function ProviderProfileScreen() {
             size={20}
             color={Colors.primary}
           />
-          <Text style={styles.contactButtonText}>Message</Text>
+          <Text style={styles.contactButtonText}>{t('providerProfile.message', 'Message')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.contactButton} onPress={handleShare}>
@@ -512,7 +514,7 @@ export default function ProviderProfileScreen() {
             size={20}
             color={Colors.primary}
           />
-          <Text style={styles.contactButtonText}>Share</Text>
+          <Text style={styles.contactButtonText}>{t('providerProfile.share', 'Share')}</Text>
         </TouchableOpacity>
       </View>
 

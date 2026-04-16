@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
 import { useProviderReviews } from '@/hooks/useProviderReviews';
@@ -24,17 +25,18 @@ import { EmptyState } from '../../../components/common/EmptyState';
 import { formatTimeAgo } from '../../utils/formatters';
 import type { CustomerReview } from '../../types/provider.types';
 
-const RATING_DISTRIBUTION = [
-  { stars: 5, label: 'Excellent' },
-  { stars: 4, label: 'Very Good' },
-  { stars: 3, label: 'Average' },
-  { stars: 2, label: 'Below Average' },
-  { stars: 1, label: 'Poor' },
-];
-
 export default function ProviderReviews() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
+
+  const RATING_DISTRIBUTION = [
+    { stars: 5, label: t('reviews.distribution.excellent', 'Excellent') },
+    { stars: 4, label: t('reviews.distribution.veryGood', 'Very Good') },
+    { stars: 3, label: t('reviews.distribution.average', 'Average') },
+    { stars: 2, label: t('reviews.distribution.belowAverage', 'Below Average') },
+    { stars: 1, label: t('reviews.distribution.poor', 'Poor') },
+  ];
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedReview, setSelectedReview] = useState<CustomerReview | null>(null);
@@ -102,9 +104,9 @@ export default function ProviderReviews() {
       setShowResponseModal(false);
       setResponseText('');
       setSelectedReview(null);
-      Alert.alert('Success', 'Your response has been posted');
+      Alert.alert(t('common.success', 'Success'), t('reviews.responsePosted', 'Your response has been posted'));
     } catch (error) {
-      Alert.alert('Error', 'Failed to post response');
+      Alert.alert(t('common.error', 'Error'), t('providerRequests.startError', 'Failed to post response'));
     }
   };
 
@@ -114,7 +116,7 @@ export default function ProviderReviews() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.surface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reviews & Ratings</Text>
+        <Text style={styles.headerTitle}>{t('reviews.title', 'Reviews & Ratings')}</Text>
         <View style={{ width: 24 }} />
       </View>
     </View>
@@ -134,7 +136,7 @@ export default function ProviderReviews() {
             />
           ))}
         </View>
-        <Text style={styles.totalReviews}>Based on {stats?.total || 0} reviews</Text>
+        <Text style={styles.totalReviews}>{t('reviews.basedOn', 'Based on {{count}} reviews').replace('{{count}}', (stats?.total || 0).toString())}</Text>
       </View>
 
       <View style={styles.ratingDistribution}>
@@ -146,10 +148,10 @@ export default function ProviderReviews() {
     return (
       <TouchableOpacity
         key={stars}
-        style={styles.distributionRow}
+         style={styles.distributionRow}
         onPress={() => setFilterRating(filterRating === stars ? null : stars)}
       >
-        <Text style={styles.distributionLabel}>{stars} star</Text>
+        <Text style={styles.distributionLabel}>{stars} {t('reviews.star', 'star')}</Text>
         <View style={styles.progressBarContainer}>
           <View 
             style={[
@@ -165,7 +167,7 @@ export default function ProviderReviews() {
 </View>
 
       <View style={styles.sortContainer}>
-        <Text style={styles.sortLabel}>Sort by:</Text>
+        <Text style={styles.sortLabel}>{t('reviews.sortBy', 'Sort by:')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {(['newest', 'oldest', 'highest', 'lowest'] as const).map((option) => (
             <TouchableOpacity
@@ -180,7 +182,7 @@ export default function ProviderReviews() {
                 styles.sortChipText,
                 sortBy === option && styles.sortChipTextActive,
               ]}>
-                {option.charAt(0).toUpperCase() + option.slice(1)}
+                {t(`reviews.sortOptions.${option}`, option.charAt(0).toUpperCase() + option.slice(1))}
               </Text>
             </TouchableOpacity>
           ))}
@@ -195,11 +197,11 @@ export default function ProviderReviews() {
     return (
       <View style={styles.criteriaContainer}>
         {[
-          { label: 'Punctuality', value: criteria.punctuality },
-          { label: 'Quality', value: criteria.quality },
-          { label: 'Professionalism', value: criteria.professionalism },
-          { label: 'Communication', value: criteria.communication },
-          { label: 'Value for Money', value: criteria.valueForMoney },
+          { label: t('reviews.criteria.punctuality', 'Punctuality'), value: criteria.punctuality },
+          { label: t('reviews.criteria.quality', 'Quality'), value: criteria.quality },
+          { label: t('reviews.criteria.professionalism', 'Professionalism'), value: criteria.professionalism },
+          { label: t('reviews.criteria.communication', 'Communication'), value: criteria.communication },
+          { label: t('reviews.criteria.valueForMoney', 'Value for Money'), value: criteria.valueForMoney },
         ].map(({ label, value }) => (
           <View key={label} style={styles.criteriaRow}>
             <Text style={styles.criteriaLabel}>{label}</Text>
@@ -252,7 +254,7 @@ export default function ProviderReviews() {
         <View style={styles.responseContainer}>
           <View style={styles.responseHeader}>
             <Ionicons name="chatbubble" size={14} color={colors.primary} />
-            <Text style={styles.responseTitle}>Your response</Text>
+            <Text style={styles.responseTitle}>{t('reviews.yourResponse', 'Your response')}</Text>
             <Text style={styles.responseDate}>{formatTimeAgo(item.response.createdAt)}</Text>
           </View>
           <Text style={styles.responseText}>{item.response.message}</Text>
@@ -260,7 +262,7 @@ export default function ProviderReviews() {
       ) : (
         <TouchableOpacity style={styles.respondButton} onPress={() => handleRespond(item)}>
           <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
-          <Text style={styles.respondButtonText}>Respond to this review</Text>
+          <Text style={styles.respondButtonText}>{t('reviews.respond', 'Respond to this review')}</Text>
         </TouchableOpacity>
       )}
 
@@ -285,7 +287,7 @@ export default function ProviderReviews() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Respond to Review</Text>
+            <Text style={styles.modalTitle}>{t('reviews.respondToReview', 'Respond to Review')}</Text>
             <TouchableOpacity onPress={() => setShowResponseModal(false)}>
               <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
@@ -312,7 +314,7 @@ export default function ProviderReviews() {
 
               <TextInput
                 style={styles.modalInput}
-                placeholder="Write your response..."
+                placeholder={t('reviews.writeResponse', 'Write your response...')}
                 placeholderTextColor={colors.text.secondary}
                 value={responseText}
                 onChangeText={setResponseText}
@@ -326,7 +328,7 @@ export default function ProviderReviews() {
                   style={styles.modalCancelButton}
                   onPress={() => setShowResponseModal(false)}
                 >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -340,7 +342,7 @@ export default function ProviderReviews() {
                   {isResponding ? (
                     <ActivityIndicator size="small" color={colors.surface} />
                   ) : (
-                    <Text style={styles.modalSubmitText}>Post Response</Text>
+                    <Text style={styles.modalSubmitText}>{t('reviews.postResponse', 'Post Response')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -354,8 +356,8 @@ export default function ProviderReviews() {
   const renderEmptyState = () => (
     <EmptyState
       icon="star-outline"
-      title="No reviews yet"
-      message="When customers review your services, they'll appear here"
+      title={t('reviews.noReviews', 'No reviews yet')}
+      message={t('reviews.noReviewsMsg', "When customers review your services, they'll appear here")}
     />
   );
 

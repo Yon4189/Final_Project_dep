@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
 import AppButton from '../AppButton';
 
@@ -28,6 +29,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   onApply,
   initialFilters = {},
 }) => {
+  const { t } = useTranslation();
   const [sortBy, setSortBy] = useState(initialFilters.sortBy || 'rating');
   const [priceRange, setPriceRange] = useState({
     min: initialFilters.priceRange?.min || 0,
@@ -87,7 +89,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
         ))}
       </View>
       <Text style={[styles.ratingText, minRating === rating && styles.ratingTextSelected]}>
-        {rating === 0 ? 'Any' : `${rating}+`}
+        {rating === 0 ? t('filter.rating.any', 'Any') : `${rating}+`}
       </Text>
     </TouchableOpacity>
   );
@@ -105,7 +107,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           style={styles.modalContent}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filter Providers</Text>
+            <Text style={styles.modalTitle}>{t('filter.title', 'Filter Providers')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
@@ -114,20 +116,20 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Sort By Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Sort By</Text>
-              <SortOption value="rating" label="Highest Rated" />
-              <SortOption value="distance" label="Nearest" />
-              <SortOption value="price_low" label="Price: Low to High" />
-              <SortOption value="price_high" label="Price: High to Low" />
-              <SortOption value="reviews" label="Most Reviewed" />
+              <Text style={styles.sectionTitle}>{t('filter.sortBy.title', 'Sort By')}</Text>
+              <SortOption value="rating" label={t('filter.sortBy.rating', 'Highest Rated')} />
+              <SortOption value="distance" label={t('filter.sortBy.distance', 'Nearest')} />
+              <SortOption value="price_low" label={t('filter.sortBy.price_low', 'Price: Low to High')} />
+              <SortOption value="price_high" label={t('filter.sortBy.price_high', 'Price: High to Low')} />
+              <SortOption value="reviews" label={t('filter.sortBy.reviews', 'Most Reviewed')} />
             </View>
 
             {/* Price Range Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Price Range (ETB)</Text>
+              <Text style={styles.sectionTitle}>{t('filter.priceRange.title', 'Price Range (ETB)')}</Text>
               <View style={styles.priceContainer}>
                 <View style={styles.priceInput}>
-                  <Text style={styles.priceLabel}>Min</Text>
+                  <Text style={styles.priceLabel}>{t('filter.priceRange.min', 'Min')}</Text>
                   <TextInput
                     style={styles.priceField}
                     value={priceRange.min.toString()}
@@ -139,7 +141,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                 </View>
                 <Text style={styles.priceSeparator}>-</Text>
                 <View style={styles.priceInput}>
-                  <Text style={styles.priceLabel}>Max</Text>
+                  <Text style={styles.priceLabel}>{t('filter.priceRange.max', 'Max')}</Text>
                   <TextInput
                     style={styles.priceField}
                     value={priceRange.max.toString()}
@@ -154,7 +156,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
             {/* Rating Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Minimum Rating</Text>
+              <Text style={styles.sectionTitle}>{t('filter.rating.title', 'Minimum Rating')}</Text>
               <RatingOption rating={0} />
               <RatingOption rating={3} />
               <RatingOption rating={4} />
@@ -163,7 +165,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
             {/* Distance Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Maximum Distance</Text>
+              <Text style={styles.sectionTitle}>{t('filter.distance.title', 'Maximum Distance')}</Text>
               <View style={styles.sliderContainer}>
                 {[5, 10, 25, 50, 100].map((distance) => (
                   <TouchableOpacity
@@ -187,7 +189,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               >
                 <View style={styles.toggleLeft}>
                   <Ionicons name="time" size={20} color={Colors.primary} />
-                  <Text style={styles.toggleText}>Available Now</Text>
+                  <Text style={styles.toggleText}>{t('filter.availableNow', 'Available Now')}</Text>
                 </View>
                 <View style={[styles.checkbox, availableNow && styles.checkboxChecked]}>
                   {availableNow && <Ionicons name="checkmark" size={14} color={Colors.surface} />}
@@ -198,10 +200,10 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-              <Text style={styles.resetButtonText}>Reset</Text>
+              <Text style={styles.resetButtonText}>{t('filter.reset', 'Reset')}</Text>
             </TouchableOpacity>
             <AppButton
-              title="Apply Filters"
+              title={t('filter.apply', 'Apply Filters')}
               onPress={handleApply}
               style={styles.applyButton}
             />

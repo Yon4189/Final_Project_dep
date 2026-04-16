@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useComplaints } from '@/hooks/useCustomerQueries';
@@ -36,14 +37,15 @@ const STATUS_ICONS: Record<ComplaintStatus, keyof typeof Ionicons.glyphMap> = {
 };
 
 const STATUS_LABELS = {
-  pending: 'Pending Review',
-  under_review: 'Under Review',
-  resolved: 'Resolved',
-  rejected: 'Rejected',
+  pending: 'complaints.status.pending',
+  under_review: 'complaints.status.underReview',
+  resolved: 'complaints.status.resolved',
+  rejected: 'complaints.status.rejected',
 };
 
 export default function ComplaintsList() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ComplaintStatus | 'all'>('all');
   
@@ -70,7 +72,7 @@ export default function ComplaintsList() {
   };
 
   const getStatusLabel = (status: ComplaintStatus) => {
-    return STATUS_LABELS[status] || status;
+    return t(STATUS_LABELS[status] || status);
   };
 
   const renderHeader = () => (
@@ -79,7 +81,7 @@ export default function ComplaintsList() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Complaints</Text>
+        <Text style={styles.headerTitle}>{t('complaints.title', 'My Complaints')}</Text>
         <TouchableOpacity 
           style={styles.newButton}
           onPress={() => router.push('/(customer)/complaints/new')}
@@ -89,26 +91,26 @@ export default function ComplaintsList() {
       </View>
 
       <Text style={styles.headerSubtitle}>
-        Track and manage your reported issues
+        {t('complaints.subtitle', 'Track and manage your reported issues')}
       </Text>
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{complaints?.length || 0}</Text>
-          <Text style={styles.statLabel}>Total</Text>
+          <Text style={styles.statLabel}>{t('common.total', 'Total')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={[styles.statNumber, { color: Colors.warning }]}>
             {complaints?.filter(c => c.status === 'pending').length || 0}
           </Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={styles.statLabel}>{t('complaints.status.pendingLabel', 'Pending')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={[styles.statNumber, { color: Colors.success }]}>
             {complaints?.filter((c: any) => c.status === 'resolved').length || 0}
           </Text>
-          <Text style={styles.statLabel}>Resolved</Text>
+          <Text style={styles.statLabel}>{t('complaints.status.resolvedLabel', 'Resolved')}</Text>
         </View>
       </View>
 
@@ -129,7 +131,7 @@ export default function ComplaintsList() {
             styles.filterText,
             filterStatus === 'all' && styles.filterTextActive,
           ]}>
-            All
+            {t('common.all', 'All')}
           </Text>
         </TouchableOpacity>
 
@@ -152,7 +154,7 @@ export default function ComplaintsList() {
               styles.filterText,
               filterStatus === status && styles.filterTextActive,
             ]}>
-              {label}
+              {t(label)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -200,7 +202,7 @@ export default function ComplaintsList() {
         {item.adminResponse && (
           <View style={styles.responseIndicator}>
             <Ionicons name="chatbubble" size={14} color={Colors.primary} />
-            <Text style={styles.responseText}>Admin responded</Text>
+            <Text style={styles.responseText}>{t('complaints.adminResponded', 'Admin responded')}</Text>
           </View>
         )}
       </View>
@@ -209,7 +211,7 @@ export default function ComplaintsList() {
         <View style={styles.resolvedContainer}>
           <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
           <Text style={styles.resolvedText}>
-            Resolved {formatDistanceToNow(new Date(item.resolvedAt), { addSuffix: true })}
+            {t('complaints.resolvedAt', { time: formatDistanceToNow(new Date(item.resolvedAt), { addSuffix: true }), defaultValue: `Resolved ${formatDistanceToNow(new Date(item.resolvedAt), { addSuffix: true })}` })}
           </Text>
         </View>
       )}
@@ -219,27 +221,27 @@ export default function ComplaintsList() {
   const renderEmptyState = () => (
     <EmptyState
       icon="alert-circle-outline"
-      title="No complaints yet"
-      message="If you have an issue with a service, you can report it here"
-      actionLabel="File a Complaint"
+      title={t('complaints.emptyTitle', 'No complaints yet')}
+      message={t('complaints.emptyMessage', 'If you have an issue with a service, you can report it here')}
+      actionLabel={t('complaints.submitNew', 'File a Complaint')}
       onAction={() => router.push('/(customer)/complaints/new')}
     />
   );
 
   const renderTips = () => (
     <View style={styles.tipsContainer}>
-      <Text style={styles.tipsTitle}>📋 Complaint Guidelines</Text>
+      <Text style={styles.tipsTitle}>📋 {t('complaints.guidelines', 'Complaint Guidelines')}</Text>
       <View style={styles.tipItem}>
         <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-        <Text style={styles.tipText}>Provide clear details about the issue</Text>
+        <Text style={styles.tipText}>{t('complaints.tips.clearDetails', 'Provide clear details about the issue')}</Text>
       </View>
       <View style={styles.tipItem}>
         <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-        <Text style={styles.tipText}>Upload photos as evidence if available</Text>
+        <Text style={styles.tipText}>{t('complaints.tips.uploadPhotos', 'Upload photos as evidence if available')}</Text>
       </View>
       <View style={styles.tipItem}>
         <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-        <Text style={styles.tipText}>Our team will respond within 24-48 hours</Text>
+        <Text style={styles.tipText}>{t('complaints.tips.responseTime', 'Our team will respond within 24-48 hours')}</Text>
       </View>
     </View>
   );
