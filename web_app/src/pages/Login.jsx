@@ -142,11 +142,12 @@ const Login = () => {
           /* LOGIN FORM */
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('admin_email')}</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('admin_email')}</label>
               <div className="relative">
                 <input
                   type="email" required placeholder="Admin@gmail.com"
-                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-slate-900 dark:text-white transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
+                  style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}
+                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
                   value={email} onChange={(e) => setEmail(e.target.value)}
                 />
                 <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
@@ -154,13 +155,14 @@ const Login = () => {
             </div>
 
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('password')}</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"} required placeholder="••••••••"
                   name="admin_password_unique"
                   autoComplete="new-password"
-                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-slate-900 dark:text-white transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md tracking-wider font-medium"
+                  style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}
+                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md tracking-wider font-medium"
                   value={password} onChange={(e) => setPassword(e.target.value)}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
@@ -188,11 +190,12 @@ const Login = () => {
           /* FORGOT PASSWORD FORM */
           <form onSubmit={handleForgotPassword} className="space-y-6">
             <div className="space-y-2 group">
-              <label className="text-xs font-bold text-slate-500 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('registered_email')}</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-admin-text-muted uppercase tracking-wider ml-2 group-focus-within:text-blue-600 transition-colors">{t('registered_email')}</label>
               <div className="relative">
                 <input
                   type="email" required placeholder="Admin@gmail.com"
-                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 text-slate-900 dark:text-white transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
+                  style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}
+                  className="w-full bg-slate-100/50 dark:bg-admin-content/50 border-2 border-transparent focus:border-blue-500 rounded-2xl py-4 pl-6 pr-14 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all outline-none focus:bg-white dark:focus:bg-admin-card shadow-sm focus:shadow-md"
                   value={email} onChange={(e) => setEmail(e.target.value)}
                 />
                 <User className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />

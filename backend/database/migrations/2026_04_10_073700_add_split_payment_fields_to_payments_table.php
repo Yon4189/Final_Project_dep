@@ -13,8 +13,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            // Add payment_type column
-            $table->enum('payment_type', ['deposit', 'final'])->default('final')->after('amount');
+            // Add payment_type column (no default - must be explicitly set)
+            $table->enum('payment_type', ['deposit', 'final'])->nullable()->after('amount');
             
             // Add payment_phase column (for additional context if needed)
             $table->string('payment_phase', 50)->nullable()->after('payment_type');
@@ -28,11 +28,11 @@ return new class extends Migration
             $table->index(['bookingID', 'payment_type'], 'idx_booking_payment');
         });
         
-        // Update existing payments to set payment_type = 'final' and payment_status based on current status
+        // Update existing payments to set payment_status based on current status
+        // Note: payment_type should be set explicitly when creating new payments
         DB::statement("
             UPDATE payments 
-            SET payment_type = 'final',
-                payment_status = CASE
+            SET payment_status = CASE
                     WHEN status = 'paid' OR status = 'released' THEN 'completed'
                     WHEN status = 'pending' THEN 'pending'
                     WHEN status = 'failed' THEN 'failed'

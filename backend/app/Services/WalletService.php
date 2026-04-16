@@ -121,7 +121,7 @@ class WalletService
                 ]);
 
                 // 1. Update Payment
-                $payment->status = 'held';
+                $payment->status = 'paid'; // Changed from 'held' to 'paid'
                 $payment->paid_at = now();
                 if ($chapaResponse) {
                     $payment->chapa_response = $chapaResponse;
@@ -134,8 +134,13 @@ class WalletService
                 // 2. Update Booking
                 $booking = Booking::with(['customer', 'service', 'provider'])->find($payment->bookingID);
                 if ($booking) {
-                    $booking->payment_status = 'held';
-                    $booking->status = 'confirmed';
+                    // Determine if this is deposit or full payment based on payment type
+                    if (isset($payment->payment_type) && $payment->payment_type === 'deposit') {
+                        $booking->payment_status = 'deposit_paid';
+                    } else {
+                        $booking->payment_status = 'completed';
+                    }
+                    $booking->status = 'accepted'; // Changed from 'confirmed' to 'accepted'
                     $booking->paid_at = now();
                     $booking->save();
 
