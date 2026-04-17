@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
 import { useProviderStore } from '@/app/store/providerStore';
-import { useProviderQueries } from '@/hooks/useProviderQueries';
+import { useProviderQueries, useProviderRequests } from '@/hooks/useProviderQueries';
 import { useProviderNotificationCount } from '@/hooks/useProviderNotifications';
 import * as pusherClient from '@/app/services/pusherClient';
 import { PriceText } from '@/components/common/PriceText';
@@ -43,7 +43,7 @@ export default function ProviderDashboard() {
 
   const { profile, toggleAvailability } = useProviderStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'pending' | 'today' | 'upcoming'>('today');
+  const [selectedTab, setSelectedTab] = useState<'accepted' | 'pending' | 'completed'>('accepted');
   const [showRecentMessages, setShowRecentMessages] = useState(false);
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
 
@@ -60,6 +60,13 @@ export default function ProviderDashboard() {
     startService,
     completeService,
   } = useProviderQueries();
+  
+  // Fetch accepted and completed requests
+  const acceptedRequestsQuery = useProviderRequests('accepted');
+  const completedRequestsQuery = useProviderRequests('completed');
+  
+  const acceptedRequests = acceptedRequestsQuery.data || [];
+  const completedRequests = completedRequestsQuery.data || [];
   const { data: conversations, isLoading: isChatsLoading } = useConversations();
   const notificationCountQuery = useProviderNotificationCount();
   const unreadNotificationCount = notificationCountQuery.data ?? 0;
@@ -92,7 +99,12 @@ export default function ProviderDashboard() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetch(), notificationCountQuery.refetch()]);
+    await Promise.all([
+      refetch(), 
+      notificationCountQuery.refetch(),
+      acceptedRequestsQuery.refetch(),
+      completedRequestsQuery.refetch()
+    ]);
     setRefreshing(false);
   };
 
@@ -198,7 +210,7 @@ export default function ProviderDashboard() {
 
   const renderTabs = () => (
     <View style={styles.tabsRow}>
-      {['today', 'pending', 'upcoming'].map((tab) => (
+      {['accepted', 'pending', 'completed'].map((tab) => (
         <TouchableOpacity 
           key={tab} 
           style={[styles.tabBtn, selectedTab === tab && styles.tabBtnActive]} 
@@ -210,22 +222,48 @@ export default function ProviderDashboard() {
           {tab === 'pending' && (pendingRequests?.length || 0) > 0 && (
             <View style={styles.tabBadge}><Text style={styles.tabBadgeText}>{pendingRequests.length}</Text></View>
           )}
+          {tab === 'accepted' && (acceptedRequests?.length || 0) > 0 && (
+            <View style={styles.tabBadge}><Text style={styles.tabBadgeText}>{acceptedRequests.length}</Text></View>
+          )}
         </TouchableOpacity>
       ))}
     </View>
   );
 
   const renderListContent = () => {
-    if (isLoading) return <LoadingSpinner />;
+    if (isLoading || acceptedRequestsQuery.isLoading || completedRequestsQuery.isLoading) {
+      return <LoadingSpinner />;
+    }
     
-    const data = selectedTab === 'pending' ? pendingRequests : todaySchedule;
+    // Select data based on active tab
+    let data: ServiceRequest[] = [];
+    let emptyTitle = '';
+    let emptyMessage = '';
+    
+    switch (selectedTab) {
+      case 'pending':
+        data = pendingRequests;
+        emptyTitle = 'No Pending Requests';
+        emptyMessage = "You don't have any pending requests at the moment.";
+        break;
+      case 'accepted':
+        data = acceptedRequests;
+        emptyTitle = 'No Accepted Requests';
+        emptyMessage = "You don't have any accepted requests at the moment.";
+        break;
+      case 'completed':
+        data = completedRequests;
+        emptyTitle = 'No Completed Requests';
+        emptyMessage = "You don't have any completed requests yet.";
+        break;
+    }
     
     if (!data || data.length === 0) {
       return (
         <EmptyState 
           icon="calendar-outline"
-          title={selectedTab === 'pending' ? t("providerDashboard.noPendingRequests", "No Pending Requests") : t("providerDashboard.noTodayRequests", "No Today's Requests")}
-          message={t("providerDashboard.noRequestsMessage", `You don't have any requests at the moment.`)} 
+          title={emptyTitle}
+          message={emptyMessage} 
         />
       );
     }
@@ -259,9 +297,27 @@ export default function ProviderDashboard() {
                 <Text style={styles.detailName}>{req.serviceName}</Text>
                 <PriceText style={styles.priceValue} amount={req.estimatedPrice || req.finalPrice || 0} />
               </View>
-              <Text style={styles.detailText}>
-                {req.scheduledDate ? formatDate(req.scheduledDate) : ''} • {req.scheduledTime ? formatTime(req.scheduledTime) : ''}
-              </Text>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailText}>
+                  {req.scheduledDate ? formatDate(req.scheduledDate) : ''} • {req.scheduledTime ? formatTime(req.scheduledTime) : ''}
+                </Text>
+                {selectedTab === 'accepted' && (
+                  <View style={[
+                    styles.paymentBadge, 
+                    { backgroundColor: req.payment_status === 'deposit_paid' || req.payment_status === 'completed' ? colors.success + '15' : colors.warning + '15' }
+                  ]}>
+                    {(req.payment_status === 'deposit_paid' || req.payment_status === 'completed') && (
+                      <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+                    )}
+                    <Text style={[
+                      styles.paymentBadgeText, 
+                      { color: req.payment_status === 'deposit_paid' || req.payment_status === 'completed' ? colors.success : colors.warning }
+                    ]}>
+                      {req.payment_status === 'deposit_paid' || req.payment_status === 'completed' ? 'Paid' : 'Unpaid'}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
             {selectedTab === 'pending' && (
@@ -450,10 +506,12 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, gap: 4 },
   statusText: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
   detailsContainer: { gap: 8, marginBottom: 15 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'space-between' },
   detailName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text.primary },
   priceValue: { fontSize: 14, fontWeight: 'bold', color: colors.primary },
   detailText: { fontSize: 13, color: colors.text.secondary },
+  paymentBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
+  paymentBadgeText: { fontSize: 11, fontWeight: 'bold' },
   cardActions: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 15 },
   pendingActions: { flexDirection: 'row', gap: 12 },
   actionBtn: { flex: 1, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },

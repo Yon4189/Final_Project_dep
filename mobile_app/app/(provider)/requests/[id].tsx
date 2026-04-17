@@ -209,25 +209,48 @@ export default function RequestDetails() {
     }
   };
 
-  const handleOpenMaps = () => {
+  const handleOpenMaps = async () => {
     let url = '';
     if (request?.customerLatitude && request?.customerLongitude) {
       const lat = request.customerLatitude;
       const lng = request.customerLongitude;
-      url = Platform.select({
-        ios: `maps://app?daddr=${lat},${lng}&dirflg=d`,
-        android: `google.navigation:q=${lat},${lng}&mode=d`,
-      }) || '';
+      
+      if (Platform.OS === 'ios') {
+        url = `maps://app?daddr=${lat},${lng}&dirflg=d`;
+      } else {
+        // For Android, use geo: URI which opens in Google Maps without navigation mode
+        // This prevents the app from being removed from the back stack
+        url = `geo:${lat},${lng}?q=${lat},${lng}`;
+      }
     } else if (request?.customerAddress) {
       const encodedAddress = encodeURIComponent(request.customerAddress);
-      url = Platform.select({
-        ios: `maps://app?daddr=${encodedAddress}&dirflg=d`,
-        android: `google.navigation:q=${encodedAddress}&mode=d`,
-      }) || '';
+      
+      if (Platform.OS === 'ios') {
+        url = `maps://app?daddr=${encodedAddress}&dirflg=d`;
+      } else {
+        url = `geo:0,0?q=${encodedAddress}`;
+      }
     }
 
     if (url) {
-      Linking.openURL(url);
+      try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+          await Linking.openURL(url);
+        } else {
+          // Fallback to web-based Google Maps
+          const webUrl = request?.customerLatitude && request?.customerLongitude
+            ? `https://www.google.com/maps/dir/?api=1&destination=${request.customerLatitude},${request.customerLongitude}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(request?.customerAddress || '')}`;
+          await Linking.openURL(webUrl);
+        }
+      } catch (error) {
+        console.error('Error opening maps:', error);
+        Alert.alert(
+          t("common.error", "Error"), 
+          t("providerRequests.navigationError", "Could not open maps. Please ensure you have Google Maps installed.")
+        );
+      }
     } else {
       Alert.alert(t("common.error", "Error"), t("providerRequests.navigationNotAvailable", "Location information not available for navigation."));
     }

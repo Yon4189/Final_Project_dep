@@ -175,6 +175,7 @@ export interface ServiceRequest {
   cancellationReason?: string;
   distance?: number; // in km
   travelTime?: number; // in minutes
+  payment_status?: 'pending_deposit' | 'deposit_paid' | 'pending_final' | 'completed' | 'overdue';
   payment?: {
     status: string;
     amount: number;

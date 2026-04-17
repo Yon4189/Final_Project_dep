@@ -86,8 +86,20 @@ class PaymentController extends Controller
         // MAIN FIX: ALWAYS INCLUDE tx_ref
         $backendReturnUrl = $baseUrl . '/api/payment/return/' . $safe . '?tx_ref=' . $txRef;
 
-        // Commission Calculation (10%)
-        $totalAmount = (float)$booking->agreed_price;
+        // Determine payment type based on booking payment_status
+        $agreedPrice = (float)$booking->agreed_price;
+        $paymentType = 'deposit'; // Default to deposit
+        
+        if ($booking->payment_status === 'deposit_paid') {
+            // Final payment: 80% of agreed price
+            $paymentType = 'final';
+            $totalAmount = $agreedPrice * 0.80;
+        } else {
+            // Deposit payment: 20% of agreed price
+            $totalAmount = $agreedPrice * 0.20;
+        }
+        
+        // Commission Calculation (10% of payment amount)
         $commission = $totalAmount * 0.10;
         $providerAmount = $totalAmount - $commission;
 
@@ -107,6 +119,7 @@ class PaymentController extends Controller
             'provider_amount' => $providerAmount,
             'status' => 'pending',
             'currency' => 'ETB',
+            'payment_type' => $paymentType, // Add payment_type field
 
             // FIXED
             'return_url' => $backendReturnUrl,
@@ -119,7 +132,7 @@ class PaymentController extends Controller
 
         // Chapa request
         $paymentData = [
-            'amount' => (string)$booking->agreed_price,
+            'amount' => (string)$totalAmount, // Use calculated amount (20% or 80%)
             'currency' => 'ETB',
             'email' => $customer->email,
             'first_name' => $customer->fullname,
