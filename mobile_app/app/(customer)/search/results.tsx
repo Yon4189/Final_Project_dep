@@ -37,40 +37,42 @@ export default function SearchResultsScreen() {
   }>();
 
   const [filtersVisible, setFiltersVisible] = useState(false);
+  // Pending (draft) filter state — only applied when user taps "Apply"
+  const [pendingSortBy, setPendingSortBy] = useState('rating');
+  const [pendingPriceRange, setPendingPriceRange] = useState({ min: 0, max: 1000 });
+  const [pendingRatingFilter, setPendingRatingFilter] = useState(0);
+  const [pendingAvailabilityFilter, setPendingAvailabilityFilter] = useState('all');
+
+  // Applied filter state — drives the actual search
   const [sortBy, setSortBy] = useState('rating');
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
   const [ratingFilter, setRatingFilter] = useState(0);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
+
   const [searchQuery, setSearchQuery] = useState(params.query || params.q || '');
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   const categoryId = params.categoryId || params.category;
 
-  // Use the search hook with proper filters
-  const { results: providers, loading: isLoading, error } = useSearch({
+  // Use the search hook — updateFilters triggers a new API call
+  const { results: providers, loading: isLoading, error, setQuery, updateFilters } = useSearch({
     initialQuery: searchQuery,
     initialFilters: {
       ...(categoryId ? { categoryId } : {}),
-      sortBy: sortBy as 'rating' | 'distance' | 'price_low' | 'price_high' | 'reviews',
+      sortBy: 'rating',
       maxDistance: 50,
     },
   });
 
-  // Apply availability filter client-side
+  // Apply availability filter client-side for 'available_today' (no backend support yet)
   const filteredProviders = useMemo(() => {
     if (!providers) return [];
-
-    if (availabilityFilter === 'all') return providers;
-
-    return providers.filter(provider => {
-      if (availabilityFilter === 'online') {
-        return provider.isAvailable === true;
-      } else if (availabilityFilter === 'available_today') {
-        return true;
-      }
-      return true;
-    });
+    if (availabilityFilter === 'available_today') {
+      // available_today has no backend signal, keep all results
+      return providers;
+    }
+    return providers;
   }, [providers, availabilityFilter]);
 
   // Handle profile view - when tapping the card
@@ -85,14 +87,36 @@ export default function SearchResultsScreen() {
   };
 
   const handleFilterApply = () => {
+    // Commit pending state to applied state
+    setSortBy(pendingSortBy);
+    setPriceRange(pendingPriceRange);
+    setRatingFilter(pendingRatingFilter);
+    setAvailabilityFilter(pendingAvailabilityFilter);
+
+    // Push all filters to the search hook so a new API call fires
+    updateFilters({
+      sortBy: pendingSortBy as any,
+      minRating: pendingRatingFilter > 0 ? pendingRatingFilter : undefined,
+      priceRange: (pendingPriceRange.min > 0 || pendingPriceRange.max < 1000)
+        ? { min: pendingPriceRange.min, max: pendingPriceRange.max }
+        : undefined,
+      availableNow: pendingAvailabilityFilter === 'online' ? true : undefined,
+    });
+
     setFiltersVisible(false);
   };
 
   const handleFilterReset = () => {
-    setSortBy('rating');
-    setPriceRange({ min: 0, max: 1000 });
-    setRatingFilter(0);
-    setAvailabilityFilter('all');
+    setPendingSortBy('rating');
+    setPendingPriceRange({ min: 0, max: 1000 });
+    setPendingRatingFilter(0);
+    setPendingAvailabilityFilter('all');
+  };
+
+  // Sync search query to the hook with debounce handled inside hook
+  const handleSearchQueryChange = (text: string) => {
+    setSearchQuery(text);
+    setQuery(text);
   };
 
   const renderHeader = () => (
@@ -105,13 +129,23 @@ export default function SearchResultsScreen() {
         <TextInput
           style={styles.searchInput}
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={handleSearchQueryChange}
           placeholder="Search for services or providers..."
           placeholderTextColor={Colors.text.secondary}
           returnKeyType="search"
         />
       </View>
-      <TouchableOpacity style={styles.filterButton} onPress={() => setFiltersVisible(true)}>
+      <TouchableOpacity
+        style={styles.filterButton}
+        onPress={() => {
+          // Sync pending state from applied state when opening modal
+          setPendingSortBy(sortBy);
+          setPendingPriceRange(priceRange);
+          setPendingRatingFilter(ratingFilter);
+          setPendingAvailabilityFilter(availabilityFilter);
+          setFiltersVisible(true);
+        }}
+      >
         <MaterialCommunityIcons name="filter-variant" size={24} color={Colors.surface} />
         <Text style={styles.filterButtonText}>Filters</Text>
       </TouchableOpacity>
@@ -126,9 +160,10 @@ export default function SearchResultsScreen() {
       <View style={styles.sortBadge}>
         <Text style={styles.sortBadgeText}>
           {sortBy === 'rating' ? 'Sorted by rating' :
-            sortBy === 'price_low' ? 'Sorted by price (low to high)' :
-              sortBy === 'price_high' ? 'Sorted by price (high to low)' :
-                sortBy === 'distance' ? 'Sorted by distance' : 'Sorted by reviews'}
+            sortBy === 'price_low' ? 'Price: low to high' :
+              sortBy === 'price_high' ? 'Price: high to low' :
+                sortBy === 'distance' ? 'Nearest first' :
+                  sortBy === 'reviews' ? 'Most reviewed' : 'Sorted by rating'}
         </Text>
       </View>
     </View>
@@ -229,19 +264,19 @@ export default function SearchResultsScreen() {
             {/* Sort By */}
             <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Sort By</Text>
-              {['rating', 'price_low', 'price_high', 'distance', 'reviews'].map((option) => (
+              {(['rating', 'price_low', 'price_high', 'distance', 'reviews'] as const).map((option) => (
                 <TouchableOpacity
                   key={option}
-                  style={[styles.filterOption, sortBy === option && styles.filterOptionSelected]}
-                  onPress={() => setSortBy(option)}
+                  style={[styles.filterOption, pendingSortBy === option && styles.filterOptionSelected]}
+                  onPress={() => setPendingSortBy(option)}
                 >
-                  <Text style={[styles.filterOptionText, sortBy === option && styles.filterOptionTextSelected]}>
+                  <Text style={[styles.filterOptionText, pendingSortBy === option && styles.filterOptionTextSelected]}>
                     {option === 'rating' ? 'Highest Rated' :
                       option === 'price_low' ? 'Price: Low to High' :
                         option === 'price_high' ? 'Price: High to Low' :
                           option === 'distance' ? 'Nearest' : 'Most Reviewed'}
                   </Text>
-                  {sortBy === option && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
+                  {pendingSortBy === option && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -254,8 +289,8 @@ export default function SearchResultsScreen() {
                   <Text style={styles.priceLabel}>Min</Text>
                   <TextInput
                     style={styles.priceInput}
-                    value={priceRange.min.toString()}
-                    onChangeText={(text) => setPriceRange({ ...priceRange, min: parseInt(text) || 0 })}
+                    value={pendingPriceRange.min.toString()}
+                    onChangeText={(text) => setPendingPriceRange({ ...pendingPriceRange, min: parseInt(text) || 0 })}
                     keyboardType="numeric"
                     placeholder="0"
                     placeholderTextColor={Colors.text.secondary}
@@ -266,8 +301,8 @@ export default function SearchResultsScreen() {
                   <Text style={styles.priceLabel}>Max</Text>
                   <TextInput
                     style={styles.priceInput}
-                    value={priceRange.max.toString()}
-                    onChangeText={(text) => setPriceRange({ ...priceRange, max: parseInt(text) || 1000 })}
+                    value={pendingPriceRange.max.toString()}
+                    onChangeText={(text) => setPendingPriceRange({ ...pendingPriceRange, max: parseInt(text) || 1000 })}
                     keyboardType="numeric"
                     placeholder="1000"
                     placeholderTextColor={Colors.text.secondary}
@@ -282,8 +317,8 @@ export default function SearchResultsScreen() {
               {[0, 1, 2, 3, 4, 5].map((rating) => (
                 <TouchableOpacity
                   key={rating}
-                  style={[styles.filterOption, ratingFilter === rating && styles.filterOptionSelected]}
-                  onPress={() => setRatingFilter(rating)}
+                  style={[styles.filterOption, pendingRatingFilter === rating && styles.filterOptionSelected]}
+                  onPress={() => setPendingRatingFilter(rating)}
                 >
                   <View style={styles.ratingFilterOption}>
                     <View style={styles.starsContainer}>
@@ -296,11 +331,11 @@ export default function SearchResultsScreen() {
                         />
                       ))}
                     </View>
-                    <Text style={[styles.filterOptionText, ratingFilter === rating && styles.filterOptionTextSelected]}>
+                    <Text style={[styles.filterOptionText, pendingRatingFilter === rating && styles.filterOptionTextSelected]}>
                       {rating === 0 ? 'Any Rating' : `${rating}+ Stars`}
                     </Text>
                   </View>
-                  {ratingFilter === rating && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
+                  {pendingRatingFilter === rating && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -308,17 +343,17 @@ export default function SearchResultsScreen() {
             {/* Availability Filter */}
             <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Availability</Text>
-              {['all', 'online', 'available_today'].map((option) => (
+              {(['all', 'online', 'available_today'] as const).map((option) => (
                 <TouchableOpacity
                   key={option}
-                  style={[styles.filterOption, availabilityFilter === option && styles.filterOptionSelected]}
-                  onPress={() => setAvailabilityFilter(option)}
+                  style={[styles.filterOption, pendingAvailabilityFilter === option && styles.filterOptionSelected]}
+                  onPress={() => setPendingAvailabilityFilter(option)}
                 >
-                  <Text style={[styles.filterOptionText, availabilityFilter === option && styles.filterOptionTextSelected]}>
+                  <Text style={[styles.filterOptionText, pendingAvailabilityFilter === option && styles.filterOptionTextSelected]}>
                     {option === 'all' ? 'All Providers' :
                       option === 'online' ? 'Currently Online' : 'Available Today'}
                   </Text>
-                  {availabilityFilter === option && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
+                  {pendingAvailabilityFilter === option && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
                 </TouchableOpacity>
               ))}
             </View>

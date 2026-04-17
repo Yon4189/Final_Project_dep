@@ -32,14 +32,9 @@ export const useSearch = ({
   const [totalResults, setTotalResults] = useState(0);
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Perform search with current query and filters
   const performSearch = useCallback(async (searchPage: number = 1, append: boolean = false) => {
-    // Don't search if location is still loading
-    if (locationLoading) {
-      console.log('Search - Waiting for location...');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -97,9 +92,9 @@ export const useSearch = ({
     } finally {
       setLoading(false);
     }
-  }, [query, filters, locationLoading]);
+  }, [query, filters]);
 
-  // Debounced search for query changes
+  // Debounced search for query/filter changes
   useEffect(() => {
     if (!autoSearch) return;
 
@@ -109,7 +104,7 @@ export const useSearch = ({
 
     searchTimeoutRef.current = setTimeout(() => {
       performSearch(1, false);
-    }, 500); // Debounce for 500ms
+    }, 300);
 
     return () => {
       if (searchTimeoutRef.current) {
@@ -117,14 +112,6 @@ export const useSearch = ({
       }
     };
   }, [query, filters, performSearch, autoSearch]);
-
-  // Trigger search when location becomes available
-  useEffect(() => {
-    if (!locationLoading && location && autoSearch) {
-      console.log('Search - Location available, retrying search...');
-      performSearch(1, false);
-    }
-  }, [locationLoading, location]);
 
   const updateFilters = useCallback((newFilters: Partial<SearchFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
