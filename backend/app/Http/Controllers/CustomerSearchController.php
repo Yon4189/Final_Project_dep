@@ -64,6 +64,7 @@ class CustomerSearchController extends Controller
         // sort
         // this switch is updated. accept this change if conflict occurs
         switch ($sortBy) {
+            case 'rating':
             case 'rating_high':
                 $providers = $providers->orderByDesc('rating');
                 break;
@@ -76,15 +77,27 @@ class CustomerSearchController extends Controller
             case 'price_low':
                 $providers = $providers->orderBy('estimatedPrice');
                 break;
-            case 'nearest':  // Changed from 'distance' to 'nearest'
-                // handled after calculation - don't order here
-                $providers = $providers->orderBy('fullname'); // temporary
+            case 'distance':
+            case 'nearest':
+                // handled after distance calculation below
+                $providers = $providers->orderBy('fullname'); // temporary placeholder
                 break;
+            case 'reviews':
             case 'completed_jobs':
                 $providers = $providers->orderByDesc('completed_jobs');
                 break;
             default:
                 $providers = $providers->orderByDesc('rating');
+        }
+
+        // price range filter
+        $priceMin = $request->query('price_min');
+        $priceMax = $request->query('price_max');
+        if ($priceMin !== null) {
+            $providers = $providers->where('estimatedPrice', '>=', (float)$priceMin);
+        }
+        if ($priceMax !== null) {
+            $providers = $providers->where('estimatedPrice', '<=', (float)$priceMax);
         }
 
         $providers = $providers->paginate($perPage, ['*'], 'page', $page);
@@ -115,7 +128,7 @@ class CustomerSearchController extends Controller
             );
             
             // re-sort by distance if requested
-            if ($sortBy === 'distance') {
+            if ($sortBy === 'distance' || $sortBy === 'nearest') {
                 $providers->setCollection(
                     $providers->getCollection()->sortBy('distance')->values()
                 );
