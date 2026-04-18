@@ -78,9 +78,10 @@ class CustomerController extends Authenticatable
             'locationId' => null,
             'description' => $booking->notes,
             'specialInstructions' => $booking->notes,
-            'estimatedPrice' => (float) ($booking->agreed_price ?? ($estimatedPrice ?? 0)),
-            'finalPrice' => (float) ($booking->agreed_price ?? 0),
-            'paymentStatus' => $booking->payment_status ?? 'pending',
+            'agreed_price' => (float) ($booking->agreed_price ?? 0), // Use database column name
+            'estimatedPrice' => (float) ($booking->agreed_price ?? ($estimatedPrice ?? 0)), // Keep for backward compatibility
+            'payment_status' => $booking->payment_status ?? 'pending', // Use database column name
+            'paymentStatus' => $booking->payment_status ?? 'pending', // Keep for backward compatibility
             'paymentDetails' => null,
             'createdAt' => optional($booking->created_at)->toISOString(),
             'updatedAt' => optional($booking->updated_at)->toISOString(),

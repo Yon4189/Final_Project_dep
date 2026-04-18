@@ -107,6 +107,10 @@ class CustomerAuthController extends Controller
 
         Log::info('Customer registered successfully:', ['id' => $customer->customerID]);
 
+        // Notify admins of new customer registration
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->notifyAdminsNewCustomer($customer);
+
         return response()->json([
             'success' => true,
             'status' => 'success',
