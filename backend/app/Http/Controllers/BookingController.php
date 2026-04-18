@@ -470,6 +470,7 @@ class BookingController extends Controller
                 'id' => $booking->bookingID, // Add id for frontend compatibility
                 'requestNumber' => 'REQ-' . str_pad($booking->bookingID, 6, '0', STR_PAD_LEFT),
                 'status' => $booking->status,
+                'payment_status' => $booking->payment_status, // Add payment_status from bookings table
                 'scheduledDate' => $booking->scheduledDate ? $booking->scheduledDate->format('Y-m-d') : null,
                 'scheduledTime' => $booking->scheduledDate ? $booking->scheduledDate->format('H:i') : null,
                 'agreed_price' => $booking->agreed_price,
@@ -934,17 +935,32 @@ class BookingController extends Controller
                 ], 401);
             }
 
-            // Find booking that belongs to this provider and is in 'paid' status
+            // Find booking that belongs to this provider
             $booking = Booking::where('bookingID', $id)
                 ->where('providerID', $provider->providerID)
-                ->whereIn('payment_status', ['paid', 'confirmed', 'held']) // Can start after payment
                 ->first();
 
             if (!$booking) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Booking not found or cannot be started'
+                    'message' => 'Booking not found'
                 ], 404);
+            }
+
+            // Check if provider has arrived
+            if ($booking->status !== 'arrived') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You must mark arrival first before starting the service'
+                ], 400);
+            }
+
+            // Check if customer has paid the deposit
+            if (!in_array($booking->payment_status, ['deposit_paid', 'completed'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot start service. Customer has not paid the deposit yet. Please wait for payment confirmation.'
+                ], 400);
             }
 
             // Update booking status
@@ -955,7 +971,8 @@ class BookingController extends Controller
             // Log the action
             Log::info('Provider started job', [
                 'booking_id' => $booking->bookingID,
-                'provider_id' => $provider->providerID
+                'provider_id' => $provider->providerID,
+                'payment_status' => $booking->payment_status
             ]);
 
             return response()->json([

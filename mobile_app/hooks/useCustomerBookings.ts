@@ -40,9 +40,13 @@ export const useBookingDetails = (id: string) => {
     queryFn: async () => {
       const response = await api.get<any>(`/customer/bookings/${id}`);
       
+      console.log('useBookingDetails - Raw API response:', JSON.stringify(response, null, 2));
+      
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch booking details');
       }
+      
+      console.log('useBookingDetails - Returning data:', JSON.stringify(response.data, null, 2));
       
       return response.data;
     },

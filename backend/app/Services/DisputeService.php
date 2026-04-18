@@ -56,6 +56,10 @@ class DisputeService
             'dispute_id' => $dispute->disputeID
         ]);
         
+        // Notify admins of new dispute
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->notifyAdminsNewDispute($dispute, $booking);
+        
         return $dispute;
     }
 

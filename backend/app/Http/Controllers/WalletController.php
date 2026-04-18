@@ -243,7 +243,9 @@ public function requestWithdrawal(Request $request)
             ], 500);
         }
         
-        // TODO: Send notification to admin about new withdrawal request
+        // Notify admins about new withdrawal request
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->notifyAdminsWithdrawalRequest($withdrawal, $provider);
         
         return response()->json([
             'success' => true,

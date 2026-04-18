@@ -145,16 +145,7 @@ class ServiceProviderAuthController extends Controller
             DB::commit();
 
             // Notify admins about new registration
-            $this->notificationService->toAdmins(
-                \App\Services\NotificationService::TYPE_NEW_PROVIDER_REGISTRATION,
-                'New Provider Registration',
-                "New provider registered: {$provider->fullname}. Pending approval.",
-                [
-                    'provider_id' => $provider->providerID,
-                    'fullname' => $provider->fullname,
-                    'email' => $provider->email
-                ]
-            );
+            $this->notificationService->notifyAdminsNewProvider($provider);
 
             // Don't return token - provider must wait for approval
             return response()->json([

@@ -36,7 +36,7 @@ class AccountService
             'reason' => $reason
         ]);
         
-        // Send notification
+        // Send notification to customer
         $this->notificationService->toCustomer(
             $customerId,
             'account_frozen',
@@ -47,6 +47,9 @@ class AccountService
                 'frozen_at' => now()->toISOString()
             ]
         );
+        
+        // Notify admins
+        $this->notificationService->notifyAdminsAccountFrozen($customer, 'customer', $reason);
     }
 
     /**

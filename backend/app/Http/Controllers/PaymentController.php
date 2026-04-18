@@ -90,7 +90,7 @@ class PaymentController extends Controller
         $agreedPrice = (float)$booking->agreed_price;
         $paymentType = 'deposit'; // Default to deposit
         
-        if ($booking->payment_status === 'deposit_paid') {
+        if ($booking->payment_status === 'pending_final' || $booking->payment_status === 'deposit_paid') {
             // Final payment: 80% of agreed price
             $paymentType = 'final';
             $totalAmount = $agreedPrice * 0.80;
@@ -359,12 +359,14 @@ class PaymentController extends Controller
 
     /**
      * Customer confirms work completed
+     * This marks the service as confirmed and prompts customer to pay the final 80%
      */
     public function confirmCompletion(Request $request, $bookingId)
     {
         $customer = auth()->guard('customer')->user();
         
         if (!$customer) {
+            Log::error('Confirmation failed: Customer not authenticated');
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized'
@@ -377,6 +379,13 @@ class PaymentController extends Controller
             ->first();
 
         if (!$booking) {
+            Log::error('Confirmation failed: Booking not found', [
+                'booking_id' => $bookingId,
+                'customer_id' => $customer->customerID,
+                'booking_exists' => Booking::where('bookingID', $bookingId)->exists(),
+                'booking_status' => Booking::where('bookingID', $bookingId)->value('status')
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Booking not found or not awaiting confirmation'
@@ -384,41 +393,41 @@ class PaymentController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($booking) {
-                $payment = Payment::where('bookingID', $booking->bookingID)->first();
-                
-                if (!$payment || $payment->status !== 'held') {
-                    throw new \Exception('Payment not in held state');
-                }
-
-                $payment->status = 'releasable';
-                $payment->save();
-
-                $booking->status = 'completed';
-                $booking->customer_confirmed_at = now();
-                $booking->save();
-
-                // Release payment to provider wallet using WalletService
-                $this->walletService->releasePayment($payment);
-            });
+            // Update booking to service_confirmed status
+            // Customer will then be prompted to pay the final 80%
+            $booking->status = 'service_confirmed';
+            $booking->payment_status = 'pending_final';
+            $booking->service_confirmed_at = now();
+            $booking->payment_deadline = now()->addHours(48); // 48 hours to pay final amount
+            $booking->save();
+            
+            Log::info('Service confirmed - Customer needs to pay final amount', [
+                'booking_id' => $bookingId,
+                'payment_deadline' => $booking->payment_deadline
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Service confirmed successfully',
+                'message' => 'Service confirmed successfully. Please proceed to pay the remaining amount.',
                 'data' => [
                     'booking_id' => $booking->bookingID,
-                    'status' => 'completed'
+                    'status' => 'service_confirmed',
+                    'payment_status' => 'pending_final',
+                    'payment_deadline' => $booking->payment_deadline,
+                    'requires_final_payment' => true
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Booking confirmation failed', [
+            Log::error('Service confirmation failed', [
                 'booking_id' => $bookingId,
-                'error' => $e->getMessage()
+                'customer_id' => $customer->customerID,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to confirm completion: ' . $e->getMessage()
+                'message' => 'Failed to confirm service. Please try again.'
             ], 500);
         }
     }

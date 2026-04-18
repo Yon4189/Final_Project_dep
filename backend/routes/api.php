@@ -167,6 +167,9 @@ Route::group(['middleware' => 'auth:customer', 'prefix' => 'customer'], function
     Route::post('/bookings/{bookingId}/confirm', [PaymentController::class, 'confirmCompletion']);
 
     Route::post('/bookings/{bookingID}/review', [ReviewController::class, 'store']);
+    
+    // Customer review route (alias for mobile app compatibility)
+    Route::post('/customer/bookings/{bookingID}/review', [ReviewController::class, 'store']);
 
     Route::post('/bookings/{bookingID}/dispute', [DisputeController::class, 'customerRaiseDispute']);
     Route::get('/disputes', [DisputeController::class, 'getCustomerDisputes']);
