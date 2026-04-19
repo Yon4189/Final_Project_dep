@@ -300,7 +300,7 @@ const VerificationQueueTable = ({
                             <p className="font-bold text-admin-text text-sm leading-tight whitespace-nowrap">
                               {item.name}
                             </p>
-                            <p className="text-xs text-admin-text-muted font-bold uppercase tracking-wider">{item.email}</p>
+                            <p className="text-xs text-admin-text-muted font-bold">{item.email}</p>
                           </div>
                         </div>
                       </td>
