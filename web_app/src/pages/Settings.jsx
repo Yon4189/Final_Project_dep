@@ -29,6 +29,32 @@ const Settings = () => {
     logoUrl: null,
   });
 
+  // Fetch existing settings from backend
+  const { data: existingSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ['adminSettings'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/admin/settings');
+        return response.data.success ? response.data.data : null;
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+        return null;
+      }
+    },
+  });
+
+  // Update state when settings are loaded
+  useEffect(() => {
+    if (existingSettings) {
+      if (existingSettings.settings) {
+        setConfig(existingSettings.settings);
+      }
+      if (existingSettings.branding) {
+        setBranding(existingSettings.branding);
+      }
+    }
+  }, [existingSettings]);
+
 
 
   // Fetch real statistics from backend to provide context for settings
@@ -73,15 +99,24 @@ const Settings = () => {
       });
 
       if (response.data.success) {
-        alert(t('set_success_sync', { tab: activeTab === 'general' ? t('set_tab_economics') : t('set_tab_branding') }));
+        // Invalidate settings cache to refetch
+        queryClient.invalidateQueries(['adminSettings']);
+        
+        alert(t('Settings saved successfully!'));
       }
     } catch (error) {
       console.error("Persist failed:", error);
-      // Inform the user about the backend status while acknowledging the UI update
-      const msg = error.response?.status === 404
-        ? t('set_err_backend')
-        : t('set_err_critical');
-      alert(msg);
+      
+      // Show appropriate error message
+      if (error.response?.status === 404) {
+        alert(t('Settings endpoint not found. Please contact support.'));
+      } else if (error.response?.status === 422) {
+        const errors = error.response?.data?.errors;
+        const errorMessages = errors ? Object.values(errors).flat().join('\n') : 'Validation failed';
+        alert(`Validation errors:\n${errorMessages}`);
+      } else {
+        alert(t('Failed to save settings. Please try again.'));
+      }
     } finally {
       setIsSaving(false);
     }
