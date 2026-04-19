@@ -392,7 +392,7 @@ const VerificationTable = ({
                         status === 'suspended' ? 'text-purple-500 dark:text-purple-400' :
                         'text-amber-500 dark:text-amber-400'
                       }`}>
-                        {item.status ? t(item.status.toLowerCase()) : t('pending')}
+                        {['active', 'approved'].includes(status) ? t('approved') : (item.status ? t(item.status.toLowerCase()) : t('pending'))}
                       </span>
                     </td>
 
@@ -413,7 +413,7 @@ const VerificationTable = ({
                               </button>
                             )}
                             {/* Reject (if not already rejected) */}
-                            {(status === 'pending' || status === 'active') && (
+                            {(status === 'pending' || status === 'active' || status === 'approved') && (
                               <button
                                 onClick={() => onReject(item)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600 transition"
@@ -422,7 +422,7 @@ const VerificationTable = ({
                               </button>
                             )}
                             {/* Suspend (if active) */}
-                            {status === 'active' && (
+                            {(status === 'active' || status === 'approved') && (
                               <button
                                 onClick={() => onSuspend(item.id, item.name)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition"
@@ -488,7 +488,7 @@ const VerificationTable = ({
                     status === 'suspended' ? 'text-purple-500 dark:text-purple-400' :
                     'text-amber-500 dark:text-amber-400'
                   }`}>
-                    {item.status ? t(item.status.toLowerCase()) : t('pending')}
+                    {['active', 'approved'].includes(status) ? t('approved') : (item.status ? t(item.status.toLowerCase()) : t('pending'))}
                   </span>
                 </div>
 
@@ -534,7 +534,7 @@ const VerificationTable = ({
                           <CheckCircle size={12} /> {status === 'suspended' ? t('vqueue_reactivate') : t('vqueue_approve')}
                         </button>
                       )}
-                      {(status === 'pending' || status === 'active') && (
+                      {(status === 'pending' || status === 'active' || status === 'approved') && (
                         <button
                           onClick={() => onReject(item)}
                           className="flex-1 bg-red-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
@@ -542,7 +542,7 @@ const VerificationTable = ({
                           <XCircle size={12} /> {t('vqueue_reject')}
                         </button>
                       )}
-                      {status === 'active' && (
+                      {(status === 'active' || status === 'approved') && (
                         <button
                           onClick={() => onSuspend(item.id, item.name)}
                           className="flex-1 bg-amber-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"

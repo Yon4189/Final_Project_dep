@@ -48,7 +48,7 @@ class ProviderSearchController extends Controller
         $customerCity = $customer->service_city ?? $customer->location;
 
         //  Get Providers in same city with matched services
-        $providers = ServiceProvider::where('status', 'approved')
+        $providers = ServiceProvider::whereIn('status', ['approved', 'Active', 'active'])
             ->where('service_city', $customerCity)
             ->whereHas('services', function ($query) use ($searchText) {
                 $query->where('title', 'LIKE', "%{$searchText}%");

@@ -307,7 +307,7 @@ const UsersTable = ({
                         ? 'text-emerald-500 dark:text-emerald-400'
                         : 'text-amber-500 dark:text-amber-400'
                     }`}>
-                      {user.status ? t(user.status.toLowerCase()) : t('pending')}
+                      {['active', 'approved'].includes(user.status?.toLowerCase()) ? t('approved') : (user.status ? t(user.status.toLowerCase()) : t('pending'))}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -369,7 +369,7 @@ const UsersTable = ({
                     ? 'text-emerald-500 dark:text-emerald-400'
                     : 'text-amber-500 dark:text-amber-400'
                 }`}>
-                  {user.status ? t(user.status.toLowerCase()) : t('pending')}
+                  {['active', 'approved'].includes(user.status?.toLowerCase()) ? t('approved') : (user.status ? t(user.status.toLowerCase()) : t('pending'))}
                 </span>
               </div>
               <div className="space-y-2 text-xs text-slate-600">
