@@ -707,4 +707,178 @@ class AdminAuthController extends Authenticatable
 
         return response()->json(['success' => true, 'data' => $booking]);
     }
+
+    /**
+     * Update platform settings
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateSettings(Request $request)
+    {
+        try {
+            $admin = auth('admin')->user();
+            if (!$admin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Validate incoming settings
+            $validator = Validator::make($request->all(), [
+                'settings' => 'nullable|array',
+                'settings.commissionRate' => 'nullable|integer|min:0|max:100',
+                'settings.maxServiceRadius' => 'nullable|integer|min:1|max:500',
+                'settings.minPayoutAmount' => 'nullable|numeric|min:0',
+                'settings.maintenanceMode' => 'nullable|boolean',
+                'branding' => 'nullable|array',
+                'branding.systemName' => 'nullable|string|max:255',
+                'branding.logoUrl' => 'nullable|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $updatedSettings = [];
+
+            // Update platform settings if provided
+            if ($request->has('settings')) {
+                $settings = $request->input('settings');
+
+                if (isset($settings['commissionRate'])) {
+                    \App\Models\SystemSetting::set(
+                        'commission_percentage',
+                        $settings['commissionRate'],
+                        'integer',
+                        'Platform commission percentage (0-100)'
+                    );
+                    $updatedSettings['commission_percentage'] = $settings['commissionRate'];
+                }
+
+                if (isset($settings['maxServiceRadius'])) {
+                    \App\Models\SystemSetting::set(
+                        'max_service_radius',
+                        $settings['maxServiceRadius'],
+                        'integer',
+                        'Maximum service radius in kilometers'
+                    );
+                    $updatedSettings['max_service_radius'] = $settings['maxServiceRadius'];
+                }
+
+                if (isset($settings['minPayoutAmount'])) {
+                    \App\Models\SystemSetting::set(
+                        'min_payout_amount',
+                        $settings['minPayoutAmount'],
+                        'decimal',
+                        'Minimum payout amount in ETB'
+                    );
+                    $updatedSettings['min_payout_amount'] = $settings['minPayoutAmount'];
+                }
+
+                if (isset($settings['maintenanceMode'])) {
+                    \App\Models\SystemSetting::set(
+                        'maintenance_mode',
+                        $settings['maintenanceMode'],
+                        'boolean',
+                        'Platform maintenance mode status'
+                    );
+                    $updatedSettings['maintenance_mode'] = $settings['maintenanceMode'];
+                }
+            }
+
+            // Update branding settings if provided
+            if ($request->has('branding')) {
+                $branding = $request->input('branding');
+
+                if (isset($branding['systemName'])) {
+                    \App\Models\SystemSetting::set(
+                        'system_name',
+                        $branding['systemName'],
+                        'string',
+                        'Platform system name'
+                    );
+                    $updatedSettings['system_name'] = $branding['systemName'];
+                }
+
+                if (isset($branding['logoUrl'])) {
+                    \App\Models\SystemSetting::set(
+                        'logo_url',
+                        $branding['logoUrl'],
+                        'string',
+                        'Platform logo URL'
+                    );
+                    $updatedSettings['logo_url'] = $branding['logoUrl'];
+                }
+            }
+
+            Log::info('Admin settings updated', [
+                'admin_id' => $admin->adminID,
+                'updated_settings' => $updatedSettings
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Settings updated successfully',
+                'data' => $updatedSettings
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update admin settings', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update settings',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get platform settings
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSettings()
+    {
+        try {
+            $settings = [
+                'commissionRate' => \App\Models\SystemSetting::get('commission_percentage', 10),
+                'maxServiceRadius' => \App\Models\SystemSetting::get('max_service_radius', 15),
+                'minPayoutAmount' => \App\Models\SystemSetting::get('min_payout_amount', 500),
+                'maintenanceMode' => \App\Models\SystemSetting::get('maintenance_mode', false),
+            ];
+
+            $branding = [
+                'systemName' => \App\Models\SystemSetting::get('system_name', 'HB Service Finder Admin'),
+                'logoUrl' => \App\Models\SystemSetting::get('logo_url', null),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'settings' => $settings,
+                    'branding' => $branding
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get admin settings', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get settings'
+            ], 500);
+        }
+    }
 }

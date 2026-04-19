@@ -270,6 +270,7 @@ Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin'], function () {
     Route::get('/search', [AdminAuthController::class, 'globalSearch']);
     
     // Platform Settings
+    Route::get('/settings', [AdminAuthController::class, 'getSettings']);
     Route::post('/settings', [AdminAuthController::class, 'updateSettings']);
     Route::post('/profile/update', [AdminAuthController::class, 'updateProfile']);
     Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
