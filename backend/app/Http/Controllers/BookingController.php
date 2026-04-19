@@ -45,7 +45,7 @@ class BookingController extends Controller
             'providerID' => 'required|exists:service_providers,providerID',
             'serviceID' => 'required|exists:services,serviceID',
             'scheduledDate' => 'required|date|after:now',
-            'agreed_price' => 'required|numeric|min:1',
+            'agreed_price' => 'required|numeric|min:10|max:500000',
             'notes' => 'nullable|string|max:500',
 
             // Location validation
@@ -780,6 +780,11 @@ class BookingController extends Controller
                 ],
                 $booking->bookingID
             );
+
+            // Notify admins
+            $booking->load(['customer', 'provider']);
+            $this->notificationService->notifyAdminsBookingCancelled($booking, 'customer', $request->reason);
+
             DB::commit();
 
             return response()->json([
@@ -856,6 +861,11 @@ class BookingController extends Controller
                 [],
                 $booking->bookingID
             );
+
+            // Notify admins
+            $booking->load(['customer']);
+            $this->notificationService->notifyAdminsBookingCompleted($booking, $provider, $booking->customer);
+
             DB::commit();
 
             return response()->json([
@@ -968,6 +978,20 @@ class BookingController extends Controller
             $booking->provider_started_at = now();
             $booking->save();
 
+            // Notify customer that provider has started the service
+            $this->notificationService->toCustomer(
+                $booking->customerID,
+                'service_started',
+                '🔧 Service Started',
+                $provider->fullname . ' has started your service. They are now working on your request.',
+                [
+                    'booking_id'    => $booking->bookingID,
+                    'provider_name' => $provider->fullname,
+                    'started_at'    => $booking->provider_started_at,
+                ],
+                $booking->bookingID
+            );
+
             // Log the action
             Log::info('Provider started job', [
                 'booking_id' => $booking->bookingID,
@@ -1019,16 +1043,19 @@ class BookingController extends Controller
         $booking->provider_arrived_at = now();
         $booking->save();
 
-        // Notify customer that provider has arrived
-        $notification = new Notification();
-        $notification->notifiable_type = 'customer';
-        $notification->notifiable_id = $booking->customerID;
-        $notification->type = 'provider_arrived';
-        $notification->title = '📍 Provider has arrived';
-        $notification->message = 'Your service provider has arrived at your location.';
-        $notification->data = json_encode(['booking_id' => $booking->bookingID]);
-        $notification->related_booking_id = $booking->bookingID;
-        $notification->save();
+        // Notify customer that provider has arrived (via NotificationService for push + DB)
+        $this->notificationService->toCustomer(
+            $booking->customerID,
+            'provider_arrived',
+            '📍 Provider Has Arrived',
+            'Your service provider has arrived at your location and is ready to begin.',
+            [
+                'booking_id'    => $booking->bookingID,
+                'provider_name' => $provider->fullname,
+                'arrived_at'    => $booking->provider_arrived_at,
+            ],
+            $booking->bookingID
+        );
 
         return response()->json([
             'success' => true,

@@ -292,21 +292,25 @@ class ServiceProvider extends Authenticatable
      */
     public function addToWallet($amount): void
     {
-        $this->walletBalance = ($this->walletBalance ?? 0) + $amount;
-        $this->save();
-        
-        // Also update the wallet table if it exists
-        if ($this->wallet) {
-            $this->wallet->pending_balance += $amount;
-            $this->wallet->save();
-        } else {
-            // Create wallet if it doesn't exist
-            Wallet::create([
-                'providerID' => $this->providerID,
-                'available_balance' => 0,
-                'pending_balance' => $amount
-            ]);
-        }
+        \Illuminate\Support\Facades\DB::transaction(function () use ($amount) {
+            $locked = self::lockForUpdate()->find($this->providerID);
+            $locked->walletBalance = ($locked->walletBalance ?? 0) + $amount;
+            $locked->save();
+            $this->walletBalance = $locked->walletBalance;
+
+            // Also update the wallet table if it exists
+            $wallet = \App\Models\Wallet::where('providerID', $this->providerID)->lockForUpdate()->first();
+            if ($wallet) {
+                $wallet->pending_balance += $amount;
+                $wallet->save();
+            } else {
+                \App\Models\Wallet::create([
+                    'providerID'       => $this->providerID,
+                    'available_balance' => 0,
+                    'pending_balance'   => $amount,
+                ]);
+            }
+        });
     }
 
     /**
@@ -324,13 +328,19 @@ class ServiceProvider extends Authenticatable
      */
     public function withdrawFromWallet($amount): bool
     {
-        if (($this->walletBalance ?? 0) < $amount) {
-            return false;
-        }
-        
-        $this->walletBalance -= $amount;
-        $this->save();
-        return true;
+        $success = false;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($amount, &$success) {
+            $locked = self::lockForUpdate()->find($this->providerID);
+            if (($locked->walletBalance ?? 0) < $amount) {
+                $success = false;
+                return;
+            }
+            $locked->walletBalance -= $amount;
+            $locked->save();
+            $this->walletBalance = $locked->walletBalance;
+            $success = true;
+        });
+        return $success;
     }
 
         /**
