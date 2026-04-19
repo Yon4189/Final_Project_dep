@@ -28,7 +28,10 @@ class ReviewController extends Controller
 
             $booking = Booking::where('bookingID', $bookingID)
                 ->where('customerID', $customer->customerID)
-                ->where('status', 'completed')
+                ->where(function($query) {
+                    $query->where('status', 'completed')
+                          ->orWhere('payment_status', 'completed');
+                })
                 ->first();
 
         if (!$booking) {
