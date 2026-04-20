@@ -5,7 +5,7 @@ import api from '../api/axios';
 import {
   Settings as SettingsIcon, Save, Activity, ShieldCheck,
   Percent, Globe, Zap, Database, Server, AlertTriangle,
-  Image as ImageIcon, Type, UploadCloud, RefreshCcw, Loader2
+  Image as ImageIcon, Type, UploadCloud, RefreshCcw, Loader2, Download
 } from 'lucide-react';
 
 const Settings = () => {
@@ -13,6 +13,7 @@ const Settings = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [latency, setLatency] = useState({ api: '...', db: '...' });
 
   // 1. Platform Configuration (Initially Mock but ready for backend sync)
@@ -119,6 +120,299 @@ const Settings = () => {
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const downloadReport = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await api.get('/admin/system-report');
+      if (!response.data.success) throw new Error('Failed');
+      const d = response.data.data;
+
+      const fmt = (n) => Number(n || 0).toLocaleString('en-ET');
+      const pct = (part, total) => total > 0 ? Math.round((part / total) * 100) : 0;
+      const maxRev = Math.max(...(d.monthly_revenue || []).map(m => m.revenue), 1);
+
+      const statusBadge = (s) => {
+        const map = { completed:'#16a34a', accepted:'#2563eb', pending:'#d97706', cancelled:'#dc2626', pending_final:'#7c3aed' };
+        const bg = { completed:'#dcfce7', accepted:'#dbeafe', pending:'#fef3c7', cancelled:'#fee2e2', pending_final:'#ede9fe' };
+        return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;background:${bg[s]||'#f1f5f9'};color:${map[s]||'#475569'}">${s}</span>`;
+      };
+
+      const progressBar = (val, max, color) =>
+        `<div style="background:#f1f5f9;border-radius:6px;height:8px;width:100%;margin-top:6px"><div style="background:${color};height:8px;border-radius:6px;width:${pct(val,max)}%"></div></div>`;
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${d.settings.system_name} – System Report ${d.generated_at}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#f0f4f8;color:#1e293b;padding:40px;font-size:13px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    .page-break{page-break-before:always}
+
+    /* COVER */
+    .cover{background:linear-gradient(135deg,#1e40af 0%,#6366f1 50%,#8b5cf6 100%);color:#fff;border-radius:24px;padding:56px 48px;margin-bottom:28px;position:relative;overflow:hidden}
+    .cover::after{content:'';position:absolute;right:-60px;top:-60px;width:280px;height:280px;background:rgba(255,255,255,.07);border-radius:50%}
+    .cover-tag{font-size:10px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;opacity:.7;margin-bottom:12px}
+    .cover h1{font-size:36px;font-weight:900;line-height:1.15;letter-spacing:-.5px}
+    .cover-sub{margin-top:10px;opacity:.75;font-size:14px}
+    .cover-meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+    .chip{background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);padding:6px 16px;border-radius:30px;font-size:11px;font-weight:700}
+
+    /* SECTION */
+    .section{background:#fff;border-radius:18px;padding:28px 32px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid #e8edf2}
+    .section-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;margin-bottom:22px;display:flex;align-items:center;gap:8px}
+    .section-title span{display:inline-block;width:3px;height:14px;background:linear-gradient(#6366f1,#3b82f6);border-radius:2px}
+
+    /* KPI GRID */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}
+    .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:20px 18px}
+    .kpi .kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:10px}
+    .kpi .kpi-val{font-size:26px;font-weight:900;line-height:1}
+    .kpi .kpi-unit{font-size:11px;color:#64748b;margin-top:4px;font-weight:600}
+    .kpi-green{color:#16a34a}.kpi-blue{color:#2563eb}.kpi-amber{color:#d97706}.kpi-red{color:#dc2626}.kpi-purple{color:#7c3aed}
+
+    /* TWO COL */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+
+    /* BAR CHART */
+    .bar-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .bar-label{width:72px;font-size:11px;font-weight:700;color:#64748b;text-align:right;flex-shrink:0}
+    .bar-track{flex:1;background:#f1f5f9;border-radius:6px;height:10px}
+    .bar-fill{height:10px;border-radius:6px;min-width:2px}
+    .bar-val{width:60px;font-size:11px;font-weight:800;color:#1e293b;text-align:right;flex-shrink:0}
+
+    /* PROVIDER BREAKDOWN */
+    .prov-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
+    .prov-row:last-child{border-bottom:none}
+    .prov-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px}
+
+    /* TABLE */
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;padding:8px 12px;border-bottom:2px solid #e2e8f0;background:#f8fafc}
+    td{padding:11px 12px;font-size:12px;color:#334155;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#f8fafc}
+    .tr-alt{background:#fafbfc}
+
+    /* SETTINGS GRID */
+    .setting-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9}
+    .setting-item:last-child{border-bottom:none}
+    .setting-key{font-size:12px;font-weight:600;color:#475569}
+    .setting-val{font-size:13px;font-weight:800;color:#1e293b}
+
+    /* FOOTER */
+    .footer{text-align:center;padding:24px 0 0;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;margin-top:8px}
+
+    @media print{body{padding:20px;background:#fff}.cover{border-radius:12px}}
+  </style>
+</head>
+<body>
+
+<!-- ═══ COVER ═══ -->
+<div class="cover">
+  <div class="cover-tag">Official Administrative Report</div>
+  <h1>${d.settings.system_name}<br/>System Report</h1>
+  <p class="cover-sub">Comprehensive platform infrastructure, financial and operational overview</p>
+  <div class="cover-meta">
+    <div class="chip">📅 ${d.generated_at}</div>
+    <div class="chip">👤 ${d.generated_by}</div>
+    <div class="chip">✉️ ${d.admin_email || 'admin'}</div>
+    <div class="chip">${d.settings.maintenance_mode ? '🔴 MAINTENANCE ON' : '🟢 SYSTEM LIVE'}</div>
+  </div>
+</div>
+
+<!-- ═══ PLATFORM CONFIGURATION ═══ -->
+<div class="section">
+  <div class="section-title"><span></span>Platform Configuration (Active Settings)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+    <div class="setting-item" style="padding-right:32px">
+      <span class="setting-key">💰 Commission Rate</span>
+      <span class="setting-val kpi-purple">${d.settings.commission_rate}%</span>
+    </div>
+    <div class="setting-item" style="padding-left:32px;border-left:1px solid #f1f5f9">
+      <span class="setting-key">🌍 Max Service Radius</span>
+      <span class="setting-val kpi-blue">${d.settings.max_service_radius} KM</span>
+    </div>
+    <div class="setting-item" style="padding-right:32px">
+      <span class="setting-key">💵 Min Withdrawal Threshold</span>
+      <span class="setting-val">${fmt(d.settings.min_payout_amount)} ETB</span>
+    </div>
+    <div class="setting-item" style="padding-left:32px;border-left:1px solid #f1f5f9">
+      <span class="setting-key">🔒 Maintenance Mode</span>
+      <span class="setting-val ${d.settings.maintenance_mode ? 'kpi-red' : 'kpi-green'}">${d.settings.maintenance_mode ? 'ACTIVE' : 'OFFLINE'}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ USER STATISTICS ═══ -->
+<div class="section">
+  <div class="section-title"><span></span>User Statistics</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Providers</div><div class="kpi-val">${d.users.total_providers}</div></div>
+    <div class="kpi"><div class="kpi-label">Approved</div><div class="kpi-val kpi-green">${d.users.approved_providers}</div><div class="kpi-unit">${pct(d.users.approved_providers, d.users.total_providers)}% of total</div></div>
+    <div class="kpi"><div class="kpi-label">Pending Review</div><div class="kpi-val kpi-amber">${d.users.pending_providers}</div></div>
+    <div class="kpi"><div class="kpi-label">Suspended</div><div class="kpi-val kpi-red">${d.users.suspended_providers}</div></div>
+    <div class="kpi"><div class="kpi-label">Rejected</div><div class="kpi-val" style="color:#64748b">${d.users.rejected_providers || 0}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Customers</div><div class="kpi-val kpi-blue">${d.users.total_customers}</div></div>
+  </div>
+  <div style="margin-top:24px">
+    ${[['Approved',d.users.approved_providers,'#16a34a'],['Pending',d.users.pending_providers,'#d97706'],['Suspended',d.users.suspended_providers,'#dc2626'],['Rejected',d.users.rejected_providers||0,'#94a3b8']].map(([label,val,color])=>`
+      <div class="bar-row">
+        <div class="bar-label">${label}</div>
+        <div class="bar-track"><div class="bar-fill" style="background:${color};width:${pct(val,d.users.total_providers)}%"></div></div>
+        <div class="bar-val">${val} (${pct(val,d.users.total_providers)}%)</div>
+      </div>`).join('')}
+  </div>
+</div>
+
+<!-- ═══ TWO COL: BOOKINGS + FINANCIALS ═══ -->
+<div class="two-col">
+  <div class="section" style="margin-bottom:0">
+    <div class="section-title"><span></span>Booking Statistics</div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
+      <div class="kpi"><div class="kpi-label">Total</div><div class="kpi-val">${d.bookings.total}</div></div>
+      <div class="kpi"><div class="kpi-label">Completed</div><div class="kpi-val kpi-green">${d.bookings.completed}</div><div class="kpi-unit">${pct(d.bookings.completed,d.bookings.total)}%</div></div>
+      <div class="kpi"><div class="kpi-label">In Progress</div><div class="kpi-val kpi-blue">${d.bookings.accepted || 0}</div></div>
+      <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-val kpi-amber">${d.bookings.pending}</div></div>
+      <div class="kpi" style="grid-column:span 2"><div class="kpi-label">Cancelled</div><div class="kpi-val kpi-red">${d.bookings.cancelled}</div></div>
+    </div>
+  </div>
+  <div class="section" style="margin-bottom:0">
+    <div class="section-title"><span></span>Withdrawal Overview</div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
+      <div class="kpi"><div class="kpi-label">Total Requests</div><div class="kpi-val">${d.withdrawals?.total || 0}</div></div>
+      <div class="kpi"><div class="kpi-label">Approved</div><div class="kpi-val kpi-green">${d.withdrawals?.approved || 0}</div></div>
+      <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-val kpi-amber">${d.withdrawals?.pending || 0}</div></div>
+      <div class="kpi"><div class="kpi-label">Total Paid Out</div><div class="kpi-val kpi-purple">${fmt(d.withdrawals?.amount)}</div><div class="kpi-unit">ETB</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FINANCIAL OVERVIEW ═══ -->
+<div class="section" style="margin-top:20px">
+  <div class="section-title"><span></span>Financial Overview (ETB)</div>
+  <div class="kpi-grid">
+    <div class="kpi" style="border-left:4px solid #6366f1">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-val kpi-purple">${fmt(d.financials.total_revenue)}</div>
+      <div class="kpi-unit">ETB collected</div>
+    </div>
+    <div class="kpi" style="border-left:4px solid #2563eb">
+      <div class="kpi-label">Platform Commission (${d.settings.commission_rate}%)</div>
+      <div class="kpi-val kpi-blue">${fmt(d.financials.platform_commission)}</div>
+      <div class="kpi-unit">ETB earned</div>
+    </div>
+    <div class="kpi" style="border-left:4px solid #16a34a">
+      <div class="kpi-label">Provider Payouts</div>
+      <div class="kpi-val kpi-green">${fmt(d.financials.provider_payouts)}</div>
+      <div class="kpi-unit">ETB released</div>
+    </div>
+    <div class="kpi" style="border-left:4px solid #d97706">
+      <div class="kpi-label">Pending Funds</div>
+      <div class="kpi-val kpi-amber">${fmt(d.financials.pending_payments)}</div>
+      <div class="kpi-unit">ETB in escrow</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total Transactions</div>
+      <div class="kpi-val">${d.financials.total_transactions || 0}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Successful</div>
+      <div class="kpi-val kpi-green">${d.financials.successful_payments || 0}</div>
+      <div class="kpi-unit">${pct(d.financials.successful_payments, d.financials.total_transactions)}% success rate</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Failed</div>
+      <div class="kpi-val kpi-red">${d.financials.failed_payments || 0}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MONTHLY REVENUE BAR CHART ═══ -->
+<div class="section">
+  <div class="section-title"><span></span>Monthly Revenue Trend (Last 6 Months)</div>
+  ${(d.monthly_revenue || []).map(m => `
+    <div class="bar-row">
+      <div class="bar-label" style="width:80px;font-size:10px">${m.month}</div>
+      <div class="bar-track"><div class="bar-fill" style="background:linear-gradient(90deg,#6366f1,#3b82f6);width:${pct(m.revenue, maxRev)}%"></div></div>
+      <div class="bar-val">${m.revenue > 0 ? fmt(m.revenue) + ' ETB' : '—'}</div>
+    </div>`).join('')}
+</div>
+
+<!-- ═══ TWO COL: TOP PROVIDERS + CATEGORIES ═══ -->
+<div class="two-col">
+  <div class="section" style="margin-bottom:0">
+    <div class="section-title"><span></span>Top 5 Providers by Rating</div>
+    ${(d.top_providers || []).length ? `<table>
+      <thead><tr><th>#</th><th>Name</th><th>City</th><th>Rating</th><th>Jobs</th></tr></thead>
+      <tbody>${(d.top_providers || []).map((p,i)=>`<tr class="${i%2?'tr-alt':''}">
+        <td style="font-weight:800;color:#6366f1">${i+1}</td>
+        <td><div style="font-weight:700">${p.name}</div><div style="color:#94a3b8;font-size:10px">${p.email}</div></td>
+        <td>${p.city}</td>
+        <td style="font-weight:800;color:#d97706">⭐ ${p.rating || 'N/A'}</td>
+        <td style="font-weight:700;color:#16a34a">${p.completed_jobs}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;text-align:center;padding:20px">No approved providers yet</p>'}
+  </div>
+  <div class="section" style="margin-bottom:0">
+    <div class="section-title"><span></span>Category Breakdown</div>
+    ${(d.category_breakdown || []).slice(0,8).map(c=>`
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:600;color:#334155">${c.name}</span>
+          <span style="font-size:11px;font-weight:800;color:#6366f1">${c.providers} providers</span>
+        </div>
+        ${progressBar(c.providers, Math.max(...(d.category_breakdown||[]).map(x=>x.providers),1), '#6366f1')}
+      </div>`).join('')}
+  </div>
+</div>
+
+<!-- ═══ RECENT BOOKINGS ═══ -->
+<div class="section" style="margin-top:20px;page-break-inside:avoid">
+  <div class="section-title"><span></span>Recent Booking Activity (Last 10)</div>
+  <table>
+    <thead><tr><th>#</th><th>Customer</th><th>Provider</th><th>Service</th><th>Amount</th><th>Status</th><th>Payment</th><th>Date</th></tr></thead>
+    <tbody>
+      ${(d.recent_bookings || []).map((b,i)=>`
+        <tr class="${i%2?'tr-alt':''}">
+          <td style="font-weight:800;color:#94a3b8">#${b.id}</td>
+          <td style="font-weight:600">${b.customer}</td>
+          <td style="font-weight:600">${b.provider}</td>
+          <td style="color:#64748b">${b.service}</td>
+          <td style="font-weight:800">${fmt(b.amount)} <span style="font-size:10px;color:#94a3b8">ETB</span></td>
+          <td>${statusBadge(b.status)}</td>
+          <td>${statusBadge(b.payment_status || 'unpaid')}</td>
+          <td style="color:#64748b;font-size:11px">${b.date}</td>
+        </tr>`).join('')}
+    </tbody>
+  </table>
+</div>
+
+<div class="footer">
+  <strong>CONFIDENTIAL</strong> — This report was generated by ${d.settings.system_name} Admin Panel on ${d.generated_at} by ${d.generated_by} (${d.admin_email || ''}).<br/>
+  For internal use only. Unauthorized distribution is prohibited.
+</div>
+
+</body>
+</html>`;
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `${d.settings.system_name.replace(/\s+/g,'-')}-Report-${new Date().toISOString().split('T')[0]}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Report download failed:', err);
+      alert('Failed to generate system report. Please try again.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -420,8 +714,17 @@ const Settings = () => {
             <p className="text-xs leading-relaxed font-medium opacity-90 mb-8 italic">
               {t('set_infra_ready_desc')}
             </p>
-            <button className="w-full bg-white/10 backdrop-blur-md border border-white/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:text-admin-accent transition-all">
-              {t('set_infra_report_btn')}
+            <button
+              onClick={downloadReport}
+              disabled={isDownloading}
+              className={`w-full backdrop-blur-md border border-white/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2
+                ${isDownloading
+                  ? 'bg-white/5 text-white/40 cursor-not-allowed'
+                  : 'bg-white/10 hover:bg-white hover:text-admin-accent'}`}
+            >
+              {isDownloading
+                ? <><Loader2 size={14} className="animate-spin" /> Generating Report...</>
+                : <><Download size={14} /> {t('set_infra_report_btn')}</>}
             </button>
           </div>
         </div>

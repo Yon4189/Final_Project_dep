@@ -272,6 +272,7 @@ Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin'], function () {
     // Platform Settings
     Route::get('/settings', [AdminAuthController::class, 'getSettings']);
     Route::post('/settings', [AdminAuthController::class, 'updateSettings']);
+    Route::get('/system-report', [AdminAuthController::class, 'generateSystemReport']);
     Route::post('/profile/update', [AdminAuthController::class, 'updateProfile']);
     Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
     

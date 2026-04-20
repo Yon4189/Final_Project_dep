@@ -881,4 +881,143 @@ class AdminAuthController extends Authenticatable
             ], 500);
         }
     }
+
+    /**
+     * Generate a comprehensive system report for download
+     */
+    public function generateSystemReport()
+    {
+        try {
+            $admin = auth('admin')->user();
+
+            $settings = [
+                'commission_rate'    => \App\Models\SystemSetting::get('commission_percentage', 10),
+                'max_service_radius' => \App\Models\SystemSetting::get('max_service_radius', 15),
+                'min_payout_amount'  => \App\Models\SystemSetting::get('min_payout_amount', 500),
+                'maintenance_mode'   => \App\Models\SystemSetting::get('maintenance_mode', false),
+                'system_name'        => \App\Models\SystemSetting::get('system_name', 'Ethio HandyMan'),
+            ];
+
+            $totalProviders     = \App\Models\ServiceProvider::count();
+            $approvedProviders  = \App\Models\ServiceProvider::whereIn('status', ['approved', 'Active'])->count();
+            $pendingProviders   = \App\Models\ServiceProvider::where('status', 'pending')->count();
+            $suspendedProviders = \App\Models\ServiceProvider::whereIn('status', ['suspended', 'Suspended'])->count();
+            $rejectedProviders  = \App\Models\ServiceProvider::whereIn('status', ['rejected', 'Rejected'])->count();
+            $totalCustomers     = \App\Models\Customer::count();
+
+            $totalBookings     = \App\Models\Booking::count();
+            $completedBookings = \App\Models\Booking::where('status', 'completed')->count();
+            $acceptedBookings  = \App\Models\Booking::where('status', 'accepted')->count();
+            $pendingBookings   = \App\Models\Booking::where('status', 'pending')->count();
+            $cancelledBookings = \App\Models\Booking::where('status', 'cancelled')->count();
+
+            $totalRevenue       = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->sum('amount') ?? 0;
+            $platformCommission = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->sum('platform_commission') ?? 0;
+            $providerPayouts    = \App\Models\Payment::where('status', 'released')->sum('provider_amount') ?? 0;
+            $pendingPayments    = \App\Models\Payment::whereIn('status', ['pending', 'held'])->sum('amount') ?? 0;
+            $totalPaymentsCount = \App\Models\Payment::count();
+            $successPayments    = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->count();
+            $failedPayments     = \App\Models\Payment::where('status', 'failed')->count();
+
+            $totalWithdrawals    = \App\Models\Withdrawal::count();
+            $pendingWithdrawals  = \App\Models\Withdrawal::where('status', 'pending')->count();
+            $approvedWithdrawals = \App\Models\Withdrawal::where('status', 'approved')->count();
+            $withdrawalAmount    = \App\Models\Withdrawal::where('status', 'approved')->sum('amount') ?? 0;
+
+            $totalCategories = \App\Models\Category::count();
+            $totalServices   = \App\Models\Service::count();
+
+            $categoryBreakdown = \App\Models\Category::withCount('providers')
+                ->orderByDesc('providers_count')
+                ->get()
+                ->map(fn($c) => ['name' => $c->name, 'providers' => $c->providers_count]);
+
+            $topProviders = \App\Models\ServiceProvider::whereIn('status', ['approved', 'Active'])
+                ->orderByDesc('rating')
+                ->orderByDesc('completed_jobs')
+                ->limit(5)
+                ->get()
+                ->map(fn($p) => [
+                    'name'           => $p->fullname,
+                    'email'          => $p->email,
+                    'rating'         => round($p->rating, 1),
+                    'completed_jobs' => $p->completed_jobs ?? 0,
+                    'city'           => $p->service_city ?? 'N/A',
+                ]);
+
+            $monthlyRevenue = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = now()->subMonths($i);
+                $rev = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('amount') ?? 0;
+                $monthlyRevenue[] = ['month' => $month->format('M Y'), 'revenue' => round($rev, 2)];
+            }
+
+            $recentBookings = \App\Models\Booking::with(['customer', 'provider', 'service'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(fn($b) => [
+                    'id'             => $b->bookingID,
+                    'customer'       => $b->customer->fullname ?? 'Unknown',
+                    'provider'       => $b->provider->fullname ?? 'Unknown',
+                    'service'        => $b->service->title ?? 'N/A',
+                    'status'         => $b->status,
+                    'payment_status' => $b->payment_status ?? 'unpaid',
+                    'amount'         => $b->agreed_price ?? 0,
+                    'date'           => $b->created_at?->format('M d, Y H:i'),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'generated_at'       => now()->format('Y-m-d H:i:s'),
+                    'generated_by'       => $admin->fullname ?? 'System Admin',
+                    'admin_email'        => $admin->email ?? '',
+                    'settings'           => $settings,
+                    'users'              => [
+                        'total_providers'     => $totalProviders,
+                        'approved_providers'  => $approvedProviders,
+                        'pending_providers'   => $pendingProviders,
+                        'suspended_providers' => $suspendedProviders,
+                        'rejected_providers'  => $rejectedProviders,
+                        'total_customers'     => $totalCustomers,
+                    ],
+                    'bookings'           => [
+                        'total'     => $totalBookings,
+                        'completed' => $completedBookings,
+                        'accepted'  => $acceptedBookings,
+                        'pending'   => $pendingBookings,
+                        'cancelled' => $cancelledBookings,
+                    ],
+                    'financials'         => [
+                        'total_revenue'       => round($totalRevenue, 2),
+                        'platform_commission' => round($platformCommission, 2),
+                        'provider_payouts'    => round($providerPayouts, 2),
+                        'pending_payments'    => round($pendingPayments, 2),
+                        'total_transactions'  => $totalPaymentsCount,
+                        'successful_payments' => $successPayments,
+                        'failed_payments'     => $failedPayments,
+                    ],
+                    'withdrawals'        => [
+                        'total'    => $totalWithdrawals,
+                        'pending'  => $pendingWithdrawals,
+                        'approved' => $approvedWithdrawals,
+                        'amount'   => round($withdrawalAmount, 2),
+                    ],
+                    'catalog'            => ['categories' => $totalCategories, 'services' => $totalServices],
+                    'category_breakdown' => $categoryBreakdown,
+                    'top_providers'      => $topProviders,
+                    'monthly_revenue'    => $monthlyRevenue,
+                    'recent_bookings'    => $recentBookings,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('System report generation failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to generate report: ' . $e->getMessage()], 500);
+        }
+    }
 }
