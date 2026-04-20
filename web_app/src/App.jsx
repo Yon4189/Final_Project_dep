@@ -26,6 +26,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import ResetPassword from './pages/ResetPassword';
 import Payment from './pages/Payment';
+import Maintenance from './pages/Maintenance';
 
 /**
  *  ProtectedRoute Component
@@ -61,6 +62,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/payment/:txRef" element={<Payment />} />
+              <Route path="/maintenance" element={<Maintenance />} />
               
               <Route
                 path="/admin"

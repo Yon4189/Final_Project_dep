@@ -38,6 +38,18 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
     refetchInterval: 30000, // Update every 30 seconds
   });
 
+  // Fetch admin settings for dynamic branding
+  const { data: adminSettings } = useQuery({
+    queryKey: ['adminSettings'],
+    queryFn: async () => {
+      const response = await api.get('/admin/settings');
+      return response.data.success ? response.data.data : null;
+    },
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  const dynamicLogo = adminSettings?.branding?.logoUrl || logo;
+  const systemName = adminSettings?.branding?.systemName || "Ethio HandyMan";
 
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
@@ -89,9 +101,10 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             style={{ backgroundColor: '#DBDBDB' }}
           >
             <img
-              src={logo}
-              alt="Ethio HandyMan Logo"
+              src={dynamicLogo}
+              alt={`${systemName} Logo`}
               className="w-full h-full object-contain scale-[1.35] transform-gpu"
+              onError={(e) => { e.target.src = logo; }}
             />
           </div>
         </Link>
