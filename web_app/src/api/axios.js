@@ -36,6 +36,9 @@ api.interceptors.response.use(
       sessionStorage.removeItem('admin_user');
       window.location.href = '/login';
     }
+    if (error.response && error.response.status === 503 && !window.location.pathname.startsWith('/admin')) {
+      window.location.href = '/maintenance';
+    }
     return Promise.reject(error);
   }
 );

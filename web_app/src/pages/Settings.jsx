@@ -249,19 +249,51 @@ const Settings = () => {
                   </div>
                 </div>
 
-                <div className={`p-8 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row items-center justify-between gap-6 ${config.maintenanceMode ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900 shadow-inner' : 'bg-admin-card border-admin-border shadow-sm'}`}>
-                  <div className="text-center md:text-left">
-                    <p className={`text-sm font-black uppercase tracking-widest ${config.maintenanceMode ? 'text-rose-900 dark:text-rose-400' : 'text-slate-800 text-admin-text'}`}>{t('set_maintenance_title')}</p>
-      <p className={`text-xs mt-1 ${config.maintenanceMode ? 'text-rose-600 dark:text-rose-500' : 'text-slate-500'}`}>{t('set_maintenance_desc')}</p>
-                  </div>
-                  <button
-                    onClick={() => setConfig({ ...config, maintenanceMode: !config.maintenanceMode })}
-                    className={`w-20 h-10 rounded-full transition-all relative p-1 shadow-inner ${config.maintenanceMode ? 'bg-rose-600' : 'bg-slate-300 dark:bg-admin-sidebar'}`}
-                  >
-                    <div className={`w-8 h-8 bg-white dark:bg-slate-200 rounded-full shadow-lg transform transition-all duration-300 flex items-center justify-center ${config.maintenanceMode ? 'translate-x-10' : 'translate-x-0'}`}>
-                      {config.maintenanceMode ? <Loader2 size={14} className="animate-spin text-rose-600" /> : <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700" />}
+                <div className={`p-8 rounded-3xl border transition-all duration-700 flex flex-col md:flex-row items-center justify-between gap-6 
+                  ${config.maintenanceMode && config.maintenanceMode === existingSettings?.settings?.maintenanceMode 
+                    ? 'bg-rose-500/10 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.1)]' 
+                    : config.maintenanceMode 
+                      ? 'bg-amber-500/5 border-amber-200' 
+                      : 'bg-admin-card border-admin-border'}`}>
+                  
+                  <div className="text-center md:text-left flex-1">
+                    <div className="flex items-center gap-3 justify-center md:justify-start">
+                      <p className={`text-sm font-black uppercase tracking-widest ${config.maintenanceMode ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 text-admin-text'}`}>
+                        {t('set_maintenance_title')}
+                      </p>
+                      
+                      {/* --- CLEAR STATUS INDICATORS --- */}
+                      {config.maintenanceMode !== existingSettings?.settings?.maintenanceMode ? (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-amber-500 text-white text-[9px] font-black uppercase rounded-full shadow-lg shadow-amber-200/50">
+                          <Save size={10} /> {t('set_status_draft')}
+                        </div>
+                      ) : config.maintenanceMode ? (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-rose-600 text-white text-[9px] font-black uppercase rounded-full shadow-lg shadow-rose-200/50 animate-pulse">
+                          <Activity size={10} /> {t('set_status_live')}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-400 text-[9px] font-black uppercase rounded-full">
+                          {t('set_status_inactive')}
+                        </div>
+                      )}
                     </div>
-                  </button>
+                    
+                    <p className={`text-xs mt-2 ${config.maintenanceMode ? 'text-rose-600/70 font-bold' : 'text-slate-500'}`}>
+                      {config.maintenanceMode && config.maintenanceMode === existingSettings?.settings?.maintenanceMode 
+                        ? "THE SYSTEM IS CURRENTLY LOCKED. ALL EXTERNAL ACCESS IS DENIED."
+                        : t('set_maintenance_desc')}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setConfig({ ...config, maintenanceMode: !config.maintenanceMode })}
+                      className={`w-20 h-10 rounded-full transition-all relative p-1 shadow-inner ${config.maintenanceMode ? 'bg-rose-600' : 'bg-slate-300 dark:bg-admin-sidebar'}`}
+                    >
+                      <div className={`w-8 h-8 bg-white rounded-full shadow-lg transform transition-all duration-300 ${config.maintenanceMode ? 'translate-x-10' : 'translate-x-0'}`}>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
