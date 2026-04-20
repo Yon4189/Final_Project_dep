@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\SystemSetting;
 use App\Services\ChapaService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
@@ -99,9 +100,17 @@ class PaymentController extends Controller
             $totalAmount = $agreedPrice * 0.20;
         }
         
-        // Commission Calculation (10% of payment amount)
-        $commission = $totalAmount * 0.10;
-        $providerAmount = $totalAmount - $commission;
+        // Commission Calculation — reads live value from admin Settings page (default 10%)
+        $commissionRate = SystemSetting::get('commission_percentage', 10) / 100;
+        $commission = round($totalAmount * $commissionRate, 2);
+        $providerAmount = round($totalAmount - $commission, 2);
+
+        Log::info('Commission calculated from SystemSetting', [
+            'commission_rate' => ($commissionRate * 100) . '%',
+            'total_amount'    => $totalAmount,
+            'commission'      => $commission,
+            'provider_amount' => $providerAmount,
+        ]);
 
         // Split Name
         $nameParts = explode(' ', trim($customer->fullname), 2);
