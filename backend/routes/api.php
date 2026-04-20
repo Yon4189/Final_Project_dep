@@ -36,6 +36,7 @@ use App\Http\Controllers\LocationAutocompleteController;
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 // ==================== PUBLIC ROUTES ====================
+
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'message' => 'API is healthy']);
 });

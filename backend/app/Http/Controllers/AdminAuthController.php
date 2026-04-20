@@ -734,7 +734,7 @@ class AdminAuthController extends Authenticatable
                 'settings.maintenanceMode' => 'nullable|boolean',
                 'branding' => 'nullable|array',
                 'branding.systemName' => 'nullable|string|max:255',
-                'branding.logoUrl' => 'nullable|string|max:500',
+                'branding.logoUrl' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -807,13 +807,30 @@ class AdminAuthController extends Authenticatable
                 }
 
                 if (isset($branding['logoUrl'])) {
+                    $logoUrl = $branding['logoUrl'];
+                    
+                    // If it's a new base64 image upload, save it as a file
+                    if (preg_match('/^data:image\/(\w+);base64,/', $logoUrl, $type)) {
+                        $base64Image = substr($logoUrl, strpos($logoUrl, ',') + 1);
+                        $extension = strtolower($type[1]); // jpg, png, svg+xml etc.
+                        if ($extension === 'svg+xml') $extension = 'svg';
+                        
+                        $fileName = 'branding/logo_' . time() . '_' . uniqid() . '.' . $extension;
+                        
+                        // Save to storage/app/public/branding/
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, base64_decode($base64Image));
+                        
+                        // Set the new URL
+                        $logoUrl = asset('storage/' . $fileName);
+                    }
+
                     \App\Models\SystemSetting::set(
                         'logo_url',
-                        $branding['logoUrl'],
+                        $logoUrl,
                         'string',
                         'Platform logo URL'
                     );
-                    $updatedSettings['logo_url'] = $branding['logoUrl'];
+                    $updatedSettings['logo_url'] = $logoUrl;
                 }
             }
 

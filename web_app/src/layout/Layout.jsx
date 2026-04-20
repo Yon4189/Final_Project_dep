@@ -3,6 +3,8 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { useTheme } from '../context/ThemeContext';
+import { useQuery } from '@tanstack/react-query';
+import api from '../api/axios';
 
 const Layout = () => {
   const [sidebarWidth, setSidebarWidth] = useState(260);
@@ -10,6 +12,22 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const { isDarkMode } = useTheme();
+
+  // Fetch admin settings for dynamic tab title
+  const { data: adminSettings } = useQuery({
+    queryKey: ['adminSettings'],
+    queryFn: async () => {
+      const response = await api.get('/admin/settings');
+      return response.data.success ? response.data.data : null;
+    },
+    staleTime: 60000,
+  });
+
+  useEffect(() => {
+    if (adminSettings?.branding?.systemName) {
+      document.title = `${adminSettings.branding.systemName} Admin Panel`;
+    }
+  }, [adminSettings]);
 
   useEffect(() => {
     const handleResize = () => {

@@ -11,6 +11,7 @@ import {
 const Settings = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const fileInputRef = React.useRef(null);
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -416,6 +417,22 @@ const Settings = () => {
     }
   };
 
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+      alert(t('set_branding_logo_size_error') || 'Logo size must be less than 2MB');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = () => {
+      setBranding({ ...branding, logoUrl: reader.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const systemHealth = [
     {
       name: t('set_health_api'),
@@ -625,7 +642,17 @@ const Settings = () => {
                     <div className="flex-1 text-center md:text-left space-y-2">
                       <p className="text-lg font-black text-slate-800 dark:text-slate-100 italic">{t('set_branding_logo_title')}</p>
                       <p className="text-xs text-slate-400 mb-6 font-medium">{t('set_branding_logo_desc')}</p>
-                      <button className="inline-flex items-center gap-3 bg-blue-600 dark:bg-admin-accent text-white px-8 py-4 rounded-2xl font-black text-[10px] tracking-widest uppercase hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-xl hover:shadow-blue-200 dark:hover:shadow-blue-900 transition-all active:scale-95">
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleLogoUpload} 
+                        accept="image/png, image/jpeg, image/svg+xml" 
+                        className="hidden" 
+                      />
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-3 bg-blue-600 dark:bg-admin-accent text-white px-8 py-4 rounded-2xl font-black text-[10px] tracking-widest uppercase hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-xl hover:shadow-blue-200 dark:hover:shadow-blue-900 transition-all active:scale-95"
+                      >
                         <UploadCloud size={16} /> {t('set_branding_logo_btn')}
                       </button>
                     </div>
