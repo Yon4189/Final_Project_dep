@@ -45,6 +45,7 @@ class Kernel extends HttpKernel
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \Illuminate\Http\Middleware\HandleCors::class,
+            \App\Http\Middleware\SanitizeInput::class, // Strip HTML tags from all string inputs
         ],
     ];
 
@@ -52,14 +53,26 @@ class Kernel extends HttpKernel
      * Route-specific middleware.
      */
     protected $routeMiddleware = [
-        'auth' => \App\Http\Middleware\Authenticate::class,
-        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-        'can' => \Illuminate\Auth\Middleware\Authorize::class,
-        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-        'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'auth'              => \App\Http\Middleware\Authenticate::class,
+        'auth.basic'        => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+        'cache.headers'     => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+        'can'               => \Illuminate\Auth\Middleware\Authorize::class,
+        'guest'             => \App\Http\Middleware\RedirectIfAuthenticated::class,
+        'password.confirm'  => \Illuminate\Auth\Middleware\RequirePassword::class,
+        'signed'            => \Illuminate\Routing\Middleware\ValidateSignature::class,
+        'throttle'          => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'verified'          => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+
+        // ── Custom security middleware ──────────────────────────────────────
+        // Verifies the authenticated user owns the resource (prevents horizontal privilege escalation)
+        'ownership'         => \App\Http\Middleware\EnsureOwnership::class,
+        // Logs sensitive operations for audit trail
+        'log.sensitive'     => \App\Http\Middleware\LogSensitiveRequests::class,
+        // Blocks suspended/pending providers from accessing protected routes
+        'provider.approved' => \App\Http\Middleware\EnsureProviderApproved::class,
+        // Blocks suspended customers from creating bookings/payments
+        'customer.active'   => \App\Http\Middleware\EnsureCustomerActive::class,
+        // Restricts admin routes to whitelisted IP addresses
+        'ip.whitelist'      => \App\Http\Middleware\IpWhitelist::class,
     ];
 }

@@ -229,10 +229,15 @@ class Payment extends Model
             }
         }
 
-        // Update customer's wallet balance
+        // Update customer's wallet balance with lock to prevent race conditions
         if ($this->customer) {
-            $this->customer->walletBalance = ($this->customer->walletBalance ?? 0) + $refundAmount;
-            $this->customer->save();
+            \Illuminate\Support\Facades\DB::transaction(function () use ($refundAmount) {
+                $customer = \App\Models\Customer::lockForUpdate()->find($this->customerID);
+                if ($customer) {
+                    $customer->walletBalance = ($customer->walletBalance ?? 0) + $refundAmount;
+                    $customer->save();
+                }
+            });
         }
     }
 

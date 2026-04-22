@@ -77,26 +77,43 @@ class ServiceProviderAuthController extends Controller
             if (!file_exists(public_path('credentials'))) mkdir(public_path('credentials'), 0755, true);
 
             // Handle file uploads
+            $fileValidator = app(\App\Services\FileUploadValidator::class);
+
             $profilePath = null;
             if ($request->hasFile('profilePicture')) {
+                try {
+                    $fileValidator->validateImage($request->file('profilePicture'), 2048);
+                } catch (\InvalidArgumentException $e) {
+                    return response()->json(['success' => false, 'message' => 'Profile picture: ' . $e->getMessage()], 422);
+                }
                 $file = $request->file('profilePicture');
-                $profileName = Str::random(20) . '_profile.' . $file->getClientOriginalExtension();
+                $profileName = $fileValidator->safeFilename($file, 'profile');
                 $file->move(public_path('profilepics'), $profileName);
                 $profilePath = 'profilepics/' . $profileName;
             }
 
             $idPhotoPath = null;
             if ($request->hasFile('idPhoto')) {
+                try {
+                    $fileValidator->validateDocument($request->file('idPhoto'), 4096);
+                } catch (\InvalidArgumentException $e) {
+                    return response()->json(['success' => false, 'message' => 'ID photo: ' . $e->getMessage()], 422);
+                }
                 $file = $request->file('idPhoto');
-                $idPhotoName = Str::random(20) . '_id.' . $file->getClientOriginalExtension();
+                $idPhotoName = $fileValidator->safeFilename($file, 'id');
                 $file->move(public_path('idphoto'), $idPhotoName);
                 $idPhotoPath = 'idphoto/' . $idPhotoName;
             }
 
             $credentialPhotoPath = null;
             if ($request->hasFile('credentialPhoto')) {
+                try {
+                    $fileValidator->validateDocument($request->file('credentialPhoto'), 4096);
+                } catch (\InvalidArgumentException $e) {
+                    return response()->json(['success' => false, 'message' => 'Credential photo: ' . $e->getMessage()], 422);
+                }
                 $file = $request->file('credentialPhoto');
-                $credentialName = Str::random(20) . '_credential.' . $file->getClientOriginalExtension();
+                $credentialName = $fileValidator->safeFilename($file, 'credential');
                 $file->move(public_path('credentials'), $credentialName);
                 $credentialPhotoPath = 'credentials/' . $credentialName;
             }

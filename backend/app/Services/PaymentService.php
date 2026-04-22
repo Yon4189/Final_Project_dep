@@ -363,12 +363,12 @@ class PaymentService
                     $depositPayment->payment_status = 'refunded';
                     $depositPayment->refunded_at = now();
                     $depositPayment->save();
-                    
-                    // Credit customer wallet/account
-                    $customer = $booking->customer;
+
+                    // Credit customer wallet with lock to prevent race conditions
+                    $customer = \App\Models\Customer::lockForUpdate()->find($booking->customerID);
                     $customer->walletBalance = ($customer->walletBalance ?? 0) + $depositPayment->amount;
                     $customer->save();
-                    
+
                     // Update booking status
                     $booking->payment_status = 'refunded';
                     $booking->save();
@@ -448,17 +448,17 @@ class PaymentService
         DB::transaction(function () use ($finalPayment, $booking, $reason) {
             // Reverse provider payouts first
             $this->payoutProcessor->reversePayoutForRefund($bookingId);
-            
+
             // Update payment status to refunded
             $finalPayment->payment_status = 'refunded';
             $finalPayment->refunded_at = now();
             $finalPayment->save();
-            
-            // Credit customer wallet/account
-            $customer = $booking->customer;
+
+            // Credit customer wallet with lock to prevent race conditions
+            $customer = \App\Models\Customer::lockForUpdate()->find($booking->customerID);
             $customer->walletBalance = ($customer->walletBalance ?? 0) + $finalPayment->amount;
             $customer->save();
-            
+
             // Update booking status
             $booking->payment_status = 'refunded';
             $booking->save();

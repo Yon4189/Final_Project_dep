@@ -566,19 +566,25 @@ class AdminAuthController extends Authenticatable
         }
 
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'required|file|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $filename = 'admin_' . $admin->adminID . '_' . time() . '.' . $file->getClientOriginalExtension();
-            
-            // Store in public/profiles
+            try {
+                $fileValidator = app(\App\Services\FileUploadValidator::class);
+                $fileValidator->validateImage($request->file('image'), 2048);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+
+            $file     = $request->file('image');
+            $fileValidator = app(\App\Services\FileUploadValidator::class);
+            $filename = $fileValidator->safeFilename($file, 'admin_' . $admin->adminID);
+
             $file->move(public_path('profiles'), $filename);
             if (!$admin) {
                 return response()->json(['error' => 'Admin not found'], 404);
             }
-            // Save path in DB
             $path = 'profiles/' . $filename;
             $admin->update(['profilePicture' => $path]);
 

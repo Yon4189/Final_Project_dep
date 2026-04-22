@@ -6,6 +6,15 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Loader2, AlertTriangle, Wallet, BellOff, Check,
+  ShieldCheck, UserPlus, MessageSquare, Users, X, RefreshCw,
+  Wrench, MapPin, CheckCircle, XCircle, BookOpen, CreditCard
+} from 'lucide-react';
+import api from '../api/axios';
+
 // Maps notification type → { icon, color, route }
 const TYPE_CONFIG = {
   provider_registration: {
@@ -44,6 +53,12 @@ const TYPE_CONFIG = {
     route: '/admin/disputes',
     label: 'Dispute'
   },
+  dispute_message: {
+    icon: MessageSquare,
+    color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    route: '/admin/disputes',
+    label: 'Dispute Message'
+  },
   withdrawal_request: {
     icon: Wallet,
     color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
@@ -51,7 +66,7 @@ const TYPE_CONFIG = {
     label: 'Withdrawal'
   },
   payment: {
-    icon: Wallet,
+    icon: CreditCard,
     color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
     route: '/admin/payments',
     label: 'Payment'
@@ -61,6 +76,60 @@ const TYPE_CONFIG = {
     color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
     route: '/admin/disputes',
     label: 'Message'
+  },
+  booking_completed: {
+    icon: CheckCircle,
+    color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+    route: '/admin/bookings',
+    label: 'Booking Completed'
+  },
+  booking_cancelled: {
+    icon: XCircle,
+    color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
+    route: '/admin/bookings',
+    label: 'Booking Cancelled'
+  },
+  booking_request: {
+    icon: BookOpen,
+    color: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
+    route: '/admin/bookings',
+    label: 'New Booking'
+  },
+  overdue_payment_detected: {
+    icon: AlertTriangle,
+    color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+    route: '/admin/payments',
+    label: 'Overdue Payment'
+  },
+  refund_failed: {
+    icon: AlertTriangle,
+    color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    route: '/admin/payments',
+    label: 'Refund Failed'
+  },
+  payout_release_failed: {
+    icon: AlertTriangle,
+    color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    route: '/admin/payments',
+    label: 'Payout Failed'
+  },
+  account_frozen: {
+    icon: ShieldCheck,
+    color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+    route: '/admin/users',
+    label: 'Account Frozen'
+  },
+  service_started: {
+    icon: Wrench,
+    color: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+    route: '/admin/bookings',
+    label: 'Service Started'
+  },
+  provider_arrived: {
+    icon: MapPin,
+    color: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
+    route: '/admin/bookings',
+    label: 'Provider Arrived'
   },
 };
 
@@ -158,9 +227,14 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate, onClose }) => {
     // Navigate to relevant page
     const config = TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
 
-    // If dispute notification, navigate to specific dispute
-    if ((notif.type === 'dispute' || notif.type === 'new_dispute' || notif.type === 'new_message') && notif.data?.disputeID) {
+    // Dispute → navigate to specific dispute if ID available
+    if (['dispute', 'new_dispute', 'dispute_message'].includes(notif.type) && notif.data?.dispute_id) {
+      navigate(`/admin/disputes/${notif.data.dispute_id}`);
+    } else if (['dispute', 'new_dispute', 'dispute_message'].includes(notif.type) && notif.data?.disputeID) {
       navigate(`/admin/disputes/${notif.data.disputeID}`);
+    // Booking → navigate to bookings page
+    } else if (['booking_completed', 'booking_cancelled', 'booking_request', 'service_started', 'provider_arrived'].includes(notif.type) && notif.data?.booking_id) {
+      navigate(`/admin/bookings`);
     } else if (config.route) {
       navigate(config.route);
     }
