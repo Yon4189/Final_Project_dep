@@ -24,6 +24,9 @@ class Kernel extends ConsoleKernel
         $schedule->job(new \App\Jobs\PaymentReminderJob)->hourly();
         $schedule->job(new \App\Jobs\HeldPayoutReleaseJob)->hourly();
         $schedule->job(new \App\Jobs\OverduePaymentJob)->dailyAt('02:00');
+
+        // Daily database backup at 3 AM
+        $schedule->command('db:backup')->dailyAt('03:00');
     }
 
     /**
