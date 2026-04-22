@@ -45,7 +45,7 @@ const LandingFooter = () => {
             <div className="space-y-3 text-slate-400 text-sm">
               <p className="flex items-center gap-3">
                 <Mail size={16} className="text-blue-400" />
-                <a href="mailto:animawabate@gmail.com" className="hover:text-white transition-colors">animawabate@gmail.com</a>
+                <a href="mailto:info@ethiohandyman.com" className="hover:text-white transition-colors">info@ethiohandyman.com</a>
               </p>
               <p className="flex items-center gap-3">
                 <Phone size={16} className="text-blue-400" />

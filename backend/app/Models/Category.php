@@ -24,4 +24,9 @@ class Category extends Model
     public function services() {  
         return $this->hasMany(Service::class, 'catagoryID', 'catagoryID'); // fk, local key  
     }  
+
+    // a category can have many service providers
+    public function providers() {
+        return $this->hasMany(ServiceProvider::class, 'catagoryID', 'catagoryID');
+    }
 }

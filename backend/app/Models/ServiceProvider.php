@@ -184,7 +184,7 @@ class ServiceProvider extends Authenticatable
      */
     public function isApproved(): bool
     {
-        return $this->status === 'approved';
+        return in_array(strtolower($this->status), ['approved', 'active']);
     }
 
     /**
@@ -253,7 +253,7 @@ class ServiceProvider extends Authenticatable
      */
     public function scopeApproved($query)
     {
-        return $query->where('status', 'approved');
+        return $query->whereIn('status', ['approved', 'Active', 'active']);
     }
 
     /**

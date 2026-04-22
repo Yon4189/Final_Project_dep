@@ -30,6 +30,7 @@ use App\Http\Controllers\LocationAutocompleteController;
 // ==================== BROADCASTING ====================
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
+<<<<<<< HEAD
 // ==================== PUBLIC ROUTES (no auth) ====================
 Route::get('/health', fn() => response()->json(['status' => 'ok']));
 Route::get('/test',   fn() => response()->json(['success' => true, 'server_time' => now()]));
@@ -41,6 +42,12 @@ Route::get('/public/stats',  [AdminAuthController::class, 'getStats']);
 // Location autocomplete — rate limited to prevent abuse
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/location/autocomplete', [LocationAutocompleteController::class, 'autocomplete']);
+=======
+// ==================== PUBLIC ROUTES ====================
+
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok', 'message' => 'API is healthy']);
+>>>>>>> 6bdd6357bb8432c830aaad5c271c4315a495f2da
 });
 
 // ==================== AUTH ROUTES — rate limited to prevent brute force ====================
@@ -280,10 +287,48 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('wallet')->gro
 });
 
 // ==================== ADMIN ROUTES ====================
+<<<<<<< HEAD
 // auth:admin     — must have valid admin token
 // ip.whitelist   — only allowed IPs can reach admin routes
 // log.sensitive  — every admin action is logged
 Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admin')->group(function () {
+=======
+Route::group(['middleware' => 'auth:admin', 'prefix' => 'admin'], function () {
+    // Statistics
+    Route::get('/stats', [AdminAuthController::class, 'getStats']);
+    Route::get('/search', [AdminAuthController::class, 'globalSearch']);
+    
+    // Platform Settings
+    Route::get('/settings', [AdminAuthController::class, 'getSettings']);
+    Route::post('/settings', [AdminAuthController::class, 'updateSettings']);
+    Route::get('/system-report', [AdminAuthController::class, 'generateSystemReport']);
+    Route::post('/profile/update', [AdminAuthController::class, 'updateProfile']);
+    Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
+    
+    // Bookings
+    Route::get('/bookings', [AdminAuthController::class, 'getAllBookings']);
+    
+    // Provider Management
+    Route::get('/providers', [AdminAuthController::class, 'getAllProviders']);
+    Route::get('/providers/pending', [AdminAuthController::class, 'pendingProviders']);
+    Route::get('/providers/approved', [AdminAuthController::class, 'approvedProviders']);
+    Route::get('/providers/rejected', [AdminAuthController::class, 'rejectedProviders']);
+    Route::get('/providers/suspended', [AdminAuthController::class, 'suspendedProviders']);
+    Route::post('/providers/{id}/verify', [AdminAuthController::class, 'verifyProvider']);
+    Route::patch('/providers/{id}/status', [AdminAuthController::class, 'toggleProviderStatus']);
+    Route::delete('/providers/{id}', [AdminAuthController::class, 'deleteProvider']);
+    
+    // Customer Management
+    Route::get('/customers', [AdminAuthController::class, 'getCustomers']);
+    Route::patch('/customers/{id}/status', [AdminAuthController::class, 'toggleCustomerStatus']);
+    Route::delete('/customers/{id}', [AdminAuthController::class, 'deleteCustomer']);
+    
+    // Category Management
+    Route::get('/categories', [CategoryController::class, 'getCategories']);
+    Route::post('/categories', [CategoryController::class, 'addCategory']);
+    Route::put('/categories/{id}', [CategoryController::class, 'editCategory']);
+    Route::delete('/categories/{id}', [CategoryController::class, 'deleteCategory']);
+>>>>>>> 6bdd6357bb8432c830aaad5c271c4315a495f2da
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     Route::get('/stats',    [AdminAuthController::class, 'getStats']);
