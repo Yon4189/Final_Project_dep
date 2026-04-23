@@ -115,11 +115,9 @@ export function useInitializeChapaPayment(options?: UseMutationOptions<PaymentIn
       return response as unknown as PaymentIntent;
     },
     onSuccess: (data, variables, context, meta) => {
-      handleMutationSuccess('Payment initialized successfully');
       options?.onSuccess?.(data, variables, context, meta);
     },
     onError: (error, variables, context, meta) => {
-      handleQueryError(error);
       options?.onError?.(error, variables, context, meta);
     },
   });
@@ -133,11 +131,9 @@ export function useVerifyChapaPayment(options?: UseMutationOptions<PaymentVerifi
       return response.data;
     },
     onSuccess: (data, variables, context, meta) => {
-      handleMutationSuccess('Payment verified successfully');
       options?.onSuccess?.(data, variables, context, meta);
     },
     onError: (error, variables, context, meta) => {
-      handleQueryError(error);
       options?.onError?.(error, variables, context, meta);
     },
   });
