@@ -94,6 +94,7 @@ Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->gro
     Route::post('/profile/password',[CustomerController::class, 'changePassword']);
     Route::post('/push-token',      [CustomerController::class, 'updatePushToken']);
     Route::post('/logout',          [OnlineStatusController::class, 'customerLogout']);
+    Route::post('/logout-all',      [CustomerAuthController::class, 'logoutAllDevices']);
     Route::post('/heartbeat',       [OnlineStatusController::class, 'customerHeartbeat']);
 
     // ── Bookings ─────────────────────────────────────────────────────────────
@@ -199,6 +200,7 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
 
     // ── Auth & Profile ────────────────────────────────────────────────────────
     Route::post('/logout',              [OnlineStatusController::class, 'providerLogout']);
+    Route::post('/logout-all',          [ServiceProviderAuthController::class, 'logoutAllDevices']);
     Route::post('/heartbeat',           [OnlineStatusController::class, 'providerHeartbeat']);
     Route::get('/profile',              [ServiceProviderAuthController::class, 'profile']);
     Route::post('/profile/update',      [ServiceProviderAuthController::class, 'updateProfile']);
@@ -292,11 +294,13 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     // ── Settings ──────────────────────────────────────────────────────────────
     Route::get('/settings',         [AdminAuthController::class, 'getSettings']);
     Route::post('/settings',        [AdminAuthController::class, 'updateSettings']);
+    Route::post('/settings/logo',   [AdminAuthController::class, 'uploadLogo']);
     Route::post('/profile/update',  [AdminAuthController::class, 'updateProfile']);
     Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
 
     // ── Bookings ──────────────────────────────────────────────────────────────
     Route::get('/bookings', [AdminAuthController::class, 'getAllBookings']);
+    Route::post('/bookings/{id}/cancel', [AdminAuthController::class, 'cancelBooking']);
 
     // ── Provider Management ───────────────────────────────────────────────────
     Route::get('/providers',            [AdminAuthController::class, 'getAllProviders']);
@@ -312,6 +316,7 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     Route::get('/customers',                [AdminAuthController::class, 'getCustomers']);
     Route::patch('/customers/{id}/status',  [AdminAuthController::class, 'toggleCustomerStatus']);
     Route::delete('/customers/{id}',        [AdminAuthController::class, 'deleteCustomer']);
+    Route::post('/users/force-logout',      [AdminAuthController::class, 'forceLogoutUser']);
 
     // ── Category Management ───────────────────────────────────────────────────
     Route::get('/categories',           [CategoryController::class, 'getCategories']);

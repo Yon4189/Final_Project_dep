@@ -44,9 +44,9 @@ export default function ScheduleScreen() {
   };
 
   // Filter and group requests by date
-  // Only show Confirmed, In Progress, and Accepted jobs
+  // Show all active jobs: accepted, arrived, in_progress, waiting confirmation
   const scheduleData = useMemo(() => {
-    const validStatuses = ["confirmed", "accepted", "in_progress"];
+    const validStatuses = ["accepted", "arrived", "in_progress", "waiting_customer_confirmation", "service_confirmed"];
     const filtered = allRequests.filter((r) => validStatuses.includes(r.status));
 
     // Group by date

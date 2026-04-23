@@ -517,6 +517,68 @@ class AdminAuthController extends Authenticatable
     }
 
     /**
+     * Admin cancel a booking (for stuck/problematic bookings)
+     */
+    public function cancelBooking(Request $request, $bookingId)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $booking = Booking::find($bookingId);
+
+        if (!$booking) {
+            return response()->json(['success' => false, 'message' => 'Booking not found'], 404);
+        }
+
+        if (in_array($booking->status, ['completed', 'cancelled'])) {
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot cancel a booking with status '{$booking->status}'."
+            ], 422);
+        }
+
+        $oldStatus = $booking->status;
+        $booking->status             = 'cancelled';
+        $booking->cancelled_at       = now();
+        $booking->cancellation_reason = 'Admin cancelled: ' . $request->reason;
+        $booking->save();
+
+        // Notify both parties
+        $notificationService = app(\App\Services\NotificationService::class);
+
+        $notificationService->toCustomer(
+            $booking->customerID,
+            'booking_cancelled',
+            'Booking Cancelled by Admin',
+            "Your booking #{$bookingId} has been cancelled by the platform. Reason: {$request->reason}",
+            ['booking_id' => $bookingId, 'reason' => $request->reason],
+            $bookingId
+        );
+
+        $notificationService->toProvider(
+            $booking->providerID,
+            'booking_cancelled',
+            'Booking Cancelled by Admin',
+            "Booking #{$bookingId} has been cancelled by the platform. Reason: {$request->reason}",
+            ['booking_id' => $bookingId, 'reason' => $request->reason],
+            $bookingId
+        );
+
+        Log::info('Admin cancelled booking', [
+            'admin_id'   => auth('admin')->id(),
+            'booking_id' => $bookingId,
+            'old_status' => $oldStatus,
+            'reason'     => $request->reason,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Booking #{$bookingId} cancelled successfully.",
+        ]);
+    }
+
+    /**
      * 10. Update Admin Profile
      */
     public function updateProfile(Request $request)
@@ -629,6 +691,46 @@ class AdminAuthController extends Authenticatable
         return response()->json([
             'success' => true,
             'data' => $admin
+        ]);
+    }
+
+    /**
+     * Force-logout a specific user (revoke all their tokens)
+     * Admin only — used when a phone is stolen or account is compromised
+     */
+    public function forceLogoutUser(Request $request)
+    {
+        $request->validate([
+            'user_type' => 'required|in:customer,provider',
+            'user_id'   => 'required|integer',
+        ]);
+
+        $userType = $request->user_type;
+        $userId   = $request->user_id;
+
+        if ($userType === 'customer') {
+            $user = \App\Models\Customer::find($userId);
+        } else {
+            $user = \App\Models\ServiceProvider::find($userId);
+        }
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => ucfirst($userType) . ' not found'], 404);
+        }
+
+        $tokenCount = $user->tokens()->count();
+        $user->tokens()->delete();
+
+        Log::info('Admin force-logged out user', [
+            'admin_id'   => auth('admin')->id(),
+            'user_type'  => $userType,
+            'user_id'    => $userId,
+            'tokens_revoked' => $tokenCount,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "All {$tokenCount} token(s) revoked for {$userType} #{$userId}. They are now logged out from all devices.",
         ]);
     }
 
@@ -874,10 +976,12 @@ class AdminAuthController extends Authenticatable
     {
         try {
             $settings = [
-                'commissionRate' => \App\Models\SystemSetting::get('commission_percentage', 10),
-                'maxServiceRadius' => \App\Models\SystemSetting::get('max_service_radius', 15),
-                'minPayoutAmount' => \App\Models\SystemSetting::get('min_payout_amount', 500),
-                'maintenanceMode' => \App\Models\SystemSetting::get('maintenance_mode', false),
+                'commissionRate'      => \App\Models\SystemSetting::get('commission_percentage', 10),
+                'maxServiceRadius'    => \App\Models\SystemSetting::get('max_service_radius', 15),
+                'minPayoutAmount'     => \App\Models\SystemSetting::get('min_payout_amount', 500),
+                'maintenanceMode'     => \App\Models\SystemSetting::get('maintenance_mode', false),
+                'maxDailyWithdrawal'  => \App\Models\SystemSetting::get('max_daily_withdrawal', 100000),
+                'maxWithdrawalAmount' => \App\Models\SystemSetting::get('max_withdrawal_amount', 50000),
             ];
 
             $branding = [
@@ -903,6 +1007,41 @@ class AdminAuthController extends Authenticatable
                 'message' => 'Failed to get settings'
             ], 500);
         }
+    }
+
+    /**
+     * Upload system logo (branding)
+     */
+    public function uploadLogo(Request $request)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate(['logo' => 'required|file|max:2048']);
+
+        try {
+            $fileValidator = app(\App\Services\FileUploadValidator::class);
+            $fileValidator->validateImage($request->file('logo'), 2048);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        $file     = $request->file('logo');
+        $fileValidator = app(\App\Services\FileUploadValidator::class);
+        $filename = $fileValidator->safeFilename($file, 'logo');
+        $file->move(public_path('branding'), $filename);
+
+        $path = url('branding/' . $filename);
+
+        \App\Models\SystemSetting::set('logo_url', $path, 'string', 'System logo URL');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logo uploaded successfully',
+            'data'    => ['logo_url' => $path]
+        ]);
     }
 
     /**

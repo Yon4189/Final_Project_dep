@@ -1719,3 +1719,254 @@ A: Laravel falls back to the database automatically. The app keeps working, just
 **Security score: 5/10 → 8.5/10**
 
 **One remaining item:** API versioning — intentionally skipped because adding `/v1/` to all routes would immediately break the mobile app. Do this when planning a major release.
+
+---
+
+## 13. Address Validation
+
+### What was the problem?
+
+The `full_address` field in the address book had no length limit. A user could save a 10,000-character string as their address. This wastes database space and could cause display issues in the mobile app.
+
+Also, `latitude` and `longitude` had no range validation — someone could send `latitude: 9999` which is physically impossible (valid range is -90 to 90).
+
+### What we fixed
+
+**File:** `backend/app/Http/Controllers/AddressController.php`
+**Methods:** `store()` and `update()`
+
+```php
+// Before:
+'full_address' => 'required|string',
+'latitude' => 'required|numeric',
+'longitude' => 'required|numeric',
+
+// After:
+'full_address' => 'required|string|max:500',
+'latitude' => 'required|numeric|between:-90,90',
+'longitude' => 'required|numeric|between:-180,180',
+'custom_label' => 'required_if:label,other|string|max:50|nullable',
+'place_id' => 'nullable|string|max:255',
+```
+
+- `max:500` on address — 500 characters is more than enough for any real address
+- `between:-90,90` on latitude — physically valid range for GPS coordinates
+- `between:-180,180` on longitude — physically valid range
+- `max:50` on custom_label — prevents long custom labels
+- `max:255` on place_id — Google Places IDs are never longer than this
+
+---
+
+## 14. Withdrawal Limits
+
+### What was the problem?
+
+A provider could request a withdrawal of any amount — even 10,000,000 ETB in a single request. There was also no daily limit, so a provider could make 100 small withdrawals in one day totaling millions.
+
+### What we fixed
+
+**File:** `backend/app/Http/Controllers/WalletController.php`
+**Method:** `requestWithdrawal()`
+
+**Per-request limit:**
+```php
+// Before:
+'amount' => 'required|numeric|min:50',
+
+// After:
+'amount' => 'required|numeric|min:50|max:50000', // Max 50,000 ETB per request
+```
+
+**Daily limit check:**
+```php
+$dailyLimit = SystemSetting::get('max_daily_withdrawal', 100000); // 100,000 ETB/day
+$todayWithdrawn = Withdrawal::where('providerID', $provider->providerID)
+    ->whereDate('created_at', today())
+    ->whereIn('status', ['pending', 'approved', 'processed'])
+    ->sum('amount');
+
+if (($todayWithdrawn + $amount) > $dailyLimit) {
+    return response()->json([
+        'message' => "Daily withdrawal limit is {$dailyLimit} ETB. Remaining: {$remaining} ETB."
+    ], 422);
+}
+```
+
+**Admin-configurable limits** — both limits are stored in `SystemSetting` so admin can change them without code changes:
+- `max_withdrawal_amount` — per-request limit (default: 50,000 ETB)
+- `max_daily_withdrawal` — daily total limit (default: 100,000 ETB)
+
+These are now returned in `GET /admin/settings` so the admin panel can display and edit them.
+
+---
+
+## 15. Logo Upload Endpoint
+
+### What was the problem?
+
+The admin Settings page had a "Upload Logo" button in the Branding tab that did nothing. Clicking it would open a file picker, but the file was only previewed locally — it was never sent to the server. After refreshing the page, the logo was gone.
+
+### What we fixed
+
+**Backend — new endpoint:**
+`POST /api/admin/settings/logo`
+
+**File:** `backend/app/Http/Controllers/AdminAuthController.php`
+**Method:** `uploadLogo()` (new)
+
+```php
+public function uploadLogo(Request $request)
+{
+    $request->validate(['logo' => 'required|file|max:2048']);
+
+    // Magic byte validation (same as profile pictures)
+    $fileValidator = app(FileUploadValidator::class);
+    $fileValidator->validateImage($request->file('logo'), 2048);
+
+    // Safe filename + store in public/branding/
+    $filename = $fileValidator->safeFilename($file, 'logo');
+    $file->move(public_path('branding'), $filename);
+
+    // Save URL to SystemSetting
+    $path = url('branding/' . $filename);
+    SystemSetting::set('logo_url', $path, 'string', 'System logo URL');
+
+    return response()->json(['success' => true, 'data' => ['logo_url' => $path]]);
+}
+```
+
+**Frontend — Settings.jsx:**
+The `handleLogoUpload` function was previously just reading the file locally with `FileReader`. Now it sends the file to the backend:
+
+```javascript
+const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    const response = await api.post('/admin/settings/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    if (response.data.success) {
+        setBranding({ ...branding, logoUrl: response.data.data.logo_url });
+        queryClient.invalidateQueries(['adminSettings']); // Refresh settings
+    }
+};
+```
+
+The logo URL is now persisted in the database and returned by `GET /admin/settings`.
+
+---
+
+## 16. Refund Limits
+
+### What was the problem?
+
+When an admin resolved a dispute with a refund, there was no check that the refund amount was less than or equal to the booking amount. An admin could accidentally (or maliciously) refund 10,000 ETB for a 500 ETB booking.
+
+### What we fixed
+
+**File:** `backend/app/Http/Controllers/AdminDisputeController.php`
+**Method:** `updateStatus()`
+
+Added a check before processing the refund:
+
+```php
+if ($request->status === 'resolved' && $request->refund_amount > 0) {
+    $booking = Booking::find($dispute->bookingID);
+    if ($booking && $request->refund_amount > $booking->agreed_price) {
+        return response()->json([
+            'success' => false,
+            'message' => "Refund amount ({$request->refund_amount} ETB) cannot exceed the booking amount ({$booking->agreed_price} ETB).",
+        ], 422);
+    }
+}
+```
+
+This runs BEFORE the refund is processed, so no money is moved if the amount is invalid.
+
+**Why this matters:** Without this check, an admin could type `99999` in the refund field and accidentally send 99,999 ETB to a customer for a 500 ETB booking. The platform would lose money with no way to recover it.
+
+---
+
+## 17. Webhook Retry Mechanism
+
+### What was the problem?
+
+When Chapa sends a webhook (payment confirmation), your server must be online to receive it. If your server is down for maintenance, restarting, or experiencing a brief outage, the webhook arrives and fails. Chapa may not retry it. The customer's payment is stuck — money was deducted but the booking stays "pending."
+
+### What we built
+
+**3 new files:**
+
+1. **Migration:** `backend/database/migrations/2026_04_22_000001_create_webhook_logs_table.php`
+   - Creates a `webhook_logs` table that records every incoming webhook
+
+2. **Model:** `backend/app/Models/WebhookLog.php`
+   - `markProcessed()` — marks webhook as successfully handled
+   - `markFailed(error, retryDelayMinutes)` — records failure and schedules retry
+
+3. **Artisan command:** `backend/app/Console/Commands/RetryFailedWebhooks.php`
+   - `php artisan webhooks:retry`
+   - Finds all failed webhooks with `retry_count < 5` and `next_retry_at <= now()`
+   - Re-processes them using `WalletService::handlePaymentSuccess()`
+   - Uses exponential backoff: 5, 10, 20, 40, 80 minutes between retries
+
+**Scheduled every 10 minutes** in `Console/Kernel.php`:
+```php
+$schedule->command('webhooks:retry')->everyTenMinutes();
+```
+
+### How the retry flow works
+
+```
+Webhook arrives → Log to webhook_logs (status: pending)
+        │
+        ▼
+Process webhook
+        │
+    Success? ──YES──→ Mark as processed
+        │
+       NO
+        │
+        ▼
+Mark as failed, set next_retry_at = now() + 5 minutes
+        │
+        ▼
+10 minutes later: webhooks:retry command runs
+        │
+        ▼
+Find failed webhooks where next_retry_at <= now()
+        │
+        ▼
+Re-process → Success? Mark processed
+             Fail again? Retry count++, next_retry_at = now() + 10 min
+        │
+        ▼
+After 5 failures: stop retrying, alert admin
+```
+
+### Exponential backoff
+
+Each retry waits longer than the last:
+- Attempt 1: wait 5 minutes
+- Attempt 2: wait 10 minutes
+- Attempt 3: wait 20 minutes
+- Attempt 4: wait 40 minutes
+- Attempt 5: wait 80 minutes → give up
+
+This prevents hammering a system that's temporarily down.
+
+### What is exponential backoff?
+
+Instead of retrying every 5 minutes forever (which could overwhelm a recovering system), you wait longer each time. The formula is `5 * 2^attempt_number` minutes. This is the same pattern used by AWS SQS, Stripe, and most production systems.
+
+### Files changed
+
+| File | What changed |
+|------|-------------|
+| `backend/database/migrations/2026_04_22_000001_create_webhook_logs_table.php` | New — `webhook_logs` table |
+| `backend/app/Models/WebhookLog.php` | New — model with `markProcessed()` and `markFailed()` |
+| `backend/app/Console/Commands/RetryFailedWebhooks.php` | New — `webhooks:retry` command |
+| `backend/app/Console/Kernel.php` | Added `webhooks:retry` to run every 10 minutes |
