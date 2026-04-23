@@ -38,6 +38,9 @@ Route::get('/categories',    [CategoryController::class, 'getCategories']);
 Route::get('/services',      [ServiceController::class, 'index']);
 Route::get('/public/stats',  [AdminAuthController::class, 'getStats']);
 
+// ── Google OAuth ──────────────────────────────────────────────────────────────
+Route::post('/auth/google/customer', [\App\Http\Controllers\GoogleAuthController::class, 'customerGoogleAuth']);
+
 // Location autocomplete — rate limited to prevent abuse
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/location/autocomplete', [LocationAutocompleteController::class, 'autocomplete']);
