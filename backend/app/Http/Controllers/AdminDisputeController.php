@@ -180,6 +180,18 @@ class AdminDisputeController extends Controller
             ], 404);
         }
 
+        // ── Refund limit check ────────────────────────────────────────────────
+        if ($request->status === 'resolved' && $request->refund_amount > 0) {
+            $booking = Booking::find($dispute->bookingID);
+            if ($booking && $request->refund_amount > $booking->agreed_price) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Refund amount ({$request->refund_amount} ETB) cannot exceed the booking amount ({$booking->agreed_price} ETB).",
+                ], 422);
+            }
+        }
+        // ── End refund limit check ────────────────────────────────────────────
+
         try {
             DB::beginTransaction();
 

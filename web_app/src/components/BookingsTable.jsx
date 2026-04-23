@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import {
   Search, X, Eye, Calendar, MapPin, DollarSign, Clock, Wrench,
   CheckCircle, XCircle, Loader2, AlertCircle, Filter, XCircle as XCircleIcon,
-  ChevronLeft, ChevronRight, UserCheck
+  ChevronLeft, ChevronRight, UserCheck, Ban
 } from 'lucide-react';
+import api from '../api/axios';
 
 const getStatusStyle = (status) => {
   switch (status?.toLowerCase()) {
@@ -63,6 +64,25 @@ const BookingsTable = ({
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const handleCancelBooking = async () => {
+    if (!cancelReason.trim()) return;
+    setCancellingId(selectedBooking.id);
+    try {
+      await api.post(`/admin/bookings/${selectedBooking.id}/cancel`, { reason: cancelReason });
+      setSelectedBooking(null);
+      setShowCancelConfirm(false);
+      setCancelReason('');
+      onRefresh();
+    } catch (err) {
+      alert('Failed to cancel booking: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setCancellingId(null);
+    }
+  };
   const itemsPerPage = 5;
 
   const processedData = useMemo(() => {
@@ -531,8 +551,49 @@ const BookingsTable = ({
                 </div>
               </div>
 
+              {/* Cancel Booking (only for non-terminal statuses) */}
+              {!['completed', 'cancelled', 'rejected', 'expired'].includes(selectedBooking.status?.toLowerCase()) && (
+                <div className="border-t border-admin-border pt-4">
+                  {!showCancelConfirm ? (
+                    <button
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="w-full flex items-center justify-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 font-semibold py-3 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition"
+                    >
+                      <Ban size={16} /> Cancel Booking
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-red-600">Confirm cancellation — provide a reason:</p>
+                      <textarea
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="Reason for cancellation..."
+                        rows={2}
+                        className="w-full border border-admin-border rounded-xl px-3 py-2 text-sm bg-admin-card text-admin-text focus:outline-none focus:border-red-400 resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setShowCancelConfirm(false); setCancelReason(''); }}
+                          className="flex-1 py-2 rounded-xl border border-admin-border text-sm font-medium text-admin-text-muted hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                        >
+                          Back
+                        </button>
+                        <button
+                          onClick={handleCancelBooking}
+                          disabled={!cancelReason.trim() || cancellingId === selectedBooking.id}
+                          className="flex-1 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {cancellingId === selectedBooking.id ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
+                          Confirm Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
-                onClick={() => setSelectedBooking(null)}
+                onClick={() => { setSelectedBooking(null); setShowCancelConfirm(false); setCancelReason(''); }}
                 className="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition mt-2"
               >
                 {t('modal_close')}

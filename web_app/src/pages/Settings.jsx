@@ -417,20 +417,36 @@ const Settings = () => {
     }
   };
 
-  const handleLogoUpload = (e) => {
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     if (file.size > 2 * 1024 * 1024) {
       alert(t('set_branding_logo_size_error') || 'Logo size must be less than 2MB');
       return;
     }
-    
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBranding({ ...branding, logoUrl: reader.result });
-    };
-    reader.readAsDataURL(file);
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const response = await api.post('/admin/settings/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data.success) {
+        const logoUrl = response.data.data.logo_url;
+        setBranding({ ...branding, logoUrl });
+        queryClient.invalidateQueries(['adminSettings']);
+        alert(t('set_branding_logo_success') || 'Logo uploaded successfully!');
+      }
+    } catch (err) {
+      console.error('Logo upload failed:', err);
+      alert(t('set_branding_logo_error') || 'Failed to upload logo. Please try again.');
+    }
+
+    // Reset file input so same file can be re-selected
+    e.target.value = '';
   };
 
   const systemHealth = [
