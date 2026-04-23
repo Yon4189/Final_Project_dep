@@ -208,7 +208,12 @@ class ProviderDashboardController extends Controller
             $bookings = Booking::with(['customer', 'service', 'service.category', 'payment'])
                 ->where('providerID', $providerID)
                 ->when($status, function($query) use ($status) {
-                    $query->where('status', $status);
+                    // Special handling for 'accepted' status - show all active jobs
+                    if ($status === 'accepted') {
+                        $query->whereIn('status', ['accepted', 'confirmed', 'arrived', 'in_progress', 'waiting_customer_confirmation']);
+                    } else {
+                        $query->where('status', $status);
+                    }
                 })
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -254,6 +259,9 @@ class ProviderDashboardController extends Controller
                     'serviceID' => $booking->service->serviceID ?? null,
                     'serviceName' => $booking->service->title ?? 'Unknown Service',
                     'serviceDescription' => $booking->service->description ?? null,
+                    
+                    // Payment Status - Add this for frontend
+                    'payment_status' => $booking->payment_status,
                     
                     // Timestamps
                     'created_at' => $booking->created_at,

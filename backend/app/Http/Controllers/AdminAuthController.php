@@ -566,19 +566,25 @@ class AdminAuthController extends Authenticatable
         }
 
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'required|file|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $filename = 'admin_' . $admin->adminID . '_' . time() . '.' . $file->getClientOriginalExtension();
-            
-            // Store in public/profiles
+            try {
+                $fileValidator = app(\App\Services\FileUploadValidator::class);
+                $fileValidator->validateImage($request->file('image'), 2048);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+
+            $file     = $request->file('image');
+            $fileValidator = app(\App\Services\FileUploadValidator::class);
+            $filename = $fileValidator->safeFilename($file, 'admin_' . $admin->adminID);
+
             $file->move(public_path('profiles'), $filename);
             if (!$admin) {
                 return response()->json(['error' => 'Admin not found'], 404);
             }
-            // Save path in DB
             $path = 'profiles/' . $filename;
             $admin->update(['profilePicture' => $path]);
 
@@ -706,5 +712,335 @@ class AdminAuthController extends Authenticatable
             ->map(fn($p) => $this->formatProvider($p));
 
         return response()->json(['success' => true, 'data' => $booking]);
+    }
+
+    /**
+     * Update platform settings
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateSettings(Request $request)
+    {
+        try {
+            $admin = auth('admin')->user();
+            if (!$admin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Validate incoming settings
+            $validator = Validator::make($request->all(), [
+                'settings' => 'nullable|array',
+                'settings.commissionRate' => 'nullable|integer|min:0|max:100',
+                'settings.maxServiceRadius' => 'nullable|integer|min:1|max:500',
+                'settings.minPayoutAmount' => 'nullable|numeric|min:0',
+                'settings.maintenanceMode' => 'nullable|boolean',
+                'branding' => 'nullable|array',
+                'branding.systemName' => 'nullable|string|max:255',
+                'branding.logoUrl' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $updatedSettings = [];
+
+            // Update platform settings if provided
+            if ($request->has('settings')) {
+                $settings = $request->input('settings');
+
+                if (isset($settings['commissionRate'])) {
+                    \App\Models\SystemSetting::set(
+                        'commission_percentage',
+                        $settings['commissionRate'],
+                        'integer',
+                        'Platform commission percentage (0-100)'
+                    );
+                    $updatedSettings['commission_percentage'] = $settings['commissionRate'];
+                }
+
+                if (isset($settings['maxServiceRadius'])) {
+                    \App\Models\SystemSetting::set(
+                        'max_service_radius',
+                        $settings['maxServiceRadius'],
+                        'integer',
+                        'Maximum service radius in kilometers'
+                    );
+                    $updatedSettings['max_service_radius'] = $settings['maxServiceRadius'];
+                }
+
+                if (isset($settings['minPayoutAmount'])) {
+                    \App\Models\SystemSetting::set(
+                        'min_payout_amount',
+                        $settings['minPayoutAmount'],
+                        'decimal',
+                        'Minimum payout amount in ETB'
+                    );
+                    $updatedSettings['min_payout_amount'] = $settings['minPayoutAmount'];
+                }
+
+                if (isset($settings['maintenanceMode'])) {
+                    \App\Models\SystemSetting::set(
+                        'maintenance_mode',
+                        $settings['maintenanceMode'],
+                        'boolean',
+                        'Platform maintenance mode status'
+                    );
+                    $updatedSettings['maintenance_mode'] = $settings['maintenanceMode'];
+                }
+            }
+
+            // Update branding settings if provided
+            if ($request->has('branding')) {
+                $branding = $request->input('branding');
+
+                if (isset($branding['systemName'])) {
+                    \App\Models\SystemSetting::set(
+                        'system_name',
+                        $branding['systemName'],
+                        'string',
+                        'Platform system name'
+                    );
+                    $updatedSettings['system_name'] = $branding['systemName'];
+                }
+
+                if (isset($branding['logoUrl'])) {
+                    $logoUrl = $branding['logoUrl'];
+                    
+                    // If it's a new base64 image upload, save it as a file
+                    if (preg_match('/^data:image\/(\w+);base64,/', $logoUrl, $type)) {
+                        $base64Image = substr($logoUrl, strpos($logoUrl, ',') + 1);
+                        $extension = strtolower($type[1]); // jpg, png, svg+xml etc.
+                        if ($extension === 'svg+xml') $extension = 'svg';
+                        
+                        $fileName = 'branding/logo_' . time() . '_' . uniqid() . '.' . $extension;
+                        
+                        // Save to storage/app/public/branding/
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, base64_decode($base64Image));
+                        
+                        // Set the new URL
+                        $logoUrl = asset('storage/' . $fileName);
+                    }
+
+                    \App\Models\SystemSetting::set(
+                        'logo_url',
+                        $logoUrl,
+                        'string',
+                        'Platform logo URL'
+                    );
+                    $updatedSettings['logo_url'] = $logoUrl;
+                }
+            }
+
+            Log::info('Admin settings updated', [
+                'admin_id' => $admin->adminID,
+                'updated_settings' => $updatedSettings
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Settings updated successfully',
+                'data' => $updatedSettings
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update admin settings', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update settings',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get platform settings
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSettings()
+    {
+        try {
+            $settings = [
+                'commissionRate' => \App\Models\SystemSetting::get('commission_percentage', 10),
+                'maxServiceRadius' => \App\Models\SystemSetting::get('max_service_radius', 15),
+                'minPayoutAmount' => \App\Models\SystemSetting::get('min_payout_amount', 500),
+                'maintenanceMode' => \App\Models\SystemSetting::get('maintenance_mode', false),
+            ];
+
+            $branding = [
+                'systemName' => \App\Models\SystemSetting::get('system_name', 'HB Service Finder Admin'),
+                'logoUrl' => \App\Models\SystemSetting::get('logo_url', null),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'settings' => $settings,
+                    'branding' => $branding
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get admin settings', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get settings'
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate a comprehensive system report for download
+     */
+    public function generateSystemReport()
+    {
+        try {
+            $admin = auth('admin')->user();
+
+            $settings = [
+                'commission_rate'    => \App\Models\SystemSetting::get('commission_percentage', 10),
+                'max_service_radius' => \App\Models\SystemSetting::get('max_service_radius', 15),
+                'min_payout_amount'  => \App\Models\SystemSetting::get('min_payout_amount', 500),
+                'maintenance_mode'   => \App\Models\SystemSetting::get('maintenance_mode', false),
+                'system_name'        => \App\Models\SystemSetting::get('system_name', 'Ethio HandyMan'),
+            ];
+
+            $totalProviders     = \App\Models\ServiceProvider::count();
+            $approvedProviders  = \App\Models\ServiceProvider::whereIn('status', ['approved', 'Active'])->count();
+            $pendingProviders   = \App\Models\ServiceProvider::where('status', 'pending')->count();
+            $suspendedProviders = \App\Models\ServiceProvider::whereIn('status', ['suspended', 'Suspended'])->count();
+            $rejectedProviders  = \App\Models\ServiceProvider::whereIn('status', ['rejected', 'Rejected'])->count();
+            $totalCustomers     = \App\Models\Customer::count();
+
+            $totalBookings     = \App\Models\Booking::count();
+            $completedBookings = \App\Models\Booking::where('status', 'completed')->count();
+            $acceptedBookings  = \App\Models\Booking::where('status', 'accepted')->count();
+            $pendingBookings   = \App\Models\Booking::where('status', 'pending')->count();
+            $cancelledBookings = \App\Models\Booking::where('status', 'cancelled')->count();
+
+            $totalRevenue       = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->sum('amount') ?? 0;
+            $platformCommission = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->sum('platform_commission') ?? 0;
+            $providerPayouts    = \App\Models\Payment::where('status', 'released')->sum('provider_amount') ?? 0;
+            $pendingPayments    = \App\Models\Payment::whereIn('status', ['pending', 'held'])->sum('amount') ?? 0;
+            $totalPaymentsCount = \App\Models\Payment::count();
+            $successPayments    = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->count();
+            $failedPayments     = \App\Models\Payment::where('status', 'failed')->count();
+
+            $totalWithdrawals    = \App\Models\Withdrawal::count();
+            $pendingWithdrawals  = \App\Models\Withdrawal::where('status', 'pending')->count();
+            $approvedWithdrawals = \App\Models\Withdrawal::where('status', 'approved')->count();
+            $withdrawalAmount    = \App\Models\Withdrawal::where('status', 'approved')->sum('amount') ?? 0;
+
+            $totalCategories = \App\Models\Category::count();
+            $totalServices   = \App\Models\Service::count();
+
+            $categoryBreakdown = \App\Models\Category::withCount('providers')
+                ->orderByDesc('providers_count')
+                ->get()
+                ->map(fn($c) => ['name' => $c->name, 'providers' => $c->providers_count]);
+
+            $topProviders = \App\Models\ServiceProvider::whereIn('status', ['approved', 'Active'])
+                ->orderByDesc('rating')
+                ->orderByDesc('completed_jobs')
+                ->limit(5)
+                ->get()
+                ->map(fn($p) => [
+                    'name'           => $p->fullname,
+                    'email'          => $p->email,
+                    'rating'         => round($p->rating, 1),
+                    'completed_jobs' => $p->completed_jobs ?? 0,
+                    'city'           => $p->service_city ?? 'N/A',
+                ]);
+
+            $monthlyRevenue = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = now()->subMonths($i);
+                $rev = \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('amount') ?? 0;
+                $monthlyRevenue[] = ['month' => $month->format('M Y'), 'revenue' => round($rev, 2)];
+            }
+
+            $recentBookings = \App\Models\Booking::with(['customer', 'provider', 'service'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(fn($b) => [
+                    'id'             => $b->bookingID,
+                    'customer'       => $b->customer->fullname ?? 'Unknown',
+                    'provider'       => $b->provider->fullname ?? 'Unknown',
+                    'service'        => $b->service->title ?? 'N/A',
+                    'status'         => $b->status,
+                    'payment_status' => $b->payment_status ?? 'unpaid',
+                    'amount'         => $b->agreed_price ?? 0,
+                    'date'           => $b->created_at?->format('M d, Y H:i'),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'generated_at'       => now()->format('Y-m-d H:i:s'),
+                    'generated_by'       => $admin->fullname ?? 'System Admin',
+                    'admin_email'        => $admin->email ?? '',
+                    'settings'           => $settings,
+                    'users'              => [
+                        'total_providers'     => $totalProviders,
+                        'approved_providers'  => $approvedProviders,
+                        'pending_providers'   => $pendingProviders,
+                        'suspended_providers' => $suspendedProviders,
+                        'rejected_providers'  => $rejectedProviders,
+                        'total_customers'     => $totalCustomers,
+                    ],
+                    'bookings'           => [
+                        'total'     => $totalBookings,
+                        'completed' => $completedBookings,
+                        'accepted'  => $acceptedBookings,
+                        'pending'   => $pendingBookings,
+                        'cancelled' => $cancelledBookings,
+                    ],
+                    'financials'         => [
+                        'total_revenue'       => round($totalRevenue, 2),
+                        'platform_commission' => round($platformCommission, 2),
+                        'provider_payouts'    => round($providerPayouts, 2),
+                        'pending_payments'    => round($pendingPayments, 2),
+                        'total_transactions'  => $totalPaymentsCount,
+                        'successful_payments' => $successPayments,
+                        'failed_payments'     => $failedPayments,
+                    ],
+                    'withdrawals'        => [
+                        'total'    => $totalWithdrawals,
+                        'pending'  => $pendingWithdrawals,
+                        'approved' => $approvedWithdrawals,
+                        'amount'   => round($withdrawalAmount, 2),
+                    ],
+                    'catalog'            => ['categories' => $totalCategories, 'services' => $totalServices],
+                    'category_breakdown' => $categoryBreakdown,
+                    'top_providers'      => $topProviders,
+                    'monthly_revenue'    => $monthlyRevenue,
+                    'recent_bookings'    => $recentBookings,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('System report generation failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to generate report: ' . $e->getMessage()], 500);
+        }
     }
 }

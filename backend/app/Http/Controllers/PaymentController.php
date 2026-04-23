@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\SystemSetting;
 use App\Services\ChapaService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
@@ -73,6 +74,36 @@ class PaymentController extends Controller
             ], 404);
         }
 
+        // ── IDEMPOTENCY CHECK ──────────────────────────────────────────────────
+        // If a pending payment already exists for this booking+type, return it
+        // instead of creating a duplicate. Prevents double-charges on retry taps.
+        $paymentType = ($booking->payment_status === 'pending_final' || $booking->payment_status === 'deposit_paid')
+            ? 'final'
+            : 'deposit';
+
+        $existingPayment = Payment::where('bookingID', $bookingId)
+            ->where('payment_type', $paymentType)
+            ->where('status', 'pending')
+            ->whereNotNull('checkout_url')
+            ->where('created_at', '>=', now()->subMinutes(30)) // only reuse if < 30 min old
+            ->first();
+
+        if ($existingPayment) {
+            Log::info('Returning existing pending payment (idempotency)', [
+                'payment_id' => $existingPayment->paymentID,
+                'tx_ref'     => $existingPayment->tx_ref,
+                'booking_id' => $bookingId,
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'checkout_url' => $existingPayment->checkout_url,
+                    'tx_ref'       => $existingPayment->tx_ref,
+                ]
+            ]);
+        }
+        // ── END IDEMPOTENCY CHECK ───────────────────────────────────────────────
+
         // Generate tx_ref
         $txRef = 'BOOKING-' . $bookingId . '-' . time();
 
@@ -88,20 +119,24 @@ class PaymentController extends Controller
 
         // Determine payment type based on booking payment_status
         $agreedPrice = (float)$booking->agreed_price;
-        $paymentType = 'deposit'; // Default to deposit
-        
-        if ($booking->payment_status === 'deposit_paid') {
-            // Final payment: 80% of agreed price
-            $paymentType = 'final';
+
+        if ($paymentType === 'final') {
             $totalAmount = $agreedPrice * 0.80;
         } else {
-            // Deposit payment: 20% of agreed price
             $totalAmount = $agreedPrice * 0.20;
         }
         
-        // Commission Calculation (10% of payment amount)
-        $commission = $totalAmount * 0.10;
-        $providerAmount = $totalAmount - $commission;
+        // Commission Calculation — reads live value from admin Settings page (default 10%)
+        $commissionRate = SystemSetting::get('commission_percentage', 10) / 100;
+        $commission = round($totalAmount * $commissionRate, 2);
+        $providerAmount = round($totalAmount - $commission, 2);
+
+        Log::info('Commission calculated from SystemSetting', [
+            'commission_rate' => ($commissionRate * 100) . '%',
+            'total_amount'    => $totalAmount,
+            'commission'      => $commission,
+            'provider_amount' => $providerAmount,
+        ]);
 
         // Split Name
         $nameParts = explode(' ', trim($customer->fullname), 2);
@@ -359,12 +394,14 @@ class PaymentController extends Controller
 
     /**
      * Customer confirms work completed
+     * This marks the service as confirmed and prompts customer to pay the final 80%
      */
     public function confirmCompletion(Request $request, $bookingId)
     {
         $customer = auth()->guard('customer')->user();
         
         if (!$customer) {
+            Log::error('Confirmation failed: Customer not authenticated');
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized'
@@ -377,6 +414,13 @@ class PaymentController extends Controller
             ->first();
 
         if (!$booking) {
+            Log::error('Confirmation failed: Booking not found', [
+                'booking_id' => $bookingId,
+                'customer_id' => $customer->customerID,
+                'booking_exists' => Booking::where('bookingID', $bookingId)->exists(),
+                'booking_status' => Booking::where('bookingID', $bookingId)->value('status')
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Booking not found or not awaiting confirmation'
@@ -384,41 +428,41 @@ class PaymentController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($booking) {
-                $payment = Payment::where('bookingID', $booking->bookingID)->first();
-                
-                if (!$payment || $payment->status !== 'held') {
-                    throw new \Exception('Payment not in held state');
-                }
-
-                $payment->status = 'releasable';
-                $payment->save();
-
-                $booking->status = 'completed';
-                $booking->customer_confirmed_at = now();
-                $booking->save();
-
-                // Release payment to provider wallet using WalletService
-                $this->walletService->releasePayment($payment);
-            });
+            // Update booking to service_confirmed status
+            // Customer will then be prompted to pay the final 80%
+            $booking->status = 'service_confirmed';
+            $booking->payment_status = 'pending_final';
+            $booking->service_confirmed_at = now();
+            $booking->payment_deadline = now()->addHours(48); // 48 hours to pay final amount
+            $booking->save();
+            
+            Log::info('Service confirmed - Customer needs to pay final amount', [
+                'booking_id' => $bookingId,
+                'payment_deadline' => $booking->payment_deadline
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Service confirmed successfully',
+                'message' => 'Service confirmed successfully. Please proceed to pay the remaining amount.',
                 'data' => [
                     'booking_id' => $booking->bookingID,
-                    'status' => 'completed'
+                    'status' => 'service_confirmed',
+                    'payment_status' => 'pending_final',
+                    'payment_deadline' => $booking->payment_deadline,
+                    'requires_final_payment' => true
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Booking confirmation failed', [
+            Log::error('Service confirmation failed', [
                 'booking_id' => $bookingId,
-                'error' => $e->getMessage()
+                'customer_id' => $customer->customerID,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to confirm completion: ' . $e->getMessage()
+                'message' => 'Failed to confirm service. Please try again.'
             ], 500);
         }
     }
@@ -724,7 +768,7 @@ class PaymentController extends Controller
     {
         $request->validate([
             'booking_id' => 'required|integer|exists:bookings,bookingID',
-            'agreed_price' => 'required|numeric|min:0'
+            'agreed_price' => 'required|numeric|min:10|max:500000'
         ]);
         
         $paymentService = app(\App\Services\PaymentService::class);

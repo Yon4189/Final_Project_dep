@@ -463,18 +463,20 @@ class DisputeController extends Controller
 
         // Send notifications (only to admin, not to other party)
         if ($userType === 'customer') {
-            $this->notificationService->toAdmins(
-                'dispute',
-                'New Message in Dispute',
-                "Customer has sent a message in dispute #{$disputeID}",
-                ['disputeID' => $disputeID]
+            $customer = \App\Models\Customer::find($senderId);
+            $this->notificationService->notifyAdminsDisputeMessage(
+                $dispute,
+                $message,
+                'customer',
+                $customer->fullname ?? 'Customer'
             );
         } elseif ($userType === 'provider') {
-            $this->notificationService->toAdmins(
-                'dispute',
-                'New Message in Dispute',
-                "Provider has sent a message in dispute #{$disputeID}",
-                ['disputeID' => $disputeID]
+            $provider = \App\Models\ServiceProvider::find($senderId);
+            $this->notificationService->notifyAdminsDisputeMessage(
+                $dispute,
+                $message,
+                'provider',
+                $provider->fullname ?? 'Provider'
             );
         }
 

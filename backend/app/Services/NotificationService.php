@@ -204,6 +204,8 @@ class NotificationService
     const TYPE_BOOKING_CANCELLED = 'booking_cancelled';
     const TYPE_BOOKING_COMPLETED = 'booking_completed';
     const TYPE_BOOKING_EXPIRED = 'booking_expired';
+    const TYPE_PROVIDER_ARRIVED = 'provider_arrived';
+    const TYPE_SERVICE_STARTED = 'service_started';
     const TYPE_PAYMENT_RECEIVED = 'payment_received';
     const TYPE_PAYMENT_RELEASED = 'payment_released';
     const TYPE_NEW_MESSAGE = 'new_message';
@@ -213,4 +215,166 @@ class NotificationService
     const TYPE_WITHDRAWAL_REQUEST = 'withdrawal_request';
     const TYPE_NEW_PROVIDER_REGISTRATION = 'provider_registration';
     const TYPE_DISPUTE_RAISED = 'dispute';
+
+    /**
+     * Admin notification helpers for important events
+     */
+
+    /**
+     * Notify admins of new customer registration
+     */
+    public function notifyAdminsNewCustomer($customer)
+    {
+        return $this->toAdmins(
+            'customer_registration',
+            'New Customer Registration',
+            "New customer registered: {$customer->fullname} ({$customer->email})",
+            [
+                'customer_id' => $customer->customerID,
+                'customer_name' => $customer->fullname,
+                'customer_email' => $customer->email,
+                'customer_phone' => $customer->phone,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins of new provider registration
+     */
+    public function notifyAdminsNewProvider($provider)
+    {
+        return $this->toAdmins(
+            'provider_registration',
+            'New Provider Registration',
+            "New provider registered: {$provider->fullname} - Requires verification",
+            [
+                'provider_id' => $provider->providerID,
+                'provider_name' => $provider->fullname,
+                'provider_email' => $provider->email,
+                'provider_phone' => $provider->phone,
+                'business_name' => $provider->businessName,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins of new dispute
+     */
+    public function notifyAdminsNewDispute($dispute, $booking)
+    {
+        $raisedBy = $dispute->raised_by === 'customer' ? 'Customer' : 'Provider';
+        return $this->toAdmins(
+            'dispute',
+            'New Dispute Created',
+            "{$raisedBy} raised a dispute for booking #{$booking->bookingID}: {$dispute->reason}",
+            [
+                'dispute_id' => $dispute->disputeID,
+                'booking_id' => $booking->bookingID,
+                'raised_by' => $dispute->raised_by,
+                'reason' => $dispute->reason,
+                'status' => $dispute->status,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins of dispute message
+     */
+    public function notifyAdminsDisputeMessage($dispute, $message, $senderType, $senderName)
+    {
+        return $this->toAdmins(
+            'dispute_message',
+            'New Dispute Message',
+            "{$senderName} ({$senderType}) sent a message in dispute #{$dispute->disputeID}",
+            [
+                'dispute_id' => $dispute->disputeID,
+                'message_id' => $message->id,
+                'sender_type' => $senderType,
+                'sender_name' => $senderName,
+                'message_preview' => substr($message->message, 0, 100),
+            ]
+        );
+    }
+
+    /**
+     * Notify admins of withdrawal request
+     */
+    public function notifyAdminsWithdrawalRequest($withdrawal, $provider)
+    {
+        return $this->toAdmins(
+            'withdrawal_request',
+            'New Withdrawal Request',
+            "{$provider->fullname} requested withdrawal of {$withdrawal->amount} ETB",
+            [
+                'withdrawal_id' => $withdrawal->withdrawalID,
+                'provider_id' => $provider->providerID,
+                'provider_name' => $provider->fullname,
+                'amount' => $withdrawal->amount,
+                'status' => $withdrawal->status,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins of account frozen
+     */
+    public function notifyAdminsAccountFrozen($user, $userType, $reason)
+    {
+        $userName = $userType === 'customer' ? $user->fullname : $user->fullname;
+        return $this->toAdmins(
+            'account_frozen',
+            'Account Frozen',
+            "{$userType} account frozen: {$userName} - Reason: {$reason}",
+            [
+                'user_id' => $userType === 'customer' ? $user->customerID : $user->providerID,
+                'user_type' => $userType,
+                'user_name' => $userName,
+                'reason' => $reason,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins when a booking is completed (awaiting customer confirmation)
+     */
+    public function notifyAdminsBookingCompleted($booking, $provider, $customer)
+    {
+        return $this->toAdmins(
+            'booking_completed',
+            'Service Completed — Awaiting Confirmation',
+            "Provider {$provider->fullname} completed booking #{$booking->bookingID} for {$customer->fullname}. Awaiting customer confirmation.",
+            [
+                'booking_id'    => $booking->bookingID,
+                'provider_id'   => $provider->providerID,
+                'provider_name' => $provider->fullname,
+                'customer_id'   => $customer->customerID,
+                'customer_name' => $customer->fullname,
+                'agreed_price'  => $booking->agreed_price,
+                'completed_at'  => $booking->completed_at,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins when a booking is cancelled
+     */
+    public function notifyAdminsBookingCancelled($booking, $cancelledBy, $reason = null)
+    {
+        $name = $cancelledBy === 'customer'
+            ? ($booking->customer->fullname ?? 'Customer')
+            : ($booking->provider->fullname ?? 'Provider');
+
+        return $this->toAdmins(
+            'booking_cancelled',
+            'Booking Cancelled',
+            "Booking #{$booking->bookingID} was cancelled by {$cancelledBy} ({$name})" . ($reason ? ": {$reason}" : ''),
+            [
+                'booking_id'    => $booking->bookingID,
+                'cancelled_by'  => $cancelledBy,
+                'name'          => $name,
+                'reason'        => $reason,
+                'agreed_price'  => $booking->agreed_price,
+            ]
+        );
+    }
 }

@@ -230,9 +230,28 @@ export default function RequestDetails() {
           text: t('common.confirm', 'Confirm'),
           onPress: async () => {
             try {
-              await confirmCompletion.mutateAsync(id as string);
-              // Instantly pop the review modal!
-              setShowReviewModal(true);
+              const response = await confirmCompletion.mutateAsync(id as string);
+              
+              // Check if final payment is required
+              if (response?.data?.requires_final_payment) {
+                // Redirect to payment screen for final 80% payment
+                Alert.alert(
+                  'Final Payment Required',
+                  'Please proceed to pay the remaining 80% of the service cost.',
+                  [
+                    {
+                      text: 'Pay Now',
+                      onPress: () => {
+                        router.push({
+                          pathname: '/(customer)/payment',
+                          params: { bookingId: id }
+                        });
+                      }
+                    }
+                  ]
+                );
+              }
+              // Note: Review modal will be shown after final payment is completed in the payment screen
             } catch (error) {
               Alert.alert(t('common.error', 'Error'), t('common.failedToConfirm', 'Failed to confirm completion. Please try again.'));
             }
@@ -433,6 +452,24 @@ export default function RequestDetails() {
           <View style={styles.paidContainer}>
             <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
             <Text style={styles.paidText}>{t('requests.paymentCompleted', 'Payment Completed')}</Text>
+          </View>
+        ) : request.status === 'service_confirmed' ? (
+          <View style={styles.confirmationRequired}>
+            <View style={styles.pendingPayment}>
+              <Ionicons name="information-circle-outline" size={20} color={Colors.info} />
+              <Text style={[styles.pendingPaymentText, { color: Colors.info }]}>
+                {t('requests.finalPaymentRequired', 'Service confirmed. Please pay the remaining 80% to complete.')}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={[styles.payButton, { marginTop: 12, backgroundColor: Colors.primary }]} 
+              onPress={handlePayNow}
+            >
+              <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
+              <Text style={styles.payButtonText}>
+                {t('requests.payFinalAmount', 'Pay Final Amount')} — ETB {(request.estimatedPrice * 0.80).toFixed(2)}
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : request.status === 'waiting_customer_confirmation' ? (
           <View style={styles.confirmationRequired}>

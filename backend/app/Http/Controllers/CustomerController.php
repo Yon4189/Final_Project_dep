@@ -78,9 +78,10 @@ class CustomerController extends Authenticatable
             'locationId' => null,
             'description' => $booking->notes,
             'specialInstructions' => $booking->notes,
-            'estimatedPrice' => (float) ($booking->agreed_price ?? ($estimatedPrice ?? 0)),
-            'finalPrice' => (float) ($booking->agreed_price ?? 0),
-            'paymentStatus' => $booking->payment_status ?? 'pending',
+            'agreed_price' => (float) ($booking->agreed_price ?? 0), // Use database column name
+            'estimatedPrice' => (float) ($booking->agreed_price ?? ($estimatedPrice ?? 0)), // Keep for backward compatibility
+            'payment_status' => $booking->payment_status ?? 'pending', // Use database column name
+            'paymentStatus' => $booking->payment_status ?? 'pending', // Keep for backward compatibility
             'paymentDetails' => null,
             'createdAt' => optional($booking->created_at)->toISOString(),
             'updatedAt' => optional($booking->updated_at)->toISOString(),
@@ -163,23 +164,31 @@ class CustomerController extends Authenticatable
     public function uploadProfileImage(Request $request)
     {
         $customer = Auth::guard('customer')->user();
-        
+
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Customer not found'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
         }
 
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'image' => 'required|file|max:2048'
         ]);
+
+        try {
+            $validator = app(\App\Services\FileUploadValidator::class);
+            $validator->validateImage($request->file('image'), 2048);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
         if ($customer->profile_image) {
             Storage::delete('public/' . $customer->profile_image);
         }
 
-        $imagePath = $request->file('image')->store('profile_images', 'public');
+        $file     = $request->file('image');
+        $filename = $validator->safeFilename($file, 'customer_' . $customer->customerID);
+        $file->storeAs('profile_images', $filename, 'public');
+        $imagePath = 'profile_images/' . $filename;
+
         $customer->update(['profile_image' => $imagePath]);
 
         return response()->json([
@@ -304,7 +313,7 @@ class CustomerController extends Authenticatable
                 'providerID' => 'required|exists:service_providers,providerID',
                 'serviceID' => 'required|exists:services,serviceID',
                 'scheduledDate' => 'required|date|after_or_equal:today',
-                'agreed_price' => 'required|numeric|min:0',
+                'agreed_price' => 'required|numeric|min:10|max:500000',
                 
                 // NEW: Location validation with 4 types
                 'location_type' => 'required|in:current,saved,manual,pin_on_map',
@@ -968,43 +977,45 @@ class CustomerController extends Authenticatable
     public function getNotificationSettings()
     {
         $customer = Auth::guard('customer')->user();
-        
-        // For demo purposes, return default settings
-        // In production, this would be stored in a separate table
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'email' => true,
-                'push' => true,
-                'sms' => false,
-                'marketing' => false,
-                'booking_updates' => true,
-                'payment_updates' => true,
-                'promotional_offers' => false
-            ]
-        ]);
+
+        $defaults = [
+            'email'               => true,
+            'push'                => true,
+            'sms'                 => false,
+            'marketing'           => false,
+            'booking_updates'     => true,
+            'payment_updates'     => true,
+            'promotional_offers'  => false,
+        ];
+
+        $saved = $customer->notification_settings;
+        $settings = $saved ? array_merge($defaults, $saved) : $defaults;
+
+        return response()->json(['success' => true, 'data' => $settings]);
     }
 
     public function updateNotificationSettings(Request $request)
     {
         $customer = Auth::guard('customer')->user();
-        
+
         $validated = $request->validate([
-            'email' => 'sometimes|boolean',
-            'push' => 'sometimes|boolean',
-            'sms' => 'sometimes|boolean',
-            'marketing' => 'sometimes|boolean',
-            'booking_updates' => 'sometimes|boolean',
-            'payment_updates' => 'sometimes|boolean',
-            'promotional_offers' => 'sometimes|boolean'
+            'email'              => 'sometimes|boolean',
+            'push'               => 'sometimes|boolean',
+            'sms'                => 'sometimes|boolean',
+            'marketing'          => 'sometimes|boolean',
+            'booking_updates'    => 'sometimes|boolean',
+            'payment_updates'    => 'sometimes|boolean',
+            'promotional_offers' => 'sometimes|boolean',
         ]);
 
-        // For demo purposes, just return success
-        // In production, this would be stored in database
-        return response()->json([
-            'success' => true,
-            'data' => $validated
-        ]);
+        // Merge with existing settings so partial updates work
+        $existing = $customer->notification_settings ?? [];
+        $merged   = array_merge($existing, $validated);
+
+        $customer->notification_settings = $merged;
+        $customer->save();
+
+        return response()->json(['success' => true, 'data' => $merged]);
     }
     private function generateRequestTimeline($booking)
     {

@@ -309,8 +309,30 @@ export default function BookingDetails() {
           text: 'Confirm',
           onPress: async () => {
             try {
-              await confirmCompletion.mutateAsync(id as string);
-              setShowReviewModal(true);
+              const response = await confirmCompletion.mutateAsync(id as string);
+              
+              // Check if final payment is required
+              if (response?.data?.requires_final_payment) {
+                // Redirect to payment screen for final 80% payment
+                Alert.alert(
+                  'Final Payment Required',
+                  'Please proceed to pay the remaining 80% of the service cost.',
+                  [
+                    {
+                      text: 'Pay Now',
+                      onPress: () => {
+                        router.push({
+                          pathname: '/(customer)/payment',
+                          params: { bookingId: id }
+                        });
+                      }
+                    }
+                  ]
+                );
+              } else {
+                // Payment already completed, show review modal
+                setShowReviewModal(true);
+              }
             } catch (error) {
               Alert.alert('Error', 'Failed to confirm completion. Please try again.');
             }

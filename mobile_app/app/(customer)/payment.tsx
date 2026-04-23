@@ -9,8 +9,9 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  RefreshControl,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
@@ -20,23 +21,45 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { PriceText } from '../../components/common/PriceText';
+import { ReviewModal } from '../../components/customer/ReviewModal';
+import { useQueryClient } from '@tanstack/react-query';
 export default function PaymentScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const params = useLocalSearchParams();
+  const queryClient = useQueryClient();
 
   // 1. Hooks
   const bookingId = params.bookingId as string;
-  const { data: bookingResponse, isLoading: bookingLoading } = useBookingDetails(bookingId || '');
+  const { data: bookingResponse, isLoading: bookingLoading, refetch: refetchBooking } = useBookingDetails(bookingId || '');
   const booking = (bookingResponse as any)?.data ?? bookingResponse;
   const { data: paymentMethods, isLoading: loadingMethods } = usePaymentMethods();
   const initializeChapaPayment = useInitializeChapaPayment();
   const verifyChapaPayment = useVerifyChapaPayment();
 
+  // Refetch booking data when screen is focused to get latest payment_status
+  useFocusEffect(
+    React.useCallback(() => {
+      if (bookingId) {
+        console.log('Payment screen focused - refetching booking data');
+        refetchBooking();
+      }
+    }, [bookingId, refetchBooking])
+  );
+
   // 2. State
   const [paymentMethod, setPaymentMethod] = useState<string>('chapa');
   const [isPaying, setIsPaying] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Pull-to-refresh handler
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refetchBooking();
+    setRefreshing(false);
+  }, [refetchBooking]);
 
   // 3. Derived values & Calculations
   const checkoutUrl = (params.checkoutUrl || params.url) as string;
@@ -44,51 +67,61 @@ export default function PaymentScreen() {
   const amount = Number.isFinite(rawAmount) ? rawAmount : 0;
 
   const bookingStatus = (booking?.status ?? '').toLowerCase();
-  const acceptedStatuses = ['accepted', 'in_progress', 'completed'];
+  const acceptedStatuses = ['accepted', 'in_progress', 'completed', 'service_confirmed', 'deposit_paid', 'arrived', 'waiting_customer_confirmation'];
   const hasAccepted = acceptedStatuses.includes(bookingStatus);
   const paymentStatusFromDB = (booking?.payment?.status ?? '').toLowerCase();
   const paymentAlreadyDone = ['paid', 'held', 'releasable', 'released'].includes(paymentStatusFromDB);
 
-  // Get agreed price from multiple possible sources
-  const bookingAgreedPrice = Number(booking?.agreed_price ?? 0);
-  const bookingEstimatedPrice = Number(booking?.estimatedPrice ?? 0);
-  const bookingPaymentAmount = Number(booking?.payment?.amount ?? 0);
-  const paramsAmount = Number(amount);
+  // Get agreed price from booking (using database column name)
+  const agreedPrice = Number(booking?.agreed_price ?? 0);
   
-  // Use the first non-zero value
-  const agreedPrice = bookingAgreedPrice || bookingEstimatedPrice || bookingPaymentAmount || paramsAmount || 0;
+  console.log('=== PAYMENT SCREEN DEBUG ===');
+  console.log('bookingId:', bookingId);
+  console.log('booking?.agreed_price:', booking?.agreed_price);
+  console.log('booking?.payment_status:', booking?.payment_status);
+  console.log('agreedPrice (final):', agreedPrice);
+  console.log('========================');
   
-  console.log('Payment Debug:', {
-    bookingAgreedPrice,
-    bookingEstimatedPrice,
-    bookingPaymentAmount,
-    paramsAmount,
-    finalAgreedPrice: agreedPrice,
-    booking: booking
-  });
-  
-  // Determine payment type based on booking payment_status
+  // Determine payment type based on booking payment_status (database column name)
   const bookingPaymentStatus = (booking?.payment_status ?? '').toLowerCase();
-  const isDepositPayment = bookingPaymentStatus === 'pending_deposit' || bookingPaymentStatus === '' || !bookingPaymentStatus;
-  const isFinalPayment = bookingPaymentStatus === 'pending_final';
+  const isPaymentCompleted = bookingPaymentStatus === 'completed';
+  const isDepositPayment = bookingPaymentStatus === 'pending_deposit' || bookingPaymentStatus === 'pending' || bookingPaymentStatus === '' || !bookingPaymentStatus;
+  const isFinalPayment = bookingPaymentStatus === 'pending_final' || bookingPaymentStatus === 'deposit_paid';
   
-  // Calculate deposit (20%) or final payment (80%)
+  // Calculate deposit (20%) and final payment (80%)
   const depositPercentage = 0.20;
+  const finalPercentage = 0.80;
   const depositAmount = Math.round(agreedPrice * depositPercentage * 100) / 100;
-  const finalPaymentAmount = Math.round((agreedPrice - depositAmount) * 100) / 100;
+  const finalPaymentAmount = Math.round(agreedPrice * finalPercentage * 100) / 100;
   
   // Determine what customer is paying now
-  const effectiveAmount = isDepositPayment ? depositAmount : (isFinalPayment ? finalPaymentAmount : agreedPrice);
+  const effectiveAmount = isFinalPayment ? finalPaymentAmount : depositAmount;
   
-  // Platform fee is 10% (already included in agreed price, not added on top)
-  // Customer pays the amount as-is, platform takes 10% from provider's payout
+  // Platform fee is 10% of the current payment amount
   const platformFeePercentage = 0.10;
-  const platformFeeInfo = Math.round(agreedPrice * platformFeePercentage * 100) / 100;
+  const currentPlatformFee = Math.round(effectiveAmount * platformFeePercentage * 100) / 100;
   
   const totalAmount = effectiveAmount;
   const displayPaymentStatus = paymentAlreadyDone ? 'completed' : paymentStatus;
   const providerName = booking?.provider?.businessName || booking?.provider?.fullname || 'the provider';
   const serviceTitle = booking?.service?.title || 'your service';
+
+  // Debug logging
+  console.log('Payment Screen Debug:', {
+    bookingStatus,
+    bookingPaymentStatus,
+    isPaymentCompleted,
+    isDepositPayment,
+    isFinalPayment,
+    depositAmount,
+    finalPaymentAmount,
+    effectiveAmount,
+    currentPlatformFee,
+    totalAmount,
+    paymentAlreadyDone,
+    displayPaymentStatus,
+    hasAccepted
+  });
 
   // 4. Handlers (hoisted or defined before effects)
   async function handlePaymentCallback(url: string) {
@@ -121,10 +154,17 @@ export default function PaymentScreen() {
 
         if (verification.is_successful) {
           setPaymentStatus('completed');
-          Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.paymentProcessed', 'Your payment has been processed successfully.'), [
-            { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
-            { text: t('common.ok', 'OK'), onPress: () => router.back() },
-          ]);
+          
+          // Check if this was a final payment - if so, show review modal
+          if (isFinalPayment) {
+            setShowReviewModal(true);
+          } else {
+            // Deposit payment - just show success message
+            Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.paymentProcessed', 'Your payment has been processed successfully.'), [
+              { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+              { text: t('common.ok', 'OK'), onPress: () => router.back() },
+            ]);
+          }
         } else if (status === 'cancel') {
           setPaymentStatus('pending');
           Alert.alert(t('payment.paymentCancelled', 'Payment Cancelled'), t('payment.cancelMsg', 'You cancelled the payment process.'));
@@ -174,10 +214,16 @@ export default function PaymentScreen() {
           const verification = await verifyChapaPayment.mutateAsync(txRef);
           if (verification.is_successful) {
             setPaymentStatus('completed');
-            Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.processedSuccessfully', 'Processed successfully.'), [
-              { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
-              { text: t('common.ok', 'OK'), onPress: () => router.back() },
-            ]);
+            
+            // Check if this was a final payment - if so, show review modal
+            if (isFinalPayment) {
+              setShowReviewModal(true);
+            } else {
+              Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.processedSuccessfully', 'Processed successfully.'), [
+                { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+                { text: t('common.ok', 'OK'), onPress: () => router.back() },
+              ]);
+            }
             return;
           }
         } catch (vErr) {}
@@ -335,26 +381,52 @@ export default function PaymentScreen() {
     );
   };
 
-  const renderPaymentSummary = () => (
-    <View style={styles.summaryContainer}>
-      <Text style={styles.summaryTitle}>Payment Summary</Text>
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Service Fee</Text>
-        <PriceText style={styles.summaryValue} amount={effectiveAmount} />
+  const renderPaymentSummary = () => {
+    return (
+      <View style={styles.summaryContainer}>
+        <Text style={styles.summaryTitle}>Payment Summary</Text>
+        
+        {/* Show payment type info */}
+        {isDepositPayment && (
+          <View style={styles.paymentTypeInfo}>
+            <Ionicons name="information-circle-outline" size={16} color={Colors.info} />
+            <Text style={styles.paymentTypeText}>Deposit Payment (20% of total)</Text>
+          </View>
+        )}
+        {isFinalPayment && (
+          <View style={styles.paymentTypeInfo}>
+            <Ionicons name="information-circle-outline" size={16} color={Colors.info} />
+            <Text style={styles.paymentTypeText}>Final Payment (80% of total)</Text>
+          </View>
+        )}
+        
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>
+            {isFinalPayment ? 'Final Payment (80%)' : 'Deposit Amount (20%)'}
+          </Text>
+          <PriceText style={styles.summaryValue} amount={effectiveAmount} />
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Service Fee (10%)</Text>
+          <PriceText style={styles.summaryValue} amount={currentPlatformFee} />
+        </View>
+        
+        <View style={styles.summaryDivider} />
+        
+        <View style={[styles.summaryRow, styles.totalRow]}>
+          <Text style={styles.totalLabel}>Pay Now {isFinalPayment ? '(80%)' : '(20%)'}</Text>
+          <PriceText style={styles.totalValue} amount={totalAmount} />
+        </View>
+        
+        {/* Show full service price for reference */}
+        <View style={styles.summaryNote}>
+          <Text style={styles.summaryNoteText}>
+            Full service price: ETB {agreedPrice.toFixed(2)}
+          </Text>
+        </View>
       </View>
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Platform Fee (5%)</Text>
-        <PriceText style={styles.summaryValue} amount={platformFeeInfo} />
-      </View>
-      
-      <View style={styles.summaryDivider} />
-      
-      <View style={[styles.summaryRow, styles.totalRow]}>
-        <Text style={styles.totalLabel}>Total Amount</Text>
-        <PriceText style={styles.totalValue} amount={totalAmount} />
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderPaymentStatus = () => {
     if (displayPaymentStatus === 'completed') {
@@ -410,7 +482,18 @@ export default function PaymentScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -440,6 +523,22 @@ export default function PaymentScreen() {
         <View style={styles.section}>
           {!hasAccepted ? (
             renderAwaitingAcceptance()
+          ) : isPaymentCompleted ? (
+            // Payment is completed - show completion message and button to view bookings
+            <View>
+              <View style={[styles.statusContainer, styles.statusSuccess]}>
+                <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
+                <Text style={[styles.statusText, styles.statusSuccessText]}>
+                  All payments completed! Thank you for your business.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.doneButton}
+                onPress={() => router.push('/(customer)/bookings')}
+              >
+                <Text style={styles.doneButtonText}>{t('bookings.viewMyBookings', 'View My Bookings')}</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
               {displayPaymentStatus === 'pending' && (
@@ -471,7 +570,12 @@ export default function PaymentScreen() {
                         ) : (
                           <>
                             <Ionicons name="card" size={20} color={Colors.surface} />
-                            <Text style={styles.payButtonText}>{t('payment.payWithChapa', 'Pay with Chapa')}</Text>
+                            <Text style={styles.payButtonText}>
+                              {isFinalPayment 
+                                ? `Pay Final 80% (ETB ${finalPaymentAmount.toFixed(2)})`
+                                : `Pay Deposit 20% (ETB ${depositAmount.toFixed(2)})`
+                              }
+                            </Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -519,6 +623,22 @@ export default function PaymentScreen() {
           )}
         </View>
       </ScrollView>
+      
+      {/* Review Modal - shown after final payment */}
+      <ReviewModal
+        visible={showReviewModal}
+        onClose={() => {
+          setShowReviewModal(false);
+          router.push('/(customer)/bookings');
+        }}
+        bookingId={bookingId}
+        providerName={providerName}
+        serviceName={serviceTitle}
+        onSuccess={() => {
+          setShowReviewModal(false);
+          router.push('/(customer)/bookings');
+        }}
+      />
     </View>
   );
 }
@@ -656,6 +776,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.primary,
+  },
+  paymentTypeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.info + '10',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+  },
+  paymentTypeText: {
+    fontSize: 13,
+    color: Colors.info,
+    fontWeight: '500',
+  },
+  summaryNote: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  summaryNoteText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
   statusContainer: {
     flexDirection: 'row',

@@ -61,7 +61,7 @@ class WalletService
                 // Update booking
                 $booking = Booking::find($payment->bookingID);
                 if ($booking) {
-                    $booking->payment_status = 'released';
+                    $booking->payment_status = 'completed';
                     $booking->released_at = now();
                     $booking->save();
                 }
@@ -115,13 +115,14 @@ class WalletService
 
         try {
             return DB::transaction(function () use ($payment, $chapaResponse) {
-                Log::info('Updating payment status to held', [
+                Log::info('Updating payment status to paid', [
                     'tx_ref' => $payment->tx_ref,
+                    'payment_type' => $payment->payment_type,
                     'chapa_response_keys' => $chapaResponse ? array_keys($chapaResponse) : 'none'
                 ]);
 
                 // 1. Update Payment
-                $payment->status = 'paid'; // Changed from 'held' to 'paid'
+                $payment->status = 'paid';
                 $payment->paid_at = now();
                 if ($chapaResponse) {
                     $payment->chapa_response = $chapaResponse;
@@ -134,15 +135,91 @@ class WalletService
                 // 2. Update Booking
                 $booking = Booking::with(['customer', 'service', 'provider'])->find($payment->bookingID);
                 if ($booking) {
-                    // Determine if this is deposit or full payment based on payment type
-                    if (isset($payment->payment_type) && $payment->payment_type === 'deposit') {
+                    // Determine booking status based on payment type
+                    if ($payment->payment_type === 'deposit') {
+                        // Deposit payment: Update to deposit_paid
                         $booking->payment_status = 'deposit_paid';
-                    } else {
+                        $booking->status = 'accepted';
+                        $booking->paid_at = now();
+                        $booking->save();
+                        
+                        // Add to provider's pending balance (held in escrow)
+                        $wallet = Wallet::firstOrCreate(
+                            ['providerID' => $payment->providerID],
+                            ['available_balance' => 0, 'pending_balance' => 0]
+                        );
+                        
+                        $lockedWallet = Wallet::where('walletID', $wallet->walletID)
+                            ->lockForUpdate()
+                            ->first();
+                        $lockedWallet->pending_balance += $payment->provider_amount;
+                        $lockedWallet->save();
+
+                        WalletTransaction::create([
+                            'walletID' => $lockedWallet->walletID,
+                            'type' => 'pending_credit',
+                            'amount' => $payment->provider_amount,
+                            'description' => 'Deposit payment held for booking #' . $booking->bookingID,
+                            'bookingID' => $booking->bookingID
+                        ]);
+                        
+                        // Notify Provider
+                        $notificationService = app(NotificationService::class);
+                        $notificationService->toProvider(
+                            $booking->providerID,
+                            'payment_received',
+                            'Deposit Payment Received',
+                            'You have received a deposit payment for ' . ($booking->service->title ?? 'service') . '. You can now start the service. Funds are held in escrow.',
+                            [
+                                'booking_id' => $booking->bookingID,
+                                'customer_name' => $booking->customer->fullname ?? 'Customer',
+                                'amount' => $payment->amount
+                            ],
+                            $booking->bookingID
+                        );
+                        
+                    } else if ($payment->payment_type === 'final') {
+                        // Final payment: Mark as completed and release ALL funds (deposit + final)
                         $booking->payment_status = 'completed';
+                        $booking->status = 'completed';
+                        $booking->paid_at = now();
+                        $booking->save();
+                        
+                        // Get the deposit payment
+                        $depositPayment = Payment::where('bookingID', $booking->bookingID)
+                            ->where('payment_type', 'deposit')
+                            ->where('status', 'paid')
+                            ->first();
+                        
+                        if ($depositPayment) {
+                            // Mark deposit as releasable
+                            $depositPayment->status = 'releasable';
+                            $depositPayment->save();
+                            
+                            // Release deposit funds
+                            $this->releasePayment($depositPayment);
+                        }
+                        
+                        // Mark final payment as releasable and release it
+                        $payment->status = 'releasable';
+                        $payment->save();
+                        $this->releasePayment($payment);
+                        
+                        // Notify Provider
+                        $notificationService = app(NotificationService::class);
+                        $notificationService->toProvider(
+                            $booking->providerID,
+                            'payment_received',
+                            'Final Payment Received',
+                            'Final payment for ' . ($booking->service->title ?? 'service') . ' has been received. All funds have been released to your wallet.',
+                            [
+                                'booking_id' => $booking->bookingID,
+                                'customer_name' => $booking->customer->fullname ?? 'Customer',
+                                'amount' => $payment->amount
+                            ],
+                            $booking->bookingID
+                        );
                     }
-                    $booking->status = 'accepted'; // Changed from 'confirmed' to 'accepted'
-                    $booking->paid_at = now();
-                    $booking->save();
 
                     // 3. Create Transaction (for provider dashboard earnings)
                     Transaction::firstOrCreate(
@@ -155,51 +232,14 @@ class WalletService
                         ]
                     );
 
-                    // 4. Update Wallet pending balance (with locking)
-                    $wallet = Wallet::firstOrCreate(
-                        ['providerID' => $payment->providerID],
-                        ['available_balance' => 0, 'pending_balance' => 0]
-                    );
-                    
-                    $lockedWallet = Wallet::where('walletID', $wallet->walletID)
-                        ->lockForUpdate()
-                        ->first();
-                    $lockedWallet->pending_balance += $payment->provider_amount;
-                    $lockedWallet->save();
-
-                    // 5. Create WalletTransaction record
-                    WalletTransaction::create([
-                        'walletID' => $lockedWallet->walletID,
-                        'type' => 'pending_credit',
-                        'amount' => $payment->provider_amount,
-                        'description' => 'Payment held for booking #' . $booking->bookingID,
-                        'bookingID' => $booking->bookingID
-                    ]);
-
-                    // 6. Send Notifications
+                    // 4. Notify Customer
                     $notificationService = app(NotificationService::class);
-                    
-                    // Notify Customer
                     $notificationService->toCustomer(
                         $booking->customerID,
                         'payment_success',
                         'Payment Successful',
                         'Your payment for ' . ($booking->service->title ?? 'service') . ' has been received.',
                         ['booking_id' => $booking->bookingID],
-                        $booking->bookingID
-                    );
-                    
-                    // Notify Provider
-                    $notificationService->toProvider(
-                        $booking->providerID,
-                        'payment_received',
-                        'Payment Received',
-                        'You have received a payment for ' . ($booking->service->title ?? 'service') . '. You can now start the service. Funds are held in escrow.',
-                        [
-                            'booking_id' => $booking->bookingID,
-                            'customer_name' => $booking->customer->fullname ?? 'Customer',
-                            'amount' => $payment->amount
-                        ],
                         $booking->bookingID
                     );
                         

@@ -9,6 +9,7 @@ use Illuminate\Database\QueryException;
 use App\Models\Customer;
 use Illuminate\Support\Facades\Hash;
 use App\Models\ServiceProvider;
+use Illuminate\Support\Facades\Cache;
 
 
 class CategoryController extends Controller
@@ -42,8 +43,10 @@ class CategoryController extends Controller
         $category = Category::create([
             'name' => $request->name,
             'description' => $request->description,
-            'status' => $request->status ?? 'Active' // default value if not provided
+            'status' => $request->status ?? 'Active'
         ]);
+
+        Cache::forget('categories_all'); // Invalidate cache
 
         return response()->json([
             'success' => true,
@@ -53,11 +56,14 @@ class CategoryController extends Controller
     }
 
     /**
-     * Fetch all categories (Read)
+     * Fetch all categories (Read) — cached for 1 hour
      */
     public function getCategories()
     {
-        $categories = Category::all();
+        $categories = Cache::remember('categories_all', 3600, function () {
+            return Category::all();
+        });
+
         return response()->json([
             'success' => true,
             'data' => $categories
@@ -79,7 +85,9 @@ class CategoryController extends Controller
         }
 
         try {
-            $category->delete(); // permanently remove
+            $category->delete();
+
+            Cache::forget('categories_all'); // Invalidate cache
 
             return response()->json([
                 'success' => true,
@@ -124,6 +132,8 @@ class CategoryController extends Controller
         $category->description = $request->input('description', $category->description);
         $category->status = $request->input('status', $category->status);
         $category->save();
+
+        Cache::forget('categories_all'); // Invalidate cache
 
         return response()->json([
             'success' => true,
