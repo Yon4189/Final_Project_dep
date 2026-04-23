@@ -366,17 +366,21 @@ class DisputeController extends Controller
             ], 403);
         }
 
-        // Filter messages by recipient_type based on user type
+        // Filter messages by recipient_type and admin-only flag based on user type
         if ($userType === 'customer') {
             $dispute->load(['messages' => function($query) {
-                $query->where('recipient_type', 'customer')->with('sender');
+                $query->where('recipient_type', 'customer')
+                      ->where('is_admin_only', false)
+                      ->with('sender');
             }]);
         } elseif ($userType === 'provider') {
             $dispute->load(['messages' => function($query) {
-                $query->where('recipient_type', 'provider')->with('sender');
+                $query->where('recipient_type', 'provider')
+                      ->where('is_admin_only', false)
+                      ->with('sender');
             }]);
         } else {
-            // Admin sees all messages
+            // Admin sees all messages including private notes
             $dispute->load(['messages.sender']);
         }
 
@@ -461,8 +465,9 @@ class DisputeController extends Controller
             $dispute->save();
         }
 
-        // Send notifications (only to admin, not to other party)
+        // Send notifications to all relevant parties
         if ($userType === 'customer') {
+            // Notify admins
             $customer = \App\Models\Customer::find($senderId);
             $this->notificationService->notifyAdminsDisputeMessage(
                 $dispute,
@@ -470,7 +475,20 @@ class DisputeController extends Controller
                 'customer',
                 $customer->fullname ?? 'Customer'
             );
+            
+            // Notify provider (the other party)
+            $providerId = $dispute->raised_by_type === 'provider' ? $dispute->raised_by_id : $dispute->against_id;
+            $this->notificationService->toUser(
+                'provider',
+                $providerId,
+                'dispute',
+                'New Message in Dispute',
+                "Customer has sent a message in dispute #{$disputeID}",
+                ['disputeID' => $disputeID],
+                $dispute->bookingID
+            );
         } elseif ($userType === 'provider') {
+            // Notify admins
             $provider = \App\Models\ServiceProvider::find($senderId);
             $this->notificationService->notifyAdminsDisputeMessage(
                 $dispute,
@@ -478,13 +496,25 @@ class DisputeController extends Controller
                 'provider',
                 $provider->fullname ?? 'Provider'
             );
+            
+            // Notify customer (the other party)
+            $customerId = $dispute->raised_by_type === 'customer' ? $dispute->raised_by_id : $dispute->against_id;
+            $this->notificationService->toUser(
+                'customer',
+                $customerId,
+                'dispute',
+                'New Message in Dispute',
+                "Provider has sent a message in dispute #{$disputeID}",
+                ['disputeID' => $disputeID],
+                $dispute->bookingID
+            );
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Message added',
             'data' => $message->load('sender')
-        ]);
+        ], 201);
     }
 
     /**
@@ -598,5 +628,294 @@ class DisputeController extends Controller
         }
 
         return ['valid' => false, 'error' => 'Invalid file type. Allowed: jpg, jpeg, png, pdf, doc, docx, mp4, mov, avi, webm'];
+    }
+
+    /**
+     * Download attachment from dispute message
+     * 
+     * @param int $disputeID
+     * @param int $messageID
+     * @param string $filename
+     * @return \Illuminate\Http\Response
+     */
+    public function downloadAttachment($disputeID, $messageID, $filename)
+    {
+        $user = $this->getAuthenticatedUser();
+        
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $userType = $this->getUserType($user);
+
+        // Verify dispute exists and user is involved
+        $dispute = Dispute::find($disputeID);
+        if (!$dispute) {
+            return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
+        }
+
+        if (!$this->isUserInvolved($dispute, $user, $userType)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Verify message exists and belongs to this dispute
+        $message = DisputeMessage::where('messageID', $messageID)
+            ->where('disputeID', $disputeID)
+            ->first();
+
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        // Verify user can access this message
+        if ($userType === 'customer' && $message->recipient_type !== 'customer') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        if ($userType === 'provider' && $message->recipient_type !== 'provider') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Verify admin-only messages are not accessible to users
+        if ($message->is_admin_only && $userType !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Find the attachment in the message
+        $attachments = $message->attachments ?? [];
+        $attachment = null;
+
+        foreach ($attachments as $att) {
+            if ($att['name'] === $filename || basename($att['path']) === $filename) {
+                $attachment = $att;
+                break;
+            }
+        }
+
+        if (!$attachment) {
+            return response()->json(['success' => false, 'message' => 'Attachment not found'], 404);
+        }
+
+        // Verify file exists
+        $filePath = storage_path('app/public/' . $attachment['path']);
+        if (!file_exists($filePath)) {
+            Log::warning('Attachment file not found', [
+                'path' => $filePath,
+                'message_id' => $messageID,
+                'dispute_id' => $disputeID
+            ]);
+            return response()->json(['success' => false, 'message' => 'File not found'], 404);
+        }
+
+        // Prevent directory traversal attacks
+        $realPath = realpath($filePath);
+        $storagePath = realpath(storage_path('app/public'));
+        
+        if ($realPath === false || strpos($realPath, $storagePath) !== 0) {
+            Log::warning('Directory traversal attempt detected', [
+                'requested_path' => $filePath,
+                'real_path' => $realPath,
+                'storage_path' => $storagePath
+            ]);
+            return response()->json(['success' => false, 'message' => 'Invalid file path'], 403);
+        }
+
+        // Log the download
+        Log::info('Dispute attachment downloaded', [
+            'dispute_id' => $disputeID,
+            'message_id' => $messageID,
+            'filename' => $filename,
+            'user_type' => $userType,
+            'user_id' => $userType === 'customer' ? $user->customerID : ($userType === 'provider' ? $user->providerID : $user->adminID)
+        ]);
+
+        // Download the file
+        return response()->download($filePath, $attachment['name'], [
+            'Content-Type' => $attachment['type'] ?? 'application/octet-stream'
+        ]);
+    }
+
+    /**
+     * Edit a message (user can only edit their own messages)
+     * 
+     * @param int $messageID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function editMessage(Request $request, $messageID)
+    {
+        $validator = Validator::make($request->all(), [
+            'message' => 'required|string|min:1|max:5000'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $user = $this->getAuthenticatedUser();
+        
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $userType = $this->getUserType($user);
+
+        // Find message
+        $message = DisputeMessage::find($messageID);
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        // Verify user is the sender
+        $senderId = $userType === 'customer' ? $user->customerID : ($userType === 'provider' ? $user->providerID : $user->adminID);
+        if ($message->sender_id !== $senderId || $message->sender_type !== $userType) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Update message
+        $message->message = strip_tags($request->message);
+        $message->save();
+
+        Log::info('Dispute message edited', [
+            'message_id' => $messageID,
+            'dispute_id' => $message->disputeID,
+            'user_type' => $userType
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Message updated',
+            'data' => $message->load('sender')
+        ]);
+    }
+
+    /**
+     * Delete a message (user can only delete their own messages)
+     * 
+     * @param int $messageID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteUserMessage($messageID)
+    {
+        $user = $this->getAuthenticatedUser();
+        
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $userType = $this->getUserType($user);
+
+        // Find message
+        $message = DisputeMessage::find($messageID);
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        // Verify user is the sender
+        $senderId = $userType === 'customer' ? $user->customerID : ($userType === 'provider' ? $user->providerID : $user->adminID);
+        if ($message->sender_id !== $senderId || $message->sender_type !== $userType) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $disputeID = $message->disputeID;
+        $message->delete();
+
+        Log::info('Dispute message deleted by user', [
+            'message_id' => $messageID,
+            'dispute_id' => $disputeID,
+            'user_type' => $userType
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Message deleted'
+        ]);
+    }
+
+    /**
+     * Search messages within a dispute
+     * 
+     * @param int $disputeID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function searchMessages(Request $request, $disputeID)
+    {
+        $validator = Validator::make($request->all(), [
+            'query' => 'required|string|min:2|max:255',
+            'limit' => 'integer|min:1|max:100'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $user = $this->getAuthenticatedUser();
+        
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $userType = $this->getUserType($user);
+
+        // Verify dispute exists and user is involved
+        $dispute = Dispute::find($disputeID);
+        if (!$dispute) {
+            return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
+        }
+
+        if (!$this->isUserInvolved($dispute, $user, $userType)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $query = $request->query;
+        $limit = $request->limit ?? 50;
+
+        // Build search query with proper filtering
+        $messagesQuery = DisputeMessage::where('disputeID', $disputeID)
+            ->where('message', 'LIKE', '%' . $query . '%')
+            ->with('sender');
+
+        // Apply user-specific filtering
+        if ($userType === 'customer') {
+            $messagesQuery->where('recipient_type', 'customer')
+                         ->where('is_admin_only', false);
+        } elseif ($userType === 'provider') {
+            $messagesQuery->where('recipient_type', 'provider')
+                         ->where('is_admin_only', false);
+        }
+        // Admin sees all messages
+
+        $messages = $messagesQuery->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+
+        // Highlight search term in results
+        $highlightedMessages = $messages->map(function ($msg) use ($query) {
+            $highlighted = str_ireplace(
+                $query,
+                '<mark>' . $query . '</mark>',
+                $msg->message
+            );
+            return [
+                'messageID' => $msg->messageID,
+                'disputeID' => $msg->disputeID,
+                'sender_id' => $msg->sender_id,
+                'sender_type' => $msg->sender_type,
+                'sender' => $msg->sender,
+                'message' => $msg->message,
+                'message_highlighted' => $highlighted,
+                'created_at' => $msg->created_at,
+                'recipient_type' => $msg->recipient_type,
+                'is_admin_only' => $msg->is_admin_only
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'query' => $query,
+                'count' => $highlightedMessages->count(),
+                'messages' => $highlightedMessages
+            ]
+        ]);
     }
 }

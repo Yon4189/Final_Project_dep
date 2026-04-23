@@ -133,6 +133,10 @@ Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->gro
     Route::middleware('ownership:dispute,disputeID,raised_by_id')->group(function () {
         Route::get('/disputes/{disputeID}',                     [DisputeController::class, 'show']);
         Route::post('/disputes/{disputeID}/messages',           [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
+        Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
+        Route::get('/disputes/{disputeID}/messages/search',     [DisputeController::class, 'searchMessages']);
+        Route::put('/disputes/messages/{messageID}',            [DisputeController::class, 'editMessage']);
+        Route::delete('/disputes/messages/{messageID}',         [DisputeController::class, 'deleteUserMessage']);
     });
 
     // ── Locations ────────────────────────────────────────────────────────────
@@ -245,6 +249,10 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
     Route::middleware('ownership:dispute,disputeID,raised_by_id')->group(function () {
         Route::get('/disputes/{disputeID}',                 [DisputeController::class, 'show']);
         Route::post('/disputes/{disputeID}/messages',       [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
+        Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
+        Route::get('/disputes/{disputeID}/messages/search', [DisputeController::class, 'searchMessages']);
+        Route::put('/disputes/messages/{messageID}',        [DisputeController::class, 'editMessage']);
+        Route::delete('/disputes/messages/{messageID}',     [DisputeController::class, 'deleteUserMessage']);
     });
 
     // ── Wallet & Withdrawals ──────────────────────────────────────────────────
@@ -350,6 +358,13 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     Route::post('/disputes/{disputeID}/notes',      [AdminDisputeController::class, 'addPrivateNote']);
     Route::post('/disputes/{disputeID}/messages',   [AdminDisputeController::class, 'addMessage'])->middleware('throttle:10,1');
     Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
+    Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [AdminDisputeController::class, 'downloadAttachment']);
+    Route::get('/disputes/{disputeID}/messages/search', [AdminDisputeController::class, 'searchMessages']);
+    Route::put('/disputes/messages/{messageID}',    [AdminDisputeController::class, 'editMessage']);
+    Route::post('/disputes/{disputeID}/typing',     [AdminDisputeController::class, 'setTypingStatus']);
+    Route::get('/disputes/{disputeID}/typing',      [AdminDisputeController::class, 'getTypingStatus']);
+    Route::post('/disputes/{disputeID}/messages/reply', [AdminDisputeController::class, 'replyToMessage'])->middleware('throttle:10,1');
+    Route::get('/disputes/{disputeID}/messages/{messageID}/thread', [AdminDisputeController::class, 'getMessageThread']);
 
     // ── Admin Settings (split payment) ────────────────────────────────────────
     Route::get('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'getDepositPercentage']);

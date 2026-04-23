@@ -5,10 +5,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { 
   AlertCircle, CheckCircle, RefreshCcw, XCircle, 
   User, Wrench, MessageSquare, ExternalLink, Search,
-  Loader2, Filter, ChevronRight, MessageSquareText, Trash2
+  Loader2, Filter, ChevronRight, MessageSquareText, Trash2, Wifi, WifiOff, Edit2, Reply
 } from 'lucide-react';
 import { disputeAPI } from '../api/dispute';
 import DescriptionModal from '../components/DescriptionModal';
+import useDisputePolling from '../hooks/useDisputePolling';
+import useTypingIndicator from '../hooks/useTypingIndicator';
 
 const Disputes = () => {
   const { t } = useTranslation();
@@ -30,6 +32,43 @@ const Disputes = () => {
   const [priorityFilter, setPriorityFilter] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [descModal, setDescModal] = useState({ show: false, content: '', title: '' });
+  const [pollingEnabled, setPollingEnabled] = useState(false);
+  const [lastMessageUpdate, setLastMessageUpdate] = useState(null);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingMessageText, setEditingMessageText] = useState('');
+  const [replyingToMessageId, setReplyingToMessageId] = useState(null);
+  const [replyText, setReplyText] = useState('');
+
+  // Enable polling when a dispute is selected
+  const pollingStatus = useDisputePolling(
+    selectedDispute?.disputeID,
+    3000, // Poll every 3 seconds
+    pollingEnabled && !!selectedDispute
+  );
+
+  // Typing indicator
+  const { typingUsers, setTyping } = useTypingIndicator(
+    selectedDispute?.disputeID,
+    pollingEnabled && !!selectedDispute
+  );
+
+  // Listen for message updates from polling
+  useEffect(() => {
+    const handleMessageUpdate = (event) => {
+      setLastMessageUpdate(event.detail.timestamp);
+      // Refresh the selected dispute to show new messages
+      if (selectedDispute) {
+        handleReviewCase(selectedDispute.disputeID);
+      }
+    };
+
+    window.addEventListener('disputeMessageUpdate', handleMessageUpdate);
+    return () => window.removeEventListener('disputeMessageUpdate', handleMessageUpdate);
+  }, [selectedDispute]);
 
   const cleanTitle = (title) => {
     if (!title) return '';
@@ -98,6 +137,8 @@ const Disputes = () => {
           resolution_type: response.data.dispute.resolution_type || '',
           refund_amount: response.data.dispute.refund_amount || 0
         });
+        // Enable polling when dispute is opened
+        setPollingEnabled(true);
       }
     } catch (error) {
       console.error('Failed to fetch dispute details:', error);
@@ -108,6 +149,7 @@ const Disputes = () => {
 
   const handleCloseModal = () => {
     setSelectedDispute(null);
+    setPollingEnabled(false);
     navigate('/admin/disputes');
   };
 
@@ -153,6 +195,61 @@ const Disputes = () => {
     }
   };
 
+  const handleEditMessage = async (messageID) => {
+    if (!editingMessageText.trim()) return;
+
+    try {
+      const response = await disputeAPI.editMessage(messageID, editingMessageText);
+      if (response.success) {
+        // Update local state
+        setSelectedDispute(prev => ({
+          ...prev,
+          messages: prev.messages.map(msg => 
+            msg.messageID === messageID 
+              ? { ...msg, message: editingMessageText, is_edited: true }
+              : msg
+          )
+        }));
+        setEditingMessageId(null);
+        setEditingMessageText('');
+      }
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      alert('Failed to edit message: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const startEditMessage = (message) => {
+    setEditingMessageId(message.messageID);
+    setEditingMessageText(message.message);
+  };
+
+  const handleReplyToMessage = async (parentMessageID) => {
+    if (!replyText.trim() || !selectedDispute) return;
+
+    try {
+      const response = await disputeAPI.replyToMessage(
+        selectedDispute.disputeID,
+        parentMessageID,
+        replyText,
+        recipientType
+      );
+
+      if (response.success) {
+        setReplyText('');
+        setReplyingToMessageId(null);
+        // Refresh dispute details
+        const detailRes = await disputeAPI.getDisputeDetails(selectedDispute.disputeID);
+        if (detailRes.success) {
+          setSelectedDispute(detailRes.data.dispute);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to reply to message:', error);
+      alert('Failed to reply: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   const handleSendMessage = async (isAdminOnly = false) => {
     if (!newMessage.trim() || !selectedDispute) return;
 
@@ -178,6 +275,30 @@ const Disputes = () => {
       alert(t('user_mgmt_err_status') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const handleSearchMessages = async (e) => {
+    e.preventDefault();
+    if (!messageSearchQuery.trim() || !selectedDispute) return;
+
+    try {
+      setIsSearching(true);
+      const response = await disputeAPI.searchMessages(
+        selectedDispute.disputeID,
+        messageSearchQuery,
+        50
+      );
+
+      if (response.success) {
+        setSearchResults(response.data.messages || []);
+        setShowSearchResults(true);
+      }
+    } catch (error) {
+      console.error('Failed to search messages:', error);
+      alert('Search failed: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -445,10 +566,17 @@ const Disputes = () => {
                 <div className="flex items-center gap-2 mb-1">
                    <AlertCircle size={20} className="text-red-400" />
                    <h2 className="text-lg font-black uppercase tracking-tight">{t('dispute_case_review')}: #{selectedDispute.disputeID}</h2>
+                   {pollingEnabled && (
+                     <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-green-500/10 border border-green-500/30 rounded-lg">
+                       <Wifi size={12} className="text-green-500 animate-pulse" />
+                       <span className="text-[9px] font-black text-green-500 uppercase">Live</span>
+                     </div>
+                   )}
                 </div>
                 <p className="text-admin-text font-bold text-xs uppercase tracking-widest leading-none opacity-80">
                   {t('dispute_status')}: <span className="text-admin-text font-black">{getStatusTranslation(selectedDispute.status)}</span> | 
                   {t('dispute_priority')}: <span className="text-admin-text font-black">{getPriorityTranslation(selectedDispute.priority)}</span>
+                  {lastMessageUpdate && <span className="ml-2 text-[9px] text-slate-400">Updated: {lastMessageUpdate.toLocaleTimeString()}</span>}
                 </p>
               </div>
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -505,19 +633,76 @@ const Disputes = () => {
 
                 {/* Messages History */}
                 <div className="space-y-4">
-                   <h3 className="text-xs font-black text-admin-text uppercase flex items-center gap-2">
-                     <MessageSquareText size={16} className="text-blue-500" />
-                     {t('dispute_msg_history')}
-                   </h3>
+                   <div className="flex items-center justify-between">
+                     <h3 className="text-xs font-black text-admin-text uppercase flex items-center gap-2">
+                       <MessageSquareText size={16} className="text-blue-500" />
+                       {t('dispute_msg_history')}
+                     </h3>
+                     <button
+                       onClick={() => setShowSearchResults(!showSearchResults)}
+                       className="text-[9px] font-black text-blue-500 hover:text-blue-700 uppercase"
+                     >
+                       {showSearchResults ? 'Hide Search' : 'Search'}
+                     </button>
+                   </div>
+
+                   {/* Search Bar */}
+                   {showSearchResults && (
+                     <form onSubmit={handleSearchMessages} className="flex gap-2 mb-3">
+                       <input
+                         type="text"
+                         placeholder="Search messages..."
+                         className="flex-1 p-2 bg-admin-card border border-admin-border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 text-admin-text"
+                         value={messageSearchQuery}
+                         onChange={(e) => setMessageSearchQuery(e.target.value)}
+                       />
+                       <button
+                         type="submit"
+                         disabled={isSearching || !messageSearchQuery.trim()}
+                         className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+                       >
+                         {isSearching ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                       </button>
+                     </form>
+                   )}
+
+                   {/* Search Results */}
+                   {showSearchResults && searchResults.length > 0 && (
+                     <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-lg">
+                       <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase mb-2">
+                         Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                       </p>
+                       <div className="space-y-2 max-h-40 overflow-y-auto">
+                         {searchResults.map((msg, idx) => (
+                           <div key={idx} className="p-2 bg-white dark:bg-admin-card rounded border border-blue-200 dark:border-admin-border text-[9px]">
+                             <p className="font-bold text-admin-text mb-1">{msg.sender?.fullname || 'System'}</p>
+                             <p className="text-admin-text-muted line-clamp-2" dangerouslySetInnerHTML={{ __html: msg.message_highlighted }} />
+                             <p className="text-[8px] text-slate-400 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+
                     <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                       {selectedDispute.messages
                         ?.filter(msg => {
-                          if (recipientType === 'admin') return msg.is_admin_only || msg.recipient_type === 'admin';
-                          if (recipientType === 'customer') {
-                            return msg.sender_type === 'customer' || (msg.sender_type === 'admin' && msg.recipient_type === 'customer' && !msg.is_admin_only);
-                          }
-                          if (recipientType === 'provider') {
-                            return msg.sender_type === 'provider' || (msg.sender_type === 'admin' && msg.recipient_type === 'provider' && !msg.is_admin_only);
+                          // Admin-only messages only visible when filtering by admin
+                          if (msg.is_admin_only && recipientType !== 'admin') return false;
+                          
+                          // Show messages based on recipient type filter
+                          if (recipientType === 'admin') {
+                            // Show all messages to admin
+                            return true;
+                          } else if (recipientType === 'customer') {
+                            // Show messages from customer or messages sent to customer
+                            return msg.sender_type === 'customer' || msg.recipient_type === 'customer';
+                          } else if (recipientType === 'provider') {
+                            // Show messages from provider or messages sent to provider
+                            return msg.sender_type === 'provider' || msg.recipient_type === 'provider';
+                          } else if (recipientType === 'both') {
+                            // Show all non-admin-only messages
+                            return !msg.is_admin_only;
                           }
                           return true;
                         })
@@ -530,9 +715,20 @@ const Disputes = () => {
                           <div className="flex justify-between items-start mb-1">
                             <p className={`text-[9px] font-black uppercase tracking-widest ${msg.sender_type === 'admin' ? 'text-blue-100' : 'text-admin-text-muted'}`}>
                               {t(msg.sender_type?.toLowerCase())} • {msg.sender?.fullname || msg.sender?.name || 'System'}
+                              {msg.recipient_type && msg.sender_type !== 'admin' && <span className="text-[8px] opacity-60"> → {t(msg.recipient_type)}</span>}
                             </p>
                             <div className="flex items-center gap-2">
-                              <p className="text-[9px] opacity-40">{new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                              <p className="text-[9px] opacity-40">
+                                {new Date(msg.created_at).toLocaleDateString([], {month: 'short', day: 'numeric'})} {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                {msg.is_edited && <span className="text-[8px] ml-1">(edited)</span>}
+                              </p>
+                              <button 
+                                onClick={() => setReplyingToMessageId(msg.messageID)}
+                                className="opacity-0 group-hover/msg:opacity-100 text-green-400 hover:text-green-500 transition-all p-1"
+                                title="Reply to message"
+                              >
+                                <Reply size={12} />
+                              </button>
                               <button 
                                 onClick={() => handleDeleteMessage(msg.messageID)}
                                 className="opacity-0 group-hover/msg:opacity-100 text-red-400 hover:text-red-500 transition-all p-1"
@@ -540,19 +736,80 @@ const Disputes = () => {
                               >
                                 <Trash2 size={12} />
                               </button>
+                              <button 
+                                onClick={() => startEditMessage(msg)}
+                                className="opacity-0 group-hover/msg:opacity-100 text-blue-400 hover:text-blue-500 transition-all p-1"
+                                title="Edit message"
+                              >
+                                <Edit2 size={12} />
+                              </button>
                             </div>
                           </div>
-                          <p className="text-xs leading-relaxed">{msg.message}</p>
+                          {editingMessageId === msg.messageID ? (
+                            <div className="space-y-2">
+                              <textarea
+                                className="w-full p-2 bg-white dark:bg-admin-sidebar text-admin-text rounded border border-admin-border text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                                value={editingMessageText}
+                                onChange={(e) => setEditingMessageText(e.target.value)}
+                                rows="3"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleEditMessage(msg.messageID)}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-[9px] font-bold hover:bg-green-600"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingMessageId(null);
+                                    setEditingMessageText('');
+                                  }}
+                                  className="px-2 py-1 bg-slate-400 text-white rounded text-[9px] font-bold hover:bg-slate-500"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs leading-relaxed">{msg.message}</p>
+                          )}
+                          {replyingToMessageId === msg.messageID && (
+                            <div className="mt-3 pt-3 border-t border-slate-300 dark:border-slate-600 space-y-2">
+                              <textarea
+                                className="w-full p-2 bg-white dark:bg-admin-sidebar text-admin-text rounded border border-admin-border text-xs outline-none focus:ring-2 focus:ring-green-500"
+                                placeholder="Write your reply..."
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                rows="2"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleReplyToMessage(msg.messageID)}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-[9px] font-bold hover:bg-green-600"
+                                >
+                                  Reply
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setReplyingToMessageId(null);
+                                    setReplyText('');
+                                  }}
+                                  className="px-2 py-1 bg-slate-400 text-white rounded text-[9px] font-bold hover:bg-slate-500"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                       {selectedDispute.messages?.filter(msg => {
-                        if (recipientType === 'admin') return msg.is_admin_only || msg.recipient_type === 'admin';
-                        if (recipientType === 'customer') {
-                          return msg.sender_type === 'customer' || (msg.sender_type === 'admin' && msg.recipient_type === 'customer' && !msg.is_admin_only);
-                        }
-                        if (recipientType === 'provider') {
-                          return msg.sender_type === 'provider' || (msg.sender_type === 'admin' && msg.recipient_type === 'provider' && !msg.is_admin_only);
-                        }
+                        if (msg.is_admin_only && recipientType !== 'admin') return false;
+                        if (recipientType === 'admin') return true;
+                        if (recipientType === 'customer') return msg.sender_type === 'customer' || msg.recipient_type === 'customer';
+                        if (recipientType === 'provider') return msg.sender_type === 'provider' || msg.recipient_type === 'provider';
+                        if (recipientType === 'both') return !msg.is_admin_only;
                         return true;
                       }).length === 0 && (
                         <div className="py-10 text-center">
@@ -566,7 +823,7 @@ const Disputes = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[9px] font-black text-admin-text-muted uppercase tracking-widest">Recipient:</span>
                           <div className="flex gap-1">
-                            {['customer', 'provider', 'admin'].map((type) => (
+                            {['customer', 'provider', 'both'].map((type) => (
                               <button 
                                 key={type}
                                 onClick={() => setRecipientType(type)}
@@ -576,23 +833,39 @@ const Disputes = () => {
                                   : 'bg-slate-100 dark:bg-admin-sidebar text-admin-text-muted hover:text-admin-text'
                                 }`}
                               >
-                                {t(type)}
+                                {type === 'both' ? 'Both' : t(type)}
                               </button>
                             ))}
                           </div>
                         </div>
+                        {typingUsers.length > 0 && (
+                          <div className="text-[9px] text-slate-400 italic">
+                            {typingUsers.map(u => u.name).join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <input 
                             type="text"
                             placeholder={t('dispute_chat_placeholder', { recipient: t(recipientType) })}
                             className="flex-1 p-3 bg-admin-card border border-admin-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-admin-text transition-all"
                             value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(recipientType === 'admin')}
+                            onChange={(e) => {
+                              setNewMessage(e.target.value);
+                              setTyping(e.target.value.length > 0);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSendMessage(false);
+                                setTyping(false);
+                              }
+                            }}
                           />
                           <button 
                             disabled={sendingMessage || !newMessage.trim()}
-                            onClick={() => handleSendMessage(recipientType === 'admin')}
+                            onClick={() => {
+                              handleSendMessage(false);
+                              setTyping(false);
+                            }}
                             className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all disabled:opacity-50 active:scale-95 flex items-center gap-2"
                           >
                             {sendingMessage ? <Loader2 size={14} className="animate-spin" /> : t('modal_submit')}
