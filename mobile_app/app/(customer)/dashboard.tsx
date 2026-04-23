@@ -312,6 +312,19 @@ export default function CustomerDashboard() {
 
   const handleServiceRequest = async (requestData: any) => {
     try {
+      // Block frozen accounts from creating new bookings
+      if (user?.account_status === 'frozen') {
+        Alert.alert(
+          'Account Frozen',
+          'Your account is frozen due to an overdue payment. Please complete the outstanding payment to restore access.',
+          [
+            { text: 'Pay Now', onPress: () => router.push('/(customer)/bookings') },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
+      }
+
       // Create service request
       const bookingResponse = await customerService.createBooking({
         providerID: selectedProvider?.id || "",
@@ -909,6 +922,23 @@ export default function CustomerDashboard() {
   return (
     <View style={styles.container}>
       {renderHeader()}
+
+      {/* Account frozen banner */}
+      {user?.account_status === 'frozen' && (
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.error, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          onPress={() => router.push('/(customer)/bookings')}
+        >
+          <Ionicons name="lock-closed" size={18} color="#fff" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Account Frozen</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>
+              Your account is frozen due to an overdue payment. Tap to pay and restore access.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#fff" />
+        </TouchableOpacity>
+      )}
 
       <View style={styles.searchContainer}>
         <ServiceSearch

@@ -222,6 +222,18 @@ class ProviderService {
     return api.get<WithdrawalRequest[]>(`${this.BASE_PATH}/withdrawals`);
   }
 
+  async getWalletTransactions(params?: { transaction_type?: string; transaction_status?: string; page?: number }): Promise<ApiResponse<any>> {
+    const query = new URLSearchParams();
+    if (params?.transaction_type) query.append('transaction_type', params.transaction_type);
+    if (params?.transaction_status) query.append('transaction_status', params.transaction_status);
+    if (params?.page) query.append('page', String(params.page));
+    return api.get<any>(`${this.BASE_PATH}/wallet/transactions?${query.toString()}`);
+  }
+
+  async getWalletDashboard(): Promise<ApiResponse<any>> {
+    return api.get<any>(`${this.BASE_PATH}/wallet`);
+  }
+
   async requestWithdrawal(data: {
     amount: number;
     payment_method: 'bank' | 'telebir';

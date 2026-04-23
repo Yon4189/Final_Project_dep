@@ -188,7 +188,11 @@ export default function ProviderNotifications() {
         case 'payment_received':
         case 'payment_released':
         case 'withdrawal':
-          router.push('/(provider)/earnings');
+        case 'immediate_payout_credited':
+        case 'held_payout_scheduled':
+        case 'held_payout_released':
+        case 'payout_reversed':
+          router.push('/(provider)/wallet');
           break;
         case 'review':
           router.push('/(provider)/reviews');
@@ -224,6 +228,14 @@ export default function ProviderNotifications() {
       case 'payment_received':
       case 'payment_released':
         return <Ionicons name="wallet" size={iconSize} color={iconColor} />;
+      case 'immediate_payout_credited':
+        return <Ionicons name="flash" size={iconSize} color="#22c55e" />;
+      case 'held_payout_scheduled':
+        return <Ionicons name="time" size={iconSize} color="#f59e0b" />;
+      case 'held_payout_released':
+        return <Ionicons name="checkmark-done-circle" size={iconSize} color="#22c55e" />;
+      case 'payout_reversed':
+        return <Ionicons name="return-down-back" size={iconSize} color={Colors.error} />;
       case 'withdrawal':
         return <Ionicons name="cash" size={iconSize} color={iconColor} />;
       case 'review':

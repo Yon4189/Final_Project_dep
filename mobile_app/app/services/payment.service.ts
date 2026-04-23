@@ -184,6 +184,24 @@ class PaymentService {
     return api.post<any>(`${this.BASE_PATH}/booking/${bookingId}/refund`, { reason });
   }
 
+  // ── Split Payment Methods ──────────────────────────────────────────────────
+
+  async calculateDeposit(bookingId: string): Promise<any> {
+    return api.post<any>('/payments/calculate-deposit', { booking_id: bookingId });
+  }
+
+  async processDeposit(bookingId: string, amount: number): Promise<any> {
+    return api.post<any>('/payments/process-deposit', { booking_id: bookingId, amount });
+  }
+
+  async processFinalPayment(bookingId: string, amount: number): Promise<any> {
+    return api.post<any>('/payments/process-final', { booking_id: bookingId, amount });
+  }
+
+  async getSplitPaymentStatus(bookingId: string): Promise<any> {
+    return api.get<any>(`/payments/status/${bookingId}`);
+  }
+
   async getRefundStatus(refundId: string): Promise<any> {
     return api.get<any>(`${this.BASE_PATH}/refunds/${refundId}`);
   }

@@ -40,6 +40,10 @@ const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   booking_completed: 'checkmark-done-outline',
   payment_received:  'cash-outline',
   payment_failed:    'alert-circle-outline',
+  payment_reminder_24h: 'time-outline',
+  payment_reminder_48h: 'alarm-outline',
+  payment_overdue:   'warning-outline',
+  account_frozen:    'lock-closed-outline',
   review:            'star-outline',
   reminder:          'time-outline',
   system:            'information-circle-outline',
@@ -53,6 +57,10 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   booking_completed: Colors.success,
   payment_received:  Colors.success,
   payment_failed:    Colors.error,
+  payment_reminder_24h: Colors.warning,
+  payment_reminder_48h: Colors.error,
+  payment_overdue:   Colors.error,
+  account_frozen:    Colors.error,
   booking_request:   Colors.primary,
   reminder:          Colors.warning,
   system:            Colors.info,
@@ -168,6 +176,16 @@ export default function CustomerNotifications() {
           router.push(`/(customer)/requests/${bookingId}`);
         }
         break;
+      case 'payment_reminder_24h':
+      case 'payment_reminder_48h':
+      case 'payment_overdue':
+        if (bookingId) {
+          router.push({ pathname: '/(customer)/payment', params: { bookingId } });
+        }
+        break;
+      case 'account_frozen':
+        router.push('/(customer)/bookings');
+        break;
       default:
         if (bookingId) {
           router.push(`/(customer)/requests/${bookingId}`);
@@ -194,6 +212,7 @@ export default function CustomerNotifications() {
 
   const renderNotification = ({ item }: { item: CustomerNotification }) => {
     const isAccepted = item.type === 'booking_accepted' || item.type === 'booking_confirmed';
+    const isPaymentReminder = item.type === 'payment_reminder_24h' || item.type === 'payment_reminder_48h' || item.type === 'payment_overdue';
     const iconName = NOTIFICATION_ICONS[item.type] ?? 'notifications-outline';
     const iconColor = NOTIFICATION_COLORS[item.type] ?? Colors.primary;
     const bookingId = item.relatedBookingId
@@ -253,6 +272,19 @@ export default function CustomerNotifications() {
                 onPress={() => router.push(`/(customer)/requests/${bookingId}`)}
               >
                 <Text style={styles.viewRequestText}>{t('notifications.viewDetails', 'View Details')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Payment reminder action */}
+          {isPaymentReminder && bookingId && (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.payNowButton, { backgroundColor: item.type === 'payment_overdue' ? Colors.error : Colors.warning }]}
+                onPress={() => handlePayNow(item)}
+              >
+                <Ionicons name="card-outline" size={14} color={Colors.surface} />
+                <Text style={styles.payNowText}> {item.type === 'payment_overdue' ? 'Pay Now (Overdue)' : 'Pay Now'}</Text>
               </TouchableOpacity>
             </View>
           )}

@@ -263,6 +263,15 @@ export default function ProviderLayout() {
         }}
       />
 
+      {/* Wallet */}
+      <Stack.Screen
+        name="wallet/index"
+        options={{
+          title: 'Wallet',
+          headerShown: false,
+        }}
+      />
+
     </Stack>
   );
 }

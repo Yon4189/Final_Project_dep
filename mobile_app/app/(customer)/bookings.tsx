@@ -125,7 +125,36 @@ export default function BookingsScreen() {
     </View>
   );
 
-  const renderBookingCard = (booking: ServiceRequest) => (
+  const getPaymentStatusColor = (paymentStatus: string) => {
+    switch (paymentStatus?.toLowerCase()) {
+      case 'pending_deposit': return Colors.warning;
+      case 'deposit_paid': return Colors.primary;
+      case 'pending_final': return Colors.warning;
+      case 'completed': return Colors.success;
+      case 'overdue': return Colors.error;
+      default: return Colors.text.secondary;
+    }
+  };
+
+  const getPaymentStatusLabel = (paymentStatus: string) => {
+    switch (paymentStatus?.toLowerCase()) {
+      case 'pending_deposit': return 'Deposit Due';
+      case 'deposit_paid': return 'Deposit Paid';
+      case 'pending_final': return 'Final Payment Due';
+      case 'completed': return 'Paid';
+      case 'overdue': return 'Overdue';
+      default: return null;
+    }
+  };
+
+  const renderBookingCard = (booking: ServiceRequest) => {
+    const paymentStatus = (booking as any).payment_status;
+    const paymentLabel = getPaymentStatusLabel(paymentStatus);
+    const paymentColor = getPaymentStatusColor(paymentStatus);
+    const needsDeposit = paymentStatus === 'pending_deposit' && booking.status !== 'pending';
+    const needsFinal = paymentStatus === 'pending_final';
+
+    return (
     <View key={booking.id} style={styles.bookingCard}>
       <View style={styles.bookingHeader}>
         <View style={styles.providerInfo}>
@@ -140,11 +169,21 @@ export default function BookingsScreen() {
             <Text style={styles.serviceName}>{booking.serviceName || 'Service'}</Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { borderColor: getStatusColor(booking.status) }]}>
-          <Ionicons name={getStatusIcon(booking.status)} size={14} color={getStatusColor(booking.status)} />
-          <Text style={[styles.statusText, { color: getStatusColor(booking.status) }]}>
-            {t(`bookings.status.${booking.status.toLowerCase()}`, booking.status)}
-          </Text>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <View style={[styles.statusBadge, { borderColor: getStatusColor(booking.status) }]}>
+            <Ionicons name={getStatusIcon(booking.status)} size={14} color={getStatusColor(booking.status)} />
+            <Text style={[styles.statusText, { color: getStatusColor(booking.status) }]}>
+              {t(`bookings.status.${booking.status.toLowerCase()}`, booking.status)}
+            </Text>
+          </View>
+          {paymentLabel && (
+            <View style={[styles.statusBadge, { borderColor: paymentColor, backgroundColor: paymentColor + '10' }]}>
+              <Ionicons name="card-outline" size={12} color={paymentColor} />
+              <Text style={[styles.statusText, { color: paymentColor, fontSize: 10 }]}>
+                {paymentLabel}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -167,10 +206,35 @@ export default function BookingsScreen() {
             {t('common.currency', 'ETB')} {booking.estimatedPrice?.toFixed(2) || '0.00'}
           </Text>
         </View>
-
+        {/* Payment deadline countdown for pending final */}
+        {needsFinal && (booking as any).payment_deadline && (
+          <View style={[styles.detailRow, { backgroundColor: Colors.warning + '10', padding: 6, borderRadius: 8, marginTop: 4 }]}>
+            <Ionicons name="time-outline" size={16} color={Colors.warning} />
+            <Text style={[styles.detailText, { color: Colors.warning, fontWeight: '600' }]}>
+              Pay by: {new Date((booking as any).payment_deadline).toLocaleDateString()}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.bookingActions}>
+        {/* Payment action buttons */}
+        {needsDeposit && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.viewButton, { backgroundColor: Colors.primary }]}
+            onPress={() => router.push({ pathname: '/(customer)/payment', params: { bookingId: booking.id } })}
+          >
+            <Text style={[styles.viewButtonText, { color: '#fff' }]}>Pay Deposit (20%)</Text>
+          </TouchableOpacity>
+        )}
+        {needsFinal && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.viewButton, { backgroundColor: Colors.warning }]}
+            onPress={() => router.push({ pathname: '/(customer)/payment', params: { bookingId: booking.id } })}
+          >
+            <Text style={[styles.viewButtonText, { color: '#fff' }]}>Pay Remaining (80%)</Text>
+          </TouchableOpacity>
+        )}
         {booking.status === 'pending' && (
           <>
             <TouchableOpacity style={styles.actionButton} onPress={() => handleCancelBooking(booking)}>
@@ -184,7 +248,7 @@ export default function BookingsScreen() {
             </TouchableOpacity>
           </>
         )}
-        {booking.status === 'confirmed' && (
+        {booking.status === 'confirmed' && !needsDeposit && (
           <>
             <TouchableOpacity style={styles.actionButton} onPress={() => handleCancelBooking(booking)}>
               <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
@@ -229,9 +293,18 @@ export default function BookingsScreen() {
             <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
           </TouchableOpacity>
         )}
+        {!needsDeposit && !needsFinal && booking.status !== 'pending' && booking.status !== 'confirmed' && booking.status !== 'completed' && booking.status !== 'cancelled' && (booking.status as any) !== 'rejected' && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.viewButton]}
+            onPress={() => handleBookingPress(booking)}
+          >
+            <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
+  };
 
   if (isLoading) {
     return (

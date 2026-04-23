@@ -411,6 +411,11 @@ export default function ProviderDashboard() {
                   <Text style={styles.drawerItemText}>{t("providerDashboard.earnings", "Earnings")}</Text>
                 </TouchableOpacity>
 
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/wallet'); }}>
+                  <Ionicons name="card-outline" size={22} color={colors.text.primary} />
+                  <Text style={styles.drawerItemText}>Wallet & Transactions</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/requests'); }}>
                   <Ionicons name="list-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.serviceRequests", "Service Requests")}</Text>
