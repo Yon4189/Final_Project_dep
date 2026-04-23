@@ -420,15 +420,6 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: t('common.wallet', 'Wallet'),
-        icon: 'wallet-outline' as const,
-        color: Colors.success || '#34C759',
-        onPress: () => {
-          setShowHamburgerMenu(false);
-          router.push('/(customer)/wallet');
-        },
-      },
-      {
         label: t('common.logout', 'Logout'),
         icon: 'log-out-outline' as const,
         color: Colors.error || '#FF3B30',

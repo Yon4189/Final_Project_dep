@@ -190,16 +190,36 @@ class CustomerAuthController extends Controller
         ]);
     }
     public function logout(Request $request)
-{
-    $customer = auth()->guard('customer')->user();
-    
-    if ($customer) {
-        $request->user()->currentAccessToken()->delete();
+    {
+        $customer = auth()->guard('customer')->user();
+        
+        if ($customer) {
+            $request->user()->currentAccessToken()->delete();
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully'
+        ]);
     }
-    
-    return response()->json([
-        'success' => true,
-        'message' => 'Logged out successfully'
-    ]);
-}
+
+    /**
+     * Revoke ALL tokens for this customer (logout from all devices)
+     */
+    public function logoutAllDevices(Request $request)
+    {
+        $customer = auth()->guard('customer')->user();
+
+        if (!$customer) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // Delete every token — logs out all phones/devices simultaneously
+        $customer->tokens()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out from all devices successfully'
+        ]);
+    }
 }

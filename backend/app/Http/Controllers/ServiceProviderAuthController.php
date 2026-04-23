@@ -278,6 +278,25 @@ class ServiceProviderAuthController extends Controller
     }
 
     /**
+     * Revoke ALL tokens for this provider (logout from all devices)
+     */
+    public function logoutAllDevices(Request $request)
+    {
+        $provider = auth()->guard('provider')->user();
+
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $provider->tokens()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out from all devices successfully'
+        ]);
+    }
+
+    /**
      * Get authenticated provider profile
      */
     public function profile(Request $request)
