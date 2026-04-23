@@ -67,6 +67,7 @@ module.exports = ({ config }) => {
     ],
     ios: {
       supportsTablet: true,
+      bundleIdentifier: "com.hbservicefinder.app",
       infoPlist: {
         UIBackgroundModes: [
           "location",
@@ -75,6 +76,7 @@ module.exports = ({ config }) => {
       }
     },
     android: {
+      package: "com.hbservicefinder.app",
       adaptiveIcon: {
         foregroundImage: "./assets/homescreen.png",
         backgroundColor: "#ffffff"

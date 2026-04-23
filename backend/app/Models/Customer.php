@@ -32,6 +32,7 @@ class Customer extends Authenticatable
         'service_address',
         'location',
         'expo_push_token',
+        'google_id',
         'notification_settings',
     ];
 

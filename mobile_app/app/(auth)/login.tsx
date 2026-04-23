@@ -20,6 +20,7 @@ import AppInput from "../../components/AppInput";
 import { ThemeColors } from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { loginWithGoogleToken } from "../services/googleAuth.service";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -33,6 +34,94 @@ export default function LoginScreen() {
   });
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<"customer" | "provider">("customer");
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    // Only available for customers
+    if (userType !== 'customer') {
+      Alert.alert('Info', 'Google sign-in is only available for customers.');
+      return;
+    }
+
+    setGoogleLoading(true);
+    try {
+      // Dynamically import expo-auth-session (may not be installed)
+      let AuthSession: any;
+      try {
+        AuthSession = require('expo-auth-session');
+      } catch {
+        Alert.alert(
+          'Not Available',
+          'Google sign-in requires expo-auth-session. Run: npx expo install expo-auth-session'
+        );
+        return;
+      }
+
+      const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
+      if (!clientId) {
+        Alert.alert('Configuration Error', 'Google Client ID is not configured.');
+        return;
+      }
+
+      const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
+
+      const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
+
+      const request = new AuthSession.AuthRequest({
+        clientId,
+        scopes: ['openid', 'profile', 'email'],
+        redirectUri,
+        responseType: AuthSession.ResponseType.Token,
+      });
+
+      const result = await request.promptAsync(discovery);
+
+      if (result.type === 'success' && result.authentication?.accessToken) {
+        // Exchange access token for user info
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
+        });
+        const userInfo = await userInfoRes.json();
+
+        // Get ID token if available, otherwise use access token
+        const idToken = result.authentication.idToken || result.authentication.accessToken;
+
+        const loginRes = await loginWithGoogleToken(idToken);
+
+        if (loginRes.success && loginRes.data) {
+          await api.setCustomerToken(loginRes.data.token, undefined);
+          await api.setUserData({
+            id: loginRes.data.customerID,
+            fullname: loginRes.data.fullname,
+            email: loginRes.data.email,
+            phone: loginRes.data.phone,
+            profilePicture: loginRes.data.profilePicture,
+            user_type: 'customer',
+          });
+
+          if (loginRes.data.needs_phone_update) {
+            Alert.alert(
+              'Welcome!',
+              'Please update your phone number in your profile.',
+              [{ text: 'OK', onPress: () => router.replace('/(customer)/dashboard') }]
+            );
+          } else {
+            router.replace('/(customer)/dashboard');
+          }
+        } else {
+          Alert.alert('Error', loginRes.message || 'Google login failed');
+        }
+      } else if (result.type === 'cancel') {
+        // User cancelled — no alert needed
+      } else {
+        Alert.alert('Error', 'Google sign-in failed. Please try again.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Google sign-in failed');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -329,6 +418,25 @@ export default function LoginScreen() {
             disabled={loading}
           />
 
+          {/* Google Sign-In (customers only) */}
+          {userType === 'customer' && (
+            <TouchableOpacity
+              style={[styles.googleButton, (loading || googleLoading) && { opacity: 0.6 }]}
+              onPress={handleGoogleSignIn}
+              disabled={loading || googleLoading}
+              activeOpacity={0.8}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#DB4437" />
+              ) : (
+                <Ionicons name="logo-google" size={20} color="#DB4437" />
+              )}
+              <Text style={styles.googleButtonText}>
+                {googleLoading ? 'Signing in...' : 'Continue with Google'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -483,6 +591,23 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   registerButton: {
     marginBottom: 10,
   },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#DB4437',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 12,
+    backgroundColor: colors.surface,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#DB4437',
+  },
   loadingOverlay: {
     position: 'absolute',
     top: 0,
@@ -501,4 +626,4 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-});
+});

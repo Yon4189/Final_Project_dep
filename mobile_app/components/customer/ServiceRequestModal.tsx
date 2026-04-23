@@ -689,6 +689,22 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
             }
           ]
         );
+      } else if (error.response?.status === 400 && error.response?.data?.existing_booking_id) {
+        // Duplicate booking
+        Alert.alert(
+          'Active Booking Exists',
+          `You already have an active booking for this service with this provider. Please complete or cancel it first.`,
+          [
+            {
+              text: 'View Booking',
+              onPress: () => {
+                onClose();
+                router.push(`/(customer)/requests/${error.response.data.existing_booking_id}`);
+              }
+            },
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
       } else {
         Alert.alert(t('common.error', 'Booking Error'), errorMessage);
       }

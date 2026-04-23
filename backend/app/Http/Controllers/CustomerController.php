@@ -357,17 +357,17 @@ class CustomerController extends Authenticatable
                 ], 400);
             }
 
-            // check if customer already booked THIS EXACT SERVICE for THIS DATE with this provider
+            // check if customer already booked THIS EXACT SERVICE with this provider (any active booking)
             $existingBooking = Booking::where('customerID', $customer->customerID)
                 ->where('serviceID', $service->serviceID)
                 ->where('providerID', $validated['providerID'])
-                ->whereDate('scheduledDate', $validated['scheduledDate'])
                 ->whereIn('status', ['pending', 'accepted', 'in_progress'])
                 ->first();
     
             if ($existingBooking) {
-                // If it's still pending, let them proceed with the existing one instead of erroring
-                if ($existingBooking->status === 'pending') {
+                // If it's still pending on the same date, return the existing one
+                if ($existingBooking->status === 'pending' && 
+                    date('Y-m-d', strtotime($existingBooking->scheduledDate)) === date('Y-m-d', strtotime($validated['scheduledDate']))) {
                     return response()->json([
                         'success' => true,
                         'message' => 'Returning existing pending booking',
@@ -379,7 +379,9 @@ class CustomerController extends Authenticatable
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'you already have an active booking for this service on this date'
+                    'message' => 'You already have an active booking for this service with this provider. Please complete or cancel it before creating a new one.',
+                    'existing_booking_id' => $existingBooking->bookingID,
+                    'existing_status' => $existingBooking->status,
                 ], 400);
             }
 

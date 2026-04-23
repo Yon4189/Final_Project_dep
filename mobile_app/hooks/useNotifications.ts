@@ -45,18 +45,41 @@ export const useNotifications = () => {
       console.log('Notification tapped:', response);
       const data = response.notification.request.content.data as any;
       
-      // Navigate based on data
-      if (data?.type === 'booking_request' || data?.type === 'booking_accepted') {
-        if (data?.bookingID) {
+      // Navigate based on notification type
+      const bookingId = data?.bookingID || data?.booking_id;
+      const disputeId = data?.disputeID || data?.dispute_id;
+      const conversationId = data?.conversationID || data?.conversation_id;
+
+      if (data?.type === 'booking_request' || data?.type === 'booking_accepted' || data?.type === 'booking_confirmed') {
+        if (bookingId) {
           const path = customer 
-            ? `/(customer)/bookings/${data.bookingID}` 
-            : `/(provider)/requests/${data.bookingID}`;
+            ? `/(customer)/requests/${bookingId}` 
+            : `/(provider)/requests/${bookingId}`;
           router.push(path as any);
         }
-      } else if (data?.type === 'new_message') {
-        if (data?.conversationID) {
-          router.push(`/chat/${data.conversationID}` as any);
+      } else if (data?.type === 'payment_reminder_24h' || data?.type === 'payment_reminder_48h' || data?.type === 'payment_overdue') {
+        if (bookingId) {
+          router.push({ pathname: '/(customer)/payment', params: { bookingId } } as any);
         }
+      } else if (data?.type === 'immediate_payout_credited' || data?.type === 'held_payout_scheduled' || data?.type === 'held_payout_released') {
+        router.push('/(provider)/wallet' as any);
+      } else if (data?.type === 'dispute' || data?.type === 'dispute_message') {
+        if (disputeId) {
+          router.push(`/(customer)/complaints` as any);
+        }
+      } else if (data?.type === 'new_message' || data?.type === 'chat') {
+        if (conversationId) {
+          const path = customer
+            ? `/(customer)/chat/${conversationId}`
+            : `/(provider)/chat/${conversationId}`;
+          router.push(path as any);
+        }
+      } else if (bookingId) {
+        // Fallback: navigate to booking
+        const path = customer 
+          ? `/(customer)/requests/${bookingId}` 
+          : `/(provider)/requests/${bookingId}`;
+        router.push(path as any);
       }
     });
 
