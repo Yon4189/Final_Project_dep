@@ -31,31 +31,11 @@ class DisputeMessage extends Model
 
     /**
      * Polymorphic relationship to get the sender.
-     * sender_type can be: 'customer', 'provider', 'admin'
+     * Uses the morphMap defined in AppServiceProvider.
      */
     public function sender()
     {
-        $morphMap = [
-            'customer' => Customer::class,
-            'provider' => ServiceProvider::class,
-            'admin'    => Admin::class,
-        ];
-
-        $modelClass = $morphMap[$this->sender_type] ?? null;
-
-        if (!$modelClass) {
-            return null;
-        }
-
-        $primaryKeyMap = [
-            Customer::class         => 'customerID',
-            ServiceProvider::class  => 'providerID',
-            Admin::class            => 'adminID',
-        ];
-
-        $fk = $primaryKeyMap[$modelClass] ?? 'id';
-
-        return $this->belongsTo($modelClass, 'sender_id', $fk);
+        return $this->morphTo('sender', 'sender_type', 'sender_id');
     }
 
     /**
