@@ -14,6 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\CheckMaintenanceMode::class);
         
+        $middleware->alias([
+            'ownership'         => \App\Http\Middleware\EnsureOwnership::class,
+            'log.sensitive'     => \App\Http\Middleware\LogSensitiveRequests::class,
+            'provider.approved' => \App\Http\Middleware\EnsureProviderApproved::class,
+            'customer.active'   => \App\Http\Middleware\EnsureCustomerActive::class,
+            'ip.whitelist'      => \App\Http\Middleware\IpWhitelist::class,
+        ]);
+
         $middleware->validateCsrfTokens(except: [
             'api/webhook/*',
         ]);

@@ -593,7 +593,7 @@ const Disputes = () => {
                           <textarea 
                             rows={3}
                             placeholder={t('dispute_chat_placeholder', { recipient: t(recipientType) })}
-                            className="w-full p-6 bg-white dark:bg-slate-800 border border-admin-border rounded-[2rem] text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100 transition-all shadow-sm resize-none pr-32 placeholder:text-slate-400"
+                            className="w-full p-6 bg-admin-card border border-admin-border rounded-[2rem] text-sm outline-none focus:ring-2 focus:ring-blue-500 text-admin-text transition-all shadow-sm resize-none pr-32 placeholder:text-admin-text-muted/50"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                           />
@@ -624,7 +624,7 @@ const Disputes = () => {
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 pl-1 group-focus-within:text-blue-500 transition-colors">{t('dispute_admin_notes')}</label>
                       <textarea 
                         placeholder="Enter internal resolution notes... (Only visible to admins)"
-                        className="w-full h-48 p-5 bg-white dark:bg-slate-800 border border-admin-border rounded-3xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100 transition-all resize-none shadow-sm group-hover:border-slate-300 dark:group-hover:border-slate-700 placeholder:text-slate-400"
+                        className="w-full h-48 p-5 bg-admin-card border border-admin-border rounded-3xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-admin-text transition-all resize-none shadow-sm group-hover:border-slate-300 dark:group-hover:border-slate-700 placeholder:text-admin-text-muted/50"
                         value={resolutionData.notes}
                         onChange={(e) => setResolutionData({...resolutionData, notes: e.target.value})}
                       />

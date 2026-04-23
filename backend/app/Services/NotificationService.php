@@ -146,7 +146,7 @@ class NotificationService
                 'title' => $notification->title
             ]);
 
-            $response = Http::post('https://exp.host/--/api/v2/push/send', [
+            $response = Http::timeout(5)->post('https://exp.host/--/api/v2/push/send', [
                 'to' => $user->expo_push_token,
                 'title' => $notification->title ?? 'New Notification',
                 'body' => $notification->message,
