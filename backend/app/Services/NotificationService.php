@@ -204,6 +204,8 @@ class NotificationService
     const TYPE_BOOKING_CANCELLED = 'booking_cancelled';
     const TYPE_BOOKING_COMPLETED = 'booking_completed';
     const TYPE_BOOKING_EXPIRED = 'booking_expired';
+    const TYPE_PROVIDER_ARRIVED = 'provider_arrived';
+    const TYPE_SERVICE_STARTED = 'service_started';
     const TYPE_PAYMENT_RECEIVED = 'payment_received';
     const TYPE_PAYMENT_RELEASED = 'payment_released';
     const TYPE_NEW_MESSAGE = 'new_message';
@@ -328,6 +330,50 @@ class NotificationService
                 'user_type' => $userType,
                 'user_name' => $userName,
                 'reason' => $reason,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins when a booking is completed (awaiting customer confirmation)
+     */
+    public function notifyAdminsBookingCompleted($booking, $provider, $customer)
+    {
+        return $this->toAdmins(
+            'booking_completed',
+            'Service Completed — Awaiting Confirmation',
+            "Provider {$provider->fullname} completed booking #{$booking->bookingID} for {$customer->fullname}. Awaiting customer confirmation.",
+            [
+                'booking_id'    => $booking->bookingID,
+                'provider_id'   => $provider->providerID,
+                'provider_name' => $provider->fullname,
+                'customer_id'   => $customer->customerID,
+                'customer_name' => $customer->fullname,
+                'agreed_price'  => $booking->agreed_price,
+                'completed_at'  => $booking->completed_at,
+            ]
+        );
+    }
+
+    /**
+     * Notify admins when a booking is cancelled
+     */
+    public function notifyAdminsBookingCancelled($booking, $cancelledBy, $reason = null)
+    {
+        $name = $cancelledBy === 'customer'
+            ? ($booking->customer->fullname ?? 'Customer')
+            : ($booking->provider->fullname ?? 'Provider');
+
+        return $this->toAdmins(
+            'booking_cancelled',
+            'Booking Cancelled',
+            "Booking #{$booking->bookingID} was cancelled by {$cancelledBy} ({$name})" . ($reason ? ": {$reason}" : ''),
+            [
+                'booking_id'    => $booking->bookingID,
+                'cancelled_by'  => $cancelledBy,
+                'name'          => $name,
+                'reason'        => $reason,
+                'agreed_price'  => $booking->agreed_price,
             ]
         );
     }

@@ -133,22 +133,38 @@ class WalletController extends Controller
      * Request withdrawal
      * POST /api/provider/withdrawals
      */
-public function requestWithdrawal(Request $request)
-{
-    $request->validate([
-        'amount' => 'required|numeric|min:50', // Minimum 50 ETB
-        'payment_method' => 'required|in:bank,telebir',
-        'bank_name' => 'required_if:payment_method,bank|string|nullable',
-        'account_number' => 'required_if:payment_method,bank|string|nullable',
-        'account_holder_name' => 'required_if:payment_method,bank|string|nullable',
-        'telebir_number' => 'required_if:payment_method,telebir|string|nullable',
-        'telebir_holder_name' => 'required_if:payment_method,telebir|string|nullable'
-    ]);
-    
-    try {
-        $provider = $request->user();
-        $wallet = $provider->wallet;
-        $amount = $request->amount;
+    public function requestWithdrawal(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:50|max:50000', // Min 50 ETB, Max 50,000 ETB per request
+            'payment_method' => 'required|in:bank,telebir',
+            'bank_name' => 'required_if:payment_method,bank|string|nullable',
+            'account_number' => 'required_if:payment_method,bank|string|nullable',
+            'account_holder_name' => 'required_if:payment_method,bank|string|nullable',
+            'telebir_number' => 'required_if:payment_method,telebir|string|nullable',
+            'telebir_holder_name' => 'required_if:payment_method,telebir|string|nullable'
+        ]);
+        
+        try {
+            $provider = $request->user();
+            $wallet = $provider->wallet;
+            $amount = $request->amount;
+
+            // ── Daily withdrawal limit check ──────────────────────────────────
+            $dailyLimit = \App\Models\SystemSetting::get('max_daily_withdrawal', 100000); // 100,000 ETB/day
+            $todayWithdrawn = \App\Models\Withdrawal::where('providerID', $provider->providerID)
+                ->whereDate('created_at', today())
+                ->whereIn('status', ['pending', 'approved', 'processed'])
+                ->sum('amount');
+
+            if (($todayWithdrawn + $amount) > $dailyLimit) {
+                $remaining = max(0, $dailyLimit - $todayWithdrawn);
+                return response()->json([
+                    'success' => false,
+                    'message' => "Daily withdrawal limit is {$dailyLimit} ETB. You have already withdrawn {$todayWithdrawn} ETB today. Remaining: {$remaining} ETB.",
+                ], 422);
+            }
+            // ── End daily limit check ─────────────────────────────────────────
         
         if (!$wallet) {
             return response()->json([

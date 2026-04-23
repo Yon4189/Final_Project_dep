@@ -24,6 +24,15 @@ class Kernel extends ConsoleKernel
         $schedule->job(new \App\Jobs\PaymentReminderJob)->hourly();
         $schedule->job(new \App\Jobs\HeldPayoutReleaseJob)->hourly();
         $schedule->job(new \App\Jobs\OverduePaymentJob)->dailyAt('02:00');
+
+        // Daily database backup at 3 AM
+        $schedule->command('db:backup')->dailyAt('03:00');
+
+        // Retry failed webhooks every 10 minutes
+        $schedule->command('webhooks:retry')->everyTenMinutes();
+
+        // Daily payment reconciliation at 6 AM — catches any missed webhooks
+        $schedule->command('payments:reconcile')->dailyAt('06:00');
     }
 
     /**

@@ -115,11 +115,9 @@ export function useInitializeChapaPayment(options?: UseMutationOptions<PaymentIn
       return response as unknown as PaymentIntent;
     },
     onSuccess: (data, variables, context, meta) => {
-      handleMutationSuccess('Payment initialized successfully');
       options?.onSuccess?.(data, variables, context, meta);
     },
     onError: (error, variables, context, meta) => {
-      handleQueryError(error);
       options?.onError?.(error, variables, context, meta);
     },
   });
@@ -133,11 +131,9 @@ export function useVerifyChapaPayment(options?: UseMutationOptions<PaymentVerifi
       return response.data;
     },
     onSuccess: (data, variables, context, meta) => {
-      handleMutationSuccess('Payment verified successfully');
       options?.onSuccess?.(data, variables, context, meta);
     },
     onError: (error, variables, context, meta) => {
-      handleQueryError(error);
       options?.onError?.(error, variables, context, meta);
     },
   });
@@ -365,5 +361,62 @@ export function useDownloadReceipt(options?: UseMutationOptions<void, Error, str
       handleQueryError(error);
       options?.onError?.(error, variables, context, meta);
     },
+  });
+}
+
+// ==================== Split Payment ====================
+
+export const splitPaymentKeys = {
+  status: (bookingId: string) => ['split-payment', 'status', bookingId] as const,
+};
+
+export function useCalculateDeposit() {
+  return useMutation<any, Error, string>({
+    mutationFn: async (bookingId: string) => {
+      const response = await paymentService.calculateDeposit(bookingId);
+      if (!response.success) throw new Error(response.message);
+      return response.data;
+    },
+  });
+}
+
+export function useProcessDeposit() {
+  const queryClient = useQueryClient();
+  return useMutation<any, Error, { bookingId: string; amount: number }>({
+    mutationFn: async ({ bookingId, amount }) => {
+      const response = await paymentService.processDeposit(bookingId, amount);
+      if (!response.success) throw new Error(response.message);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: splitPaymentKeys.status(variables.bookingId) });
+    },
+  });
+}
+
+export function useProcessFinalPayment() {
+  const queryClient = useQueryClient();
+  return useMutation<any, Error, { bookingId: string; amount: number }>({
+    mutationFn: async ({ bookingId, amount }) => {
+      const response = await paymentService.processFinalPayment(bookingId, amount);
+      if (!response.success) throw new Error(response.message);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: splitPaymentKeys.status(variables.bookingId) });
+    },
+  });
+}
+
+export function useSplitPaymentStatus(bookingId: string) {
+  return useQuery<any, Error>({
+    queryKey: splitPaymentKeys.status(bookingId),
+    queryFn: async () => {
+      const response = await paymentService.getSplitPaymentStatus(bookingId);
+      if (!response.success) throw new Error(response.message);
+      return response.data;
+    },
+    enabled: !!bookingId,
+    refetchInterval: 10000, // Poll every 10s
   });
 }

@@ -530,7 +530,7 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
     - _Requirements: 11.4, 12.5_
 
 - [ ] 13. Frontend integration - Customer app
-  - [ ] 13.1 Create deposit payment page component
+  - [x] 13.1 Create deposit payment page component
     - Create component to display deposit amount and remaining amount after booking acceptance
     - Show breakdown: "Deposit (20%): X ETB, Remaining: Y ETB, Total: Z ETB"
     - Add "Pay Deposit" button that calls /api/payments/process-deposit
@@ -538,7 +538,7 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
     - Handle payment callback and show success/failure message
     - _Requirements: 1.2, 2.1_
 
-  - [ ] 13.2 Create final payment page component
+  - [x] 13.2 Create final payment page component
     - Create component to display remaining amount after service confirmation
     - Show payment deadline (48 hours countdown)
     - Add "Pay Remaining Amount" button that calls /api/payments/process-final
@@ -546,21 +546,21 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
     - Handle payment callback and show success/failure message
     - _Requirements: 3.1, 14.1_
 
-  - [ ] 13.3 Update booking status display
+  - [x] 13.3 Update booking status display
     - Update booking list and detail views to show payment_status
     - Display status badges: "Pending Deposit", "Deposit Paid", "Pending Final Payment", "Completed", "Overdue"
     - Show payment deadline countdown for pending final payments
     - Add payment action buttons based on current status
     - _Requirements: 10.1, 10.2, 10.3, 10.4_
 
-  - [ ] 13.4 Add payment reminder notifications UI
+  - [x] 13.4 Add payment reminder notifications UI
     - Integrate with existing notification system
     - Display payment reminder notifications with urgency indicators
     - Add quick action button to navigate to payment page
     - Show countdown to payment deadline
     - _Requirements: 6.2, 6.3, 6.4_
 
-  - [ ] 13.5 Add overdue payment and account frozen UI
+  - [x] 13.5 Add overdue payment and account frozen UI
     - Display account frozen banner when customer account is frozen
     - Show message: "Your account is frozen due to overdue payment. Please complete payment to restore access."
     - Add link to overdue booking payment page
@@ -568,13 +568,13 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
     - _Requirements: 7.3, 7.4_
 
 - [ ] 14. Frontend integration - Provider app
-  - [ ] 14.1 Update wallet display with payout breakdown
+  - [x] 14.1 Update wallet display with payout breakdown
     - Update wallet component to show available_balance and pending_balance separately
     - Display: "Available Balance: X ETB (can withdraw)", "Pending Balance: Y ETB (held for 3 days)"
     - Show total balance: available + pending
     - _Requirements: 4.2, 4.5_
 
-  - [ ] 14.2 Create wallet transaction history page
+  - [x] 14.2 Create wallet transaction history page
     - Create page that calls /api/wallet/transactions
     - Display transaction list with type, amount, status, date
     - Add filters for transaction_type (immediate_payout, held_payout, withdrawal, etc.)
@@ -583,14 +583,14 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
     - Link transactions to related bookings
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-  - [ ] 14.3 Add payout notification display
+  - [x] 14.3 Add payout notification display
     - Integrate with existing notification system
     - Display immediate payout notifications: "You received X ETB for booking #Y"
     - Display held payout notifications: "X ETB will be released on [date] for booking #Y"
     - Display held payout release notifications: "X ETB has been released to your wallet"
     - _Requirements: 4.2, 4.5, 5.3_
 
-  - [ ] 14.4 Update booking detail view with payment info
+  - [x] 14.4 Update booking detail view with payment info
     - Show deposit payment status and amount
     - Show final payment status and amount
     - Show payout breakdown: immediate (50%) and held (50%)
@@ -599,7 +599,7 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
 
 
 - [ ] 15. Frontend integration - Admin panel
-  - [ ] 15.1 Create deposit percentage configuration page
+  - [x] 15.1 Create deposit percentage configuration page
     - Create admin settings page for deposit percentage
     - Display current deposit percentage value
     - Add form input to update percentage (1-99 range validation)
@@ -610,7 +610,7 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
     - Show last updated timestamp
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-  - [ ] 15.2 Add payment analytics dashboard
+  - [x] 15.2 Add payment analytics dashboard
     - Create dashboard showing split payment metrics
     - Display: total deposit payments, total final payments, average time to final payment
     - Show overdue payment count and list
@@ -618,7 +618,7 @@ The implementation uses PHP/Laravel and integrates with the existing Chapa payme
     - Add date range filters
     - _Requirements: 9.5, 14.3, 14.5_
 
-  - [ ] 15.3 Add overdue payment management interface
+  - [x] 15.3 Add overdue payment management interface
     - Create page listing all overdue payments
     - Show booking details, customer info, days overdue, amount owed
     - Display dispute status and account freeze status

@@ -176,6 +176,31 @@ const Payments = () => {
         ))}
       </div>
 
+      {/* Split Payment Analytics */}
+      {stats && (
+        <div className="bg-admin-card rounded-[2.5rem] border border-admin-border p-6 space-y-4">
+          <h3 className="text-[10px] font-black text-admin-text-muted uppercase tracking-widest">Split Payment Analytics</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-blue-50 dark:bg-blue-900/10 rounded-2xl p-4 border border-blue-100 dark:border-blue-900/30">
+              <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Deposit Payments</p>
+              <p className="text-xl font-black text-blue-600">{stats.deposit_payments || 0}</p>
+            </div>
+            <div className="bg-green-50 dark:bg-green-900/10 rounded-2xl p-4 border border-green-100 dark:border-green-900/30">
+              <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mb-1">Final Payments</p>
+              <p className="text-xl font-black text-green-600">{stats.final_payments || 0}</p>
+            </div>
+            <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl p-4 border border-amber-100 dark:border-amber-900/30">
+              <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">Held Payouts</p>
+              <p className="text-xl font-black text-amber-600">{stats.held_payouts_total ? `${stats.held_payouts_total} ETB` : '0 ETB'}</p>
+            </div>
+            <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl p-4 border border-red-100 dark:border-red-900/30">
+              <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-1">Overdue Payments</p>
+              <p className="text-xl font-black text-red-600">{stats.overdue_payments || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Transaction Table */}
       <div className="bg-admin-card rounded-[2.5rem] shadow-sm border border-admin-border overflow-hidden flex flex-col min-h-[500px]">
         <div className="p-6 border-b border-admin-border bg-admin-card flex justify-between items-center">

@@ -16,6 +16,9 @@ const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [latency, setLatency] = useState({ api: '...', db: '...' });
+  const [depositPercentage, setDepositPercentage] = useState(20);
+  const [isSavingDeposit, setIsSavingDeposit] = useState(false);
+  const [depositSaved, setDepositSaved] = useState(false);
 
   // 1. Platform Configuration (Initially Mock but ready for backend sync)
   const [config, setConfig] = useState({
@@ -56,6 +59,45 @@ const Settings = () => {
       }
     }
   }, [existingSettings]);
+
+  // Fetch deposit percentage
+  const { data: depositData } = useQuery({
+    queryKey: ['depositPercentage'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/admin/settings/deposit-percentage');
+        return response.data.success ? response.data.data : null;
+      } catch (err) {
+        return null;
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (depositData?.deposit_percentage !== undefined) {
+      setDepositPercentage(depositData.deposit_percentage);
+    }
+  }, [depositData]);
+
+  const handleSaveDeposit = async () => {
+    if (depositPercentage < 1 || depositPercentage > 99) {
+      alert('Deposit percentage must be between 1 and 99');
+      return;
+    }
+    setIsSavingDeposit(true);
+    try {
+      const response = await api.put('/admin/settings/deposit-percentage', { deposit_percentage: depositPercentage });
+      if (response.data.success) {
+        setDepositSaved(true);
+        queryClient.invalidateQueries({ queryKey: ['depositPercentage'] });
+        setTimeout(() => setDepositSaved(false), 3000);
+      }
+    } catch (err) {
+      alert('Failed to save deposit percentage');
+    } finally {
+      setIsSavingDeposit(false);
+    }
+  };
 
 
 
@@ -417,20 +459,36 @@ const Settings = () => {
     }
   };
 
-  const handleLogoUpload = (e) => {
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     if (file.size > 2 * 1024 * 1024) {
       alert(t('set_branding_logo_size_error') || 'Logo size must be less than 2MB');
       return;
     }
-    
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBranding({ ...branding, logoUrl: reader.result });
-    };
-    reader.readAsDataURL(file);
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const response = await api.post('/admin/settings/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data.success) {
+        const logoUrl = response.data.data.logo_url;
+        setBranding({ ...branding, logoUrl });
+        queryClient.invalidateQueries(['adminSettings']);
+        alert(t('set_branding_logo_success') || 'Logo uploaded successfully!');
+      }
+    } catch (err) {
+      console.error('Logo upload failed:', err);
+      alert(t('set_branding_logo_error') || 'Failed to upload logo. Please try again.');
+    }
+
+    // Reset file input so same file can be re-selected
+    e.target.value = '';
   };
 
   const systemHealth = [
@@ -500,6 +558,12 @@ const Settings = () => {
               className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'branding' ? 'bg-admin-card text-admin-accent shadow-sm ring-1 ring-admin-border dark:ring-slate-800' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
               {t('set_tab_branding')}
+            </button>
+            <button
+              onClick={() => setActiveTab('payment')}
+              className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'payment' ? 'bg-admin-card text-admin-accent shadow-sm ring-1 ring-admin-border dark:ring-slate-800' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
+            >
+              Split Payment
             </button>
           </div>
 
@@ -605,6 +669,97 @@ const Settings = () => {
                       </div>
                     </button>
                   </div>
+                </div>
+              </div>
+            ) : activeTab === 'payment' ? (
+              /* --- SPLIT PAYMENT TAB --- */
+              <div className="p-10 space-y-10">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
+                    <Percent size={16} className="text-admin-accent" /> Split Payment Configuration
+                  </h3>
+                  <p className="text-xs text-slate-400">Configure the deposit percentage customers pay upfront when booking a service. The remaining balance is due after service completion.</p>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-6 space-y-2">
+                  <p className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">How Split Payment Works</p>
+                  <ul className="text-xs text-blue-600 dark:text-blue-300 space-y-1 list-disc list-inside">
+                    <li>Customer pays <strong>{depositPercentage}%</strong> deposit when booking is accepted</li>
+                    <li>Customer pays remaining <strong>{100 - depositPercentage}%</strong> after service completion (within 48 hours)</li>
+                    <li>Provider receives 50% immediately after final payment, 50% held for 3 days</li>
+                    <li>Overdue payments (7+ days) trigger automatic dispute and account freeze</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
+                    <Percent size={14} className="text-admin-accent" /> Deposit Percentage
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      className="w-40 border-2 border-admin-border bg-admin-card rounded-2xl py-4 px-6 focus:outline-none focus:border-admin-accent font-black text-2xl text-admin-text transition-all shadow-sm text-center"
+                      value={depositPercentage}
+                      onChange={(e) => setDepositPercentage(Math.min(99, Math.max(1, parseInt(e.target.value) || 1)))}
+                    />
+                    <span className="text-2xl font-black text-admin-text">%</span>
+                    <div className="flex-1 bg-admin-card border border-admin-border rounded-2xl p-4">
+                      <div className="flex justify-between text-xs font-bold text-admin-text-muted mb-2">
+                        <span>Deposit</span>
+                        <span>Remaining</span>
+                      </div>
+                      <div className="h-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex">
+                        <div className="bg-blue-500 transition-all duration-300" style={{ width: `${depositPercentage}%` }} />
+                        <div className="bg-green-400 flex-1" />
+                      </div>
+                      <div className="flex justify-between text-xs font-black mt-2">
+                        <span className="text-blue-500">{depositPercentage}% upfront</span>
+                        <span className="text-green-500">{100 - depositPercentage}% after service</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic">Must be between 1% and 99%. Changes apply to new bookings only.</p>
+                </div>
+
+                <button
+                  onClick={handleSaveDeposit}
+                  disabled={isSavingDeposit}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isSavingDeposit ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {depositSaved ? '✓ Saved!' : 'Save Deposit Percentage'}
+                </button>
+
+                {/* Overdue Payment Management */}
+                <div className="border-t border-admin-border pt-8 space-y-4">
+                  <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-red-500" /> Overdue Payment Management
+                  </h3>
+                  <p className="text-xs text-slate-400">Bookings where the customer has not paid the final amount within 7 days of service completion.</p>
+                  {stats?.overdue_bookings?.length > 0 ? (
+                    <div className="space-y-3">
+                      {stats.overdue_bookings.map((booking) => (
+                        <div key={booking.id} className="flex items-center justify-between bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-4">
+                          <div>
+                            <p className="text-xs font-black text-admin-text">Booking #{booking.id}</p>
+                            <p className="text-[10px] text-slate-400">{booking.customer_name} • {booking.days_overdue} days overdue</p>
+                            <p className="text-[10px] text-red-500 font-bold">{booking.amount_owed} ETB owed</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${booking.account_frozen ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
+                              {booking.account_frozen ? 'Frozen' : 'Active'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-6 text-center">
+                      <p className="text-xs font-black text-green-600">No overdue payments</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

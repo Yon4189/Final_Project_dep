@@ -41,10 +41,10 @@ class ProviderDashboardController extends Controller
                 ->where('status', 'pending')
                 ->count();
 
-            // Count today's jobs (accepted or in-progress)
+            // Count today's jobs (accepted, arrived, or in-progress)
             $todayJobs = Booking::where('providerID', $providerID)
                 ->whereDate('scheduledDate', $today)
-                ->whereIn('status', ['accepted', 'in_progress'])
+                ->whereIn('status', ['accepted', 'arrived', 'in_progress', 'waiting_customer_confirmation'])
                 ->count();
 
             // Calculate weekly earnings (sum of netAmount from transactions this week)
@@ -67,7 +67,7 @@ class ProviderDashboardController extends Controller
                 ->count();
             
             $completedJobsCount = Booking::where('providerID', $providerID)
-                ->where('status', 'completed')
+                ->whereIn('status', ['completed', 'service_confirmed', 'waiting_customer_confirmation'])
                 ->count();
 
             $completionRate = $totalPastJobs > 0 ? ($completedJobsCount / $totalPastJobs) * 100 : 100;
@@ -109,7 +109,7 @@ class ProviderDashboardController extends Controller
             $bookings = Booking::with(['customer', 'service'])
                 ->where('providerID', $providerID)
                 ->whereDate('scheduledDate', $today)
-                ->whereIn('status', ['accepted', 'in_progress'])
+                ->whereIn('status', ['accepted', 'arrived', 'in_progress', 'waiting_customer_confirmation', 'service_confirmed'])
                 ->orderBy('scheduledDate', 'asc')
                 ->get();
 
@@ -170,7 +170,7 @@ class ProviderDashboardController extends Controller
             })->whereMonth('created_at', $lastMonth->month)->whereYear('created_at', $lastMonth->year)->sum('netAmount');
 
             $completedJobsCount = Booking::where('providerID', $providerID)
-                ->where('status', 'completed')
+                ->whereIn('status', ['completed', 'service_confirmed', 'waiting_customer_confirmation'])
                 ->count();
 
             return response()->json([
@@ -210,7 +210,7 @@ class ProviderDashboardController extends Controller
                 ->when($status, function($query) use ($status) {
                     // Special handling for 'accepted' status - show all active jobs
                     if ($status === 'accepted') {
-                        $query->whereIn('status', ['accepted', 'confirmed', 'arrived', 'in_progress', 'waiting_customer_confirmation']);
+                        $query->whereIn('status', ['accepted', 'arrived', 'in_progress', 'waiting_customer_confirmation', 'service_confirmed']);
                     } else {
                         $query->where('status', $status);
                     }

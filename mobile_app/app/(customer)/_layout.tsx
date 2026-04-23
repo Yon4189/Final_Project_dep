@@ -203,14 +203,6 @@ export default function CustomerLayout() {
       />
 
       <Stack.Screen
-        name="wallet/index"
-        options={{
-          title: 'My Wallet',
-          headerShown: false,
-        }}
-      />
-
-      <Stack.Screen
         name="chat/index"
         options={{
           headerShown: false,

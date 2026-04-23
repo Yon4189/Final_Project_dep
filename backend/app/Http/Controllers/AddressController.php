@@ -80,12 +80,12 @@ class AddressController extends Controller
         }
         
         $validator = Validator::make($request->all(), [
-            'full_address' => 'required|string',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
+            'full_address' => 'required|string|max:500',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
             'label' => 'required|in:home,office,other',
-            'custom_label' => 'required_if:label,other|string|nullable',
-            'place_id' => 'nullable|string',
+            'custom_label' => 'required_if:label,other|string|max:50|nullable',
+            'place_id' => 'nullable|string|max:255',
             'is_default' => 'boolean'
         ]);
 
@@ -140,12 +140,12 @@ class AddressController extends Controller
         }
         
         $validator = Validator::make($request->all(), [
-            'full_address' => 'sometimes|string',
-            'latitude' => 'sometimes|numeric',
-            'longitude' => 'sometimes|numeric',
+            'full_address' => 'sometimes|string|max:500',
+            'latitude' => 'sometimes|numeric|between:-90,90',
+            'longitude' => 'sometimes|numeric|between:-180,180',
             'label' => 'sometimes|in:home,office,other',
-            'custom_label' => 'required_if:label,other|string|nullable',
-            'place_id' => 'nullable|string',
+            'custom_label' => 'required_if:label,other|string|max:50|nullable',
+            'place_id' => 'nullable|string|max:255',
             'is_default' => 'boolean'
         ]);
 

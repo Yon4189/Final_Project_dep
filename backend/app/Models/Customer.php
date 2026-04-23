@@ -31,7 +31,12 @@ class Customer extends Authenticatable
         'service_longitude',
         'service_address',
         'location',
-        'expo_push_token'
+        'expo_push_token',
+        'notification_settings',
+    ];
+
+    protected $casts = [
+        'notification_settings' => 'array',
     ];
 
     // Hide sensitive fields
@@ -55,12 +60,17 @@ class Customer extends Authenticatable
     }
 
     /**
-     * Add funds to wallet (for refunds)
+     * Add funds to wallet (for refunds) — uses DB lock to prevent race conditions
      */
     public function addToWallet($amount): void
     {
-        $this->walletBalance = ($this->walletBalance ?? 0) + $amount;
-        $this->save();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($amount) {
+            $locked = self::lockForUpdate()->find($this->customerID);
+            $locked->walletBalance = ($locked->walletBalance ?? 0) + $amount;
+            $locked->save();
+            // Sync the in-memory instance
+            $this->walletBalance = $locked->walletBalance;
+        });
     }
 
     /**

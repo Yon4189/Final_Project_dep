@@ -122,6 +122,24 @@ export default function EarningsScreen() {
           safeSummary.currency,
         )}
       </Text>
+      <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginBottom: 12, textAlign: 'center' }}>
+        Can withdraw immediately
+      </Text>
+
+      {/* Pending balance highlight */}
+      {safeSummary.pendingEarnings > 0 && (
+        <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 10, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="time-outline" size={16} color="rgba(255,255,255,0.9)" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '600' }}>
+              {safeFormatCurrency(safeSummary.pendingEarnings, safeSummary.currency)} held (3-day hold)
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10 }}>
+              Will be released to your available balance
+            </Text>
+          </View>
+        </View>
+      )}
 
       <View style={styles.balanceDetails}>
         <View style={styles.balanceDetailItem}>
@@ -137,8 +155,8 @@ export default function EarningsScreen() {
         <View style={styles.balanceDetailDivider} />
 
         <View style={styles.balanceDetailItem}>
-          <Text style={styles.balanceDetailLabel}>{t("wallet.filterPending", "Pending")}</Text>
-          <Text style={styles.balanceDetailValue}>
+          <Text style={styles.balanceDetailLabel}>Pending (Held)</Text>
+          <Text style={[styles.balanceDetailValue, { color: 'rgba(255,255,255,0.7)' }]}>
             {safeFormatCurrency(
               safeSummary.pendingEarnings,
               safeSummary.currency,

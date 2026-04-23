@@ -558,25 +558,53 @@ export default function RequestDetails() {
     );
   };
 
-  const renderPayment = () => (
+  const renderPayment = () => {
+    const agreedPrice = request?.estimatedPrice || request?.agreed_price || 0;
+    const immediateAmount = Math.round(agreedPrice * 0.50 * 100) / 100;
+    const heldAmount = Math.round(agreedPrice * 0.50 * 100) / 100;
+    const paymentStatus = request?.payment_status;
+    const depositPaid = paymentStatus === 'deposit_paid' || paymentStatus === 'pending_final' || paymentStatus === 'completed';
+    const finalPaid = paymentStatus === 'completed';
+
+    return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{t("requests.paymentDetails", "Payment Details")}</Text>
       <View style={styles.paymentCard}>
         <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>{t("providerRequests.estimatedPrice", "Estimated Price")}</Text>
-          <PriceText style={styles.priceValue} amount={request?.estimatedPrice || 0} />
-        </View>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>{t("providerRequests.serviceFee", "Service Fee")}</Text>
-          <PriceText style={styles.priceValue} amount={(request?.estimatedPrice || 0) * 0.05} />
+          <Text style={styles.priceLabel}>{t("providerRequests.estimatedPrice", "Total Service Price")}</Text>
+          <PriceText style={styles.priceValue} amount={agreedPrice} />
         </View>
 
         <View style={styles.priceDivider} />
 
-        <View style={styles.priceRow}>
-          <Text style={styles.totalLabel}>{t("providerRequests.yourEarnings", "Your Earnings")}</Text>
-          <PriceText style={styles.totalValue} amount={(request?.estimatedPrice || 0) * 0.95} />
+        {/* Split payout breakdown */}
+        <View style={[styles.priceRow, { marginBottom: 4 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="flash-outline" size={14} color="#22c55e" />
+            <Text style={[styles.priceLabel, { color: '#22c55e' }]}>Immediate (50%)</Text>
+          </View>
+          <PriceText style={[styles.priceValue, { color: '#22c55e' }]} amount={immediateAmount} />
+        </View>
+        <View style={[styles.priceRow, { marginBottom: 12 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="time-outline" size={14} color="#f59e0b" />
+            <Text style={[styles.priceLabel, { color: '#f59e0b' }]}>Held 3 days (50%)</Text>
+          </View>
+          <PriceText style={[styles.priceValue, { color: '#f59e0b' }]} amount={heldAmount} />
+        </View>
+
+        {/* Payment phase status */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          <View style={[{ flex: 1, padding: 8, borderRadius: 10, alignItems: 'center', backgroundColor: depositPaid ? '#22c55e18' : '#94a3b818' }]}>
+            <Ionicons name={depositPaid ? 'checkmark-circle' : 'time-outline'} size={16} color={depositPaid ? '#22c55e' : '#94a3b8'} />
+            <Text style={{ fontSize: 10, fontWeight: '600', color: depositPaid ? '#22c55e' : '#94a3b8', marginTop: 2 }}>Deposit (20%)</Text>
+            <Text style={{ fontSize: 9, color: depositPaid ? '#22c55e' : '#94a3b8' }}>{depositPaid ? 'Paid' : 'Pending'}</Text>
+          </View>
+          <View style={[{ flex: 1, padding: 8, borderRadius: 10, alignItems: 'center', backgroundColor: finalPaid ? '#22c55e18' : '#94a3b818' }]}>
+            <Ionicons name={finalPaid ? 'checkmark-circle' : 'time-outline'} size={16} color={finalPaid ? '#22c55e' : '#94a3b8'} />
+            <Text style={{ fontSize: 10, fontWeight: '600', color: finalPaid ? '#22c55e' : '#94a3b8', marginTop: 2 }}>Final (80%)</Text>
+            <Text style={{ fontSize: 9, color: finalPaid ? '#22c55e' : '#94a3b8' }}>{finalPaid ? 'Paid' : 'Pending'}</Text>
+          </View>
         </View>
 
         {(request?.status === "completed" || request?.status === "waiting_customer_confirmation") && (
@@ -594,6 +622,7 @@ export default function RequestDetails() {
       </View>
     </View>
   );
+  };
 
   const renderTimeline = () => {
     const currentStep = getCurrentStep();

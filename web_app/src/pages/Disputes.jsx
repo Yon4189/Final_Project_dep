@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { disputeAPI } from '../api/dispute';
 import DescriptionModal from '../components/DescriptionModal';
+import useDisputePolling from '../hooks/useDisputePolling';
+import useTypingIndicator from '../hooks/useTypingIndicator';
 
 const Disputes = () => {
   const { t } = useTranslation();
@@ -31,6 +33,43 @@ const Disputes = () => {
   const [priorityFilter, setPriorityFilter] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [descModal, setDescModal] = useState({ show: false, content: '', title: '' });
+  const [pollingEnabled, setPollingEnabled] = useState(false);
+  const [lastMessageUpdate, setLastMessageUpdate] = useState(null);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingMessageText, setEditingMessageText] = useState('');
+  const [replyingToMessageId, setReplyingToMessageId] = useState(null);
+  const [replyText, setReplyText] = useState('');
+
+  // Enable polling when a dispute is selected
+  const pollingStatus = useDisputePolling(
+    selectedDispute?.disputeID,
+    3000, // Poll every 3 seconds
+    pollingEnabled && !!selectedDispute
+  );
+
+  // Typing indicator
+  const { typingUsers, setTyping } = useTypingIndicator(
+    selectedDispute?.disputeID,
+    pollingEnabled && !!selectedDispute
+  );
+
+  // Listen for message updates from polling
+  useEffect(() => {
+    const handleMessageUpdate = (event) => {
+      setLastMessageUpdate(event.detail.timestamp);
+      // Refresh the selected dispute to show new messages
+      if (selectedDispute) {
+        handleReviewCase(selectedDispute.disputeID);
+      }
+    };
+
+    window.addEventListener('disputeMessageUpdate', handleMessageUpdate);
+    return () => window.removeEventListener('disputeMessageUpdate', handleMessageUpdate);
+  }, [selectedDispute]);
 
   const cleanTitle = (title) => {
     if (!title) return '';
@@ -99,6 +138,8 @@ const Disputes = () => {
           resolution_type: response.data.dispute.resolution_type || '',
           refund_amount: response.data.dispute.refund_amount || 0
         });
+        // Enable polling when dispute is opened
+        setPollingEnabled(true);
       }
     } catch (error) {
       console.error('Failed to fetch dispute details:', error);
@@ -109,6 +150,7 @@ const Disputes = () => {
 
   const handleCloseModal = () => {
     setSelectedDispute(null);
+    setPollingEnabled(false);
     navigate('/admin/disputes');
   };
 
@@ -154,6 +196,61 @@ const Disputes = () => {
     }
   };
 
+  const handleEditMessage = async (messageID) => {
+    if (!editingMessageText.trim()) return;
+
+    try {
+      const response = await disputeAPI.editMessage(messageID, editingMessageText);
+      if (response.success) {
+        // Update local state
+        setSelectedDispute(prev => ({
+          ...prev,
+          messages: prev.messages.map(msg => 
+            msg.messageID === messageID 
+              ? { ...msg, message: editingMessageText, is_edited: true }
+              : msg
+          )
+        }));
+        setEditingMessageId(null);
+        setEditingMessageText('');
+      }
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      alert('Failed to edit message: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const startEditMessage = (message) => {
+    setEditingMessageId(message.messageID);
+    setEditingMessageText(message.message);
+  };
+
+  const handleReplyToMessage = async (parentMessageID) => {
+    if (!replyText.trim() || !selectedDispute) return;
+
+    try {
+      const response = await disputeAPI.replyToMessage(
+        selectedDispute.disputeID,
+        parentMessageID,
+        replyText,
+        recipientType
+      );
+
+      if (response.success) {
+        setReplyText('');
+        setReplyingToMessageId(null);
+        // Refresh dispute details
+        const detailRes = await disputeAPI.getDisputeDetails(selectedDispute.disputeID);
+        if (detailRes.success) {
+          setSelectedDispute(detailRes.data.dispute);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to reply to message:', error);
+      alert('Failed to reply: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   const handleSendMessage = async (isAdminOnly = false) => {
     if (!newMessage.trim() || !selectedDispute) return;
 
@@ -180,6 +277,30 @@ const Disputes = () => {
       alert(`Failed to send message: ${errorMsg}`);
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const handleSearchMessages = async (e) => {
+    e.preventDefault();
+    if (!messageSearchQuery.trim() || !selectedDispute) return;
+
+    try {
+      setIsSearching(true);
+      const response = await disputeAPI.searchMessages(
+        selectedDispute.disputeID,
+        messageSearchQuery,
+        50
+      );
+
+      if (response.success) {
+        setSearchResults(response.data.messages || []);
+        setShowSearchResults(true);
+      }
+    } catch (error) {
+      console.error('Failed to search messages:', error);
+      alert('Search failed: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -380,12 +501,22 @@ const Disputes = () => {
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar scroll-smooth">
                       {selectedDispute.messages
                         ?.filter(msg => {
-                          if (recipientType === 'admin') return msg.is_admin_only || msg.recipient_type === 'admin';
-                          if (recipientType === 'customer') {
-                            return msg.sender_type === 'customer' || (msg.sender_type === 'admin' && msg.recipient_type === 'customer' && !msg.is_admin_only);
-                          }
-                          if (recipientType === 'provider') {
-                            return msg.sender_type === 'provider' || (msg.sender_type === 'admin' && msg.recipient_type === 'provider' && !msg.is_admin_only);
+                          // Admin-only messages only visible when filtering by admin
+                          if (msg.is_admin_only && recipientType !== 'admin') return false;
+                          
+                          // Show messages based on recipient type filter
+                          if (recipientType === 'admin') {
+                            // Show all messages to admin
+                            return true;
+                          } else if (recipientType === 'customer') {
+                            // Show messages from customer or messages sent to customer
+                            return msg.sender_type === 'customer' || msg.recipient_type === 'customer';
+                          } else if (recipientType === 'provider') {
+                            // Show messages from provider or messages sent to provider
+                            return msg.sender_type === 'provider' || msg.recipient_type === 'provider';
+                          } else if (recipientType === 'both') {
+                            // Show all non-admin-only messages
+                            return !msg.is_admin_only;
                           }
                           return true;
                         })
@@ -421,13 +552,11 @@ const Disputes = () => {
                         })}
                       
                       {selectedDispute.messages?.filter(msg => {
-                        if (recipientType === 'admin') return msg.is_admin_only || msg.recipient_type === 'admin';
-                        if (recipientType === 'customer') {
-                          return msg.sender_type === 'customer' || (msg.sender_type === 'admin' && msg.recipient_type === 'customer' && !msg.is_admin_only);
-                        }
-                        if (recipientType === 'provider') {
-                          return msg.sender_type === 'provider' || (msg.sender_type === 'admin' && msg.recipient_type === 'provider' && !msg.is_admin_only);
-                        }
+                        if (msg.is_admin_only && recipientType !== 'admin') return false;
+                        if (recipientType === 'admin') return true;
+                        if (recipientType === 'customer') return msg.sender_type === 'customer' || msg.recipient_type === 'customer';
+                        if (recipientType === 'provider') return msg.sender_type === 'provider' || msg.recipient_type === 'provider';
+                        if (recipientType === 'both') return !msg.is_admin_only;
                         return true;
                       }).length === 0 && (
                         <div className="py-20 flex flex-col items-center justify-center opacity-20 italic">
@@ -455,7 +584,7 @@ const Disputes = () => {
                                   : 'bg-white dark:bg-slate-800 text-slate-500 border-admin-border hover:bg-slate-50'
                                 }`}
                               >
-                                {t(type)}
+                                {type === 'both' ? 'Both' : t(type)}
                               </button>
                             ))}
                           </div>
