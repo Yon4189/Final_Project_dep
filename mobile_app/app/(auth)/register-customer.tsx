@@ -24,6 +24,7 @@ import { ThemeColors } from "../constants/Colors";
 import { LOCATIONS } from "../constants/Services";
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from "../context/ThemeContext";
+import { launchGoogleOAuth, registerWithGoogle } from "../services/googleAuth.service";
 
 // Define City interface
 interface City {
@@ -49,6 +50,7 @@ export default function RegisterCustomerScreen() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [cities, setCities] = useState<City[]>([]);
@@ -80,6 +82,53 @@ export default function RegisterCustomerScreen() {
       console.log('Error fetching cities:', err);
     } finally {
       setCitiesLoading(false);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    setGoogleLoading(true);
+    try {
+      const { accessToken, userInfo, error } = await launchGoogleOAuth();
+      if (error === 'cancelled') return;
+      if (error || !accessToken) {
+        Alert.alert('Error', error || 'Google sign-in failed.');
+        return;
+      }
+
+      // Pre-fill form with Google info
+      setFormData(prev => ({
+        ...prev,
+        fullname: userInfo?.name || prev.fullname,
+        email: userInfo?.email || prev.email,
+      }));
+
+      // Try to register or login directly
+      const res = await registerWithGoogle(accessToken);
+      if (res.success && res.data?.token) {
+        const { api: apiService } = require('../services/api');
+        await apiService.setCustomerToken(res.data.token, undefined);
+        await apiService.setUserData({
+          id: res.data.customerID,
+          fullname: res.data.fullname,
+          email: res.data.email,
+          phone: res.data.phone,
+          profilePicture: res.data.profilePicture,
+          user_type: 'customer',
+        });
+        router.replace('/(customer)/customer_dashboard');
+      } else if (res.message?.toLowerCase().includes('phone')) {
+        Alert.alert(
+          'Almost there!',
+          'Your Google account was linked. Please complete your profile with a phone number and location.',
+        );
+      } else {
+        Alert.alert('Info', res.message || 'Account created! Please log in.');
+        router.push('/(auth)/login');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Google sign-in failed.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -190,6 +239,29 @@ export default function RegisterCustomerScreen() {
         <View style={styles.formContainer}>
           <AppInput label={t("auth.fullName", "Full Name")} value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder={t("auth.enterFullName", "Enter your full name")} required error={validationErrors.fullname} />
           <AppInput label={t("auth.email", "Email")} value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder={t("auth.enterEmail", "Enter your email")} keyboardType="email-address" autoCapitalize="none" required error={validationErrors.email} />
+
+          {/* Google Sign-Up — placed right after email */}
+          <View style={styles.googleDivider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t('auth.orContinueWith', 'or continue with')}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <TouchableOpacity
+            style={[styles.googleButton, (loading || googleLoading) && { opacity: 0.6 }]}
+            onPress={handleGoogleRegister}
+            disabled={loading || googleLoading}
+            activeOpacity={0.8}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#DB4437" />
+            ) : (
+              <Ionicons name="logo-google" size={20} color="#DB4437" />
+            )}
+            <Text style={styles.googleButtonText}>
+              {googleLoading ? t('login.signingIn', 'Please wait...') : t('auth.continueWithGoogle', 'Continue with Google')}
+            </Text>
+          </TouchableOpacity>
+
           <AppInput label={t("auth.phoneNumber", "Phone Number")} value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required error={validationErrors.phone} />
           
           <View style={styles.inputGroup}>
@@ -289,4 +361,22 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: "bold", color: colors.text.primary },
   modalItem: { padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalItemText: { fontSize: 16, color: colors.text.primary },
+  googleButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#DB4437',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#DB4437',
+  },
+  googleDivider: { flexDirection: 'row' as const, alignItems: 'center' as const, marginVertical: 12 },
 });

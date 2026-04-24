@@ -23,6 +23,7 @@ import AppInput from '../../components/AppInput';
 import { ThemeColors } from '../constants/Colors';
 import { api } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { launchGoogleOAuth } from '../services/googleAuth.service';
 
 const ID_PHOTO_TYPES = ['Passport', 'Driver License', 'National ID', 'Kebele ID'];
 
@@ -70,12 +71,18 @@ export default function RegisterProviderScreen() {
 
   const [profilePicture, setProfilePicture] = useState<any>(null);
   const [profilePictureUri, setProfilePictureUri] = useState<string | null>(null);
-  const [idPhoto, setIdPhoto] = useState<any>(null);
-  const [idPhotoUri, setIdPhotoUri] = useState<string | null>(null);
-  const [credentialPhoto, setCredentialPhoto] = useState<any>(null);
-  const [credentialPhotoUri, setCredentialPhotoUri] = useState<string | null>(null);
+
+  // ID Card — front and back are both required
+  const [idPhotoFront, setIdPhotoFront] = useState<any>(null);
+  const [idPhotoFrontUri, setIdPhotoFrontUri] = useState<string | null>(null);
+  const [idPhotoBack, setIdPhotoBack] = useState<any>(null);
+  const [idPhotoBackUri, setIdPhotoBackUri] = useState<string | null>(null);
+
+  // Certificates / work documents — optional, multiple
+  const [certificates, setCertificates] = useState<{ file: any; uri: string; name: string }[]>([]);
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [showIdTypeModal, setShowIdTypeModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
@@ -129,6 +136,32 @@ export default function RegisterProviderScreen() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      const { accessToken, userInfo, error } = await launchGoogleOAuth();
+      if (error === 'cancelled') return;
+      if (error || !accessToken) {
+        Alert.alert('Error', error || 'Google sign-in failed.');
+        return;
+      }
+      // Pre-fill name and email from Google
+      setFormData(prev => ({
+        ...prev,
+        fullname: userInfo?.name || prev.fullname,
+        email: userInfo?.email || prev.email,
+      }));
+      Alert.alert(
+        t('auth.googleLinked', 'Google Account Linked!'),
+        t('auth.googleProviderPrompt', 'Your info has been pre-filled from Google. Please complete the remaining fields (phone, city, services, ID) to finish registration.'),
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Google sign-in failed.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const addServiceOffering = () => {
     setServiceOfferings([
       ...serviceOfferings,
@@ -158,40 +191,91 @@ export default function RegisterProviderScreen() {
     });
   };
 
-  const pickImage = async (type: 'profile' | 'id' | 'credential') => {
+  const pickImage = async (type: 'profile' | 'idFront' | 'idBack') => {
+    if (type === 'profile') {
+      // Profile picture: let user choose camera or gallery
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('auth.permissionNeeded', 'Permission needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+      });
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const filename = asset.uri.split('/').pop() || 'profile.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+        setProfilePictureUri(asset.uri);
+        setProfilePicture({ uri: asset.uri, name: filename, type: mimeType });
+      }
+    } else {
+      // ID card front/back: camera only for security
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('auth.cameraPermissionTitle', 'Camera Permission Required'),
+          t('auth.cameraPermissionMsg', 'Camera access is required to photograph your ID card for verification.')
+        );
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [3, 2],
+        quality: 0.7,
+      });
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const filename = asset.uri.split('/').pop() || 'id.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+        const file = { uri: asset.uri, name: filename, type: mimeType };
+        if (type === 'idFront') { setIdPhotoFrontUri(asset.uri); setIdPhotoFront(file); }
+        else if (type === 'idBack') { setIdPhotoBackUri(asset.uri); setIdPhotoBack(file); }
+      }
+    }
+  };
+
+  const pickCertificate = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(t('auth.permissionNeeded', 'Permission needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: type === 'profile' ? [1, 1] : [3, 2],
-      quality: 0.5,
+      allowsEditing: false,
+      quality: 0.7,
     });
-
     if (!result.canceled) {
       const asset = result.assets[0];
-      if (type === 'profile') setProfilePictureUri(asset.uri);
-      else if (type === 'id') setIdPhotoUri(asset.uri);
-      else setCredentialPhotoUri(asset.uri);
-
-      const filename = asset.uri.split('/').pop() || 'upload.jpg';
+      const filename = asset.uri.split('/').pop() || 'certificate.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
       const file = { uri: asset.uri, name: filename, type: mimeType };
-
-      if (type === 'profile') setProfilePicture(file);
-      else if (type === 'id') setIdPhoto(file);
-      else setCredentialPhoto(file);
+      setCertificates(prev => [...prev, { file, uri: asset.uri, name: filename }]);
     }
   };
 
+  const removeCertificate = (index: number) => {
+    setCertificates(prev => prev.filter((_, i) => i !== index));
+  };
+
   const registerProvider = async () => {
-    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType || !idPhoto) {
-      Alert.alert(t('common.error', 'Error'), t('auth.fillRequiredFields', 'Please fill all required fields and upload your ID card photo.'));
+    if (!formData.fullname || !formData.email || !formData.phone || !formData.service_city || !formData.idPhotoType) {
+      Alert.alert(t('common.error', 'Error'), t('auth.fillRequiredFields', 'Please fill all required fields.'));
+      return;
+    }
+    if (!idPhotoFront) {
+      Alert.alert(t('common.error', 'Error'), t('auth.uploadIdFront', 'Please upload the front side of your ID card.'));
+      return;
+    }
+    if (!idPhotoBack) {
+      Alert.alert(t('common.error', 'Error'), t('auth.uploadIdBack', 'Please upload the back side of your ID card.'));
       return;
     }
 
@@ -232,8 +316,17 @@ export default function RegisterProviderScreen() {
       data.append('services', JSON.stringify(servicesToSend));
       
       if (profilePicture) data.append('profilePicture', profilePicture as any);
-      if (idPhoto) data.append('idPhoto', idPhoto as any);
-      if (credentialPhoto) data.append('credentialPhoto', credentialPhoto as any);
+      
+      // Map front ID to 'idPhoto' (Required by backend)
+      if (idPhotoFront) data.append('idPhoto', idPhotoFront as any);
+      
+      // Map back ID to 'credentialPhoto' (Optional in backend, but we use it for back side)
+      if (idPhotoBack) data.append('credentialPhoto', idPhotoBack as any);
+      
+      // Append certificates (optional)
+      certificates.forEach((cert, index) => {
+        data.append(`certificates[${index}]`, cert.file as any);
+      });
 
       const response = await api.post<any>('/provider/register', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -352,6 +445,29 @@ export default function RegisterProviderScreen() {
 
           <AppInput label={t("auth.fullName", "Full Name")} value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder={t("auth.fullNamePlaceholder", "John Doe")} required />
           <AppInput label={t("auth.email", "Email")} value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder={t("login.emailPlaceholder", "email@example.com")} autoCapitalize="none" keyboardType="email-address" required />
+
+          {/* Google Pre-fill — placed right after email */}
+          <View style={styles.googleDivider}>
+            <View style={styles.googleDividerLine} />
+            <Text style={styles.googleDividerText}>{t('auth.orContinueWith', 'or continue with')}</Text>
+            <View style={styles.googleDividerLine} />
+          </View>
+          <TouchableOpacity
+            style={[styles.googleButton, (loading || googleLoading) && { opacity: 0.6 }]}
+            onPress={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+            activeOpacity={0.8}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#DB4437" />
+            ) : (
+              <Ionicons name="logo-google" size={20} color="#DB4437" />
+            )}
+            <Text style={styles.googleButtonText}>
+              {googleLoading ? t('login.signingIn', 'Please wait...') : t('auth.continueWithGoogle', 'Continue with Google')}
+            </Text>
+          </TouchableOpacity>
+
           <AppInput label={t("auth.phoneNumber", "Phone Number")} value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required />
 
           <View style={styles.inputGroup}>
@@ -392,22 +508,87 @@ export default function RegisterProviderScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* ID Card — Front & Back (required) */}
           <View style={styles.uploadContainer}>
-            <Text style={styles.label}>{t("auth.idCardPhoto", "ID Card Photo")} <Text style={styles.required}>*</Text></Text>
-            <TouchableOpacity style={styles.idImagePicker} onPress={() => pickImage('id')}>
-              {idPhotoUri ? <Image source={{ uri: idPhotoUri }} style={styles.idImage} /> : (
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="id-card-outline" size={40} color={colors.text.secondary} />
-                  <Text style={styles.imagePlaceholderText}>{t("auth.uploadIdCard", "Upload ID Card")}</Text>
-                </View>
-              )}
+            <Text style={styles.label}>
+              {t('auth.idCardPhoto', 'ID Card Photos')} <Text style={styles.required}>*</Text>
+            </Text>
+            <Text style={styles.uploadHint}>{t('auth.idBothSides', 'Upload both the front and back of your ID card')}</Text>
+
+            <View style={styles.idPhotoRow}>
+              {/* Front */}
+              <TouchableOpacity style={styles.idHalfPicker} onPress={() => pickImage('idFront')}>
+                {idPhotoFrontUri ? (
+                  <Image source={{ uri: idPhotoFrontUri }} style={styles.idHalfImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera" size={32} color={colors.primary} />
+                    <Text style={styles.imagePlaceholderText}>{t('auth.frontSide', 'Front Side')}</Text>
+                    <Text style={styles.uploadHint}>{t('auth.tapToCapture', 'Tap to take photo')}</Text>
+                  </View>
+                )}
+                {idPhotoFrontUri && (
+                  <View style={styles.checkBadge}>
+                    <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Back */}
+              <TouchableOpacity style={styles.idHalfPicker} onPress={() => pickImage('idBack')}>
+                {idPhotoBackUri ? (
+                  <Image source={{ uri: idPhotoBackUri }} style={styles.idHalfImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera" size={32} color={colors.primary} />
+                    <Text style={styles.imagePlaceholderText}>{t('auth.backSide', 'Back Side')}</Text>
+                    <Text style={styles.uploadHint}>{t('auth.tapToCapture', 'Tap to take photo')}</Text>
+                  </View>
+                )}
+                {idPhotoBackUri && (
+                  <View style={styles.checkBadge}>
+                    <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Certificates & Documents — optional */}
+          <View style={styles.uploadContainer}>
+            <Text style={styles.label}>
+              {t('auth.certificates', 'Certificates & Work Documents')}{' '}
+              <Text style={styles.optional}>{t('auth.optional', '(Optional)')}</Text>
+            </Text>
+            <Text style={styles.uploadHint}>
+              {t('auth.certificatesHint', 'Upload any relevant certifications, licenses, or work documents')}
+            </Text>
+
+            {/* Uploaded certificates list */}
+            {certificates.map((cert, index) => (
+              <View key={index} style={styles.certItem}>
+                <Image source={{ uri: cert.uri }} style={styles.certThumb} />
+                <Text style={styles.certName} numberOfLines={1}>{cert.name}</Text>
+                <TouchableOpacity onPress={() => removeCertificate(index)} style={styles.certRemove}>
+                  <Ionicons name="close-circle" size={22} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <TouchableOpacity style={styles.addCertButton} onPress={pickCertificate}>
+              <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+              <Text style={styles.addCertText}>
+                {certificates.length === 0
+                  ? t('auth.addCertificate', 'Add Certificate or Document')
+                  : t('auth.addAnother', 'Add Another')}
+              </Text>
             </TouchableOpacity>
           </View>
 
           <AppInput label={t("auth.password", "Password")} value={formData.password} onChangeText={(t) => setFormData({ ...formData, password: t })} secureTextEntry showPasswordToggle={true} placeholder={t("auth.minCharacters", "Minimum 8 characters")} required />
           <AppInput label={t("auth.confirmPassword", "Confirm Password")} value={formData.password_confirmation} onChangeText={(t) => setFormData({ ...formData, password_confirmation: t })} secureTextEntry showPasswordToggle={true} placeholder={t("auth.reenterPasswordPlaceholder", "Re-enter password")} required />
 
-          <AppButton title={t("auth.registerAsProviderBtn", "Register as Provider")} onPress={registerProvider} loading={loading} disabled={loading} fullWidth style={{ marginTop: 20 }} />
+          <AppButton title={t("auth.registerAsProviderBtn", "Register as Provider")} onPress={registerProvider} loading={loading} disabled={loading} fullWidth style={{ marginTop: 12 }} />
 
           <TouchableOpacity style={styles.loginLink} onPress={() => router.push('/login')}>
             <Text style={styles.loginText}>{t("auth.alreadyHaveAccount", "Already have an account?")} <Text style={styles.loginLinkText}>{t("auth.signIn", "Sign In")}</Text></Text>
@@ -470,6 +651,54 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   idImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   imagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   imagePlaceholderText: { marginTop: 8, color: colors.text.secondary, fontSize: 14, fontWeight: '500' },
+  uploadHint: { fontSize: 12, color: colors.text.secondary, marginBottom: 10, marginTop: -4 },
+  idPhotoRow: { flexDirection: 'row' as const, gap: 12 },
+  idHalfPicker: {
+    flex: 1,
+    height: 150,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: 'dashed' as const,
+    overflow: 'hidden' as const,
+    backgroundColor: colors.background,
+    position: 'relative' as const,
+  },
+  idHalfImage: { width: '100%', height: '100%', resizeMode: 'cover' as const },
+  checkBadge: {
+    position: 'absolute' as const,
+    bottom: 6,
+    right: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 11,
+  },
+  certItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  certThumb: { width: 48, height: 48, borderRadius: 6, resizeMode: 'cover' as const },
+  certName: { flex: 1, marginHorizontal: 10, fontSize: 13, color: colors.text.primary },
+  certRemove: { padding: 4 },
+  addCertButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed' as const,
+    marginTop: 8,
+    backgroundColor: colors.background,
+  },
+  addCertText: { color: colors.primary, fontSize: 14, fontWeight: '600' as const },
   servicesSection: { marginBottom: 20 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 12 },
   serviceCard: { backgroundColor: colors.background, padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
@@ -496,4 +725,25 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   errorText: { marginTop: 12, color: colors.error, fontSize: 14, textAlign: 'center' },
   retryButton: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 8 },
   retryText: { color: '#FFFFFF', fontWeight: '600' },
+  googleButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#DB4437',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 12,
+    marginBottom: 4,
+    backgroundColor: colors.surface,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#DB4437',
+  },
+  googleDivider: { flexDirection: 'row' as const, alignItems: 'center' as const, marginVertical: 12 },
+  googleDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  googleDividerText: { marginHorizontal: 10, color: colors.text.secondary, fontSize: 13 },
 });
