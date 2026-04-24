@@ -182,15 +182,19 @@ class CustomerService {
   async searchProviders(filters: SearchFilters & { page?: number; perPage?: number }): Promise<ApiResponse<ServiceProvider[]>> {
     const params = new URLSearchParams();
     
-    if (filters.query) params.append('query', filters.query);
+    const searchQuery = filters.query || (filters as any).q;
+    if (searchQuery) params.append('q', searchQuery);
     if (filters.categoryId) params.append('category_id', filters.categoryId);
     if (filters.serviceId) params.append('service_id', filters.serviceId);
     if (filters.minRating) params.append('min_rating', filters.minRating.toString());
     if (filters.maxDistance) params.append('max_distance', filters.maxDistance.toString());
-    if (filters.priceRange) {
-      params.append('price_min', filters.priceRange.min.toString());
-      params.append('price_max', filters.priceRange.max.toString());
-    }
+    
+    // Support both nested object and flattened params
+    const pMin = filters.priceRange?.min ?? (filters as any).price_min;
+    const pMax = filters.priceRange?.max ?? (filters as any).price_max;
+    
+    if (pMin !== undefined && pMin !== null) params.append('price_min', pMin.toString());
+    if (pMax !== undefined && pMax !== null) params.append('price_max', pMax.toString());
     if (filters.verifiedOnly) params.append('verified_only', 'true');
     if (filters.availableNow) params.append('available_now', 'true');
     if (filters.sortBy) params.append('sort_by', filters.sortBy);

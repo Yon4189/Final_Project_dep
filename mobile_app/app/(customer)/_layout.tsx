@@ -16,7 +16,7 @@ function NotificationBadge() {
   if (unreadCount === 0) {
     return (
       <TouchableOpacity
-        onPress={() => router.push('/(customer)/notifications')}
+        onPress={() => router.push('/notifications')}
         style={{ marginRight: 15 }}
       >
         <Ionicons name="notifications-outline" size={24} color={colors.primary} />
@@ -26,7 +26,7 @@ function NotificationBadge() {
 
   return (
     <TouchableOpacity
-      onPress={() => router.push('/(customer)/notifications')}
+      onPress={() => router.push('/notifications')}
       style={{ marginRight: 15, position: 'relative' }}
     >
       <Ionicons name="notifications-outline" size={24} color={colors.primary} />
@@ -60,7 +60,7 @@ export default function CustomerLayout() {
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  router.replace('/(customer)/customer_dashboard');
+                  router.replace('/customer_dashboard');
                 }
               }}
               style={{ marginRight: 12 }}
@@ -68,7 +68,7 @@ export default function CustomerLayout() {
               <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => router.replace('/(customer)/customer_dashboard')}
+              onPress={() => router.replace('/customer_dashboard')}
             >
               <Ionicons name="home-outline" size={24} color={colors.primary} />
             </TouchableOpacity>

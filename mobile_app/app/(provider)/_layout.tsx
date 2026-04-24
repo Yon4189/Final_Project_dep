@@ -52,7 +52,7 @@ export default function ProviderLayout() {
           ) : null,
         headerRight: () => (
           <TouchableOpacity
-            onPress={() => router.replace('/(provider)/provider_dashboard')}
+            onPress={() => router.replace('/provider_dashboard')}
             style={{ marginRight: 16 }}
           >
             <Ionicons name="home-outline" size={24} color={colors.primary} />

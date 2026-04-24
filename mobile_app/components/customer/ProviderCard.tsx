@@ -85,6 +85,11 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
               <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
             </View>
           )}
+          {provider.isAvailable && (
+            <View style={styles.availabilityDotContainer}>
+              <View style={styles.availableDot} />
+            </View>
+          )}
         </View>
 
         <View style={styles.info}>
@@ -92,22 +97,28 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
             <Text style={styles.name} numberOfLines={1}>
               {provider.businessName || provider.name || 'Provider'}
             </Text>
-            {showDistance && provider.distance && (
-              <View style={styles.distance}>
-                <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
-                <Text style={styles.distanceText}>{formatDistance(provider.distance)}</Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={Colors.warning} />
             <Text style={styles.rating}>{provider.rating?.toFixed(1) || '0.0'}</Text>
             <Text style={styles.reviews}>({provider.reviewCount || 0} {t('providerCard.reviews', 'reviews')})</Text>
+            
+            {showDistance && provider.distance && (
+              <View style={styles.distance}>
+                <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
+                <Text style={styles.distanceText}>{formatDistance(provider.distance)}</Text>
+              </View>
+            )}
+
             {provider.completedJobs > 0 && (
               <View style={styles.jobsBadge}>
                 <Text style={styles.jobsText}>{provider.completedJobs} {t('providerCard.jobs', 'jobs')}</Text>
               </View>
+            )}
+
+            {provider.isAvailable && (
+              <Text style={styles.availableTextInline}> • {t('providerCard.available', 'Available')}</Text>
             )}
           </View>
 
@@ -164,12 +175,6 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         </View>
       </View>
 
-      {provider.isAvailable && (
-        <View style={styles.availableBadge}>
-          <View style={styles.availableDot} />
-          <Text style={styles.availableText}>{t('providerCard.availableNow', 'Available Now')}</Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 };
@@ -216,7 +221,6 @@ const styles = StyleSheet.create({
   },
   nameRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
   },
@@ -334,28 +338,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 4,
   },
-  availableBadge: {
+  availabilityDotContainer: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.success + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    top: 0,
+    right: 0,
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: 2,
     borderWidth: 1,
-    borderColor: Colors.success,
+    borderColor: Colors.border,
   },
   availableDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: Colors.success,
-    marginRight: 4,
   },
-  availableText: {
-    fontSize: 10,
+  availableTextInline: {
+    fontSize: 12,
     color: Colors.success,
     fontWeight: '600',
   },

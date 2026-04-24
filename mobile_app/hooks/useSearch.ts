@@ -54,8 +54,7 @@ export const useSearch = ({
 
       // Add price range if provided
       if (filters.priceRange) {
-        searchParams.price_min = filters.priceRange.min;
-        searchParams.price_max = filters.priceRange.max;
+        searchParams.priceRange = filters.priceRange;
       }
 
       // Add verified filter if provided

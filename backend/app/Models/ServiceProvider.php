@@ -61,7 +61,10 @@ class ServiceProvider extends Authenticatable
         'expo_push_token',
         'business_license',
         'insurance_certificate',
-        'certifications'
+        'certifications',
+        'hourly_rate',
+        'total_earned',
+        'success_rate'
     ];
 
     protected $hidden = [
