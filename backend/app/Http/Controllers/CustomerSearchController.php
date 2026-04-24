@@ -72,10 +72,10 @@ class CustomerSearchController extends Controller
                 $providers = $providers->orderBy('rating');
                 break;
             case 'price_high':
-                $providers = $providers->orderByDesc('estimatedPrice');
+                $providers = $providers->orderByRaw('COALESCE(estimatedPrice, hourly_rate, 0) DESC');
                 break;
             case 'price_low':
-                $providers = $providers->orderBy('estimatedPrice');
+                $providers = $providers->orderByRaw('COALESCE(estimatedPrice, hourly_rate, 999999) ASC');
                 break;
             case 'distance':
             case 'nearest':
@@ -93,11 +93,41 @@ class CustomerSearchController extends Controller
         // price range filter
         $priceMin = $request->query('price_min');
         $priceMax = $request->query('price_max');
-        if ($priceMin !== null) {
-            $providers = $providers->where('estimatedPrice', '>=', (float)$priceMin);
-        }
-        if ($priceMax !== null) {
-            $providers = $providers->where('estimatedPrice', '<=', (float)$priceMax);
+        
+        if ($priceMin !== null || $priceMax !== null) {
+            $providers->where(function($q) use ($priceMin, $priceMax) {
+                // Check provider's direct estimatedPrice or hourly_rate
+                $q->where(function($sq) use ($priceMin, $priceMax) {
+                    if ($priceMin !== null) {
+                        $sq->where(function($ssq) use ($priceMin) {
+                            $ssq->where('estimatedPrice', '>=', (float)$priceMin)
+                                ->orWhere('hourly_rate', '>=', (float)$priceMin);
+                        });
+                    }
+                    if ($priceMax !== null) {
+                        $sq->where(function($ssq) use ($priceMax) {
+                            $ssq->where('estimatedPrice', '<=', (float)$priceMax)
+                                ->orWhere('hourly_rate', '<=', (float)$priceMax);
+                        });
+                    }
+                });
+                
+                // OR check if any of their services fall within the range
+                $q->orWhereHas('services', function($sq) use ($priceMin, $priceMax) {
+                    if ($priceMin !== null) {
+                        $sq->where(function($ssq) use ($priceMin) {
+                            $ssq->where('estimatedPrice', '>=', (float)$priceMin)
+                                ->orWhere('hourly_rate', '>=', (float)$priceMin);
+                        });
+                    }
+                    if ($priceMax !== null) {
+                        $sq->where(function($ssq) use ($priceMax) {
+                            $ssq->where('estimatedPrice', '<=', (float)$priceMax)
+                                ->orWhere('hourly_rate', '<=', (float)$priceMax);
+                        });
+                    }
+                });
+            });
         }
 
         $providers = $providers->paginate($perPage, ['*'], 'page', $page);

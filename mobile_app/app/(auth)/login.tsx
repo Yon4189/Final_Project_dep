@@ -62,7 +62,7 @@ export default function LoginScreen() {
             profilePicture: loginRes.data.profilePicture,
             user_type: 'customer',
           });
-          router.replace('/(customer)/customer_dashboard');
+          router.replace('/customer_dashboard');
         } else {
           Alert.alert('Error', loginRes.message || 'Google login failed');
         }
@@ -79,7 +79,7 @@ export default function LoginScreen() {
             profilePicture: loginRes.data.profilePicture,
             user_type: 'provider',
           });
-          router.replace('/(provider)/provider_dashboard');
+          router.replace('/provider_dashboard');
         } else {
           Alert.alert('Error', loginRes.message || 'Google login failed for provider');
         }
@@ -163,10 +163,10 @@ export default function LoginScreen() {
 
           if (userType === "provider") {
             console.log(' Navigating to provider dashboard');
-            router.replace("/(provider)/provider_dashboard");
+            router.replace("/provider_dashboard");
           } else {
             console.log(' Navigating to customer dashboard');
-            router.replace("/(customer)/customer_dashboard");
+            router.replace("/customer_dashboard");
           }
         } else {
           console.error(' No token in response');

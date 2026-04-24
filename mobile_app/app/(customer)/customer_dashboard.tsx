@@ -293,7 +293,7 @@ export default function CustomerDashboard() {
 
     // Navigate to search results with category filter
     router.push({
-      pathname: "/(customer)/search/results",
+      pathname: "/search/results",
       params: {
         categoryId,
         sortBy: "rating",
@@ -304,7 +304,7 @@ export default function CustomerDashboard() {
   };
 
   const handleViewAllCategories = () => {
-    router.push("/(customer)/categories");
+    router.push("/categories");
   };
 
   const handleProviderSelect = (provider: ServiceProvider) => {
@@ -388,7 +388,7 @@ export default function CustomerDashboard() {
           [
             {
               text: "View My Bookings",
-              onPress: () => router.push("/(customer)/bookings"),
+              onPress: () => router.push("/bookings"),
             },
             {
               text: "OK",
@@ -423,7 +423,7 @@ export default function CustomerDashboard() {
             await SecureStore.deleteItemAsync('auth_token');
             await SecureStore.deleteItemAsync('user_data');
             useCustomerStore.getState().reset();
-            router.replace('/(auth)/login');
+            router.replace('/login');
           } catch (error) {
             console.error('Logout error:', error);
           }
@@ -458,7 +458,7 @@ export default function CustomerDashboard() {
         color: Colors.primary,
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/(customer)/bookings');
+          router.push('/bookings');
         },
       },
       {
@@ -467,7 +467,7 @@ export default function CustomerDashboard() {
         color: Colors.warning || '#FF9500',
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/(customer)/complaints');
+          router.push('/complaints');
         },
       },
       {
@@ -666,7 +666,7 @@ export default function CustomerDashboard() {
           <View style={[styles.headerActions, { position: 'relative', right: 0 }]}>
             <TouchableOpacity
               style={[styles.iconButton, { marginRight: 4 }]}
-              onPress={() => router.push("/(customer)/notifications")}
+              onPress={() => router.push("/notifications")}
             >
               <Ionicons
                 name="notifications-outline"
@@ -684,7 +684,7 @@ export default function CustomerDashboard() {
 
             <TouchableOpacity
               style={styles.profileButton}
-              onPress={() => router.push("/(customer)/profile")}
+              onPress={() => router.push("/profile")}
             >
               {(() => {
                 const pic = user?.profilePicture || user?.profile_picture;

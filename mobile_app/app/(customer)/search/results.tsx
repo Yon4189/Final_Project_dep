@@ -39,13 +39,13 @@ export default function SearchResultsScreen() {
   const [filtersVisible, setFiltersVisible] = useState(false);
   // Pending (draft) filter state — only applied when user taps "Apply"
   const [pendingSortBy, setPendingSortBy] = useState('rating');
-  const [pendingPriceRange, setPendingPriceRange] = useState({ min: 0, max: 1000 });
+  const [pendingPriceRange, setPendingPriceRange] = useState({ min: 0, max: 10000 });
   const [pendingRatingFilter, setPendingRatingFilter] = useState(0);
   const [pendingAvailabilityFilter, setPendingAvailabilityFilter] = useState('all');
 
   // Applied filter state — drives the actual search
   const [sortBy, setSortBy] = useState('rating');
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
   const [ratingFilter, setRatingFilter] = useState(0);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
 
@@ -97,7 +97,7 @@ export default function SearchResultsScreen() {
     updateFilters({
       sortBy: pendingSortBy as any,
       minRating: pendingRatingFilter > 0 ? pendingRatingFilter : undefined,
-      priceRange: (pendingPriceRange.min > 0 || pendingPriceRange.max < 1000)
+      priceRange: (pendingPriceRange.min > 0 || pendingPriceRange.max < 10000)
         ? { min: pendingPriceRange.min, max: pendingPriceRange.max }
         : undefined,
       availableNow: pendingAvailabilityFilter === 'online' ? true : undefined,
@@ -108,7 +108,7 @@ export default function SearchResultsScreen() {
 
   const handleFilterReset = () => {
     setPendingSortBy('rating');
-    setPendingPriceRange({ min: 0, max: 1000 });
+    setPendingPriceRange({ min: 0, max: 10000 });
     setPendingRatingFilter(0);
     setPendingAvailabilityFilter('all');
   };
@@ -302,9 +302,9 @@ export default function SearchResultsScreen() {
                   <TextInput
                     style={styles.priceInput}
                     value={pendingPriceRange.max.toString()}
-                    onChangeText={(text) => setPendingPriceRange({ ...pendingPriceRange, max: parseInt(text) || 1000 })}
+                    onChangeText={(text) => setPendingPriceRange({ ...pendingPriceRange, max: parseInt(text) || 10000 })}
                     keyboardType="numeric"
-                    placeholder="1000"
+                    placeholder="10000"
                     placeholderTextColor={Colors.text.secondary}
                   />
                 </View>

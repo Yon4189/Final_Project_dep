@@ -115,7 +115,7 @@ export default function RegisterCustomerScreen() {
           profilePicture: res.data.profilePicture,
           user_type: 'customer',
         });
-        router.replace('/(customer)/customer_dashboard');
+        router.replace('/customer_dashboard');
       } else if (res.message?.toLowerCase().includes('phone')) {
         Alert.alert(
           'Almost there!',
