@@ -132,7 +132,7 @@ export default function MyRequests() {
         title={t('requests.noRequests', 'No requests found')}
         message={t(`requests.empty.${activeFilter}`, 'No requests found')}
         actionLabel={t('requests.browseServices', 'Browse Services')}
-        onAction={() => router.push('/(customer)/dashboard')}
+        onAction={() => router.push('/(customer)/customer_dashboard')}
       />
     );
   };
