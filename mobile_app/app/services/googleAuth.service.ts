@@ -1,58 +1,104 @@
-/**
- * Google OAuth service for Expo
- *
- * Setup required:
- * 1. Run: npx expo install expo-auth-session expo-crypto
- * 2. Add GOOGLE_CLIENT_ID to your .env (backend) and app.json (mobile)
- * 3. In app.json, add your scheme under "expo.scheme" (e.g. "hbservicefinder")
- *
- * Google Cloud Console setup:
- * - Create OAuth 2.0 credentials for "Android" and "iOS" app types
- * - For Expo Go testing, also create a "Web" credential
- * - Add the redirect URI: https://auth.expo.io/@your-username/your-app-slug
- */
-
+// app/services/googleAuth.service.ts
 import { api } from './api';
 
-// These are set in app.json / eas.json
-const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '';
-const GOOGLE_CLIENT_ID_IOS = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || '';
-const GOOGLE_CLIENT_ID_ANDROID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '';
-
-export interface GoogleAuthResult {
-  success: boolean;
-  idToken?: string;
-  error?: string;
-}
-
-export interface GoogleLoginResponse {
-  success: boolean;
-  data?: {
-    customerID: number;
-    user_type: string;
-    token: string;
-    fullname: string;
-    email: string;
-    phone: string;
-    profilePicture?: string;
-    needs_phone_update?: boolean;
-  };
-  message?: string;
-}
-
 /**
- * Exchange a Google ID token with our backend for a session token.
+ * Exchanges a Google access/ID token with the backend for an app token.
+ * Used for customer Google sign-in.
  */
-export async function loginWithGoogleToken(idToken: string): Promise<GoogleLoginResponse> {
+export async function loginWithGoogleToken(
+  token: string
+): Promise<{ success: boolean; data?: any; message?: string }> {
   try {
-    const response = await api.post<any>('/auth/google/customer', { id_token: idToken });
-    return response as GoogleLoginResponse;
+    const response = await api.post<any>('/customer/google-login', { token });
+    return response as any;
   } catch (error: any) {
-    return {
-      success: false,
-      message: error?.response?.data?.message || error?.message || 'Google login failed',
-    };
+    return { success: false, message: error.message || 'Google login failed' };
   }
 }
 
-export { GOOGLE_CLIENT_ID_WEB, GOOGLE_CLIENT_ID_IOS, GOOGLE_CLIENT_ID_ANDROID };
+/**
+ * Exchanges a Google token with the backend for a provider app token.
+ */
+export async function loginWithGoogleTokenProvider(
+  token: string
+): Promise<{ success: boolean; data?: any; message?: string }> {
+  try {
+    const response = await api.post<any>('/provider/google-login', { token });
+    return response as any;
+  } catch (error: any) {
+    return { success: false, message: error.message || 'Google login failed' };
+  }
+}
+
+/**
+ * Registers a new customer via Google OAuth.
+ * Used on the customer registration page.
+ */
+export async function registerWithGoogle(
+  token: string,
+  additionalData?: { phone?: string; location?: string }
+): Promise<{ success: boolean; data?: any; message?: string }> {
+  try {
+    const response = await api.post<any>('/customer/google-register', {
+      token,
+      ...additionalData,
+    });
+    return response as any;
+  } catch (error: any) {
+    return { success: false, message: error.message || 'Google registration failed' };
+  }
+}
+
+/**
+ * Shared helper: Launch Google OAuth flow using expo-auth-session.
+ * Returns the access token or null.
+ */
+export async function launchGoogleOAuth(): Promise<{
+  accessToken: string | null;
+  userInfo: any | null;
+  error?: string;
+}> {
+  let AuthSession: any;
+  try {
+    AuthSession = require('expo-auth-session');
+  } catch {
+    return { accessToken: null, userInfo: null, error: 'expo-auth-session not installed' };
+  }
+
+  const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
+  if (!clientId) {
+    return { accessToken: null, userInfo: null, error: 'Google Client ID not configured' };
+  }
+
+  try {
+    const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
+    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
+
+    const request = new AuthSession.AuthRequest({
+      clientId,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri,
+      responseType: AuthSession.ResponseType.Token,
+    });
+
+    const result = await request.promptAsync(discovery);
+
+    if (result.type === 'success' && result.authentication?.accessToken) {
+      const accessToken = result.authentication.accessToken;
+
+      // Fetch user info from Google
+      const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const userInfo = await userInfoRes.json();
+
+      return { accessToken, userInfo };
+    } else if (result.type === 'cancel') {
+      return { accessToken: null, userInfo: null, error: 'cancelled' };
+    } else {
+      return { accessToken: null, userInfo: null, error: 'Google sign-in failed' };
+    }
+  } catch (error: any) {
+    return { accessToken: null, userInfo: null, error: error.message || 'Google sign-in failed' };
+  }
+}

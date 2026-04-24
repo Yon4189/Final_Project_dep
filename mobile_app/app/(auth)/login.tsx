@@ -20,7 +20,7 @@ import AppInput from "../../components/AppInput";
 import { ThemeColors } from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
-import { loginWithGoogleToken } from "../services/googleAuth.service";
+import { loginWithGoogleToken, loginWithGoogleTokenProvider, launchGoogleOAuth } from "../services/googleAuth.service";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,57 +37,21 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
-    // Only available for customers
-    if (userType !== 'customer') {
-      Alert.alert('Info', 'Google sign-in is only available for customers.');
-      return;
-    }
-
     setGoogleLoading(true);
     try {
-      // Dynamically import expo-auth-session (may not be installed)
-      let AuthSession: any;
-      try {
-        AuthSession = require('expo-auth-session');
-      } catch {
-        Alert.alert(
-          'Not Available',
-          'Google sign-in requires expo-auth-session. Run: npx expo install expo-auth-session'
-        );
+      const { accessToken, userInfo, error } = await launchGoogleOAuth();
+
+      if (error === 'cancelled') return;
+      if (error || !accessToken) {
+        Alert.alert('Error', error || 'Google sign-in failed. Please try again.');
         return;
       }
 
-      const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB;
-      if (!clientId) {
-        Alert.alert('Configuration Error', 'Google Client ID is not configured.');
-        return;
-      }
+      // Use access token as the token sent to backend
+      const idToken = accessToken;
 
-      const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
-
-      const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
-
-      const request = new AuthSession.AuthRequest({
-        clientId,
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri,
-        responseType: AuthSession.ResponseType.Token,
-      });
-
-      const result = await request.promptAsync(discovery);
-
-      if (result.type === 'success' && result.authentication?.accessToken) {
-        // Exchange access token for user info
-        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
-        });
-        const userInfo = await userInfoRes.json();
-
-        // Get ID token if available, otherwise use access token
-        const idToken = result.authentication.idToken || result.authentication.accessToken;
-
+      if (userType === 'customer') {
         const loginRes = await loginWithGoogleToken(idToken);
-
         if (loginRes.success && loginRes.data) {
           await api.setCustomerToken(loginRes.data.token, undefined);
           await api.setUserData({
@@ -98,22 +62,27 @@ export default function LoginScreen() {
             profilePicture: loginRes.data.profilePicture,
             user_type: 'customer',
           });
-
-          if (loginRes.data.needs_phone_update) {
-            Alert.alert(
-              'Please update your phone number in your profile.',
-              [{ text: 'OK', onPress: () => router.replace('/(customer)/customer_dashboard') }]
-            );
-          } else {
-            router.replace('/(customer)/customer_dashboard');
-          }
+          router.replace('/(customer)/customer_dashboard');
         } else {
           Alert.alert('Error', loginRes.message || 'Google login failed');
         }
-      } else if (result.type === 'cancel') {
-        // User cancelled — no alert needed
       } else {
-        Alert.alert('Error', 'Google sign-in failed. Please try again.');
+        // Provider Google login
+        const loginRes = await loginWithGoogleTokenProvider(idToken);
+        if (loginRes.success && loginRes.data) {
+          await api.setProviderToken(loginRes.data.token, undefined);
+          await api.setUserData({
+            id: loginRes.data.providerID,
+            fullname: loginRes.data.fullname,
+            email: loginRes.data.email,
+            phone: loginRes.data.phone,
+            profilePicture: loginRes.data.profilePicture,
+            user_type: 'provider',
+          });
+          router.replace('/(provider)/provider_dashboard');
+        } else {
+          Alert.alert('Error', loginRes.message || 'Google login failed for provider');
+        }
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Google sign-in failed');
@@ -416,24 +385,22 @@ export default function LoginScreen() {
             disabled={loading}
           />
 
-          {/* Google Sign-In (customers only) */}
-          {userType === 'customer' && (
-            <TouchableOpacity
-              style={[styles.googleButton, (loading || googleLoading) && { opacity: 0.6 }]}
-              onPress={handleGoogleSignIn}
-              disabled={loading || googleLoading}
-              activeOpacity={0.8}
-            >
-              {googleLoading ? (
-                <ActivityIndicator size="small" color="#DB4437" />
-              ) : (
-                <Ionicons name="logo-google" size={20} color="#DB4437" />
-              )}
-              <Text style={styles.googleButtonText}>
-                {googleLoading ? 'Signing in...' : 'Continue with Google'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          {/* Google Sign-In (both customer and provider) */}
+          <TouchableOpacity
+            style={[styles.googleButton, (loading || googleLoading) && { opacity: 0.6 }]}
+            onPress={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+            activeOpacity={0.8}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#DB4437" />
+            ) : (
+              <Ionicons name="logo-google" size={20} color="#DB4437" />
+            )}
+            <Text style={styles.googleButtonText}>
+              {googleLoading ? t('login.signingIn', 'Signing in...') : t('login.continueWithGoogle', 'Continue with Google')}
+            </Text>
+          </TouchableOpacity>
 
           {loading && (
             <View style={styles.loadingOverlay}>
