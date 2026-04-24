@@ -131,7 +131,7 @@ export default function AboutScreen() {
     {
       name: t('about.team.name', 'HomeLink Team'),
       role: t('about.team.role', 'Connecting You with Trusted Service Providers'),
-      image: 'https://via.placeholder.com/100',
+      image: require('@/assets/images/about_team.png'),
     },
   ];
 
@@ -186,6 +186,11 @@ export default function AboutScreen() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{t('about.missionTitle', 'Our Mission')}</Text>
       <View style={styles.missionCard}>
+        <Image 
+          source={require('@/assets/images/about_mission.png')} 
+          style={styles.missionImage}
+          resizeMode="contain"
+        />
         <Text style={styles.missionText}>
           {t('about.missionText', "Home Based Service Finding Solution was founded with a simple mission: to connect Ethiopian households with trusted, verified, and professional service providers. We believe that finding reliable help for your home shouldn't be a hassle. Whether you need a plumber, electrician, cleaner, or any other service, HomeLink makes it easy, safe, and convenient.")}
         </Text>
@@ -202,6 +207,13 @@ export default function AboutScreen() {
   const renderFeatures = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{t('about.featuresTitle', 'Why Choose HomeLink')}</Text>
+      <View style={styles.qualityImageContainer}>
+        <Image 
+          source={require('@/assets/images/about_quality.png')} 
+          style={styles.qualityImage}
+          resizeMode="contain"
+        />
+      </View>
       <View style={styles.featuresGrid}>
         {features.map((feature, index) => (
           <View key={index} style={styles.featureCard}>
@@ -241,7 +253,7 @@ export default function AboutScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.teamScroll}>
         {team.map((member, index) => (
           <View key={index} style={styles.teamCard}>
-            <Image source={{ uri: member.image }} style={styles.teamImage} />
+            <Image source={member.image} style={styles.teamImage} />
             <Text style={styles.teamName}>{member.name}</Text>
             <Text style={styles.teamRole}>{member.role}</Text>
           </View>
@@ -347,6 +359,11 @@ export default function AboutScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {renderHeader()}
+        <Image 
+          source={require('@/assets/images/about_hero.png')} 
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
         {renderStats()}
         {renderMission()}
         {renderFeatures()}
@@ -428,6 +445,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text.primary,
     marginBottom: 16,
+  },
+  heroImage: {
+    width: '100%',
+    height: 200,
+    marginTop: -20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  missionImage: {
+    width: '100%',
+    height: 150,
+    marginBottom: 16,
+    borderRadius: 12,
+  },
+  qualityImageContainer: {
+    width: '100%',
+    height: 120,
+    backgroundColor: Colors.primary + '05',
+    borderRadius: 16,
+    marginBottom: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  qualityImage: {
+    width: '80%',
+    height: '100%',
   },
   missionCard: {
     backgroundColor: Colors.surface,

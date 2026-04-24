@@ -21,6 +21,9 @@ import { ThemeColors } from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import { loginWithGoogleToken, loginWithGoogleTokenProvider, launchGoogleOAuth } from "../services/googleAuth.service";
+import { useQueryClient } from "@tanstack/react-query";
+import { useProviderStore } from "../store/providerStore";
+import { useCustomerStore } from "../store/customerStore";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -35,6 +38,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<"customer" | "provider">("customer");
   const [googleLoading, setGoogleLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -62,6 +66,9 @@ export default function LoginScreen() {
             profilePicture: loginRes.data.profilePicture,
             user_type: 'customer',
           });
+          queryClient.clear();
+          useCustomerStore.getState().reset();
+          useProviderStore.getState().reset();
           router.replace('/customer_dashboard');
         } else {
           Alert.alert('Error', loginRes.message || 'Google login failed');
@@ -79,6 +86,9 @@ export default function LoginScreen() {
             profilePicture: loginRes.data.profilePicture,
             user_type: 'provider',
           });
+          queryClient.clear();
+          useCustomerStore.getState().reset();
+          useProviderStore.getState().reset();
           router.replace('/provider_dashboard');
         } else {
           Alert.alert('Error', loginRes.message || 'Google login failed for provider');
@@ -163,9 +173,15 @@ export default function LoginScreen() {
 
           if (userType === "provider") {
             console.log(' Navigating to provider dashboard');
+            queryClient.clear();
+            useCustomerStore.getState().reset();
+            useProviderStore.getState().reset();
             router.replace("/provider_dashboard");
           } else {
             console.log(' Navigating to customer dashboard');
+            queryClient.clear();
+            useCustomerStore.getState().reset();
+            useProviderStore.getState().reset();
             router.replace("/customer_dashboard");
           }
         } else {

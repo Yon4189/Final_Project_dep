@@ -328,42 +328,6 @@
     "termsConditions": "Terms & Conditions",
     "supportTelegram": "Our support team is on Telegram: @handyman_support"
   },
-  "providerProfile": {
-    "myProfile": "My Profile",
-    "businessName": "Business Name",
-    "serviceProvider": "Service Provider",
-    "verified": "Verified Professional",
-    "topRated": "Top Rated",
-    "expert": "Expert Professional",
-    "emergency": "Emergency Service",
-    "insured": "Fully Insured",
-    "jobs": "Jobs",
-    "years": "Years",
-    "response": "Response",
-    "contactInfo": "Contact Information",
-    "businessInfo": "Business Information",
-    "workingHours": "Working Hours",
-    "manage": "Manage",
-    "documents": "Documents & Certifications",
-    "appearance": "Appearance"
-  },
-  "notifications": {
-    "title": "Notifications",
-    "markAllRead": "Mark all as read",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "filterRead": "Read",
-    "payNow": "Pay Now",
-    "viewRequest": "View Request",
-    "viewDetails": "View Details",
-    "noNotifications": "No notifications",
-    "noNotificationsSub": "We'll notify you when pros respond to your requests",
-    "unreadMessage": "Unread notification",
-    "unreadMessages": "Unread notifications",
-    "reason": "Reason:",
-    "noUnread": "You have no unread notifications",
-    "noNotificationsAny": "You have no notifications at the moment"
-  },
   "bookings": {
     "myBookings": "My Bookings",
     "cancelBooking": "Cancel Booking",
@@ -1040,6 +1004,7 @@
       "title": "Maximum Distance"
     },
     "availableNow": "Available Now",
+    "verifiedOnly": "Verified Providers Only",
     "reset": "Reset",
     "apply": "Apply Filters"
   },

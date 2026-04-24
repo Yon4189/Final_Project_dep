@@ -120,6 +120,7 @@ export default function ProviderProfile() {
           onPress: async () => {
             // Clear auth and navigate to login
             await api.clearAll();
+            useProviderStore.getState().reset();
             router.replace('/login');
           }
         },

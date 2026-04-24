@@ -7,6 +7,7 @@ export interface ProviderProfile {
   fullname: string; // Add this from database
   businessName: string; // Keep for backward compatibility
   bio: string;
+  profession?: string;
   profilePicture?: string; // Change from profileImage to profilePicture
   profile_picture?: string; // Add this
   profileImage?: string; // Keep for backward compatibility
