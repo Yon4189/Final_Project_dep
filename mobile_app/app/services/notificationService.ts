@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { api } from './api';
@@ -7,9 +6,20 @@ import Constants from 'expo-constants';
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
+// Dynamic require to avoid side-effects in Expo Go (SDK 53+)
+const getNotifications = () => {
+  if (isExpoGo) return null;
+  try {
+    return require('expo-notifications');
+  } catch (e) {
+    return null;
+  }
+};
+
+const Notifications = getNotifications();
+
 // Configure how notifications are handled when the app is in the foreground
-// Skip in Expo Go (SDK 53+) — remote notifications are not supported there
-if (!isExpoGo) {
+if (Notifications) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
@@ -26,10 +36,17 @@ class NotificationService {
    * Register for push notifications and get the token
    */
   async registerForPushNotificationsAsync(): Promise<string | null> {
+    if (isExpoGo) {
+      console.warn('Push Notifications (remote) are not supported in Expo Go. Returning mock token for development.');
+      return 'expo-go-mock-token';
+    }
+
     if (!Device.isDevice) {
       console.log('Must use physical device for Push Notifications');
       return null;
     }
+
+    if (!Notifications) return null;
 
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -43,14 +60,6 @@ class NotificationService {
       if (finalStatus !== 'granted') {
         console.warn('Failed to get push token for push notification!');
         return null;
-      }
-
-      // Detect if running in Expo Go
-      const isExpoGo = Constants.appOwnership === 'expo';
-      
-      if (isExpoGo) {
-        console.warn('Push Notifications (remote) are not supported in Expo Go. Returning mock token for development.');
-        return 'expo-go-mock-token';
       }
 
       // Get the project ID from Expo constants or app config
@@ -116,16 +125,16 @@ class NotificationService {
   /**
    * Handle incoming notifications
    */
-  addNotificationListener(callback: (notification: Notifications.Notification) => void) {
-    if (isExpoGo) return { remove: () => {} } as Notifications.Subscription;
+  addNotificationListener(callback: (notification: any) => void): { remove: () => void } {
+    if (isExpoGo || !Notifications) return { remove: () => {} };
     return Notifications.addNotificationReceivedListener(callback);
   }
 
   /**
    * Handle user tapping on a notification
    */
-  addNotificationResponseListener(callback: (response: Notifications.NotificationResponse) => void) {
-    if (isExpoGo) return { remove: () => {} } as Notifications.Subscription;
+  addNotificationResponseListener(callback: (response: any) => void): { remove: () => void } {
+    if (isExpoGo || !Notifications) return { remove: () => {} };
     return Notifications.addNotificationResponseReceivedListener(callback);
   }
 }

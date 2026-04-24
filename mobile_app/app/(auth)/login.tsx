@@ -101,12 +101,11 @@ export default function LoginScreen() {
 
           if (loginRes.data.needs_phone_update) {
             Alert.alert(
-              'Welcome!',
               'Please update your phone number in your profile.',
-              [{ text: 'OK', onPress: () => router.replace('/(customer)/dashboard') }]
+              [{ text: 'OK', onPress: () => router.replace('/(customer)/customer_dashboard') }]
             );
           } else {
-            router.replace('/(customer)/dashboard');
+            router.replace('/(customer)/customer_dashboard');
           }
         } else {
           Alert.alert('Error', loginRes.message || 'Google login failed');
@@ -193,13 +192,12 @@ export default function LoginScreen() {
           await api.setUserData(userData);
           console.log(' User data stored:', userData.email);
 
-          // Navigate to appropriate dashboard
           if (userType === "provider") {
             console.log(' Navigating to provider dashboard');
-            router.replace("/(provider)/dashboard");
+            router.replace("/(provider)/provider_dashboard");
           } else {
             console.log(' Navigating to customer dashboard');
-            router.replace("/(customer)/dashboard");
+            router.replace("/(customer)/customer_dashboard");
           }
         } else {
           console.error(' No token in response');

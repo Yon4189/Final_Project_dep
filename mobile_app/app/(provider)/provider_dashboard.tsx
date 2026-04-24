@@ -396,7 +396,7 @@ export default function ProviderDashboard() {
                   <Text style={styles.drawerItemText}>{t("common.home", "Home")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/dashboard'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/provider_dashboard'); }}>
                   <Ionicons name="grid-outline" size={22} color={colors.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.dashboard", "Dashboard")}</Text>
                 </TouchableOpacity>

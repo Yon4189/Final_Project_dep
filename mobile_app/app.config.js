@@ -84,7 +84,8 @@ module.exports = ({ config }) => {
       permissions: [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECORD_AUDIO"
       ]
     },
     web: {
@@ -96,6 +97,13 @@ module.exports = ({ config }) => {
       "expo-localization",
       "expo-secure-store",
       "@react-native-community/datetimepicker",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow HomeLink to use the microphone for voice search.",
+          "speechRecognitionPermission": "Allow HomeLink to recognize your speech for voice search."
+        }
+      ],
       [
         "expo-location",
         {
