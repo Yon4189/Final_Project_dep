@@ -30,6 +30,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { customerService } from '../services/customer.service';
+import { useCustomerStore } from '../store/customerStore';
 
 interface EditableField {
   key: string;
@@ -144,7 +145,8 @@ export default function CustomerProfile() {
           text: t('common.logout', 'Logout'),
           style: 'destructive',
           onPress: async () => {
-            await api.removeToken();
+            await api.clearAll();
+            useCustomerStore.getState().reset();
             router.replace('/(auth)/login');
           },
         },
