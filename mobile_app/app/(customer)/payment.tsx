@@ -31,7 +31,8 @@ export default function PaymentScreen() {
 
   // 1. Hooks
   const bookingId = params.bookingId as string;
-  const { data: booking, isLoading: bookingLoading, refetch: refetchBooking } = useBookingDetails(bookingId || '');
+  const { data: bookingResponse, isLoading: bookingLoading, refetch: refetchBooking } = useBookingDetails(bookingId || '');
+  const booking = (bookingResponse as any)?.data ?? bookingResponse;
   const { data: paymentMethods, isLoading: loadingMethods } = usePaymentMethods();
   const initializeChapaPayment = useInitializeChapaPayment();
   const verifyChapaPayment = useVerifyChapaPayment();

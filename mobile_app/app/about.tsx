@@ -14,16 +14,18 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
+import { useTranslation } from 'react-i18next';
 import { api } from './services/api';
 import { Colors } from '@/app/constants/Colors';
 
 export default function AboutScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [stats, setStats] = useState([
-    { value: '...', label: 'Verified Providers', icon: 'people-outline' },
-    { value: '...', label: 'Happy Customers', icon: 'happy-outline' },
-    { value: '...', label: 'Service Categories', icon: 'grid-outline' },
-    { value: '24/7', label: 'Customer Support', icon: 'headset-outline' },
+    { value: '...', label: t('about.stats.providers', 'Verified Providers'), icon: 'people-outline' },
+    { value: '...', label: t('about.stats.customers', 'Happy Customers'), icon: 'happy-outline' },
+    { value: '...', label: t('about.stats.categories', 'Service Categories'), icon: 'grid-outline' },
+    { value: '24/7', label: t('about.stats.support', 'Customer Support'), icon: 'headset-outline' },
   ]);
 
   const updateStatValue = (label: string, value: string) => {
@@ -40,8 +42,8 @@ export default function AboutScreen() {
         const response = await api.get<{ providers: number; customers: number }>('/public/stats');
         if (isMounted && response.success && response.data) {
           const { providers, customers } = response.data;
-          updateStatValue('Verified Providers', `${providers}+`);
-          updateStatValue('Happy Customers', `${customers}+`);
+          updateStatValue(t('about.stats.providers', 'Verified Providers'), `${providers}+`);
+          updateStatValue(t('about.stats.customers', 'Happy Customers'), `${customers}+`);
         }
       } catch (error) {
         console.error('Failed to load stats for about page', error);
@@ -50,7 +52,7 @@ export default function AboutScreen() {
       try {
         const response = await api.get<any[]>('/categories');
         if (isMounted && response.success && response.data) {
-          updateStatValue('Service Categories', `${response.data.length}+`);
+          updateStatValue(t('about.stats.categories', 'Service Categories'), `${response.data.length}+`);
         }
       } catch (error) {
         console.error('Failed to load categories count', error);
@@ -67,69 +69,69 @@ export default function AboutScreen() {
   const features = [
     {
       icon: 'shield-checkmark-outline',
-      title: 'Verified Providers',
-      description: 'All service providers undergo thorough background verification for your safety.',
+      title: t('about.features.providersTitle', 'Verified Providers'),
+      description: t('about.features.providersDesc', 'All service providers undergo thorough background verification for your safety.'),
     },
     {
       icon: 'cash-outline',
-      title: 'Secure Payments',
-      description: 'Multiple payment options with secure transactions through Chapa integration.',
+      title: t('about.features.paymentsTitle', 'Secure Payments'),
+      description: t('about.features.paymentsDesc', 'Multiple payment options with secure transactions through Chapa integration.'),
     },
     {
       icon: 'star-outline',
-      title: 'Quality Guaranteed',
-      description: 'Customer reviews and ratings ensure you get the best service every time.',
+      title: t('about.features.qualityTitle', 'Quality Guaranteed'),
+      description: t('about.features.qualityDesc', 'Customer reviews and ratings ensure you get the best service every time.'),
     },
     {
       icon: 'time-outline',
-      title: 'Quick Response',
-      description: 'Get instant responses and same-day service availability in most areas.',
+      title: t('about.features.responseTitle', 'Quick Response'),
+      description: t('about.features.responseDesc', 'Get instant responses and same-day service availability in most areas.'),
     },
     {
       icon: 'location-outline',
-      title: 'Service Cities',
-      description: 'Currently serving Addis Ababa and major cities across Ethiopia.',
+      title: t('about.features.citiesTitle', 'Service Cities'),
+      description: t('about.features.citiesDesc', 'Currently serving Addis Ababa and major cities across Ethiopia.'),
     },
     {
       icon: 'headset-outline',
-      title: '24/7 Support',
-      description: 'Our customer support team is always ready to assist you.',
+      title: t('about.features.supportTitle', '24/7 Support'),
+      description: t('about.features.supportDesc', 'Our customer support team is always ready to assist you.'),
     },
   ];
 
   const howItWorks = [
     {
       step: 1,
-      title: 'Search',
-      description: 'Find the service you need by browsing categories or searching for specific providers.',
+      title: t('about.steps.searchTitle', 'Search'),
+      description: t('about.steps.searchDesc', 'Find the service you need by browsing categories or searching for specific providers.'),
     },
     {
       step: 2,
-      title: 'Compare',
-      description: 'View provider profiles, ratings, reviews, and compare prices to make an informed choice.',
+      title: t('about.steps.compareTitle', 'Compare'),
+      description: t('about.steps.compareDesc', 'View provider profiles, ratings, reviews, and compare prices to make an informed choice.'),
     },
     {
       step: 3,
-      title: 'Book',
-      description: 'Select your preferred provider, choose a convenient time, and confirm your booking.',
+      title: t('about.steps.bookTitle', 'Book'),
+      description: t('about.steps.bookDesc', 'Select your preferred provider, choose a convenient time, and confirm your booking.'),
     },
     {
       step: 4,
-      title: 'Pay',
-      description: 'Pay securely online through Chapa or choose cash on completion.',
+      title: t('about.steps.payTitle', 'Pay'),
+      description: t('about.steps.payDesc', 'Pay securely online through Chapa or choose cash on completion.'),
     },
     {
       step: 5,
-      title: 'Rate',
-      description: 'Share your experience by rating and reviewing the service provider.',
+      title: t('about.steps.rateTitle', 'Rate'),
+      description: t('about.steps.rateDesc', 'Share your experience by rating and reviewing the service provider.'),
     },
   ];
 
   const team = [
     {
-      name: 'HomeLink Team',
-      role: 'Connecting You with Trusted Service Providers',
-      image: 'https://via.placeholder.com/100',
+      name: t('about.team.name', 'HomeLink Team'),
+      role: t('about.team.role', 'Connecting You with Trusted Service Providers'),
+      image: require('@/assets/images/about_team.png'),
     },
   ];
 
@@ -158,9 +160,9 @@ export default function AboutScreen() {
         <Ionicons name="arrow-back" size={24} color={Colors.surface} />
       </TouchableOpacity>
       <View style={styles.headerContent}>
-        <Text style={styles.headerTitle}>About Home Based Service Finding Solution</Text>
+        <Text style={styles.headerTitle}>{t('about.headerTitle', 'About Home Based Service Finding Solution')}</Text>
         <Text style={styles.headerSubtitle}>
-          Your trusted platform for finding professional service providers
+          {t('about.headerSubtitle', 'Your trusted platform for finding professional service providers')}
         </Text>
       </View>
     </LinearGradient>
@@ -182,18 +184,20 @@ export default function AboutScreen() {
 
   const renderMission = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Our Mission</Text>
+      <Text style={styles.sectionTitle}>{t('about.missionTitle', 'Our Mission')}</Text>
       <View style={styles.missionCard}>
+        <Image 
+          source={require('@/assets/images/about_mission.png')} 
+          style={styles.missionImage}
+          resizeMode="contain"
+        />
         <Text style={styles.missionText}>
-          Home Based Service Finding Solution was founded with a simple mission: to connect Ethiopian households with trusted, 
-          verified, and professional service providers. We believe that finding reliable help for 
-          your home shouldn't be a hassle. Whether you need a plumber, electrician, cleaner, or 
-          any other service, HomeLink makes it easy, safe, and convenient.
+          {t('about.missionText', "Home Based Service Finding Solution was founded with a simple mission: to connect Ethiopian households with trusted, verified, and professional service providers. We believe that finding reliable help for your home shouldn't be a hassle. Whether you need a plumber, electrician, cleaner, or any other service, HomeLink makes it easy, safe, and convenient.")}
         </Text>
         <View style={styles.missionHighlight}>
           <Ionicons name="heart" size={20} color={Colors.error} />
           <Text style={styles.missionHighlightText}>
-            Serving thousands of happy customers across Ethiopia
+            {t('about.missionHighlight', 'Serving thousands of happy customers across Ethiopia')}
           </Text>
         </View>
       </View>
@@ -202,7 +206,14 @@ export default function AboutScreen() {
 
   const renderFeatures = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Why Choose HomeLink</Text>
+      <Text style={styles.sectionTitle}>{t('about.featuresTitle', 'Why Choose HomeLink')}</Text>
+      <View style={styles.qualityImageContainer}>
+        <Image 
+          source={require('@/assets/images/about_quality.png')} 
+          style={styles.qualityImage}
+          resizeMode="contain"
+        />
+      </View>
       <View style={styles.featuresGrid}>
         {features.map((feature, index) => (
           <View key={index} style={styles.featureCard}>
@@ -219,7 +230,7 @@ export default function AboutScreen() {
 
   const renderHowItWorks = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>How It Works</Text>
+      <Text style={styles.sectionTitle}>{t('about.howItWorksTitle', 'How It Works')}</Text>
       <View style={styles.stepsContainer}>
         {howItWorks.map((step) => (
           <View key={step.step} style={styles.stepCard}>
@@ -238,11 +249,11 @@ export default function AboutScreen() {
 
   const renderTeam = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Our Team</Text>
+      <Text style={styles.sectionTitle}>{t('about.teamTitle', 'Our Team')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.teamScroll}>
         {team.map((member, index) => (
           <View key={index} style={styles.teamCard}>
-            <Image source={{ uri: member.image }} style={styles.teamImage} />
+            <Image source={member.image} style={styles.teamImage} />
             <Text style={styles.teamName}>{member.name}</Text>
             <Text style={styles.teamRole}>{member.role}</Text>
           </View>
@@ -253,7 +264,7 @@ export default function AboutScreen() {
 
   const renderContact = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Get In Touch</Text>
+      <Text style={styles.sectionTitle}>{t('about.contactTitle', 'Get In Touch')}</Text>
       <View style={styles.contactCard}>
         <TouchableOpacity
           style={styles.contactItem}
@@ -263,7 +274,7 @@ export default function AboutScreen() {
             <Ionicons name="mail-outline" size={20} color={Colors.primary} />
           </View>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactLabel}>Email</Text>
+            <Text style={styles.contactLabel}>{t('common.email', 'Email')}</Text>
             <Text style={styles.contactValue}>yositilahun21@gmail.com</Text>
           </View>
           <Ionicons name="open-outline" size={20} color={Colors.text.secondary} />
@@ -277,7 +288,7 @@ export default function AboutScreen() {
             <Ionicons name="call-outline" size={20} color={Colors.primary} />
           </View>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactLabel}>Phone</Text>
+            <Text style={styles.contactLabel}>{t('common.phone', 'Phone')}</Text>
             <Text style={styles.contactValue}>+251 905217674</Text>
           </View>
           <Ionicons name="open-outline" size={20} color={Colors.text.secondary} />
@@ -291,7 +302,7 @@ export default function AboutScreen() {
             <Ionicons name="globe-outline" size={20} color={Colors.primary} />
           </View>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactLabel}>Website</Text>
+            <Text style={styles.contactLabel}>{t('common.website', 'Website')}</Text>
             <Text style={styles.contactValue}>www.homelink.com</Text>
           </View>
           <Ionicons name="open-outline" size={20} color={Colors.text.secondary} />
@@ -339,8 +350,8 @@ export default function AboutScreen() {
 
   const renderFooter = () => (
     <View style={styles.footer}>
-      <Text style={styles.footerText}>© 2024 HomeLink. All rights reserved.</Text>
-      <Text style={styles.footerText}>Version 1.0.0</Text>
+      <Text style={styles.footerText}>{t('about.copyright', '© 2024 HomeLink. All rights reserved.')}</Text>
+      <Text style={styles.footerText}>{t('about.version', 'Version')} 1.0.0</Text>
     </View>
   );
 
@@ -348,6 +359,11 @@ export default function AboutScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {renderHeader()}
+        <Image 
+          source={require('@/assets/images/about_hero.png')} 
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
         {renderStats()}
         {renderMission()}
         {renderFeatures()}
@@ -429,6 +445,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.text.primary,
     marginBottom: 16,
+  },
+  heroImage: {
+    width: '100%',
+    height: 200,
+    marginTop: -20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  missionImage: {
+    width: '100%',
+    height: 150,
+    marginBottom: 16,
+    borderRadius: 12,
+  },
+  qualityImageContainer: {
+    width: '100%',
+    height: 120,
+    backgroundColor: Colors.primary + '05',
+    borderRadius: 16,
+    marginBottom: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  qualityImage: {
+    width: '80%',
+    height: '100%',
   },
   missionCard: {
     backgroundColor: Colors.surface,

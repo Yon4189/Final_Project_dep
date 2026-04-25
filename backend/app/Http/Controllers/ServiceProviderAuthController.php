@@ -54,6 +54,8 @@ class ServiceProviderAuthController extends Controller
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048', // ID photo is REQUIRED
             'credentialPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+            'certificates' => 'nullable|array',
+            'certificates.*' => 'image|mimes:jpeg,jpg,png|max:4096',
             'idPhotoType' => 'required|string|in:Passport,Driver License,National ID,Kebele ID', // ID type is REQUIRED
             'current_latitude' => 'nullable|numeric|between:-90,90',
             'current_longitude' => 'nullable|numeric|between:-180,180',
@@ -118,6 +120,22 @@ class ServiceProviderAuthController extends Controller
                 $credentialPhotoPath = 'credentials/' . $credentialName;
             }
 
+            // Handle additional certificates if any
+            $certPaths = [];
+            if ($request->hasFile('certificates')) {
+                $files = $request->file('certificates');
+                foreach ($files as $index => $file) {
+                    try {
+                        $fileValidator->validateDocument($file, 4096);
+                        $certName = $fileValidator->safeFilename($file, "cert_{$index}");
+                        $file->move(public_path('credentials'), $certName);
+                        $certPaths[] = 'credentials/' . $certName;
+                    } catch (\Exception $e) {
+                        Log::warning("Failed to upload certificate at index {$index}: " . $e->getMessage());
+                    }
+                }
+            }
+
             // Create new provider
             $provider = ServiceProvider::create([
                 'fullname' => $request->fullname,
@@ -130,9 +148,10 @@ class ServiceProviderAuthController extends Controller
                 'idPhoto' => $idPhotoPath,
                 'credentialPhoto' => $credentialPhotoPath,
                 'idPhotoType' => $request->idPhotoType,
+                'certifications' => $certPaths, // Store array of paths
                 'current_latitude' => $request->current_latitude,
                 'current_longitude' => $request->current_longitude,
-                'status' => 'pending', // Needs admin approval
+                'status' => 'pending', // newly registered will have pending status
                 'rating' => 0,
                 'completed_jobs' => 0,
                 'accepted_jobs' => 0,

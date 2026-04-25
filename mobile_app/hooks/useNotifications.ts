@@ -1,17 +1,19 @@
 import { useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
 import { notificationService } from '../app/services/notificationService';
 import { useUser } from '../app/store/customerStore';
 import { useProviderProfile } from '../app/store/providerStore';
 import { useRouter } from 'expo-router';
+
+// Local type alias to avoid static import of expo-notifications in Expo Go
+type NotificationSubscription = { remove: () => void };
 
 export const useNotifications = () => {
   const customer = useUser();
   const provider = useProviderProfile();
   const router = useRouter();
   
-  const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
+  const notificationListener = useRef<NotificationSubscription | null>(null);
+  const responseListener = useRef<NotificationSubscription | null>(null);
 
   useEffect(() => {
     let isMounted = true;

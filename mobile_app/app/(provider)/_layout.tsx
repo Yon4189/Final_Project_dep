@@ -52,7 +52,7 @@ export default function ProviderLayout() {
           ) : null,
         headerRight: () => (
           <TouchableOpacity
-            onPress={() => router.replace('/(provider)/dashboard')}
+            onPress={() => router.replace('/provider_dashboard')}
             style={{ marginRight: 16 }}
           >
             <Ionicons name="home-outline" size={24} color={colors.primary} />
@@ -62,7 +62,7 @@ export default function ProviderLayout() {
     >
       {/* Main Dashboard */}
       <Stack.Screen
-        name="dashboard"
+        name="provider_dashboard"
         options={{
           headerShown: false,
           headerRight: () => null,
@@ -113,7 +113,7 @@ export default function ProviderLayout() {
                 <Ionicons name="filter-outline" size={22} color={colors.text.primary} />
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => router.replace('/(provider)/dashboard')}
+                onPress={() => router.replace('/(provider)/provider_dashboard')}
                 style={{ marginRight: 16 }}
               >
                 <Ionicons name="home-outline" size={24} color={colors.primary} />
@@ -156,7 +156,7 @@ export default function ProviderLayout() {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => router.replace('/(provider)/dashboard')}
+                onPress={() => router.replace('/(provider)/provider_dashboard')}
                 style={{ marginRight: 16 }}
               >
                 <Ionicons name="home-outline" size={24} color={colors.primary} />

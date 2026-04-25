@@ -168,7 +168,24 @@
     "goToLogin": "Go to Login",
     "chooseServiceCategory": "Choose Service Category",
     "selectIdTypeModal": "Select ID Type",
-    "selectServiceCityModal": "Select City"
+    "selectServiceCityModal": "Select City",
+    "idBothSides": "ID Card Photos *",
+    "idBothSidesHint": "Upload both the front and back side of your ID card",
+    "frontSide": "Front Side",
+    "backSide": "Back Side",
+    "tapToCapture": "Tap to take photo",
+    "uploadIdFront": "Please upload the front side of your ID card.",
+    "uploadIdBack": "Please upload the back side of your ID card.",
+    "certificates": "Certificates & Work Documents",
+    "certificatesHint": "Upload any relevant certifications, licenses, or work documents",
+    "addCertificate": "Add Certificate or Document",
+    "addAnother": "Add Another",
+    "cameraPermissionTitle": "Camera Permission Required",
+    "cameraPermissionMsg": "Camera access is required to photograph your ID card for verification.",
+    "orContinueWith": "or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "permissionNeeded": "Permission Needed",
+    "cameraRollPermission": "Please grant camera roll permissions"
   },
   "validation": {
     "fullNameRequired": "Full name is required",
@@ -188,6 +205,55 @@
     "serviceCategories": "Service Categories",
     "recentChats": "Recent Chats",
     "topRatedPros": "Top Rated Pros"
+  },
+  "about": {
+    "headerTitle": "About Home Based Service Finding Solution",
+    "headerSubtitle": "Your trusted platform for finding professional service providers",
+    "stats": {
+      "providers": "Verified Providers",
+      "customers": "Happy Customers",
+      "categories": "Service Categories",
+      "support": "Customer Support"
+    },
+    "missionTitle": "Our Mission",
+    "missionText": "Home Based Service Finding Solution was founded with a simple mission: to connect Ethiopian households with trusted, verified, and professional service providers. We believe that finding reliable help for your home shouldn't be a hassle. Whether you need a plumber, electrician, cleaner, or any other service, HomeLink makes it easy, safe, and convenient.",
+    "missionHighlight": "Serving thousands of happy customers across Ethiopia",
+    "featuresTitle": "Why Choose HomeLink",
+    "features": {
+      "providersTitle": "Verified Providers",
+      "providersDesc": "All service providers undergo thorough background verification for your safety.",
+      "paymentsTitle": "Secure Payments",
+      "paymentsDesc": "Multiple payment options with secure transactions through Chapa integration.",
+      "qualityTitle": "Quality Guaranteed",
+      "qualityDesc": "Customer reviews and ratings ensure you get the best service every time.",
+      "responseTitle": "Quick Response",
+      "responseDesc": "Get instant responses and same-day service availability in most areas.",
+      "citiesTitle": "Service Cities",
+      "citiesDesc": "Currently serving Addis Ababa and major cities across Ethiopia.",
+      "supportTitle": "24/7 Support",
+      "supportDesc": "Our customer support team is always ready to assist you."
+    },
+    "howItWorksTitle": "How It Works",
+    "steps": {
+      "searchTitle": "Search",
+      "searchDesc": "Find the service you need by browsing categories or searching for specific providers.",
+      "compareTitle": "Compare",
+      "compareDesc": "View provider profiles, ratings, reviews, and compare prices to make an informed choice.",
+      "bookTitle": "Book",
+      "bookDesc": "Select your preferred provider, choose a convenient time, and confirm your booking.",
+      "payTitle": "Pay",
+      "payDesc": "Pay securely online through Chapa or choose cash on completion.",
+      "rateTitle": "Rate",
+      "rateDesc": "Share your experience by rating and reviewing the service provider."
+    },
+    "teamTitle": "Our Team",
+    "team": {
+      "name": "HomeLink Team",
+      "role": "Connecting You with Trusted Service Providers"
+    },
+    "contactTitle": "Get In Touch",
+    "copyright": "© 2024 HomeLink. All rights reserved.",
+    "version": "Version"
   },
   "providerDashboard": {
     "welcomeBack": "Welcome back,",
@@ -261,42 +327,6 @@
     "helpSupport": "Help & Support",
     "termsConditions": "Terms & Conditions",
     "supportTelegram": "Our support team is on Telegram: @handyman_support"
-  },
-  "providerProfile": {
-    "myProfile": "My Profile",
-    "businessName": "Business Name",
-    "serviceProvider": "Service Provider",
-    "verified": "Verified Professional",
-    "topRated": "Top Rated",
-    "expert": "Expert Professional",
-    "emergency": "Emergency Service",
-    "insured": "Fully Insured",
-    "jobs": "Jobs",
-    "years": "Years",
-    "response": "Response",
-    "contactInfo": "Contact Information",
-    "businessInfo": "Business Information",
-    "workingHours": "Working Hours",
-    "manage": "Manage",
-    "documents": "Documents & Certifications",
-    "appearance": "Appearance"
-  },
-  "notifications": {
-    "title": "Notifications",
-    "markAllRead": "Mark all as read",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "filterRead": "Read",
-    "payNow": "Pay Now",
-    "viewRequest": "View Request",
-    "viewDetails": "View Details",
-    "noNotifications": "No notifications",
-    "noNotificationsSub": "We'll notify you when pros respond to your requests",
-    "unreadMessage": "Unread notification",
-    "unreadMessages": "Unread notifications",
-    "reason": "Reason:",
-    "noUnread": "You have no unread notifications",
-    "noNotificationsAny": "You have no notifications at the moment"
   },
   "bookings": {
     "myBookings": "My Bookings",
@@ -974,6 +1004,7 @@
       "title": "Maximum Distance"
     },
     "availableNow": "Available Now",
+    "verifiedOnly": "Verified Providers Only",
     "reset": "Reset",
     "apply": "Apply Filters"
   },

@@ -1,4 +1,4 @@
-// app/(customer)/dashboard.tsx
+// app/(customer)/customer_dashboard.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -27,6 +27,7 @@ import { Ionicons } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 import { useLocation } from "../../hooks/useLocation";
 import { useSearch } from "../../hooks/useSearch";
+import { useVoiceRecognition } from "../../hooks/useVoiceRecognition";
 import { useTopRatedProviders, useUnreadNotificationsCount } from "@/hooks/useCustomerQueries";
 import { useConversations } from "@/hooks/useChat";
 import { ServiceSearch } from "../../components/customer/ServiceSearch";
@@ -103,6 +104,15 @@ export default function CustomerDashboard() {
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loadingComplaints, setLoadingComplaints] = useState(false);
   const [pendingComplaints, setPendingComplaints] = useState(0);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+
+  const { 
+    isListening, 
+    transcript, 
+    error: voiceError, 
+    startListening, 
+    stopListening 
+  } = useVoiceRecognition();
   
   // Sidebar animation and gesture handling
   const sidebarAnim = React.useRef(new Animated.Value(0)).current;
@@ -283,7 +293,7 @@ export default function CustomerDashboard() {
 
     // Navigate to search results with category filter
     router.push({
-      pathname: "/(customer)/search/results",
+      pathname: "/search/results",
       params: {
         categoryId,
         sortBy: "rating",
@@ -294,7 +304,7 @@ export default function CustomerDashboard() {
   };
 
   const handleViewAllCategories = () => {
-    router.push("/(customer)/categories");
+    router.push("/categories");
   };
 
   const handleProviderSelect = (provider: ServiceProvider) => {
@@ -306,9 +316,37 @@ export default function CustomerDashboard() {
     updateFilters(newFilters);
   };
 
-  const handleVoiceSearch = () => {
-    Alert.alert("Voice Search", "Voice search feature coming soon!");
+  const handleVoiceSearch = async () => {
+    const started = await startListening();
+    if (started) {
+      setShowVoiceModal(true);
+    } else if (voiceError) {
+      Alert.alert("Voice Search", voiceError);
+    }
   };
+
+  // Handle voice search result
+  useEffect(() => {
+    if (!isListening && transcript && showVoiceModal) {
+      const lowerTranscript = transcript.toLowerCase().trim();
+      
+      // Try to find matching category
+      const matchedCategory = serviceCategories.find(cat => 
+        cat.name.toLowerCase().includes(lowerTranscript) || 
+        lowerTranscript.includes(cat.name.toLowerCase())
+      );
+      
+      if (matchedCategory) {
+        handleCategorySelect(matchedCategory.id);
+      } else {
+        setQuery(transcript);
+        // We don't call refreshSearch() here because the query useEffect will trigger it
+      }
+      
+      // Close modal after a short delay to let user see the transcript
+      setTimeout(() => setShowVoiceModal(false), 800);
+    }
+  }, [isListening, transcript, serviceCategories, showVoiceModal]);
 
   const handleServiceRequest = async (requestData: any) => {
     try {
@@ -350,7 +388,7 @@ export default function CustomerDashboard() {
           [
             {
               text: "View My Bookings",
-              onPress: () => router.push("/(customer)/bookings"),
+              onPress: () => router.push("/bookings"),
             },
             {
               text: "OK",
@@ -385,7 +423,7 @@ export default function CustomerDashboard() {
             await SecureStore.deleteItemAsync('auth_token');
             await SecureStore.deleteItemAsync('user_data');
             useCustomerStore.getState().reset();
-            router.replace('/(auth)/login');
+            router.replace('/login');
           } catch (error) {
             console.error('Logout error:', error);
           }
@@ -420,7 +458,7 @@ export default function CustomerDashboard() {
         color: Colors.primary,
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/(customer)/bookings');
+          router.push('/bookings');
         },
       },
       {
@@ -429,7 +467,7 @@ export default function CustomerDashboard() {
         color: Colors.warning || '#FF9500',
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/(customer)/complaints');
+          router.push('/complaints');
         },
       },
       {
@@ -525,6 +563,63 @@ export default function CustomerDashboard() {
     );
   };
 
+  const renderVoiceSearchModal = () => (
+    <Modal
+      visible={showVoiceModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        stopListening();
+        setShowVoiceModal(false);
+      }}
+    >
+      <View style={styles.voiceModalOverlay}>
+        <View style={[styles.voiceModalContent, { backgroundColor: colors.surface }]}>
+          <View style={styles.voiceIconContainer}>
+            <Animated.View style={[
+              styles.voicePulse,
+              {
+                backgroundColor: colors.primary,
+                transform: [{ scale: isListening ? 1.2 : 1 }],
+                opacity: isListening ? 0.3 : 0
+              }
+            ]} />
+            <TouchableOpacity 
+              style={[styles.voiceMicButton, { backgroundColor: colors.primary }]}
+              onPress={stopListening}
+            >
+              <Ionicons name={isListening ? "mic" : "mic-off"} size={32} color="white" />
+            </TouchableOpacity>
+          </View>
+          
+          <Text style={[styles.voiceStatusText, { color: colors.text.primary }]}>
+            {isListening ? t('search.listening', 'Listening...') : t('search.processing', 'Processing...')}
+          </Text>
+          
+          <Text style={[styles.voiceTranscript, { color: colors.text.secondary }]}>
+            {transcript || t('search.saySomething', 'Say something...')}
+          </Text>
+
+          {voiceError && (
+            <Text style={styles.voiceErrorText}>{voiceError}</Text>
+          )}
+
+          <TouchableOpacity 
+            style={[styles.voiceCloseButton, { borderColor: colors.border }]}
+            onPress={() => {
+              stopListening();
+              setShowVoiceModal(false);
+            }}
+          >
+            <Text style={[styles.voiceCloseText, { color: colors.text.primary }]}>
+              {t('common.cancel', 'Cancel')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderHeader = () => {
     // Get user's first name from fullname
     let displayName = "User";
@@ -571,7 +666,7 @@ export default function CustomerDashboard() {
           <View style={[styles.headerActions, { position: 'relative', right: 0 }]}>
             <TouchableOpacity
               style={[styles.iconButton, { marginRight: 4 }]}
-              onPress={() => router.push("/(customer)/notifications")}
+              onPress={() => router.push("/notifications")}
             >
               <Ionicons
                 name="notifications-outline"
@@ -589,7 +684,7 @@ export default function CustomerDashboard() {
 
             <TouchableOpacity
               style={styles.profileButton}
-              onPress={() => router.push("/(customer)/profile")}
+              onPress={() => router.push("/profile")}
             >
               {(() => {
                 const pic = user?.profilePicture || user?.profile_picture;
@@ -1121,6 +1216,7 @@ export default function CustomerDashboard() {
       />
 
       {renderHamburgerMenu()}
+      {renderVoiceSearchModal()}
     </View>
   );
 }
@@ -1597,6 +1693,73 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: 6,
     backgroundColor: colors.background,
     borderRadius: 12,
+  },
+  voiceModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  voiceModalContent: {
+    width: '100%',
+    maxWidth: 320,
+    borderRadius: 24,
+    padding: 30,
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  voiceIconContainer: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  voicePulse: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  voiceMicButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  voiceStatusText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  voiceTranscript: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    minHeight: 40,
+  },
+  voiceErrorText: {
+    color: Colors.error,
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  voiceCloseButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    borderWidth: 1,
+  },
+  voiceCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   menuItem: {
     flexDirection: 'row',

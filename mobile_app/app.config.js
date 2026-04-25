@@ -84,7 +84,11 @@ module.exports = ({ config }) => {
       permissions: [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECORD_AUDIO",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ]
     },
     web: {
@@ -96,6 +100,21 @@ module.exports = ({ config }) => {
       "expo-localization",
       "expo-secure-store",
       "@react-native-community/datetimepicker",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow HomeLink to use the microphone for voice search.",
+          "speechRecognitionPermission": "Allow HomeLink to recognize your speech for voice search."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow HomeLink to access your camera to photograph your ID card for identity verification.",
+          "microphonePermission": false,
+          "photosPermission": "Allow HomeLink to access your photo library to upload profile pictures and documents."
+        }
+      ],
       [
         "expo-location",
         {

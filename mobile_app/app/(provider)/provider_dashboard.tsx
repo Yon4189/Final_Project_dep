@@ -150,7 +150,7 @@ export default function ProviderDashboard() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(provider)/notifications')}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/notifications')}>
             <Ionicons name="notifications-outline" size={24} color={colors.surface} />
             {unreadNotificationCount > 0 && (
               <View style={styles.badge}>
@@ -159,7 +159,7 @@ export default function ProviderDashboard() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/(provider)/profile')}>
+          <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/profile')}>
             <Image
               source={{ 
                 uri: (() => {
@@ -192,15 +192,15 @@ export default function ProviderDashboard() {
       </View>
 
       <View style={styles.statsRow}>
-        <TouchableOpacity style={styles.statBox} onPress={() => router.push('/(provider)/earnings')}>
+        <TouchableOpacity style={styles.statBox} onPress={() => router.push('/earnings')}>
           <PriceText style={styles.statAmount} amount={earnings?.today || 0} />
           <Text style={styles.statPeriod}>{t("providerDashboard.today", "Today")}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.statBox} onPress={() => router.push('/(provider)/earnings')}>
+        <TouchableOpacity style={styles.statBox} onPress={() => router.push('/earnings')}>
           <PriceText style={styles.statAmount} amount={earnings?.week || 0} />
           <Text style={styles.statPeriod}>{t("providerDashboard.week", "Week")}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.statBox} onPress={() => router.push('/(provider)/earnings')}>
+        <TouchableOpacity style={styles.statBox} onPress={() => router.push('/earnings')}>
           <PriceText style={styles.statAmount} amount={earnings?.month || 0} />
           <Text style={styles.statPeriod}>{t("providerDashboard.month", "Month")}</Text>
         </TouchableOpacity>
@@ -325,7 +325,7 @@ export default function ProviderDashboard() {
                 <View style={styles.pendingActions}>
                   <TouchableOpacity 
                     style={[styles.actionBtn, styles.rejectBtn]} 
-                    onPress={() => router.push(`/(provider)/requests/${req.id}`)}
+                    onPress={() => router.push(`/requests/${req.id}`)}
                   >
                     <Text style={styles.rejectBtnText}>{t("common.reject", "Reject")}</Text>
                   </TouchableOpacity>
@@ -342,7 +342,7 @@ export default function ProviderDashboard() {
             {selectedTab !== 'pending' && (
               <TouchableOpacity 
                 style={styles.viewDetailsBtn}
-                onPress={() => router.push(`/(provider)/requests/${req.id}`)}
+                onPress={() => router.push(`/requests/${req.id}`)}
               >
                 <Text style={styles.viewDetailsText}>{t("common.viewDetails", "View Details")}</Text>
                 <Ionicons name="arrow-forward" size={14} color={colors.primary} />
@@ -396,42 +396,42 @@ export default function ProviderDashboard() {
                   <Text style={styles.drawerItemText}>{t("common.home", "Home")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/dashboard'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/provider_dashboard'); }}>
                   <Ionicons name="grid-outline" size={22} color={colors.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.dashboard", "Dashboard")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/profile'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/profile'); }}>
                   <Ionicons name="person-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.myProfile", "My Profile")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/earnings'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/earnings'); }}>
                   <Ionicons name="wallet-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.earnings", "Earnings")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/wallet'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/wallet'); }}>
                   <Ionicons name="card-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>Wallet & Transactions</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/requests'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/requests'); }}>
                   <Ionicons name="list-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.serviceRequests", "Service Requests")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/schedule'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/schedule'); }}>
                   <Ionicons name="calendar-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.mySchedule", "My Schedule")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/reviews'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/reviews'); }}>
                   <Ionicons name="star-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.reviewsAndRatings", "Reviews & Ratings")}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/(provider)/disputes'); }}>
+                <TouchableOpacity style={styles.drawerItem} onPress={() => { closeMenu(); router.push('/disputes'); }}>
                   <Ionicons name="alert-circle-outline" size={22} color={colors.text.primary} />
                   <Text style={styles.drawerItemText}>{t("providerDashboard.disputes", "Disputes")}</Text>
                 </TouchableOpacity>
@@ -459,8 +459,8 @@ export default function ProviderDashboard() {
           visible={showRecentMessages}
           onClose={() => setShowRecentMessages(false)}
           conversations={conversations || []}
-          onSelectConversation={(id) => router.push(`/(provider)/chat/${id}`)}
-          onSeeAll={() => { setShowRecentMessages(false); router.push('/(provider)/messages'); }}
+          onSelectConversation={(id) => router.push(`/chat/${id}`)}
+          onSeeAll={() => { setShowRecentMessages(false); router.push('/messages'); }}
         />
       )}
     </View>

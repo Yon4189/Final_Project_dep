@@ -32,7 +32,7 @@ class DisputeMessage extends Model
 
     /**
      * Polymorphic relationship to get the sender.
-     * sender_type can be: 'customer', 'provider', 'admin'
+     * Uses the morphMap defined in AppServiceProvider.
      */
     public function sender()
     {
