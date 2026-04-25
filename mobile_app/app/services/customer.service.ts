@@ -511,45 +511,62 @@ class CustomerService {
 
   async getMyComplaints(): Promise<ApiResponse<Complaint[]>> {
     const cacheKey = 'user_complaints';
-    const cached = await storage.getItem<Complaint[]>(cacheKey);
     
-    if (cached && isValidArray<Complaint>(cached)) {
-      return { success: true, data: cached };
-    }
-    
-    const response = await api.get<Complaint[]>(`${this.BASE_PATH}/complaints`);
+    const response = await api.get<any[]>(`${this.BASE_PATH}/complaints`);
     
     if (response.success && response.data) {
-      await storage.setItem(cacheKey, response.data);
+      // Normalize: map disputeID → id for frontend consistency
+      const normalized = (response.data as any[]).map((item: any) => ({
+        ...item,
+        id: item.id || item.disputeID?.toString() || item.complaintID?.toString(),
+        complaintNumber: item.complaintNumber || item.disputeID?.toString(),
+        subject: item.subject || item.title,
+        description: item.description,
+        status: item.status,
+        createdAt: item.createdAt || item.created_at,
+        resolvedAt: item.resolvedAt || item.resolved_at,
+        providerName: item.providerName || item.against?.fullname || item.booking?.provider?.fullname || 'Provider',
+        providerImage: item.providerImage || item.against?.profilePicture || item.booking?.provider?.profilePicture,
+      }));
+      await storage.setItem(cacheKey, normalized);
+      return { success: true, data: normalized };
     }
     
     return response;
   }
 
   async getComplaintDetails(id: string): Promise<ApiResponse<Complaint>> {
-    const cacheKey = `complaint_${id}`;
-    const cached = await storage.getItem<Complaint>(cacheKey);
-    
-    if (cached) {
-      return { success: true, data: cached };
-    }
-    
-    const response = await api.get<Complaint>(`${this.BASE_PATH}/complaints/${id}`);
+    const response = await api.get<any>(`${this.BASE_PATH}/complaints/${id}`);
     
     if (response.success && response.data) {
-      await storage.setItem(cacheKey, response.data);
+      const item = response.data as any;
+      const normalized = {
+        ...item,
+        id: item.id || item.disputeID?.toString(),
+        complaintNumber: item.complaintNumber || item.disputeID?.toString(),
+        subject: item.subject || item.title,
+        createdAt: item.createdAt || item.created_at,
+        resolvedAt: item.resolvedAt || item.resolved_at,
+        rejectedAt: item.rejectedAt || item.rejected_at,
+        providerName: item.providerName || item.against?.fullname || item.booking?.provider?.fullname || 'Provider',
+        providerImage: item.providerImage || item.against?.profilePicture || item.booking?.provider?.profilePicture,
+        bookingId: item.bookingId || item.bookingID?.toString(),
+        responses: item.responses || item.messages?.filter((m: any) => m.sender_type === 'admin') || [],
+        userResponses: item.userResponses || item.messages?.filter((m: any) => m.sender_type === 'customer') || [],
+      };
+      return { success: true, data: normalized };
     }
     
     return response;
   }
 
-  async addComplaintResponse(id: string, message: string): Promise<ApiResponse<Complaint>> {
-    const response = await api.post<Complaint>(`${this.BASE_PATH}/complaints/${id}/respond`, { message });
-    
-    if (response.success) {
-      await storage.removeItem(`complaint_${id}`);
-    }
-    
+  async addComplaintResponse(id: string, message: string): Promise<ApiResponse<any>> {
+    const response = await api.post<any>(`${this.BASE_PATH}/complaints/${id}/messages`, { message });
+    return response;
+  }
+
+  async getComplaintMessages(id: string): Promise<ApiResponse<any[]>> {
+    const response = await api.get<any[]>(`${this.BASE_PATH}/complaints/${id}/messages`);
     return response;
   }
 

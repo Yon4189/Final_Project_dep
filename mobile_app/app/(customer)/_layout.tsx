@@ -107,6 +107,16 @@ export default function CustomerLayout() {
       />
 
       <Stack.Screen
+        name="terms"
+        options={{ title: 'Terms & Conditions', headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="privacy"
+        options={{ title: 'Privacy Policy', headerShown: false }}
+      />
+
+      <Stack.Screen
         name="locations"
         options={{
           title: 'Service City',

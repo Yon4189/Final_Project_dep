@@ -25,6 +25,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/webhook/*',
         ]);
+
+        // Register custom middleware aliases
+        $middleware->alias([
+            'ownership'         => \App\Http\Middleware\EnsureOwnership::class,
+            'log.sensitive'     => \App\Http\Middleware\LogSensitiveRequests::class,
+            'provider.approved' => \App\Http\Middleware\EnsureProviderApproved::class,
+            'customer.active'   => \App\Http\Middleware\EnsureCustomerActive::class,
+            'ip.whitelist'      => \App\Http\Middleware\IpWhitelist::class,
+        ]);
+
+        // Add SanitizeInput to the api group
+        $middleware->appendToGroup('api', \App\Http\Middleware\SanitizeInput::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

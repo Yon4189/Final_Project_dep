@@ -155,6 +155,11 @@ export default function PaymentScreen() {
         if (verification.is_successful) {
           setPaymentStatus('completed');
           
+          // Invalidate bookings cache so the list refreshes with updated payment_status
+          queryClient.invalidateQueries({ queryKey: ['requests'] });
+          queryClient.invalidateQueries({ queryKey: ['bookings'] });
+          queryClient.invalidateQueries({ queryKey: ['myRequests'] });
+          
           // Check if this was a final payment - if so, show review modal
           if (isFinalPayment) {
             setShowReviewModal(true);

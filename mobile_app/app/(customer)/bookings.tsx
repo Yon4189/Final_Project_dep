@@ -20,7 +20,9 @@ import { useMyRequests } from '../../hooks/useCustomerQueries';
 import { useCancelRequest } from '../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
+import { ReviewModal } from '../../components/customer/ReviewModal';
 import type { ServiceRequest } from '@/app/types/customer.types';
+import { useFocusEffect } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -28,11 +30,19 @@ export default function BookingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const [reviewBooking, setReviewBooking] = useState<ServiceRequest | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: bookings, isLoading, error, refetch } = useMyRequests();
   const cancelRequest = useCancelRequest();
+
+  // Refetch every time the screen comes into focus to get fresh payment_status
+  useFocusEffect(
+    React.useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -70,7 +80,7 @@ export default function BookingsScreen() {
   };
 
   const handleRateProvider = (booking: ServiceRequest) => {
-    router.push(`/(customer)/requests/${booking.id}`);
+    setReviewBooking(booking);
   };
 
   const getStatusColor = (status: string) => {
@@ -151,8 +161,9 @@ export default function BookingsScreen() {
     const paymentStatus = (booking as any).payment_status;
     const paymentLabel = getPaymentStatusLabel(paymentStatus);
     const paymentColor = getPaymentStatusColor(paymentStatus);
-    const needsDeposit = paymentStatus === 'pending_deposit' && booking.status !== 'pending';
-    const needsFinal = paymentStatus === 'pending_final';
+    const isPaymentCompleted = paymentStatus === 'completed' || booking.status === 'completed';
+    const needsDeposit = paymentStatus === 'pending_deposit' && booking.status !== 'pending' && !isPaymentCompleted;
+    const needsFinal = paymentStatus === 'pending_final' && !isPaymentCompleted;
 
     return (
     <View key={booking.id} style={styles.bookingCard}>
@@ -276,8 +287,7 @@ export default function BookingsScreen() {
               <Text style={styles.viewButtonText}>{t('bookings.viewDetails', 'View Details')}</Text>
             </TouchableOpacity>
           </>
-        )}
-        {booking.status === 'cancelled' && (
+        )}        {booking.status === 'cancelled' && (
           <TouchableOpacity
             style={[styles.actionButton, styles.viewButton]}
             onPress={() => handleBookingPress(booking)}
@@ -374,6 +384,21 @@ export default function BookingsScreen() {
           />
         )}
       </ScrollView>
+
+      {/* Review Modal */}
+      {reviewBooking && (
+        <ReviewModal
+          visible={!!reviewBooking}
+          onClose={() => setReviewBooking(null)}
+          bookingId={reviewBooking.id}
+          providerName={reviewBooking.providerName || 'Provider'}
+          serviceName={reviewBooking.serviceName || 'Service'}
+          onSuccess={() => {
+            setReviewBooking(null);
+            refetch();
+          }}
+        />
+      )}
     </View>
   );
 }

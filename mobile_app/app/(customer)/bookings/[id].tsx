@@ -90,7 +90,7 @@ export default function BookingDetails() {
 
   const { data: bookingData, isLoading } = useBookingDetails(id as string);
   const { data: statusData } = useBookingStatus(id as string);
-  const { data: trackingData } = useTrackProvider(id as string);
+  const { data: trackingData } = useTrackProvider(id as string, bookingData?.status);
   const cancelBooking = useCancelBooking();
   const confirmCompletion = useConfirmCompletion();
 

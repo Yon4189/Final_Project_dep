@@ -82,7 +82,7 @@ export default function RequestDetails() {
   const cancelRequest = useCancelRequest();
   const confirmCompletion = useConfirmCompletion();
   const queryClient = useQueryClient();
-  const { data: trackingResponse } = useTrackProvider(id as string);
+  const { data: trackingResponse } = useTrackProvider(id as string, request?.status);
   const trackingData = trackingResponse?.data || trackingResponse; // Handle both nested and direct data
 
   const [liveLocation, setLiveLocation] = useState<{

@@ -51,6 +51,11 @@ export default function ComplaintsList() {
   
   const { data: complaints, isLoading, refetch } = useComplaints();
 
+  // Clear stale cache and refetch on mount to get normalized data
+  React.useEffect(() => {
+    refetch();
+  }, []);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await refetch();
@@ -119,6 +124,7 @@ export default function ComplaintsList() {
         horizontal 
         showsHorizontalScrollIndicator={false}
         style={styles.filtersScroll}
+        contentContainerStyle={{ paddingRight: 20 }}
       >
         <TouchableOpacity
           style={[
@@ -162,14 +168,28 @@ export default function ComplaintsList() {
     </View>
   );
 
-  const renderComplaintCard = ({ item }: { item: any }) => (
+  const renderComplaintCard = ({ item }: { item: any }) => {
+    // Safely format date - handle null/invalid dates
+    const formatDate = (dateStr: string | null | undefined) => {
+      if (!dateStr) return '';
+      try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '';
+        return formatDistanceToNow(date, { addSuffix: true });
+      } catch {
+        return '';
+      }
+    };
+
+    return (
     <TouchableOpacity
+      key={item.id?.toString() || item.disputeID?.toString()}
       style={styles.complaintCard}
-      onPress={() => router.push(`/(customer)/complaints/${item.id}`)}
+      onPress={() => router.push(`/(customer)/complaints/${item.id || item.disputeID}`)}
     >
       <View style={styles.cardHeader}>
         <View style={styles.complaintInfo}>
-          <Text style={styles.complaintNumber}>#{item.complaintNumber}</Text>
+          <Text style={styles.complaintNumber}>#{item.complaintNumber || item.id}</Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
             <Ionicons name={getStatusIcon(item.status)} size={12} color={getStatusColor(item.status)} />
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
@@ -178,7 +198,7 @@ export default function ComplaintsList() {
           </View>
         </View>
         <Text style={styles.complaintDate}>
-          {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+          {formatDate(item.createdAt || item.created_at)}
         </Text>
       </View>
 
@@ -196,7 +216,7 @@ export default function ComplaintsList() {
             source={{ uri: item.providerImage || 'https://via.placeholder.com/30' }}
             style={styles.providerImage}
           />
-          <Text style={styles.providerName}>{item.providerName}</Text>
+          <Text style={styles.providerName}>{item.providerName || 'Provider'}</Text>
         </View>
 
         {item.adminResponse && (
@@ -211,12 +231,13 @@ export default function ComplaintsList() {
         <View style={styles.resolvedContainer}>
           <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
           <Text style={styles.resolvedText}>
-            {t('complaints.resolvedAt', { time: formatDistanceToNow(new Date(item.resolvedAt), { addSuffix: true }), defaultValue: `Resolved ${formatDistanceToNow(new Date(item.resolvedAt), { addSuffix: true })}` })}
+            {t('complaints.resolvedAt', { time: formatDate(item.resolvedAt), defaultValue: `Resolved ${formatDate(item.resolvedAt)}` })}
           </Text>
         </View>
       )}
     </TouchableOpacity>
   );
+  };
 
   const renderEmptyState = () => (
     <EmptyState
@@ -263,14 +284,15 @@ export default function ComplaintsList() {
       <FlatList
         data={filteredComplaints}
         renderItem={renderComplaintCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => (item.id || item.disputeID || Math.random()).toString()}
         contentContainerStyle={styles.listContainer}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={complaints?.length ? renderTips : null}
+        ListFooterComponent={complaints?.length ? renderTips() : null}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
       />
     </View>
   );

@@ -897,10 +897,108 @@ class CustomerController extends Authenticatable
             ], 404);
         }
 
+        // Load messages for the chat
+        $messages = \App\Models\DisputeMessage::where('disputeID', $id)
+            ->where('is_admin_only', false)
+            ->where(function($q) use ($customer) {
+                $q->where('sender_type', 'customer')
+                  ->orWhere('sender_type', 'admin');
+            })
+            ->with('sender')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function($msg) {
+                return [
+                    'id' => $msg->messageID,
+                    'message' => $msg->message,
+                    'sender_type' => $msg->sender_type,
+                    'sender_name' => $msg->sender?->fullname ?? ($msg->sender_type === 'admin' ? 'Support' : 'You'),
+                    'created_at' => $msg->created_at,
+                ];
+            });
+
         return response()->json([
             'success' => true,
-            'data' => $complaint
+            'data' => array_merge($complaint->toArray(), ['messages' => $messages])
         ]);
+    }
+
+    public function addComplaintMessage(Request $request, $id)
+    {
+        $request->validate(['message' => 'required|string|max:2000']);
+
+        $customer = Auth::guard('customer')->user();
+        $complaint = Dispute::where('raised_by_type', 'customer')
+            ->where('raised_by_id', $customer->customerID)
+            ->find($id);
+
+        if (!$complaint) {
+            return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
+        }
+
+        $message = \App\Models\DisputeMessage::create([
+            'disputeID'      => $id,
+            'sender_id'      => $customer->customerID,
+            'sender_type'    => 'customer',
+            'recipient_type' => 'admin',
+            'message'        => strip_tags($request->message),
+            'is_admin_only'  => false,
+        ]);
+
+        // Notify admins (optional - skip if notification service not available)
+        try {
+            app(\App\Services\NotificationService::class)->toAdmins(
+                'dispute',
+                'New Customer Message',
+                "Customer replied on dispute #{$id}",
+                ['disputeID' => $id]
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to notify admins of dispute message: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id'          => $message->messageID,
+                'message'     => $message->message,
+                'sender_type' => 'customer',
+                'created_at'  => $message->created_at,
+            ]
+        ], 201);
+    }
+
+    public function getComplaintMessages($id)
+    {
+        $customer = Auth::guard('customer')->user();
+        $complaint = Dispute::where('raised_by_type', 'customer')
+            ->where('raised_by_id', $customer->customerID)
+            ->find($id);
+
+        if (!$complaint) {
+            return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
+        }
+
+        $messages = \App\Models\DisputeMessage::where('disputeID', $id)
+            ->where('is_admin_only', false)
+            ->where(function($q) {
+                $q->where('sender_type', 'customer')
+                  ->orWhere('sender_type', 'admin');
+            })
+            ->with('sender')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function($msg) {
+                return [
+                    'id'          => $msg->messageID,
+                    'message'     => $msg->message,
+                    'sender_type' => $msg->sender_type,
+                    'sender_name' => $msg->sender?->fullname ?? ($msg->sender_type === 'admin' ? 'Support' : 'You'),
+                    'created_at'  => $msg->created_at,
+                ];
+            });
+
+        return response()->json(['success' => true, 'data' => $messages]);
     }
 
     public function getLocations()
