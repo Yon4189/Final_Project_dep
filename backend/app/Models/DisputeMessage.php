@@ -15,6 +15,7 @@ class DisputeMessage extends Model
         'recipient_type',
         'message',
         'is_admin_only',
+        'parent_message_id',
     ];
 
     protected $casts = [
@@ -41,11 +42,7 @@ class DisputeMessage extends Model
             'admin'    => Admin::class,
         ];
 
-        $modelClass = $morphMap[$this->sender_type] ?? null;
-
-        if (!$modelClass) {
-            return null;
-        }
+        $modelClass = $morphMap[$this->sender_type] ?? Admin::class;
 
         $primaryKeyMap = [
             Customer::class         => 'customerID',
@@ -53,7 +50,7 @@ class DisputeMessage extends Model
             Admin::class            => 'adminID',
         ];
 
-        $fk = $primaryKeyMap[$modelClass] ?? 'id';
+        $fk = $primaryKeyMap[$modelClass] ?? 'adminID';
 
         return $this->belongsTo($modelClass, 'sender_id', $fk);
     }

@@ -314,8 +314,8 @@ export default function CustomerProfile() {
           <View style={styles.card}>
             {renderNavItem('help-circle-outline', t('profile.helpCenter', 'Help Center'), () => Alert.alert('Coming Soon', 'Help center coming soon.'))}
             {renderNavItem('chatbubble-outline', t('profile.contactSupport', 'Contact Support'), () => Alert.alert('Coming Soon', 'Support chat coming soon.'))}
-            {renderNavItem('document-text-outline', t('profile.terms', 'Terms & Conditions'), () => Alert.alert('Coming Soon', 'Terms page coming soon.'))}
-            {renderNavItem('shield-outline', t('profile.privacy', 'Privacy Policy'), () => Alert.alert('Coming Soon', 'Privacy policy coming soon.'))}
+            {renderNavItem('document-text-outline', t('profile.terms', 'Terms & Conditions'), () => router.push('/(customer)/terms'))}
+            {renderNavItem('shield-outline', t('profile.privacy', 'Privacy Policy'), () => router.push('/(customer)/privacy'))}
           </View>
         </View>
 

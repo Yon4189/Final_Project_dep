@@ -147,7 +147,10 @@ export const useBookingStatus = (id: string) => {
 
 // ==================== Track Provider Hook ====================
 
-export const useTrackProvider = (id: string) => {
+export const useTrackProvider = (id: string, bookingStatus?: string) => {
+  const activeStatuses = ['accepted', 'in_progress', 'started', 'arrived', 'confirmed'];
+  const isActive = !bookingStatus || activeStatuses.includes(bookingStatus?.toLowerCase());
+
   return useQuery({
     queryKey: bookingKeys.track(id),
     queryFn: async () => {
@@ -159,8 +162,9 @@ export const useTrackProvider = (id: string) => {
       
       return response.data;
     },
-    enabled: !!id,
-    refetchInterval: 10000, // Refetch every 10 seconds for live tracking
+    enabled: !!id && isActive,
+    refetchInterval: isActive ? 10000 : false, // Only poll for active bookings
+    retry: false, // Don't retry on 404
   });
 };
 

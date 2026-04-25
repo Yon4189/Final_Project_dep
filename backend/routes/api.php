@@ -130,6 +130,8 @@ Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->gro
     Route::post('/complaints',          [CustomerController::class, 'createComplaint']);
     Route::get('/complaints',           [CustomerController::class, 'getComplaints']);
     Route::get('/complaints/{id}',      [CustomerController::class, 'getComplaintDetails']);
+    Route::post('/complaints/{id}/messages', [CustomerController::class, 'addComplaintMessage']);
+    Route::get('/complaints/{id}/messages',  [CustomerController::class, 'getComplaintMessages']);
 
     Route::post('/bookings/{bookingID}/dispute',    [DisputeController::class, 'customerRaiseDispute']);
     Route::get('/disputes',                         [DisputeController::class, 'getCustomerDisputes']);

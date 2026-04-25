@@ -427,9 +427,9 @@ export default function LoginScreen() {
               activeOpacity={0.8}
             >
               {googleLoading ? (
-                <ActivityIndicator size="small" color="#DB4437" />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Ionicons name="logo-google" size={20} color="#DB4437" />
+                <Ionicons name="logo-google" size={20} color="#fff" />
               )}
               <Text style={styles.googleButtonText}>
                 {googleLoading ? 'Signing in...' : 'Continue with Google'}
@@ -596,17 +596,15 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    borderWidth: 1.5,
-    borderColor: '#DB4437',
     borderRadius: 12,
     paddingVertical: 14,
     marginTop: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primary,
   },
   googleButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#DB4437',
+    color: '#ffffff',
   },
   loadingOverlay: {
     position: 'absolute',

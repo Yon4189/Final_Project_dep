@@ -2,14 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Loader2, AlertTriangle, Wallet, BellOff, Check,
-  ShieldCheck, UserPlus, MessageSquare, Users, X, RefreshCw
-} from 'lucide-react';
-import api from '../api/axios';
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Loader2, AlertTriangle, Wallet, BellOff, Check,
   ShieldCheck, UserPlus, MessageSquare, Users, X, RefreshCw,
   Wrench, MapPin, CheckCircle, XCircle, BookOpen, CreditCard
 } from 'lucide-react';

@@ -64,8 +64,11 @@ export const useNotifications = () => {
       } else if (data?.type === 'immediate_payout_credited' || data?.type === 'held_payout_scheduled' || data?.type === 'held_payout_released') {
         router.push('/(provider)/wallet' as any);
       } else if (data?.type === 'dispute' || data?.type === 'dispute_message') {
+        // Always go to complaints page for dispute notifications
         if (disputeId) {
-          router.push(`/(customer)/complaints` as any);
+          router.push(`/(customer)/complaints/${disputeId}` as any);
+        } else {
+          router.push('/(customer)/complaints' as any);
         }
       } else if (data?.type === 'new_message' || data?.type === 'chat') {
         if (conversationId) {
@@ -74,8 +77,15 @@ export const useNotifications = () => {
             : `/(provider)/chat/${conversationId}`;
           router.push(path as any);
         }
-      } else if (bookingId) {
-        // Fallback: navigate to booking
+      } else if (data?.type === 'booking_completed' || data?.type === 'booking_cancelled' || data?.type === 'booking_rejected') {
+        if (bookingId) {
+          const path = customer 
+            ? `/(customer)/requests/${bookingId}` 
+            : `/(provider)/requests/${bookingId}`;
+          router.push(path as any);
+        }
+      } else if (bookingId && !disputeId) {
+        // Fallback: only navigate to booking if there's no dispute context
         const path = customer 
           ? `/(customer)/requests/${bookingId}` 
           : `/(provider)/requests/${bookingId}`;
