@@ -13,8 +13,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import './i18n';
 import LanguageToggleButton from '../components/LanguageToggleButton';
 
-// Silence the Expo SDK 53 Android push notification warning in local development
-LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
+// Silence specific warnings globally
+LogBox.ignoreLogs(['same key', 'Push notifications']);
+LogBox.ignoreAllLogs(true); // Forcefully hide all warning notifications
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
