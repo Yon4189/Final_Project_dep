@@ -282,13 +282,27 @@ class ProviderService {
   async getDisputes(): Promise<ApiResponse<Dispute[]>> {
     const response = await api.get<any>(`${this.BASE_PATH}/disputes`);
     if (response.success && response.data && Array.isArray(response.data.data)) {
-      response.data = response.data.data;
+      // Normalize disputes: map disputeID → id
+      response.data = response.data.data.map((dispute: any) => ({
+        ...dispute,
+        id: dispute.id || dispute.disputeID?.toString(),
+        disputeNumber: dispute.disputeNumber || dispute.disputeID?.toString(),
+      }));
     }
     return response as ApiResponse<Dispute[]>;
   }
 
   async getDisputeDetails(id: string): Promise<ApiResponse<Dispute>> {
-    return api.get<Dispute>(`${this.BASE_PATH}/disputes/${id}`);
+    const response = await api.get<any>(`${this.BASE_PATH}/disputes/${id}`);
+    if (response.success && response.data) {
+      // Normalize dispute: map disputeID → id
+      response.data = {
+        ...response.data,
+        id: response.data.id || response.data.disputeID?.toString(),
+        disputeNumber: response.data.disputeNumber || response.data.disputeID?.toString(),
+      };
+    }
+    return response as ApiResponse<Dispute>;
   }
 
   async createDispute(data: {
@@ -303,6 +317,16 @@ class ProviderService {
 
   async addDisputeEvidence(id: string, evidence: string[]): Promise<ApiResponse<Dispute>> {
     const response = await api.post<Dispute>(`${this.BASE_PATH}/disputes/${id}/evidence`, { evidence });
+    return response;
+  }
+
+  async addDisputeMessage(id: string, message: string): Promise<ApiResponse<any>> {
+    const response = await api.post<any>(`${this.BASE_PATH}/disputes/${id}/messages`, { message });
+    return response;
+  }
+
+  async getDisputeMessages(id: string): Promise<ApiResponse<any[]>> {
+    const response = await api.get<any[]>(`${this.BASE_PATH}/disputes/${id}/messages`);
     return response;
   }
 

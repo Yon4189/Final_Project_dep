@@ -180,8 +180,23 @@ export default function RegisterCustomerScreen() {
       if (!isValid) errors.phone = t("validation.invalidPhone", "Invalid Ethiopian phone format");
     }
     if (!formData.location) errors.location = t("validation.locationRequired", "Location is required");
-    if (!formData.password) errors.password = t("validation.passwordRequired", "Password is required");
-    if (formData.password !== formData.password_confirmation) errors.password_confirmation = t("validation.passwordsDoNotMatch", "Passwords do not match");
+    
+    // Enhanced password validation to match backend
+    if (!formData.password) {
+      errors.password = t("validation.passwordRequired", "Password is required");
+    } else if (formData.password.length < 8) {
+      errors.password = t("validation.passwordTooShort", "Password must be at least 8 characters");
+    } else if (!/[a-z]/.test(formData.password)) {
+      errors.password = t("validation.passwordNeedsLowercase", "Password must contain at least one lowercase letter");
+    } else if (!/[A-Z]/.test(formData.password)) {
+      errors.password = t("validation.passwordNeedsUppercase", "Password must contain at least one uppercase letter");
+    } else if (!/[0-9]/.test(formData.password)) {
+      errors.password = t("validation.passwordNeedsNumber", "Password must contain at least one number");
+    }
+    
+    if (formData.password !== formData.password_confirmation) {
+      errors.password_confirmation = t("validation.passwordsDoNotMatch", "Passwords do not match");
+    }
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -209,12 +224,46 @@ export default function RegisterCustomerScreen() {
       });
 
       if (response?.success || response?.status === 'success') {
-        router.replace("/login");
+        Alert.alert(
+          t("auth.success", "Success!"),
+          t("auth.accountCreated", "Your account has been created successfully. Please log in."),
+          [{ text: "OK", onPress: () => router.replace("/login") }]
+        );
       } else {
-        Alert.alert(t("auth.registrationFailed", "Registration Failed"), response?.message || t("auth.somethingWentWrong", "Something went wrong."));
+        // Handle backend validation errors
+        if (response?.errors) {
+          const backendErrors: { [key: string]: string } = {};
+          Object.keys(response.errors).forEach(key => {
+            const errorArray = response.errors[key];
+            backendErrors[key] = Array.isArray(errorArray) ? errorArray[0] : errorArray;
+          });
+          setValidationErrors(backendErrors);
+          
+          // Show first error in alert
+          const firstError = Object.values(backendErrors)[0];
+          Alert.alert(t("auth.validationError", "Validation Error"), firstError);
+        } else {
+          Alert.alert(t("auth.registrationFailed", "Registration Failed"), response?.message || t("auth.somethingWentWrong", "Something went wrong."));
+        }
       }
     } catch (err: any) {
-      Alert.alert(t("auth.registrationError", "Registration Error"), err.message || t("auth.failedToRegister", "Failed to register."));
+      console.error('Registration error:', err);
+      
+      // Handle backend validation errors from catch block
+      if (err.response?.data?.errors) {
+        const backendErrors: { [key: string]: string } = {};
+        Object.keys(err.response.data.errors).forEach(key => {
+          const errorArray = err.response.data.errors[key];
+          backendErrors[key] = Array.isArray(errorArray) ? errorArray[0] : errorArray;
+        });
+        setValidationErrors(backendErrors);
+        
+        // Show first error in alert
+        const firstError = Object.values(backendErrors)[0];
+        Alert.alert(t("auth.validationError", "Validation Error"), firstError);
+      } else {
+        Alert.alert(t("auth.registrationError", "Registration Error"), err.message || t("auth.failedToRegister", "Failed to register."));
+      }
     } finally {
       setLoading(false);
     }
@@ -274,6 +323,52 @@ export default function RegisterCustomerScreen() {
           </View>
 
           <AppInput label={t("auth.password", "Password")} value={formData.password} onChangeText={(t) => setFormData({ ...formData, password: t })} placeholder={t("auth.minCharacters", "Minimum 8 characters")} secureTextEntry showPasswordToggle required error={validationErrors.password} />
+          
+          {/* Password Requirements Hint */}
+          <View style={styles.passwordHint}>
+            <Text style={styles.passwordHintTitle}>Password must contain:</Text>
+            <View style={styles.passwordRequirement}>
+              <Ionicons 
+                name={formData.password.length >= 8 ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={formData.password.length >= 8 ? colors.success : colors.text.secondary} 
+              />
+              <Text style={[styles.passwordRequirementText, formData.password.length >= 8 && styles.passwordRequirementMet]}>
+                At least 8 characters
+              </Text>
+            </View>
+            <View style={styles.passwordRequirement}>
+              <Ionicons 
+                name={/[a-z]/.test(formData.password) ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={/[a-z]/.test(formData.password) ? colors.success : colors.text.secondary} 
+              />
+              <Text style={[styles.passwordRequirementText, /[a-z]/.test(formData.password) && styles.passwordRequirementMet]}>
+                One lowercase letter (a-z)
+              </Text>
+            </View>
+            <View style={styles.passwordRequirement}>
+              <Ionicons 
+                name={/[A-Z]/.test(formData.password) ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={/[A-Z]/.test(formData.password) ? colors.success : colors.text.secondary} 
+              />
+              <Text style={[styles.passwordRequirementText, /[A-Z]/.test(formData.password) && styles.passwordRequirementMet]}>
+                One uppercase letter (A-Z)
+              </Text>
+            </View>
+            <View style={styles.passwordRequirement}>
+              <Ionicons 
+                name={/[0-9]/.test(formData.password) ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={/[0-9]/.test(formData.password) ? colors.success : colors.text.secondary} 
+              />
+              <Text style={[styles.passwordRequirementText, /[0-9]/.test(formData.password) && styles.passwordRequirementMet]}>
+                One number (0-9)
+              </Text>
+            </View>
+          </View>
+          
           <AppInput label={t("auth.confirmPassword", "Confirm Password")} value={formData.password_confirmation} onChangeText={(t) => setFormData({ ...formData, password_confirmation: t })} placeholder={t("auth.reenterPassword", "Re-enter your password")} secureTextEntry showPasswordToggle required error={validationErrors.password_confirmation} />
 
           <View style={styles.inputGroup}>
@@ -379,4 +474,33 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     color: '#DB4437',
   },
   googleDivider: { flexDirection: 'row' as const, alignItems: 'center' as const, marginVertical: 12 },
+  passwordHint: {
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: -10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  passwordHintTitle: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: colors.text.secondary,
+    marginBottom: 8,
+  },
+  passwordRequirement: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 4,
+  },
+  passwordRequirementText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  passwordRequirementMet: {
+    color: colors.success,
+    fontWeight: '500' as const,
+  },
 });
