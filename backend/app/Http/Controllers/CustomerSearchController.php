@@ -79,7 +79,7 @@ class CustomerSearchController extends Controller
         $searchTerm = $inputs['query'];
         $query->when($searchTerm, function ($q) use ($searchTerm) {
             $q->where(function ($subQuery) use ($searchTerm) {
-                $subQuery->where('fullname', 'like', $searchTerm . '%')
+                $subQuery->where('fullname', 'like', '%' . $searchTerm . '%')
                     ->orWhere('bio', 'like', '%' . $searchTerm . '%')
                     ->orWhereHas('services', function ($serviceQuery) use ($searchTerm) {
                         $serviceQuery->where('title', 'like', '%' . $searchTerm . '%');
