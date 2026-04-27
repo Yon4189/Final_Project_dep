@@ -180,6 +180,8 @@ class CustomerService {
   // ==================== Service Provider Search ====================
 
   async searchProviders(filters: SearchFilters & { page?: number; perPage?: number }): Promise<ApiResponse<ServiceProvider[]>> {
+    console.log('[CustomerService] searchProviders called with filters:', filters);
+    
     const params = new URLSearchParams();
     
     const searchQuery = filters.query || (filters as any).q;
@@ -207,13 +209,22 @@ class CustomerService {
       if (isValidLocation(location)) {
         params.append('latitude', location.latitude.toString());
         params.append('longitude', location.longitude.toString());
+        console.log('[CustomerService] Added location to search:', { lat: location.latitude, lng: location.longitude });
+      } else {
+        console.log('[CustomerService] No valid location available for search');
       }
     } catch (error) {
       console.warn('Failed to get location from storage:', error);
       // Continue without location params
     }
 
-    return api.get<ServiceProvider[]>(`${this.BASE_PATH}/providers/search?${params.toString()}`);
+    const url = `${this.BASE_PATH}/providers/search?${params.toString()}`;
+    console.log('[CustomerService] Calling API:', url);
+    
+    const response = await api.get<ServiceProvider[]>(url);
+    console.log('[CustomerService] Search response:', { success: response.success, dataLength: response.data?.length });
+    
+    return response;
   }
 
   async getProviderDetails(id: string): Promise<ApiResponse<ServiceProvider>> {
@@ -244,20 +255,31 @@ class CustomerService {
   }
 
   async getTopRatedProviders(limit: number = 10): Promise<ApiResponse<ServiceProvider[]>> {
+    console.log(`[CustomerService] getTopRatedProviders called with limit: ${limit}`);
+    
     const cacheKey = `top_rated_providers_${limit}`;
     const cached = await storage.getItem<ServiceProvider[]>(cacheKey);
     
     if (cached && isValidArray<ServiceProvider>(cached)) {
+      console.log(`[CustomerService] Returning cached top rated providers:`, cached.length);
       return { success: true, data: cached };
     }
     
+    console.log(`[CustomerService] Fetching top rated providers from API...`);
     const response = await api.get<ServiceProvider[]>(
       `${this.BASE_PATH}/providers/top-rated?limit=${limit}`
     );
     
+    console.log(`[CustomerService] API response:`, {
+      success: response.success,
+      dataLength: response.data?.length,
+      data: response.data
+    });
+    
     if (response.success && response.data) {
       // Cache for 1 hour
       await storage.setItem(cacheKey, response.data, 60 * 60 * 1000);
+      console.log(`[CustomerService] Cached ${response.data.length} providers`);
     }
     
     return response;
