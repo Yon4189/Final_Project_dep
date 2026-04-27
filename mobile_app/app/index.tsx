@@ -124,8 +124,8 @@ export default function LandingScreen() {
         </Text>
         <View style={styles.servicesGrid}>
           {categories.length > 0 ? (
-            categories.slice(0, 9).map((category) => (
-              <TouchableOpacity key={category.catagoryID} style={styles.serviceCard}>
+            categories.slice(0, 9).map((category, index) => (
+              <TouchableOpacity key={category.catagoryID || `cat-${index}`} style={styles.serviceCard}>
                 <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
                 <Text style={styles.serviceName}>
                   <Text>{category.name}</Text>

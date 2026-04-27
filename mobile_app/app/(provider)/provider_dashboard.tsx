@@ -270,7 +270,7 @@ export default function ProviderDashboard() {
 
     return (
       <View style={styles.listContainer}>
-        {data.map((req: ServiceRequest) => (
+        {Array.from(new Map(data.map((item: ServiceRequest) => [item.id, item])).values()).map((req: ServiceRequest) => (
           <View key={req.id} style={styles.requestCard}>
             <View style={styles.cardHeader}>
               <View style={styles.customerInfo}>
