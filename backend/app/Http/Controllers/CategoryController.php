@@ -43,7 +43,6 @@ class CategoryController extends Controller
         $category = Category::create([
             'name' => $request->name,
             'description' => $request->description,
-            'status' => $request->status ?? 'Active'
         ]);
 
         Cache::forget('categories_all'); // Invalidate cache
@@ -130,7 +129,6 @@ class CategoryController extends Controller
 
         $category->name = $request->input('name', $category->name);
         $category->description = $request->input('description', $category->description);
-        $category->status = $request->input('status', $category->status);
         $category->save();
 
         Cache::forget('categories_all'); // Invalidate cache
@@ -142,7 +140,6 @@ class CategoryController extends Controller
                 'catagoryID' => $category->catagoryID,
                 'name' => $category->name,
                 'description' => $category->description,
-                'status' => $category->status,
             ]
         ]);
     }

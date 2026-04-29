@@ -124,12 +124,17 @@ export default function LandingScreen() {
         </Text>
         <View style={styles.servicesGrid}>
           {categories.length > 0 ? (
-            categories.slice(0, 9).map((category, index) => (
+            categories.map((category, index) => (
               <TouchableOpacity key={category.catagoryID || `cat-${index}`} style={styles.serviceCard}>
-                <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
-                <Text style={styles.serviceName}>
-                  <Text>{category.name}</Text>
-                </Text>
+                <View style={styles.serviceIconContainer}>
+                  <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
+                </View>
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceName}>{category.name}</Text>
+                  <Text style={styles.serviceDescription} numberOfLines={2}>
+                    {category.description}
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))
           ) : (
@@ -295,22 +300,41 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   serviceCard: {
-    width: (width - 70) / 3,
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 10,
+    width: '48%',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+    padding: 15,
     backgroundColor: colors.background,
-    borderRadius: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  serviceIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   serviceIcon: {
-    fontSize: 30,
-    marginBottom: 8,
+    fontSize: 24,
+  },
+  serviceInfo: {
+    width: '100%',
   },
   serviceName: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: 'bold',
     color: colors.text.primary,
-    textAlign: 'center',
+    marginBottom: 4,
+  },
+  serviceDescription: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    lineHeight: 14,
   },
   roleSection: {
     padding: 20,

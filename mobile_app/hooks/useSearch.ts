@@ -20,7 +20,7 @@ export const useSearch = ({
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<Partial<SearchFilters>>({
     sortBy: 'rating',
-    maxDistance: 10000,
+    maxDistance: 1000,
     minRating: 0,
     ...initialFilters,
   });
@@ -122,7 +122,7 @@ export const useSearch = ({
   const resetFilters = useCallback(() => {
     setFilters({
       sortBy: 'rating',
-      maxDistance: 10000,
+      maxDistance: 1000,
       minRating: 0,
     });
   }, []);
