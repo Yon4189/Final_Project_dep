@@ -23,6 +23,8 @@ import { ThemeColors } from "../../constants/Colors";
 import type { Currency } from "../../types/customer.types";
 import type { BankDetails } from "../../types/provider.types";
 import { formatCurrency } from "../../utils/formatters";
+import { providerService } from "../../services/provider.service";
+import { api } from "../../services/api";
 
 // Add this interface to include id
 interface BankAccount extends BankDetails {
@@ -47,16 +49,28 @@ export default function WithdrawScreen() {
   });
   const [saveBank, setSaveBank] = useState(true);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isSavingBank, setIsSavingBank] = useState(false);
 
   const {
     summary,
-    bankDetails: savedBankDetails,
+    bankAccounts: savedBankAccounts,
     withdrawals,
     isLoading,
+    isBankAccountsLoading,
     requestWithdrawal,
     updateBankDetails,
     refetch,
   } = useProviderEarnings();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🏦 Bank Accounts Debug:', {
+      savedBankAccounts,
+      isLoading,
+      isBankAccountsLoading,
+      count: savedBankAccounts?.length || 0
+    });
+  }, [savedBankAccounts, isLoading, isBankAccountsLoading]);
 
   // Safe currency formatter
   const safeFormatCurrency = (
@@ -66,16 +80,21 @@ export default function WithdrawScreen() {
     return formatCurrency(amount, currencyCode as Currency);
   };
 
-  // Convert savedBankDetails to array format for display with proper typing
-  const bankAccounts: BankAccount[] = useMemo(() => savedBankDetails
-    ? [{ ...savedBankDetails, id: "saved-bank-1" }]
-    : [], [savedBankDetails]);
+  // Convert savedBankAccounts to array format for display with proper typing
+  const bankAccounts: BankAccount[] = useMemo(() => {
+    const accounts = (savedBankAccounts || []).map((bank, index) => ({
+      ...bank,
+      id: bank.id?.toString() || `bank-${index}`
+    }));
+    console.log('🏦 Processed bank accounts:', accounts);
+    return accounts;
+  }, [savedBankAccounts]);
 
   useEffect(() => {
     if (bankAccounts.length > 0 && !selectedBank) {
       setSelectedBank(bankAccounts[0]);
     }
-  }, [bankAccounts, selectedBank]);
+  }, [bankAccounts]); // Removed selectedBank from dependencies to prevent re-selection when user clicks "Add New Bank Account"
 
   const handleAmountChange = (text: string) => {
     // Only allow numbers and decimal point
@@ -110,15 +129,106 @@ export default function WithdrawScreen() {
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1) {
       if (!validateAmount()) return;
       setStep(2);
     } else if (step === 2) {
+      // Validate bank details
       if (!selectedBank && !bankDetails.bankName) {
         Alert.alert(t("success.error", "Error"), t("wallet.selectBank", "Please select or add bank details"));
         return;
       }
+      
+      // If user filled in new bank details, save them to database
+      if (!selectedBank && bankDetails.bankName && bankDetails.accountName && bankDetails.accountNumber) {
+        setIsSavingBank(true);
+        try {
+          console.log('💾 Attempting to save bank account...');
+          console.log('📋 Bank details:', {
+            bankName: bankDetails.bankName,
+            accountName: bankDetails.accountName,
+            accountNumber: bankDetails.accountNumber?.slice(-4), // Only log last 4 digits
+          });
+          
+          // Check if user is authenticated
+          const token = api.getToken();
+          const userType = api.getUserType();
+          const isAuthenticated = api.isAuthenticated();
+          
+          console.log('🔑 Authentication status:', {
+            hasToken: !!token,
+            tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+            userType,
+            isAuthenticated
+          });
+          
+          if (!token) {
+            Alert.alert(
+              t("success.error", "Error"),
+              "Authentication token not found. Please login again."
+            );
+            setIsSavingBank(false);
+            router.push('/(auth)/login');
+            return;
+          }
+          
+          // Save bank account using provider service
+          const response = await providerService.saveBankAccount({
+            bankName: bankDetails.bankName,
+            accountName: bankDetails.accountName,
+            accountNumber: bankDetails.accountNumber,
+            branch: bankDetails.branch || undefined,
+            swiftCode: bankDetails.swiftCode || undefined,
+          });
+          
+          console.log('✅ Save response:', response);
+          
+          if (!response.success) {
+            Alert.alert(t("success.error", "Error"), response.message || "Failed to save bank account");
+            setIsSavingBank(false);
+            return;
+          }
+          
+          // Refetch bank accounts to update the list
+          console.log('🔄 Refetching bank accounts...');
+          await refetch();
+          console.log('✅ Refetch complete');
+          
+          Alert.alert(t("common.success", "Success"), "Bank account saved successfully");
+          setIsSavingBank(false);
+        } catch (error: any) {
+          console.error('❌ Error saving bank account:', error);
+          console.error('❌ Error details:', {
+            message: error.message,
+            statusCode: error.statusCode,
+            response: error.response?.data,
+          });
+          
+          // Handle specific error cases
+          let errorMessage = "Failed to save bank account. Please try again.";
+          
+          if (error.statusCode === 401 || error.message?.includes('Unauthenticated')) {
+            errorMessage = "Authentication token not found. Please login again.";
+            Alert.alert(t("success.error", "Error"), errorMessage);
+            setIsSavingBank(false);
+            router.push('/(auth)/login');
+            return;
+          } else if (error.statusCode === 422) {
+            errorMessage = error.message || "Validation error. Please check your input.";
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
+          Alert.alert(
+            t("success.error", "Error"), 
+            errorMessage
+          );
+          setIsSavingBank(false);
+          return;
+        }
+      }
+      
       setStep(3);
     }
   };
@@ -565,47 +675,58 @@ export default function WithdrawScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View>
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          {step < 3 ? (
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>{t("common.continue", "Continue")}</Text>
-              <Ionicons name="arrow-forward" size={20} color={colors.surface} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.confirmButton,
-                isPending && styles.confirmButtonDisabled,
-              ]}
-              onPress={handleWithdraw}
-              disabled={isPending}
-            >
-              {isPending ? (
-                <ActivityIndicator size="small" color={colors.surface} />
-              ) : (
-                <>
-                  <Text style={styles.confirmButtonText}>{t("wallet.withdraw", "Confirm Withdrawal")}</Text>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
+        {step === 1 && renderStep1()}
+        {step === 2 && renderStep2()}
+        {step === 3 && renderStep3()}
       </ScrollView>
+
+      {/* Footer - Outside ScrollView for fixed positioning */}
+      <View style={styles.footer}>
+        {step < 3 ? (
+          <TouchableOpacity 
+            style={[styles.nextButton, isSavingBank && styles.nextButtonDisabled]} 
+            onPress={handleNext}
+            disabled={isSavingBank}
+          >
+            {isSavingBank ? (
+              <>
+                <ActivityIndicator size="small" color={colors.surface} />
+                <Text style={styles.nextButtonText}>{t("common.pleaseWait", "Please wait...")}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.nextButtonText}>{t("common.continue", "Continue")}</Text>
+                <Ionicons name="arrow-forward" size={20} color={colors.surface} />
+              </>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.confirmButton,
+              isPending && styles.confirmButtonDisabled,
+            ]}
+            onPress={handleWithdraw}
+            disabled={isPending}
+          >
+            {isPending ? (
+              <ActivityIndicator size="small" color={colors.surface} />
+            ) : (
+              <>
+                <Text style={styles.confirmButtonText}>{t("wallet.withdraw", "Confirm Withdrawal")}</Text>
+                <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { flexGrow: 1 },
+  scrollContent: { paddingBottom: 300 }, // Increased from 20 to 300 for keyboard clearance
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { fontSize: 18, fontWeight: "600", color: colors.text.primary },
   progressContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 40, paddingVertical: 20, backgroundColor: colors.surface },
@@ -615,7 +736,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   progressStepTextActive: { color: colors.surface },
   progressLine: { flex: 1, height: 2, backgroundColor: colors.border, marginHorizontal: 8 },
   progressLineActive: { backgroundColor: colors.primary },
-  content: { flex: 1, padding: 20 },
+  content: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   stepContainer: { paddingBottom: 20 },
   stepTitle: { fontSize: 22, fontWeight: "bold", color: colors.text.primary, marginBottom: 8 },
   stepSubtitle: { fontSize: 14, color: colors.text.secondary, marginBottom: 24 },
@@ -675,6 +796,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   warningText: { flex: 1, fontSize: 13, color: colors.warning, lineHeight: 18 },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
   nextButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 12, gap: 8 },
+  nextButtonDisabled: { opacity: 0.5 },
   nextButtonText: { fontSize: 16, color: colors.surface, fontWeight: "600" },
   confirmButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: colors.success, paddingVertical: 16, borderRadius: 12, gap: 8 },
   confirmButtonDisabled: { opacity: 0.5 },

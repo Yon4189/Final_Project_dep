@@ -273,6 +273,12 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
     });
     Route::get('/transactions',         [WalletController::class, 'transactions']);
 
+    // ── Bank Accounts ─────────────────────────────────────────────────────────
+    Route::get('/bank-accounts',            [WalletController::class, 'getBankAccounts']);
+    Route::post('/bank-accounts',           [WalletController::class, 'saveBankAccount']);
+    Route::put('/bank-accounts/{id}',       [WalletController::class, 'updateBankAccount']);
+    Route::delete('/bank-accounts/{id}',    [WalletController::class, 'deleteBankAccount']);
+
     // ── Notifications ─────────────────────────────────────────────────────────
     Route::get('/notifications',                [NotificationController::class, 'getProviderNotifications']);
     Route::post('/notifications/{id}/read',     [NotificationController::class, 'markAsRead']);

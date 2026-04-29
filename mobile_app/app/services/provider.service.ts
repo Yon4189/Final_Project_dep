@@ -256,6 +256,27 @@ class ProviderService {
     return response;
   }
 
+  // ==================== Bank Accounts ====================
+
+  async getBankAccounts(): Promise<ApiResponse<BankDetails[]>> {
+    return api.get<BankDetails[]>(`${this.BASE_PATH}/bank-accounts`);
+  }
+
+  async saveBankAccount(data: Partial<BankDetails>): Promise<ApiResponse<BankDetails>> {
+    const response = await api.post<BankDetails>(`${this.BASE_PATH}/bank-accounts`, data);
+    return response;
+  }
+
+  async updateBankAccount(id: string, data: Partial<BankDetails>): Promise<ApiResponse<BankDetails>> {
+    const response = await api.put<BankDetails>(`${this.BASE_PATH}/bank-accounts/${id}`, data);
+    return response;
+  }
+
+  async deleteBankAccount(id: string): Promise<ApiResponse<void>> {
+    const response = await api.delete<void>(`${this.BASE_PATH}/bank-accounts/${id}`);
+    return response;
+  }
+
   // ==================== Reviews ====================
 
   async getReviews(page: number = 1): Promise<ApiResponse<{

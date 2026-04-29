@@ -464,25 +464,32 @@ class CustomerSearchController extends Controller
 
     public function getNearbyProviders(Request $request)
     {
-        $latitude = $request->query('lat');
+        $latitude  = $request->query('lat');
         $longitude = $request->query('lng');
-        $radius = $request->query('radius', 10);
+        $radius    = $request->query('radius'); // optional — null means no distance filter
 
-        if (!$latitude || !$longitude) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Latitude and longitude are required'
-            ], 400);
+        // Build base query: approved providers only
+        $query = ServiceProvider::whereIn('status', ['Active', 'approved']);
+
+        // Distance filtering is OPTIONAL — only applied when lat/lng AND radius are all provided
+        if ($latitude && $longitude) {
+            $query->selectRaw(
+                '*, (6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0))))) AS distance',
+                [$latitude, $longitude, $latitude]
+            );
+
+            // Only filter by radius if explicitly provided
+            if ($radius !== null) {
+                $query->having('distance', '<=', (float) $radius);
+            }
+
+            $query->orderBy('distance');
+        } else {
+            // No coordinates — just return approved providers sorted by rating
+            $query->orderByDesc('rating');
         }
 
-        $providers = ServiceProvider::whereIn('status', ['Active', 'approved'])
-            ->whereNotNull('current_latitude')
-            ->whereNotNull('current_longitude')
-            ->selectRaw('*, (6371 * acos(cos(radians(?)) * cos(radians(current_latitude)) * cos(radians(current_longitude) - radians(?)) + sin(radians(?)) * sin(radians(current_latitude)))) AS distance', [$latitude, $longitude, $latitude])
-            ->having('distance', '<=', $radius)
-            ->orderBy('distance')
-            ->limit(20)
-            ->get();
+        $providers = $query->limit(20)->get();
 
         $transformedProviders = $providers->map(function ($provider) {
             return [
