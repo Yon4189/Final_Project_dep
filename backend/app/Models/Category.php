@@ -16,6 +16,7 @@ class Category extends Model
     // Make status fillable as well
     protected $fillable = [  
         'name', 
+        'icon',
         'description', 
     ];  
 

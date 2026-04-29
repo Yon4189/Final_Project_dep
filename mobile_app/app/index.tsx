@@ -18,7 +18,11 @@ import { useTheme } from './context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
-const getCategoryIcon = (name: string) => {
+const getCategoryIcon = (category: any) => {
+  // If the category has an icon from the database, use it
+  if (category.icon) return category.icon;
+
+  const name = category.name;
   const icons: { [key: string]: string } = {
     'Plumbing': '🔧',
     'Home Cleaning': '🧹',
@@ -38,6 +42,8 @@ const getCategoryIcon = (name: string) => {
 
 const CategoryCard = ({ category, index, colors, styles }: any) => {
   const [expanded, setExpanded] = useState(false);
+  const icon = getCategoryIcon(category);
+  const isImageUrl = icon && (icon.startsWith('http') || icon.startsWith('/storage') || icon.startsWith('data:image'));
 
   return (
     <TouchableOpacity
@@ -47,7 +53,11 @@ const CategoryCard = ({ category, index, colors, styles }: any) => {
       activeOpacity={0.7}
     >
       <View style={styles.serviceIconContainer}>
-        <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
+        {isImageUrl ? (
+          <Image source={{ uri: icon }} style={styles.serviceIconImage} />
+        ) : (
+          <Text style={styles.serviceIcon}>{icon}</Text>
+        )}
       </View>
       <View style={styles.serviceInfo}>
         <Text style={styles.serviceName}>{category.name}</Text>
@@ -360,6 +370,11 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   serviceIcon: {
     fontSize: 24,
+  },
+  serviceIconImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
   },
   serviceInfo: {
     width: '100%',

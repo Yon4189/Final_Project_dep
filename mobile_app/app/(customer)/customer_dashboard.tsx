@@ -773,7 +773,11 @@ export default function CustomerDashboard() {
               onPress={() => handleCategorySelect(category.id)}
             >
               <View style={styles.categoryIconContainer}>
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                {category.icon && (category.icon.startsWith('http') || category.icon.startsWith('/storage')) ? (
+                  <Image source={{ uri: category.icon }} style={styles.categoryIconImage} />
+                ) : (
+                  <Text style={styles.categoryIcon}>{category.icon}</Text>
+                )}
               </View>
               <Text style={styles.categoryName}>{category.name}</Text>
             </TouchableOpacity>
@@ -1401,6 +1405,11 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   categoryIcon: {
     fontSize: 24,
+  },
+  categoryIconImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
   },
   categoryName: {
     fontSize: 12,
