@@ -131,6 +131,21 @@ export function useBankDetails(options?: UseQueryOptions<BankDetails>) {
   });
 }
 
+export function useBankAccounts(options?: UseQueryOptions<BankDetails[]>) {
+  return useQuery<BankDetails[], Error>({
+    queryKey: [...earningsKeys.bankDetails(), 'list'],
+    queryFn: async () => {
+      console.log('🔍 Fetching bank accounts...');
+      const response = await providerService.getBankAccounts();
+      console.log('📦 Bank accounts response:', response);
+      if (!response.success) throw new Error(response.message);
+      console.log('✅ Bank accounts data:', response.data);
+      return response.data as BankDetails[];
+    },
+    ...options,
+  });
+}
+
 export function useUpdateBankDetails(options?: UseMutationOptions<BankDetails, Error, Partial<BankDetails>>) {
   const queryClient = useQueryClient();
 
@@ -184,6 +199,7 @@ export function useProviderEarnings(period: 'week' | 'month' | 'year' = 'month')
   const transactionsQuery = useTransactions();
   const chartDataQuery = useEarningsChartData(period);
   const bankDetailsQuery = useBankDetails();
+  const bankAccountsQuery = useBankAccounts();
   const withdrawalHistoryQuery = useWithdrawalHistory();
 
   const isLoading = 
@@ -191,6 +207,7 @@ export function useProviderEarnings(period: 'week' | 'month' | 'year' = 'month')
     transactionsQuery.isLoading || 
     chartDataQuery.isLoading ||
     bankDetailsQuery.isLoading ||
+    bankAccountsQuery.isLoading ||
     withdrawalHistoryQuery.isLoading;
 
   const refetch = async () => {
@@ -199,6 +216,7 @@ export function useProviderEarnings(period: 'week' | 'month' | 'year' = 'month')
       transactionsQuery.refetch(),
       chartDataQuery.refetch(),
       bankDetailsQuery.refetch(),
+      bankAccountsQuery.refetch(),
       withdrawalHistoryQuery.refetch(),
     ]);
   };
@@ -219,6 +237,7 @@ export function useProviderEarnings(period: 'week' | 'month' | 'year' = 'month')
     totalTransactions,
     chartData: chartDataQuery.data,
     bankDetails: bankDetailsQuery.data,
+    bankAccounts: bankAccountsQuery.data || [],
     withdrawals: withdrawalHistoryQuery.data || [],
     
     // Loading states
@@ -227,6 +246,7 @@ export function useProviderEarnings(period: 'week' | 'month' | 'year' = 'month')
     isTransactionsLoading: transactionsQuery.isLoading,
     isChartLoading: chartDataQuery.isLoading,
     isBankLoading: bankDetailsQuery.isLoading,
+    isBankAccountsLoading: bankAccountsQuery.isLoading,
     isWithdrawalsLoading: withdrawalHistoryQuery.isLoading,
     
     // Error states

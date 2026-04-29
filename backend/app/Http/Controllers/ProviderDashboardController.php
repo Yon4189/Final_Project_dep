@@ -7,6 +7,7 @@ use App\Models\Service;
 use App\Models\Transaction;
 use App\Models\Booking;
 use App\Models\Review;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -173,6 +174,11 @@ class ProviderDashboardController extends Controller
                 ->whereIn('status', ['completed', 'service_confirmed', 'waiting_customer_confirmation'])
                 ->count();
 
+            // Get actual wallet balance
+            $wallet = Wallet::where('providerID', $providerID)->first();
+            $availableBalance = $wallet ? (float)$wallet->available_balance : 0.0;
+            $pendingBalance = $wallet ? (float)$wallet->pending_balance : 0.0;
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -180,8 +186,8 @@ class ProviderDashboardController extends Controller
                     'thisMonth' => (float)$thisMonthEarnings,
                     'thisWeek' => (float)$thisWeekEarnings,
                     'lastMonth' => (float)$lastMonthEarnings,
-                    'availableForWithdrawal' => (float)$totalEarnings, // Assuming all is available for now
-                    'pendingClearance' => 0.0,
+                    'availableForWithdrawal' => $availableBalance, // Use actual wallet balance
+                    'pendingClearance' => $pendingBalance, // Use actual pending balance
                     'completedJobs' => $completedJobsCount
                 ]
             ]);

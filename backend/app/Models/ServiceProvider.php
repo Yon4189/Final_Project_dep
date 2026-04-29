@@ -280,9 +280,9 @@ class ServiceProvider extends Authenticatable
      */
     public function scopeNearest($query, $latitude, $longitude)
     {
-        $sql = "(6371 * acos(cos(radians(?)) * cos(radians(current_latitude)) 
-                * cos(radians(current_longitude) - radians(?)) 
-                + sin(radians(?)) * sin(radians(current_latitude)))) AS distance";
+        $sql = "(6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) 
+                * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) 
+                + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0))))) AS distance";
         
         return $query->select('service_providers.*')
             ->selectRaw($sql, [$latitude, $longitude, $latitude])

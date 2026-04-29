@@ -7,6 +7,7 @@ use App\Models\Wallet;
 use App\Models\Payment;
 use App\Models\Withdrawal;
 use App\Models\WalletTransaction;
+use App\Models\BankAccount;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -592,6 +593,221 @@ class WalletController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load transactions'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all bank accounts for the authenticated provider
+     * GET /api/provider/bank-accounts
+     */
+    public function getBankAccounts(Request $request)
+    {
+        try {
+            $provider = $request->user();
+            
+            $bankAccounts = BankAccount::where('user_type', 'provider')
+                ->where('user_id', $provider->providerID)
+                ->orderBy('is_default', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $bankAccounts
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Get bank accounts error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load bank accounts'
+            ], 500);
+        }
+    }
+
+    /**
+     * Save a new bank account
+     * POST /api/provider/bank-accounts
+     */
+    public function saveBankAccount(Request $request)
+    {
+        $request->validate([
+            'bankName' => 'required|string|max:255',
+            'accountName' => 'required|string|max:255',
+            'accountNumber' => 'required|string|max:50|unique:bank_accounts,account_number',
+            'branch' => 'nullable|string|max:255',
+            'swiftCode' => 'nullable|string|max:20'
+        ]);
+        
+        try {
+            $provider = $request->user();
+            
+            // Check if this is the first bank account for this provider
+            $existingCount = BankAccount::where('user_type', 'provider')
+                ->where('user_id', $provider->providerID)
+                ->count();
+            $isDefault = $existingCount === 0; // First account is automatically default
+            
+            // If user wants to set this as default, unset other default accounts
+            if ($request->has('is_default') && $request->is_default) {
+                BankAccount::where('user_type', 'provider')
+                    ->where('user_id', $provider->providerID)
+                    ->update(['is_default' => false]);
+                $isDefault = true;
+            }
+            
+            $bankAccount = BankAccount::create([
+                'user_type' => 'provider',
+                'user_id' => $provider->providerID,
+                'bank_name' => $request->bankName,
+                'account_name' => $request->accountName,
+                'account_number' => $request->accountNumber,
+                'branch' => $request->branch,
+                'swift_code' => $request->swiftCode,
+                'is_default' => $isDefault
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Bank account saved successfully',
+                'data' => $bankAccount
+            ], 201);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Save bank account error: ' . $e->getMessage(), [
+                'provider_id' => $request->user()->providerID ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save bank account: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update an existing bank account
+     * PUT /api/provider/bank-accounts/{id}
+     */
+    public function updateBankAccount(Request $request, $id)
+    {
+        $request->validate([
+            'bankName' => 'required|string|max:255',
+            'accountName' => 'required|string|max:255',
+            'accountNumber' => 'required|string|max:50|unique:bank_accounts,account_number,' . $id . ',id',
+            'branch' => 'nullable|string|max:255',
+            'swiftCode' => 'nullable|string|max:20'
+        ]);
+        
+        try {
+            $provider = $request->user();
+            
+            $bankAccount = BankAccount::where('id', $id)
+                ->where('user_type', 'provider')
+                ->where('user_id', $provider->providerID)
+                ->first();
+            
+            if (!$bankAccount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bank account not found'
+                ], 404);
+            }
+            
+            // If user wants to set this as default, unset other default accounts
+            if ($request->has('is_default') && $request->is_default) {
+                BankAccount::where('user_type', 'provider')
+                    ->where('user_id', $provider->providerID)
+                    ->where('id', '!=', $id)
+                    ->update(['is_default' => false]);
+            }
+            
+            $bankAccount->update([
+                'bank_name' => $request->bankName,
+                'account_name' => $request->accountName,
+                'account_number' => $request->accountNumber,
+                'branch' => $request->branch,
+                'swift_code' => $request->swiftCode,
+                'is_default' => $request->has('is_default') ? $request->is_default : $bankAccount->is_default
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Bank account updated successfully',
+                'data' => $bankAccount
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Update bank account error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update bank account'
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a bank account
+     * DELETE /api/provider/bank-accounts/{id}
+     */
+    public function deleteBankAccount(Request $request, $id)
+    {
+        try {
+            $provider = $request->user();
+            
+            $bankAccount = BankAccount::where('id', $id)
+                ->where('user_type', 'provider')
+                ->where('user_id', $provider->providerID)
+                ->first();
+            
+            if (!$bankAccount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bank account not found'
+                ], 404);
+            }
+            
+            // If deleting default account, set another account as default
+            if ($bankAccount->is_default) {
+                $nextAccount = BankAccount::where('user_type', 'provider')
+                    ->where('user_id', $provider->providerID)
+                    ->where('id', '!=', $id)
+                    ->first();
+                
+                if ($nextAccount) {
+                    $nextAccount->update(['is_default' => true]);
+                }
+            }
+            
+            $bankAccount->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Bank account deleted successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Delete bank account error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete bank account'
             ], 500);
         }
     }
