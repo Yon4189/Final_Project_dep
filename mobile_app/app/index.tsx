@@ -25,11 +25,46 @@ const getCategoryIcon = (name: string) => {
     'Electrical Services': '⚡',
     'Internet & TV Setup': '📡',
     'Painting & Finishing': '🎨',
-    'Carpentry': '🪚',
+    'Carpentry': '🔧',
     'AC & Home Appliances': '❄️',
     'Home Maintenance': '🏠',
+    'Gardening': '🌱',
+    'Moving Services': '📦',
+    'Beauty & Salon': '💄',
+    'Tutoring': '📚',
   };
   return icons[name] || '🛠️';
+};
+
+const CategoryCard = ({ category, index, colors, styles }: any) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <TouchableOpacity
+      key={category.catagoryID || `cat-${index}`}
+      style={[styles.serviceCard, expanded && styles.serviceCardExpanded]}
+      onPress={() => setExpanded(!expanded)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.serviceIconContainer}>
+        <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
+      </View>
+      <View style={styles.serviceInfo}>
+        <Text style={styles.serviceName}>{category.name}</Text>
+        <Text
+          style={styles.serviceDescription}
+          numberOfLines={expanded ? undefined : 2}
+        >
+          {category.description}
+        </Text>
+        {category.description && category.description.length > 60 && (
+          <Text style={styles.readMoreText}>
+            {expanded ? 'Read Less' : 'Read More...'}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 };
 
 export default function LandingScreen() {
@@ -125,17 +160,13 @@ export default function LandingScreen() {
         <View style={styles.servicesGrid}>
           {categories.length > 0 ? (
             categories.map((category, index) => (
-              <TouchableOpacity key={category.catagoryID || `cat-${index}`} style={styles.serviceCard}>
-                <View style={styles.serviceIconContainer}>
-                  <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
-                </View>
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceName}>{category.name}</Text>
-                  <Text style={styles.serviceDescription} numberOfLines={2}>
-                    {category.description}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <CategoryCard
+                key={category.catagoryID || `cat-${index}`}
+                category={category}
+                index={index}
+                colors={colors}
+                styles={styles}
+              />
             ))
           ) : (
             <Text style={{ textAlign: 'center', width: '100%', color: colors.text.secondary }}>
@@ -309,6 +340,14 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 140,
+  },
+  serviceCardExpanded: {
+    width: '100%',
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+    elevation: 4,
+    zIndex: 10,
   },
   serviceIconContainer: {
     width: 44,
@@ -334,7 +373,13 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   serviceDescription: {
     fontSize: 11,
     color: colors.text.secondary,
-    lineHeight: 14,
+    lineHeight: 16,
+  },
+  readMoreText: {
+    fontSize: 10,
+    color: colors.primary,
+    fontWeight: 'bold',
+    marginTop: 4,
   },
   roleSection: {
     padding: 20,
