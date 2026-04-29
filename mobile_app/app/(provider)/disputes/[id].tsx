@@ -1,4 +1,4 @@
-// app/(customer)/complaints/[id].tsx
+// app/(provider)/disputes/[id].tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -7,9 +7,9 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '@/app/constants/Colors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerService } from '@/app/services/customer.service';
+import { providerService } from '@/app/services/provider.service';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,7 +27,7 @@ const STATUS_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   rejected: 'close-circle-outline',
 };
 
-export default function ComplaintDetails() {
+export default function DisputeDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
@@ -46,10 +46,10 @@ export default function ComplaintDetails() {
     } catch { return ''; }
   };
 
-  const { data: complaint, isLoading, refetch } = useQuery({
-    queryKey: ['complaint', id],
+  const { data: dispute, isLoading, refetch } = useQuery({
+    queryKey: ['dispute', id],
     queryFn: async () => {
-      const response = await customerService.getComplaintDetails(id as string);
+      const response = await providerService.getDisputeDetails(id as string);
       if (!response.success) throw new Error(response.message || 'Failed to load');
       return response.data as any;
     },
@@ -57,10 +57,10 @@ export default function ComplaintDetails() {
   });
 
   const sendMessage = useMutation({
-    mutationFn: (msg: string) => customerService.addComplaintResponse(id as string, msg),
+    mutationFn: (msg: string) => providerService.addDisputeMessage(id as string, msg),
     onSuccess: () => {
       setNewMessage('');
-      queryClient.invalidateQueries({ queryKey: ['complaint', id] });
+      queryClient.invalidateQueries({ queryKey: ['dispute', id] });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
     },
     onError: (err: any) => {
@@ -75,14 +75,14 @@ export default function ComplaintDetails() {
 
   // Scroll to bottom when messages load
   useEffect(() => {
-    if (complaint?.messages?.length) {
+    if (dispute?.messages?.length) {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 100);
     }
-  }, [complaint?.messages?.length]);
+  }, [dispute?.messages?.length]);
 
   if (isLoading) return <LoadingSpinner fullScreen />;
 
-  if (!complaint) {
+  if (!dispute) {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
@@ -94,10 +94,10 @@ export default function ComplaintDetails() {
     );
   }
 
-  const status = complaint.status || 'pending';
+  const status = dispute.status || 'pending';
   const statusColor = STATUS_COLORS[status] || Colors.text.secondary;
   const statusIcon = STATUS_ICONS[status] || 'help-outline';
-  const messages: any[] = complaint.messages || [];
+  const messages: any[] = dispute.messages || [];
   const isClosed = status === 'resolved' || status === 'rejected';
 
   return (
@@ -113,7 +113,7 @@ export default function ComplaintDetails() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {complaint.subject || complaint.title || `Dispute #${id}`}
+            {dispute.reason ? t(`disputes.reasons.${dispute.reason}`, dispute.reason.replace('_', ' ')) : `Dispute #${id}`}
           </Text>
           <View style={[styles.statusPill, { backgroundColor: statusColor + '20' }]}>
             <Ionicons name={statusIcon} size={11} color={statusColor} />
@@ -129,15 +129,15 @@ export default function ComplaintDetails() {
       <View style={styles.infoCard}>
         <Text style={styles.infoLabel}>Description</Text>
         <Text style={styles.infoValue} numberOfLines={3}>
-          {complaint.description}
+          {dispute.description}
         </Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoMeta}>
-            Filed: {safeFormat(complaint.createdAt || complaint.created_at)}
+            Filed: {safeFormat(dispute.createdAt || dispute.created_at)}
           </Text>
-          {complaint.bookingId || complaint.bookingID ? (
+          {dispute.bookingId || dispute.bookingID ? (
             <TouchableOpacity
-              onPress={() => router.push(`/(customer)/requests/${complaint.bookingId || complaint.bookingID}`)}
+              onPress={() => router.push(`/(provider)/requests/${dispute.bookingId || dispute.bookingID}`)}
             >
               <Text style={styles.viewBookingLink}>View Booking →</Text>
             </TouchableOpacity>
@@ -166,28 +166,28 @@ export default function ComplaintDetails() {
             </View>
           ) : (
             messages.map((msg: any, idx: number) => {
-              const isCustomer = msg.sender_type === 'customer';
+              const isProvider = msg.sender_type === 'provider';
               return (
                 <View
                   key={msg.id?.toString() || idx.toString()}
-                  style={[styles.messageBubbleRow, isCustomer ? styles.rowRight : styles.rowLeft]}
+                  style={[styles.messageBubbleRow, isProvider ? styles.rowRight : styles.rowLeft]}
                 >
-                  {!isCustomer && (
+                  {!isProvider && (
                     <View style={styles.adminAvatar}>
                       <Ionicons name="shield-checkmark" size={16} color={Colors.primary} />
                     </View>
                   )}
                   <View style={[
                     styles.bubble,
-                    isCustomer ? styles.bubbleCustomer : styles.bubbleAdmin,
+                    isProvider ? styles.bubbleProvider : styles.bubbleAdmin,
                   ]}>
-                    {!isCustomer && (
+                    {!isProvider && (
                       <Text style={styles.bubbleSender}>Support</Text>
                     )}
-                    <Text style={isCustomer ? styles.bubbleTextCustomer : styles.bubbleText}>
+                    <Text style={isProvider ? styles.bubbleTextProvider : styles.bubbleText}>
                       {msg.message}
                     </Text>
-                    <Text style={[styles.bubbleTime, isCustomer && styles.bubbleTimeCustomer]}>
+                    <Text style={isProvider ? styles.bubbleTimeProvider : styles.bubbleTime}>
                       {safeFormat(msg.created_at)}
                     </Text>
                   </View>
@@ -300,15 +300,15 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border,
     borderBottomLeftRadius: 4,
   },
-  bubbleCustomer: {
+  bubbleProvider: {
     backgroundColor: Colors.primary,
     borderBottomRightRadius: 4,
   },
   bubbleSender: { fontSize: 10, fontWeight: '700', color: Colors.primary, marginBottom: 3 },
   bubbleText: { fontSize: 14, color: Colors.text.primary, lineHeight: 20 },
-  bubbleTextCustomer: { fontSize: 14, color: '#FFFFFF', lineHeight: 20 },
+  bubbleTextProvider: { fontSize: 14, color: '#FFFFFF', lineHeight: 20 },
   bubbleTime: { fontSize: 10, color: Colors.text.secondary, marginTop: 4, textAlign: 'right' },
-  bubbleTimeCustomer: { color: 'rgba(255,255,255,0.7)' },
+  bubbleTimeProvider: { fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 4, textAlign: 'right' },
   closedBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     padding: 12, borderTopWidth: 1, borderTopColor: Colors.border,

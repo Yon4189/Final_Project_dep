@@ -101,13 +101,6 @@ module.exports = ({ config }) => {
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Allow HomeLink to use the microphone for voice search.",
-          "speechRecognitionPermission": "Allow HomeLink to recognize your speech for voice search."
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "cameraPermission": "Allow HomeLink to access your camera to photograph your ID card for identity verification.",

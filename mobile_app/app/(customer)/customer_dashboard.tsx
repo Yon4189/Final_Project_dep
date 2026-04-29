@@ -82,6 +82,9 @@ export default function CustomerDashboard() {
   const { data: topRatedProviders, isLoading: topRatedLoading } =
     useTopRatedProviders(5);
 
+  console.log("Dashboard - Top Rated Hook - Loading:", topRatedLoading);
+  console.log("Dashboard - Top Rated Hook - Data:", topRatedProviders);
+
   const [showMapView, setShowMapView] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedProvider, setSelectedProvider] =
@@ -836,11 +839,16 @@ export default function CustomerDashboard() {
   };
 
   const renderTopRated = () => {
+    console.log("Dashboard - renderTopRated called");
+    console.log("Dashboard - topRatedLoading:", topRatedLoading);
+    console.log("Dashboard - topRatedProviders:", topRatedProviders);
+    
     if (topRatedLoading) {
       return <LoadingSpinner />;
     }
 
     if (!topRatedProviders?.length) {
+      console.log("Dashboard - No top rated providers to display");
       return null;
     }
 

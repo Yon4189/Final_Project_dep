@@ -57,6 +57,17 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     setMinRating(0);
     setAvailableNow(false);
     setMaxDistance(50);
+    
+    // Apply the reset filters immediately
+    const resetFilters = {
+      sortBy: 'rating',
+      priceRange: undefined,
+      minRating: undefined,
+      availableNow: false,
+      maxDistance: 50,
+    };
+    onApply(resetFilters);
+    onClose();
   };
 
   const SortOption = ({ value, label }: { value: string; label: string }) => (

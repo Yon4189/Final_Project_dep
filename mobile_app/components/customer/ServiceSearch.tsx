@@ -63,7 +63,9 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
 
   const handleClear = () => {
     onChangeText("");
-    inputRef.current?.focus();
+    setShowSuggestions(false);
+    // Trigger search with empty query to show all providers
+    setTimeout(() => onSearch(), 100);
   };
 
   return (
