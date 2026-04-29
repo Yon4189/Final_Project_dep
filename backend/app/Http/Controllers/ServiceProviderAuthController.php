@@ -316,41 +316,75 @@ class ServiceProviderAuthController extends Controller
     }
 
     /**
+     * Toggle provider availability (accepting jobs or not)
+     * PATCH /api/provider/availability
+     */
+    public function updateAvailability(Request $request)
+    {
+        $provider = $request->user();
+
+        $request->validate([
+            'isAvailable' => 'required|boolean',
+        ]);
+
+        $provider->is_available = $request->isAvailable;
+        $provider->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $request->isAvailable ? 'You are now available for work' : 'You are now unavailable',
+            'data' => array_merge($this->buildProfileData($provider), [
+                'isAvailable' => (bool) $provider->is_available,
+                'is_online'   => (bool) $provider->is_online,
+            ]),
+        ]);
+    }
+
+    /**
      * Get authenticated provider profile
      */
     public function profile(Request $request)
     {
         $provider = $request->user();
-        
-        // Load relationships
         $provider->load(['services', 'category']);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'providerID' => $provider->providerID,
-                'fullname' => $provider->fullname,
-                'email' => $provider->email,
-                'phone' => $provider->phone,
-                'profilePicture' => $provider->profilePicture,
-                'service_city' => $provider->service_city,
-                'bio' => $provider->bio,
-                'rating' => $provider->rating,
-                'completed_jobs' => $provider->completed_jobs,
-                'accepted_jobs' => $provider->accepted_jobs,
-                'success_rate' => $provider->success_rate,
-                'walletBalance' => $provider->walletBalance,
-                'serviceRadiusKm' => $provider->serviceRadiusKm,
-                'current_latitude' => $provider->current_latitude,
-                'current_longitude' => $provider->current_longitude,
-                'status' => $provider->status,
-                'category' => $provider->category,
-                'services' => $provider->services,
-                'business_license' => $provider->business_license,
-                'insurance_certificate' => $provider->insurance_certificate,
-                'certifications' => $provider->certifications,
-            ]
+            'data'    => $this->buildProfileData($provider),
         ]);
+    }
+
+    /**
+     * Build the profile data array (shared between profile() and updateAvailability())
+     */
+    private function buildProfileData(ServiceProvider $provider): array
+    {
+        return [
+            'providerID'             => $provider->providerID,
+            'fullname'               => $provider->fullname,
+            'email'                  => $provider->email,
+            'phone'                  => $provider->phone,
+            'profilePicture'         => $provider->profilePicture,
+            'service_city'           => $provider->service_city,
+            'bio'                    => $provider->bio,
+            'rating'                 => $provider->rating,
+            'completed_jobs'         => $provider->completed_jobs,
+            'accepted_jobs'          => $provider->accepted_jobs,
+            'success_rate'           => $provider->success_rate,
+            'walletBalance'          => $provider->walletBalance,
+            'serviceRadiusKm'        => $provider->serviceRadiusKm,
+            'current_latitude'       => $provider->current_latitude,
+            'current_longitude'      => $provider->current_longitude,
+            'status'                 => $provider->status,
+            'isAvailable'            => (bool) $provider->is_available,
+            'is_online'              => (bool) $provider->is_online,
+            'last_seen_at'           => $provider->last_seen_at,
+            'category'               => $provider->category,
+            'services'               => $provider->services,
+            'business_license'       => $provider->business_license,
+            'insurance_certificate'  => $provider->insurance_certificate,
+            'certifications'         => $provider->certifications,
+        ];
     }
 
     /**

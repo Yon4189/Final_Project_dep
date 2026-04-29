@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Models\Booking;
 use App\Models\Review;
 use App\Models\Wallet;
+use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -149,46 +150,42 @@ class ProviderDashboardController extends Controller
             }
             $providerID = $provider->providerID;
 
-            $currentMonth = Carbon::now()->month;
-            $currentYear = Carbon::now()->year;
-            $startOfWeek = Carbon::now()->startOfWeek();
-            $lastMonth = Carbon::now()->subMonth();
+            // Get the provider's wallet
+            $wallet = Wallet::where('providerID', $providerID)->first();
+            $availableBalance = $wallet ? (float)$wallet->available_balance : 0.0;
+            $pendingBalance   = $wallet ? (float)$wallet->pending_balance   : 0.0;
+            $walletID         = $wallet ? $wallet->walletID : null;
 
-            $totalEarnings = Transaction::whereHas('booking', function($q) use ($providerID) {
-                $q->where('providerID', $providerID);
-            })->sum('netAmount');
+            // Use WalletTransaction credits for period breakdowns — these reflect
+            // actual money credited to the provider's wallet, matching what they
+            // see when they open the earnings screen.
+            $baseQuery = function() use ($walletID) {
+                return \App\Models\WalletTransaction::where('walletID', $walletID)
+                    ->where('type', 'credit');
+            };
 
-            $thisMonthEarnings = Transaction::whereHas('booking', function($q) use ($providerID) {
-                $q->where('providerID', $providerID);
-            })->whereMonth('created_at', $currentMonth)->whereYear('created_at', $currentYear)->sum('netAmount');
-
-            $thisWeekEarnings = Transaction::whereHas('booking', function($q) use ($providerID) {
-                $q->where('providerID', $providerID);
-            })->where('created_at', '>=', $startOfWeek)->sum('netAmount');
-
-            $lastMonthEarnings = Transaction::whereHas('booking', function($q) use ($providerID) {
-                $q->where('providerID', $providerID);
-            })->whereMonth('created_at', $lastMonth->month)->whereYear('created_at', $lastMonth->year)->sum('netAmount');
+            $todayEarnings     = $walletID ? (float)$baseQuery()->whereDate('created_at', today())->sum('amount') : 0.0;
+            $thisWeekEarnings  = $walletID ? (float)$baseQuery()->where('created_at', '>=', Carbon::now()->startOfWeek())->sum('amount') : 0.0;
+            $thisMonthEarnings = $walletID ? (float)$baseQuery()->whereMonth('created_at', Carbon::now()->month)->whereYear('created_at', Carbon::now()->year)->sum('amount') : 0.0;
+            $lastMonthEarnings = $walletID ? (float)$baseQuery()->whereMonth('created_at', Carbon::now()->subMonth()->month)->whereYear('created_at', Carbon::now()->subMonth()->year)->sum('amount') : 0.0;
+            $totalEarnings     = $walletID ? (float)$baseQuery()->sum('amount') : 0.0;
 
             $completedJobsCount = Booking::where('providerID', $providerID)
                 ->whereIn('status', ['completed', 'service_confirmed', 'waiting_customer_confirmation'])
                 ->count();
 
-            // Get actual wallet balance
-            $wallet = Wallet::where('providerID', $providerID)->first();
-            $availableBalance = $wallet ? (float)$wallet->available_balance : 0.0;
-            $pendingBalance = $wallet ? (float)$wallet->pending_balance : 0.0;
-
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'totalEarnings' => (float)$totalEarnings,
-                    'thisMonth' => (float)$thisMonthEarnings,
-                    'thisWeek' => (float)$thisWeekEarnings,
-                    'lastMonth' => (float)$lastMonthEarnings,
-                    'availableForWithdrawal' => $availableBalance, // Use actual wallet balance
-                    'pendingClearance' => $pendingBalance, // Use actual pending balance
-                    'completedJobs' => $completedJobsCount
+                    'totalEarnings'          => $totalEarnings,
+                    'today'                  => $todayEarnings,
+                    'thisWeek'               => $thisWeekEarnings,
+                    'thisMonth'              => $thisMonthEarnings,
+                    'lastMonth'              => $lastMonthEarnings,
+                    'availableForWithdrawal' => $availableBalance,
+                    'pendingClearance'       => $pendingBalance,
+                    'completedJobs'          => $completedJobsCount,
+                    'currency'               => 'ETB',
                 ]
             ]);
         } catch (\Exception $e) {

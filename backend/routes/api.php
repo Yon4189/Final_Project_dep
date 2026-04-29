@@ -211,11 +211,13 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
     Route::post('/logout',              [OnlineStatusController::class, 'providerLogout']);
     Route::post('/logout-all',          [ServiceProviderAuthController::class, 'logoutAllDevices']);
     Route::post('/heartbeat',           [OnlineStatusController::class, 'providerHeartbeat']);
+    Route::post('/heartbeat/offline',   [OnlineStatusController::class, 'providerMarkOffline']);
     Route::get('/profile',              [ServiceProviderAuthController::class, 'profile']);
     Route::post('/profile/update',      [ServiceProviderAuthController::class, 'updateProfile']);
     Route::post('/profile/password',    [ServiceProviderAuthController::class, 'changePassword']);
     Route::post('/location/update',     [ServiceProviderAuthController::class, 'updateLocation']);
     Route::post('/push-token',          [ServiceProviderAuthController::class, 'updatePushToken']);
+    Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
     Route::get('/bank-details',         [ServiceProviderAuthController::class, 'getBankDetails']);
     Route::put('/bank-details',         [ServiceProviderAuthController::class, 'updateBankDetails']);
 

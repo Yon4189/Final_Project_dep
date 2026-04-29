@@ -35,6 +35,28 @@ class OnlineStatusController extends Controller
             'message' => 'Heartbeat received'
         ]);
     }
+
+    /**
+     * Provider explicitly marks themselves offline (app backgrounded / unmounted)
+     */
+    public function providerMarkOffline(Request $request)
+    {
+        $provider = auth()->guard('provider')->user();
+
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        Cache::forget("provider_online_{$provider->providerID}");
+        $provider->is_online = false;
+        $provider->last_seen_at = now();
+        $provider->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Marked offline'
+        ]);
+    }
     
     /**
      * Customer sends heartbeat

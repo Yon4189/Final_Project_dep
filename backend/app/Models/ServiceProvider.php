@@ -64,7 +64,10 @@ class ServiceProvider extends Authenticatable
         'certifications',
         'hourly_rate',
         'total_earned',
-        'success_rate'
+        'success_rate',
+        'is_available',
+        'is_online',
+        'last_seen_at',
     ];
 
     protected $hidden = [
@@ -80,6 +83,9 @@ class ServiceProvider extends Authenticatable
         'current_longitude' => 'decimal:8',
         'rating' => 'float',
         'certifications' => 'array',
+        'is_available' => 'boolean',
+        'is_online' => 'boolean',
+        'last_seen_at' => 'datetime',
     ];
 
     /**
