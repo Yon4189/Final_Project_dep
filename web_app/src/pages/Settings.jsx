@@ -5,7 +5,8 @@ import api from '../api/axios';
 import {
   Settings as SettingsIcon, Save, Activity, ShieldCheck,
   Percent, Globe, Zap, Database, Server, AlertTriangle,
-  Image as ImageIcon, Type, UploadCloud, RefreshCcw, Loader2, Download
+  Image as ImageIcon, Type, UploadCloud, RefreshCcw, Loader2, Download, MapPin, Trash2, Plus, Pencil, Check, X,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const Settings = () => {
@@ -33,6 +34,17 @@ const Settings = () => {
     systemName: 'HB Service Finder Admin',
     logoUrl: null,
   });
+
+  // 3. Service Cities
+  const [cities, setCities] = useState([]);
+  const [newCityName, setNewCityName] = useState('');
+  const [isAddingCity, setIsAddingCity] = useState(false);
+  const [isLoadingCities, setIsLoadingCities] = useState(false);
+  const [editingCityId, setEditingCityId] = useState(null);
+  const [editCityName, setEditCityName] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Fetch existing settings from backend
   const { data: existingSettings, isLoading: isLoadingSettings } = useQuery({
@@ -132,6 +144,115 @@ const Settings = () => {
     const interval = setInterval(checkLatency, 15000); // Check every 15s
     return () => clearInterval(interval);
   }, []);
+
+  // --- CITY MANAGEMENT LOGIC ---
+  const fetchCities = async () => {
+    setIsLoadingCities(true);
+    try {
+      const response = await api.get('/admin/cities');
+      if (response.data.success) {
+        setCities(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch cities:', err);
+    } finally {
+      setIsLoadingCities(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'cities') {
+      fetchCities();
+    }
+  }, [activeTab]);
+
+  const handleAddCity = async () => {
+    if (!newCityName.trim()) return;
+    setIsAddingCity(true);
+    try {
+      const response = await api.post('/admin/cities', {
+        name: newCityName,
+        status: 'Active'
+      });
+      if (response.data.success) {
+        setCities([...cities, response.data.data]);
+        setNewCityName('');
+        alert('City added successfully!');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add city');
+    } finally {
+      setIsAddingCity(false);
+    }
+  };
+
+  const toggleCityStatus = async (city) => {
+    const newStatus = city.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      const response = await api.put(`/admin/cities/${city.cityID}`, {
+        status: newStatus
+      });
+      if (response.data.success) {
+        setCities(cities.map(c => c.cityID === city.cityID ? { ...c, status: newStatus } : c));
+      }
+    } catch (err) {
+      alert('Failed to update city status');
+    }
+  };
+
+  const handleDeleteCity = async (cityID) => {
+    if (!window.confirm('Are you sure you want to delete this city?')) return;
+    try {
+      const response = await api.delete(`/admin/cities/${cityID}`);
+      if (response.data.success) {
+        setCities(cities.filter(c => c.cityID !== cityID));
+        alert('City deleted successfully!');
+      }
+    } catch (err) {
+      alert('Failed to delete city');
+    }
+  };
+
+  const handleStartEdit = (city) => {
+    setEditingCityId(city.cityID);
+    setEditCityName(city.name);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCityId(null);
+    setEditCityName('');
+  };
+
+  const handleSaveEdit = async (cityID) => {
+    if (!editCityName.trim()) return;
+    setIsSavingEdit(true);
+    try {
+      const response = await api.put(`/admin/cities/${cityID}`, {
+        name: editCityName
+      });
+      if (response.data.success) {
+        setCities(cities.map(c => c.cityID === cityID ? { ...c, name: editCityName } : c));
+        setEditingCityId(null);
+        setEditCityName('');
+        alert('City updated successfully!');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update city');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = cities.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(cities.length / itemsPerPage);
+
+  const paginate = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    setCurrentPage(pageNumber);
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -560,10 +681,10 @@ const Settings = () => {
               {t('set_tab_branding')}
             </button>
             <button
-              onClick={() => setActiveTab('payment')}
-              className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'payment' ? 'bg-admin-card text-admin-accent shadow-sm ring-1 ring-admin-border dark:ring-slate-800' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
+              onClick={() => setActiveTab('cities')}
+              className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'cities' ? 'bg-admin-card text-admin-accent shadow-sm ring-1 ring-admin-border dark:ring-slate-800' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
-              Split Payment
+              Cities
             </button>
           </div>
 
@@ -670,97 +791,241 @@ const Settings = () => {
                     </button>
                   </div>
                 </div>
-              </div>
-            ) : activeTab === 'payment' ? (
-              /* --- SPLIT PAYMENT TAB --- */
-              <div className="p-10 space-y-10">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
-                    <Percent size={16} className="text-admin-accent" /> Split Payment Configuration
-                  </h3>
-                  <p className="text-xs text-slate-400">Configure the deposit percentage customers pay upfront when booking a service. The remaining balance is due after service completion.</p>
-                </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-6 space-y-2">
-                  <p className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">How Split Payment Works</p>
-                  <ul className="text-xs text-blue-600 dark:text-blue-300 space-y-1 list-disc list-inside">
-                    <li>Customer pays <strong>{depositPercentage}%</strong> deposit when booking is accepted</li>
-                    <li>Customer pays remaining <strong>{100 - depositPercentage}%</strong> after service completion (within 48 hours)</li>
-                    <li>Provider receives 50% immediately after final payment, 50% held for 3 days</li>
-                    <li>Overdue payments (7+ days) trigger automatic dispute and account freeze</li>
-                  </ul>
-                </div>
+                {/* --- INTEGRATED SPLIT PAYMENT SECTION --- */}
+                <div className="border-t border-admin-border pt-10 space-y-10">
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
+                      <Percent size={16} className="text-admin-accent" /> Split Payment Configuration
+                    </h3>
+                    <p className="text-xs text-slate-400">Configure the deposit percentage customers pay upfront when booking a service.</p>
+                  </div>
 
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                    <Percent size={14} className="text-admin-accent" /> Deposit Percentage
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="number"
-                      min="1"
-                      max="99"
-                      className="w-40 border-2 border-admin-border bg-admin-card rounded-2xl py-4 px-6 focus:outline-none focus:border-admin-accent font-black text-2xl text-admin-text transition-all shadow-sm text-center"
-                      value={depositPercentage}
-                      onChange={(e) => setDepositPercentage(Math.min(99, Math.max(1, parseInt(e.target.value) || 1)))}
-                    />
-                    <span className="text-2xl font-black text-admin-text">%</span>
-                    <div className="flex-1 bg-admin-card border border-admin-border rounded-2xl p-4">
-                      <div className="flex justify-between text-xs font-bold text-admin-text-muted mb-2">
-                        <span>Deposit</span>
-                        <span>Remaining</span>
+                  <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-6 space-y-2">
+                    <p className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">How Split Payment Works</p>
+                    <ul className="text-xs text-blue-600 dark:text-blue-300 space-y-1 list-disc list-inside">
+                      <li>Customer pays <strong>{depositPercentage}%</strong> deposit upfront</li>
+                      <li>Remaining <strong>{100 - depositPercentage}%</strong> due after service completion</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
+                      <Percent size={14} className="text-admin-accent" /> Deposit Percentage
+                    </label>
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="number"
+                          min="1"
+                          max="99"
+                          className="w-32 border-2 border-admin-border bg-admin-card rounded-2xl py-4 px-6 focus:outline-none focus:border-admin-accent font-black text-2xl text-admin-text transition-all shadow-sm text-center"
+                          value={depositPercentage}
+                          onChange={(e) => setDepositPercentage(Math.min(99, Math.max(1, parseInt(e.target.value) || 1)))}
+                        />
+                        <span className="text-2xl font-black text-admin-text">%</span>
                       </div>
-                      <div className="h-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex">
-                        <div className="bg-blue-500 transition-all duration-300" style={{ width: `${depositPercentage}%` }} />
-                        <div className="bg-green-400 flex-1" />
-                      </div>
-                      <div className="flex justify-between text-xs font-black mt-2">
-                        <span className="text-blue-500">{depositPercentage}% upfront</span>
-                        <span className="text-green-500">{100 - depositPercentage}% after service</span>
+                      <div className="flex-1 w-full bg-admin-card border border-admin-border rounded-2xl p-4">
+                        <div className="h-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex">
+                          <div className="bg-blue-500 transition-all duration-300" style={{ width: `${depositPercentage}%` }} />
+                          <div className="bg-green-400 flex-1" />
+                        </div>
+                        <div className="flex justify-between text-[10px] font-black mt-2 uppercase tracking-tighter">
+                          <span className="text-blue-500">{depositPercentage}% Upfront</span>
+                          <span className="text-green-500">{100 - depositPercentage}% Post-Service</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 italic">Must be between 1% and 99%. Changes apply to new bookings only.</p>
+
+                  <button
+                    onClick={handleSaveDeposit}
+                    disabled={isSavingDeposit}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isSavingDeposit ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    {depositSaved ? '✓ Saved!' : 'Update Deposit Rules'}
+                  </button>
+
+                  {/* Overdue Payment Management */}
+                  <div className="border-t border-admin-border pt-8 space-y-4">
+                    <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
+                      <AlertTriangle size={16} className="text-red-500" /> Overdue Payment Management
+                    </h3>
+                    {stats?.overdue_bookings?.length > 0 ? (
+                      <div className="space-y-3">
+                        {stats.overdue_bookings.map((booking) => (
+                          <div key={booking.id} className="flex items-center justify-between bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-4">
+                            <div>
+                              <p className="text-xs font-black text-admin-text">Booking #{booking.id}</p>
+                              <p className="text-[10px] text-slate-400">{booking.customer_name} • {booking.days_overdue} days overdue</p>
+                            </div>
+                            <span className="text-red-500 font-black text-xs">{booking.amount_owed} ETB</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-6 text-center">
+                        <p className="text-xs font-black text-green-600 uppercase tracking-widest">All payments up to date</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                <button
-                  onClick={handleSaveDeposit}
-                  disabled={isSavingDeposit}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isSavingDeposit ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  {depositSaved ? '✓ Saved!' : 'Save Deposit Percentage'}
-                </button>
-
-                {/* Overdue Payment Management */}
-                <div className="border-t border-admin-border pt-8 space-y-4">
+              </div>
+            ) : activeTab === 'cities' ? (
+              /* --- CITIES MANAGEMENT TAB --- */
+              <div className="p-10 space-y-10">
+                <div className="space-y-4">
                   <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-red-500" /> Overdue Payment Management
+                    <MapPin size={16} className="text-admin-accent" /> Service Cities Management
                   </h3>
-                  <p className="text-xs text-slate-400">Bookings where the customer has not paid the final amount within 7 days of service completion.</p>
-                  {stats?.overdue_bookings?.length > 0 ? (
-                    <div className="space-y-3">
-                      {stats.overdue_bookings.map((booking) => (
-                        <div key={booking.id} className="flex items-center justify-between bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-4">
-                          <div>
-                            <p className="text-xs font-black text-admin-text">Booking #{booking.id}</p>
-                            <p className="text-[10px] text-slate-400">{booking.customer_name} • {booking.days_overdue} days overdue</p>
-                            <p className="text-[10px] text-red-500 font-bold">{booking.amount_owed} ETB owed</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${booking.account_frozen ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-                              {booking.account_frozen ? 'Frozen' : 'Active'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-6 text-center">
-                      <p className="text-xs font-black text-green-600">No overdue payments</p>
-                    </div>
-                  )}
+                  <p className="text-xs text-slate-400">Add or manage the cities where your services are available.</p>
                 </div>
+
+                <div className="flex gap-4">
+                  <div className="flex-1 relative group">
+                    <input
+                      type="text"
+                      className="w-full border-2 border-admin-border bg-admin-card rounded-2xl py-5 px-6 focus:outline-none focus:border-admin-accent font-black text-lg text-admin-text transition-all shadow-sm"
+                      placeholder="Enter city name (e.g. Addis Ababa)"
+                      value={newCityName}
+                      onChange={(e) => setNewCityName(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddCity()}
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddCity}
+                    disabled={isAddingCity || !newCityName.trim()}
+                    className="bg-admin-accent text-white px-8 py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-blue-600 active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-blue-200/50 dark:shadow-none"
+                  >
+                    {isAddingCity ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                    Add City
+                  </button>
+                </div>
+
+                <div className="border border-admin-border rounded-3xl overflow-hidden bg-admin-card/30">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-admin-card border-b border-admin-border">
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">City Name</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-admin-border">
+                      {isLoadingCities ? (
+                        <tr>
+                          <td colSpan="3" className="px-8 py-10 text-center">
+                            <Loader2 size={24} className="animate-spin text-admin-accent mx-auto" />
+                          </td>
+                        </tr>
+                      ) : cities.length === 0 ? (
+                        <tr>
+                          <td colSpan="3" className="px-8 py-10 text-center text-slate-400 font-bold italic">
+                            No service cities found.
+                          </td>
+                        </tr>
+                      ) : (
+                        currentItems.map((city) => (
+                          <tr key={city.cityID} className="group hover:bg-admin-card/50 transition-colors">
+                            <td className="px-8 py-5">
+                              {editingCityId === city.cityID ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    className="bg-admin-card border-2 border-admin-accent/50 rounded-xl px-4 py-2 font-black text-admin-text uppercase italic focus:outline-none focus:border-admin-accent shadow-sm"
+                                    value={editCityName}
+                                    onChange={(e) => setEditCityName(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleSaveEdit(city.cityID)}
+                                    className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                                    disabled={isSavingEdit}
+                                  >
+                                    {isSavingEdit ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                  </button>
+                                  <button
+                                    onClick={handleCancelEdit}
+                                    className="p-2 text-slate-400 hover:bg-slate-500/10 rounded-lg transition-all"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="font-black text-admin-text uppercase italic">{city.name}</span>
+                              )}
+                            </td>
+                            <td className="px-8 py-5">
+                              <button
+                                onClick={() => toggleCityStatus(city)}
+                                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${city.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}`}
+                              >
+                                {city.status}
+                              </button>
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <div className="flex justify-end gap-2">
+                                {editingCityId !== city.cityID && (
+                                  <button
+                                    onClick={() => handleStartEdit(city)}
+                                    className="p-3 text-slate-300 hover:text-admin-accent hover:bg-admin-accent/10 rounded-xl transition-all active:scale-90"
+                                  >
+                                    <Pencil size={18} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteCity(city.cityID)}
+                                  className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all active:scale-90"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination UI */}
+                {!isLoadingCities && cities.length > itemsPerPage && (
+                  <div className="flex items-center justify-between px-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, cities.length)} of {cities.length} cities
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-xl bg-admin-card border border-admin-border text-slate-400 hover:text-admin-accent disabled:opacity-30 disabled:hover:text-slate-400 transition-all active:scale-90"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      
+                      <div className="flex gap-1">
+                        {[...Array(totalPages)].map((_, i) => (
+                          <button
+                            key={i + 1}
+                            onClick={() => paginate(i + 1)}
+                            className={`w-10 h-10 rounded-xl text-xs font-black transition-all active:scale-90 ${currentPage === i + 1 ? 'bg-admin-accent text-white shadow-lg shadow-blue-200/50 dark:shadow-none' : 'bg-admin-card border border-admin-border text-slate-500 hover:border-admin-accent hover:text-admin-accent'}`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-xl bg-admin-card border border-admin-border text-slate-400 hover:text-admin-accent disabled:opacity-30 disabled:hover:text-slate-400 transition-all active:scale-90"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               /* --- BRANDING TAB (LOGO & NAME) --- */

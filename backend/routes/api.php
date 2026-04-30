@@ -380,6 +380,12 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     // ── Admin Settings (split payment) ────────────────────────────────────────
     Route::get('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'getDepositPercentage']);
     Route::put('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'updateDepositPercentage']);
+
+    // ── Service Cities Management ─────────────────────────────────────────────
+    Route::get('/cities',       [ServiceCityController::class, 'index']);
+    Route::post('/cities',      [ServiceCityController::class, 'store']);
+    Route::put('/cities/{id}',  [ServiceCityController::class, 'update']);
+    Route::delete('/cities/{id}', [ServiceCityController::class, 'destroy']);
 });
 
 // ==================== CHAT ROUTES ====================
