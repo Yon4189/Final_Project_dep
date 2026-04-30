@@ -177,10 +177,10 @@ const Settings = () => {
       if (response.data.success) {
         setCities([...cities, response.data.data]);
         setNewCityName('');
-        alert('City added successfully!');
+        alert(t('set_cities_added'));
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add city');
+      alert(err.response?.data?.message || t('set_cities_add_failed'));
     } finally {
       setIsAddingCity(false);
     }
@@ -196,20 +196,20 @@ const Settings = () => {
         setCities(cities.map(c => c.cityID === city.cityID ? { ...c, status: newStatus } : c));
       }
     } catch (err) {
-      alert('Failed to update city status');
+      alert(t('set_cities_status_failed'));
     }
   };
 
   const handleDeleteCity = async (cityID) => {
-    if (!window.confirm('Are you sure you want to delete this city?')) return;
+    if (!window.confirm(t('set_cities_delete_confirm'))) return;
     try {
       const response = await api.delete(`/admin/cities/${cityID}`);
       if (response.data.success) {
         setCities(cities.filter(c => c.cityID !== cityID));
-        alert('City deleted successfully!');
+        alert(t('set_cities_deleted'));
       }
     } catch (err) {
-      alert('Failed to delete city');
+      alert(t('set_cities_delete_failed'));
     }
   };
 
@@ -234,10 +234,10 @@ const Settings = () => {
         setCities(cities.map(c => c.cityID === cityID ? { ...c, name: editCityName } : c));
         setEditingCityId(null);
         setEditCityName('');
-        alert('City updated successfully!');
+        alert(t('set_cities_updated'));
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update city');
+      alert(err.response?.data?.message || t('set_cities_update_failed'));
     } finally {
       setIsSavingEdit(false);
     }
@@ -684,7 +684,7 @@ const Settings = () => {
               onClick={() => setActiveTab('cities')}
               className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'cities' ? 'bg-admin-card text-admin-accent shadow-sm ring-1 ring-admin-border dark:ring-slate-800' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
             >
-              Cities
+              {t('set_tab_cities')}
             </button>
           </div>
 
@@ -796,22 +796,22 @@ const Settings = () => {
                 <div className="border-t border-admin-border pt-10 space-y-10">
                   <div className="space-y-2">
                     <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
-                      <Percent size={16} className="text-admin-accent" /> Split Payment Configuration
+                      <Percent size={16} className="text-admin-accent" /> {t('set_split_title')}
                     </h3>
-                    <p className="text-xs text-slate-400">Configure the deposit percentage customers pay upfront when booking a service.</p>
+                    <p className="text-xs text-slate-400">{t('set_split_desc')}</p>
                   </div>
 
                   <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-6 space-y-2">
-                    <p className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">How Split Payment Works</p>
+                    <p className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">{t('set_split_how')}</p>
                     <ul className="text-xs text-blue-600 dark:text-blue-300 space-y-1 list-disc list-inside">
-                      <li>Customer pays <strong>{depositPercentage}%</strong> deposit upfront</li>
-                      <li>Remaining <strong>{100 - depositPercentage}%</strong> due after service completion</li>
+                      <li>{t('set_split_upfront_desc', { percent: depositPercentage })}</li>
+                      <li>{t('set_split_post_desc', { percent: 100 - depositPercentage })}</li>
                     </ul>
                   </div>
 
                   <div className="space-y-4">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                      <Percent size={14} className="text-admin-accent" /> Deposit Percentage
+                      <Percent size={14} className="text-admin-accent" /> {t('set_split_label')}
                     </label>
                     <div className="flex flex-col md:flex-row items-center gap-6">
                       <div className="flex items-center gap-4">
@@ -831,8 +831,8 @@ const Settings = () => {
                           <div className="bg-green-400 flex-1" />
                         </div>
                         <div className="flex justify-between text-[10px] font-black mt-2 uppercase tracking-tighter">
-                          <span className="text-blue-500">{depositPercentage}% Upfront</span>
-                          <span className="text-green-500">{100 - depositPercentage}% Post-Service</span>
+                          <span className="text-blue-500">{depositPercentage}% {t('set_split_upfront')}</span>
+                          <span className="text-green-500">{100 - depositPercentage}% {t('set_split_post')}</span>
                         </div>
                       </div>
                     </div>
@@ -844,13 +844,13 @@ const Settings = () => {
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
                   >
                     {isSavingDeposit ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                    {depositSaved ? '✓ Saved!' : 'Update Deposit Rules'}
+                    {depositSaved ? `✓ ${t('set_split_saved')}` : t('set_split_update')}
                   </button>
 
                   {/* Overdue Payment Management */}
                   <div className="border-t border-admin-border pt-8 space-y-4">
                     <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
-                      <AlertTriangle size={16} className="text-red-500" /> Overdue Payment Management
+                      <AlertTriangle size={16} className="text-red-500" /> {t('set_overdue_title')}
                     </h3>
                     {stats?.overdue_bookings?.length > 0 ? (
                       <div className="space-y-3">
@@ -858,7 +858,7 @@ const Settings = () => {
                           <div key={booking.id} className="flex items-center justify-between bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-4">
                             <div>
                               <p className="text-xs font-black text-admin-text">Booking #{booking.id}</p>
-                              <p className="text-[10px] text-slate-400">{booking.customer_name} • {booking.days_overdue} days overdue</p>
+                              <p className="text-[10px] text-slate-400">{booking.customer_name} • {t('set_overdue_days', { count: booking.days_overdue })}</p>
                             </div>
                             <span className="text-red-500 font-black text-xs">{booking.amount_owed} ETB</span>
                           </div>
@@ -866,7 +866,7 @@ const Settings = () => {
                       </div>
                     ) : (
                       <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-6 text-center">
-                        <p className="text-xs font-black text-green-600 uppercase tracking-widest">All payments up to date</p>
+                        <p className="text-xs font-black text-green-600 uppercase tracking-widest">{t('set_overdue_up_to_date')}</p>
                       </div>
                     )}
                   </div>
@@ -877,9 +877,9 @@ const Settings = () => {
               <div className="p-10 space-y-10">
                 <div className="space-y-4">
                   <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
-                    <MapPin size={16} className="text-admin-accent" /> Service Cities Management
+                    <MapPin size={16} className="text-admin-accent" /> {t('set_cities_title')}
                   </h3>
-                  <p className="text-xs text-slate-400">Add or manage the cities where your services are available.</p>
+                  <p className="text-xs text-slate-400">{t('set_cities_desc')}</p>
                 </div>
 
                 <div className="flex gap-4">
@@ -887,7 +887,7 @@ const Settings = () => {
                     <input
                       type="text"
                       className="w-full border-2 border-admin-border bg-admin-card rounded-2xl py-5 px-6 focus:outline-none focus:border-admin-accent font-black text-lg text-admin-text transition-all shadow-sm"
-                      placeholder="Enter city name (e.g. Addis Ababa)"
+                      placeholder={t('set_cities_placeholder')}
                       value={newCityName}
                       onChange={(e) => setNewCityName(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleAddCity()}
@@ -899,7 +899,7 @@ const Settings = () => {
                     className="bg-admin-accent text-white px-8 py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-blue-600 active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-blue-200/50 dark:shadow-none"
                   >
                     {isAddingCity ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                    Add City
+                    {t('set_cities_add')}
                   </button>
                 </div>
 
@@ -907,9 +907,9 @@ const Settings = () => {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-admin-card border-b border-admin-border">
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">City Name</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('set_cities_col_name')}</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('set_cities_col_status')}</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">{t('set_cities_col_actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-admin-border">
@@ -922,7 +922,7 @@ const Settings = () => {
                       ) : cities.length === 0 ? (
                         <tr>
                           <td colSpan="3" className="px-8 py-10 text-center text-slate-400 font-bold italic">
-                            No service cities found.
+                            {t('set_cities_empty')}
                           </td>
                         </tr>
                       ) : (
@@ -961,7 +961,7 @@ const Settings = () => {
                                 onClick={() => toggleCityStatus(city)}
                                 className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${city.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}`}
                               >
-                                {city.status}
+                                {t(city.status === 'Active' ? 'serv_status_active' : 'serv_status_inactive')}
                               </button>
                             </td>
                             <td className="px-8 py-5 text-right">
@@ -993,7 +993,7 @@ const Settings = () => {
                 {!isLoadingCities && cities.length > itemsPerPage && (
                   <div className="flex items-center justify-between px-2">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, cities.length)} of {cities.length} cities
+                      {t('set_cities_showing', { start: indexOfFirstItem + 1, end: Math.min(indexOfLastItem, cities.length), total: cities.length })}
                     </p>
                     <div className="flex items-center gap-2">
                       <button
