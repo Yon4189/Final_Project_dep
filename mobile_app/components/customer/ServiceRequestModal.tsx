@@ -251,25 +251,13 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
   const checkAuthAndLoadUser = async () => {
     try {
-      // Step 1: Check in-memory token first (fast path for dashboard users)
-      let authenticated = api.isAuthenticated();
+      console.log('[ServiceRequestModal] Checking auth...');
+      // Wait for the API service to finish loading tokens from storage
+      await api.waitForReady();
       
-      if (!authenticated) {
-        // Step 2: In-memory token not loaded yet — read directly from storage
-        // This handles the race condition where loadStoredToken() hasn't finished
-        const { Platform } = require('react-native');
-        let storedToken: string | null = null;
-        
-        if (Platform.OS === 'web') {
-          storedToken = localStorage.getItem('customer_token');
-        } else {
-          const SecureStore = require('expo-secure-store');
-          storedToken = await SecureStore.getItemAsync('customer_token');
-        }
-        
-        authenticated = !!storedToken;
-      }
-
+      const authenticated = api.isAuthenticated();
+      console.log('[ServiceRequestModal] Auth result:', { authenticated });
+      
       setIsAuthenticated(authenticated);
       
       if (authenticated) {

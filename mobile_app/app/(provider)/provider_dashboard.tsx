@@ -154,7 +154,7 @@ export default function ProviderDashboard() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/notifications')}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(provider)/notifications')}>
             <Ionicons name="notifications-outline" size={24} color={colors.surface} />
             {unreadNotificationCount > 0 && (
               <View style={styles.badge}>
