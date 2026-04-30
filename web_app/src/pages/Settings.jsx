@@ -559,12 +559,34 @@ const Settings = () => {
           api.get('/admin/customers'),
         ]);
 
-        const stats     = statsRes.status === 'fulfilled'     ? (statsRes.value.data.data     || statsRes.value.data)     : {};
+        // /admin/stats returns: { providers, customers, pending, active, suspended, rejected, revenue }
+        const rawStats  = statsRes.status === 'fulfilled'     ? (statsRes.value.data.data     || statsRes.value.data)     : {};
         const bkData    = bookingsRes.status === 'fulfilled'  ? (bookingsRes.value.data.data  || []) : [];
+        // /admin/payments/stats returns: { total_payments, successful_payments, failed_payments, pending_payments, total_revenue, platform_revenue }
         const payStats  = paymentsRes.status === 'fulfilled'  ? (paymentsRes.value.data.data  || paymentsRes.value.data)  : {};
-        const dispStats = disputesRes.status === 'fulfilled'  ? (disputesRes.value.data.data  || disputesRes.value.data)  : {};
+        // /admin/disputes/stats returns: { data: { total, by_status: { pending, under_review, resolved, ... } } }
+        const rawDisp   = disputesRes.status === 'fulfilled'  ? (disputesRes.value.data.data  || disputesRes.value.data)  : {};
         const providers = providersRes.status === 'fulfilled' ? (providersRes.value.data.data || []) : [];
         const customers = customersRes.status === 'fulfilled' ? (customersRes.value.data.data || []) : [];
+
+        // Normalise stats fields to what the report template uses
+        const stats = {
+          total_bookings:    rawStats.total_bookings    ?? 0,
+          completed_bookings:rawStats.completed_bookings?? 0,
+          total_customers:   rawStats.customers         ?? customers.length,
+          total_providers:   rawStats.providers         ?? providers.length,
+          pending_providers: rawStats.pending           ?? 0,
+          active_disputes:   rawStats.active_disputes   ?? 0,
+          total_revenue:     rawStats.revenue           ?? 0,
+        };
+
+        // Normalise dispute stats (nested by_status vs flat)
+        const dispStats = {
+          total:       rawDisp.total                    ?? 0,
+          pending:     rawDisp.by_status?.pending       ?? rawDisp.pending       ?? 0,
+          under_review:rawDisp.by_status?.under_review  ?? rawDisp.under_review  ?? 0,
+          resolved:    rawDisp.by_status?.resolved      ?? rawDisp.resolved      ?? 0,
+        };
 
         const recentBookings = Array.isArray(bkData) ? bkData.slice(0, 10) : [];
         const statusBadge = (s) => {
@@ -643,10 +665,10 @@ const Settings = () => {
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-label">Total Bookings</div><div class="kpi-val kpi-blue">${fmt(stats.total_bookings)}</div></div>
     <div class="kpi"><div class="kpi-label">Completed</div><div class="kpi-val kpi-green">${fmt(stats.completed_bookings)}</div></div>
-    <div class="kpi"><div class="kpi-label">Total Customers</div><div class="kpi-val kpi-blue">${fmt(stats.total_customers ?? customers.length)}</div></div>
-    <div class="kpi"><div class="kpi-label">Total Providers</div><div class="kpi-val kpi-purple">${fmt(stats.total_providers ?? providers.length)}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Customers</div><div class="kpi-val kpi-blue">${fmt(stats.total_customers)}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Providers</div><div class="kpi-val kpi-purple">${fmt(stats.total_providers)}</div></div>
     <div class="kpi"><div class="kpi-label">Pending Providers</div><div class="kpi-val kpi-amber">${fmt(stats.pending_providers)}</div></div>
-    <div class="kpi"><div class="kpi-label">Open Disputes</div><div class="kpi-val kpi-red">${fmt(dispStats.pending ?? stats.active_disputes)}</div></div>
+    <div class="kpi"><div class="kpi-label">Open Disputes</div><div class="kpi-val kpi-red">${fmt(dispStats.pending)}</div></div>
   </div>
 </div>
 
@@ -655,9 +677,16 @@ const Settings = () => {
   <div class="section-title"><span></span>Payment Analytics</div>
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-label">Total Revenue</div><div class="kpi-val kpi-green">${fmt(payStats.total_revenue ?? stats.total_revenue)}</div><div class="kpi-unit">ETB</div></div>
-    <div class="kpi"><div class="kpi-label">Total Volume</div><div class="kpi-val kpi-blue">${fmt(payStats.total_volume ?? stats.total_payments)}</div><div class="kpi-unit">ETB</div></div>
-    <div class="kpi"><div class="kpi-label">Pending Payments</div><div class="kpi-val kpi-amber">${fmt(payStats.pending_payments)}</div></div>
-    <div class="kpi"><div class="kpi-label">Success Rate</div><div class="kpi-val kpi-green">${payStats.success_rate ?? '—'}${payStats.success_rate ? '%' : ''}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Volume (Paid)</div><div class="kpi-val kpi-blue">${fmt(payStats.total_revenue ?? 0)}</div><div class="kpi-unit">ETB</div></div>
+    <div class="kpi"><div class="kpi-label">Pending Payments</div><div class="kpi-val kpi-amber">${fmt(payStats.pending_payments ?? 0)}</div></div>
+    <div class="kpi">
+      <div class="kpi-label">Success Rate</div>
+      <div class="kpi-val kpi-green">
+        ${payStats.total_payments > 0
+          ? Math.round((payStats.successful_payments / payStats.total_payments) * 100) + '%'
+          : (payStats.successful_payments > 0 ? '100%' : '—')}
+      </div>
+    </div>
   </div>
 </div>
 
@@ -679,16 +708,25 @@ ${recentBookings.length > 0 ? `
   <table>
     <thead><tr><th>#</th><th>Customer</th><th>Provider</th><th>Service</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
     <tbody>
-      ${recentBookings.map((b, i) => `
+      ${recentBookings.map((b, i) => {
+        // Backend getAllBookings() maps: customer_name, provider_name, service_type/service_title, price, status, created_at
+        const customer  = b.customer_name  || b.customer  || '—';
+        const provider  = b.provider_name  || b.provider  || '—';
+        const service   = b.service_type   || b.service_title || b.service_name || b.service || '—';
+        const amount    = b.price          || b.agreed_price  || b.total_price  || b.amount  || 0;
+        const status    = (b.status || '').toLowerCase();
+        const dateStr   = b.created_at ? new Date(b.created_at).toLocaleDateString('en-US') : '—';
+        return `
         <tr style="${i%2?'background:#fafbfc':''}">
-          <td style="font-weight:800;color:#94a3b8">#${b.id}</td>
-          <td style="font-weight:600">${b.customer_name || b.customer || '—'}</td>
-          <td style="font-weight:600">${b.provider_name || b.provider || '—'}</td>
-          <td style="color:#64748b">${b.service_name || b.service || '—'}</td>
-          <td style="font-weight:800">${fmt(b.total_price || b.amount)} <span style="font-size:10px;color:#94a3b8">ETB</span></td>
-          <td>${statusBadge(b.status)}</td>
-          <td style="color:#64748b;font-size:11px">${b.created_at ? new Date(b.created_at).toLocaleDateString('en-ET') : '—'}</td>
-        </tr>`).join('')}
+          <td style="font-weight:800;color:#94a3b8">#${b.id || b.bookingID || (i+1)}</td>
+          <td style="font-weight:600">${customer}</td>
+          <td style="font-weight:600">${provider}</td>
+          <td style="color:#64748b">${service}</td>
+          <td style="font-weight:800">${fmt(amount)} <span style="font-size:10px;color:#94a3b8">ETB</span></td>
+          <td>${statusBadge(status)}</td>
+          <td style="color:#64748b;font-size:11px">${dateStr}</td>
+        </tr>`;
+      }).join('')}
     </tbody>
   </table>
 </div>` : ''}

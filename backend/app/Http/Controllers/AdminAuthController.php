@@ -77,15 +77,19 @@ class AdminAuthController extends Authenticatable
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'providers'  => ServiceProvider::count(),
-                    'customers'  => Customer::count(),
-                    'pending'    => ServiceProvider::where('status', 'pending')->count(),
-                    'active'     => ServiceProvider::whereIn('status', ['Active', 'approved'])->count(), // Support both old and new
-                    'suspended'  => ServiceProvider::whereIn('status', ['Suspended', 'suspended'])->count(), // Support both old and new
-                    'rejected'   => ServiceProvider::whereIn('status', ['Rejected', 'rejected'])->count(), // Support both old and new
-                    'categories' => Category::count(),
-                    'services'   => Service::count(),
-                    'revenue'    => \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission') ?? 0
+                    'providers'          => ServiceProvider::count(),
+                    'customers'          => Customer::count(),
+                    'pending'            => ServiceProvider::where('status', 'pending')->count(),
+                    'active'             => ServiceProvider::whereIn('status', ['Active', 'approved'])->count(),
+                    'suspended'          => ServiceProvider::whereIn('status', ['Suspended', 'suspended'])->count(),
+                    'rejected'           => ServiceProvider::whereIn('status', ['Rejected', 'rejected'])->count(),
+                    'categories'         => Category::count(),
+                    'services'           => Service::count(),
+                    'revenue'            => \App\Models\Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission') ?? 0,
+                    // Booking counts (used by the system report download)
+                    'total_bookings'     => Booking::count(),
+                    'completed_bookings' => Booking::where('status', 'completed')->count(),
+                    'active_disputes'    => \App\Models\Dispute::whereIn('status', ['pending', 'under_review'])->count(),
                 ]
             ]);
         } catch (\Exception $e) {
