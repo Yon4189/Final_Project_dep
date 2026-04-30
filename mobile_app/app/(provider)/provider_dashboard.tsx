@@ -41,7 +41,11 @@ export default function ProviderDashboard() {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
-  const { profile, toggleAvailability } = useProviderStore();
+  const { profile, toggleAvailability, loadProfile } = useProviderStore();
+  
+  useEffect(() => {
+    loadProfile();
+  }, []);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'accepted' | 'pending' | 'completed'>('accepted');
   const [showRecentMessages, setShowRecentMessages] = useState(false);

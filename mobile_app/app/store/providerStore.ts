@@ -140,8 +140,11 @@ export const useProviderStore = create<ProviderState & ProviderActions>()(
     if (response.success && response.data) {
       console.log('📦 Setting profile in store:', response.data); // Add debug log
       set({
-        profile: response.data as ProviderProfile,
-        isOnline: (response.data as ProviderProfile).isAvailable,
+        profile: {
+          ...response.data,
+          isAvailable: response.data.isAvailable ?? response.data.is_online ?? false,
+        } as ProviderProfile,
+        isOnline: response.data.isAvailable ?? response.data.is_online ?? false,
       });
     } else {
       set({ error: response.message });
@@ -165,9 +168,14 @@ export const useProviderStore = create<ProviderState & ProviderActions>()(
           set({ isLoading: true });
           const response = await providerService.updateAvailability(!current);
           if (response.success && response.data) {
-            set({
-              isOnline: !current,
-              profile: response.data as ProviderProfile,
+            const updatedProfile = {
+              ...response.data,
+              isAvailable: response.data.isAvailable ?? response.data.is_online ?? false,
+            } as ProviderProfile;
+            
+            set({ 
+              isOnline: updatedProfile.isAvailable,
+              profile: updatedProfile
             });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }

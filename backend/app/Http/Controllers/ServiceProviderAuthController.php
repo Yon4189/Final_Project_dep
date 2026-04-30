@@ -349,6 +349,32 @@ class ServiceProviderAuthController extends Controller
                 'business_license' => $provider->business_license,
                 'insurance_certificate' => $provider->insurance_certificate,
                 'certifications' => $provider->certifications,
+                'isAvailable' => (bool) $provider->is_online,
+                'is_online' => (bool) $provider->is_online,
+            ]
+        ]);
+    }
+
+    /**
+     * Update provider availability (Online/Offline status)
+     */
+    public function updateAvailability(Request $request)
+    {
+        $request->validate([
+            'isAvailable' => 'required|boolean'
+        ]);
+
+        $provider = $request->user();
+        $provider->is_online = $request->isAvailable;
+        $provider->last_seen_at = now();
+        $provider->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Availability updated successfully',
+            'data' => [
+                'isAvailable' => (bool) $provider->is_online,
+                'is_online' => (bool) $provider->is_online
             ]
         ]);
     }
