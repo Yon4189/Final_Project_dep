@@ -16,10 +16,7 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [latency, setLatency] = useState({ api: '...', db: '...' });
   const [depositPercentage, setDepositPercentage] = useState(20);
-  const [isSavingDeposit, setIsSavingDeposit] = useState(false);
-  const [depositSaved, setDepositSaved] = useState(false);
 
   // 1. Platform Configuration (Initially Mock but ready for backend sync)
   const [config, setConfig] = useState({
@@ -91,26 +88,6 @@ const Settings = () => {
     }
   }, [depositData]);
 
-  const handleSaveDeposit = async () => {
-    if (depositPercentage < 1 || depositPercentage > 99) {
-      alert('Deposit percentage must be between 1 and 99');
-      return;
-    }
-    setIsSavingDeposit(true);
-    try {
-      const response = await api.put('/admin/settings/deposit-percentage', { deposit_percentage: depositPercentage });
-      if (response.data.success) {
-        setDepositSaved(true);
-        queryClient.invalidateQueries({ queryKey: ['depositPercentage'] });
-        setTimeout(() => setDepositSaved(false), 3000);
-      }
-    } catch (err) {
-      alert('Failed to save deposit percentage');
-    } finally {
-      setIsSavingDeposit(false);
-    }
-  };
-
 
 
   // Fetch real statistics from backend to provide context for settings
@@ -127,23 +104,6 @@ const Settings = () => {
     refetchInterval: 30000,
   });
 
-  // Real-time API Latency Monitoring
-  useEffect(() => {
-    const checkLatency = async () => {
-      const start = Date.now();
-      try {
-        await api.get('/health');
-        const end = Date.now();
-        setLatency(prev => ({ ...prev, api: `${end - start}ms` }));
-      } catch (e) {
-        setLatency(prev => ({ ...prev, api: 'OFFLINE' }));
-      }
-    };
-
-    checkLatency();
-    const interval = setInterval(checkLatency, 15000); // Check every 15s
-    return () => clearInterval(interval);
-  }, []);
 
   // --- CITY MANAGEMENT LOGIC ---
   const fetchCities = async () => {
@@ -257,6 +217,17 @@ const Settings = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Validate deposit percentage
+      if (depositPercentage < 1 || depositPercentage > 99) {
+        alert('Deposit percentage must be between 1 and 99');
+        setIsSaving(false);
+        return;
+      }
+
+      // Persist deposit percentage
+      await api.put('/admin/settings/deposit-percentage', { deposit_percentage: depositPercentage });
+      queryClient.invalidateQueries({ queryKey: ['depositPercentage'] });
+
       // Attempt to persist settings to backend
       const response = await api.post('/admin/settings', {
         settings: config,
@@ -573,8 +544,172 @@ const Settings = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Report download failed:', err);
-      alert('Failed to generate system report. Please try again.');
+      console.warn('Backend /admin/system-report unavailable, building report from individual endpoints:', err);
+      try {
+        const now = new Date().toLocaleString('en-ET');
+        const fmt = (n) => Number(n || 0).toLocaleString('en-ET');
+
+        // Fetch all available data in parallel
+        const [statsRes, bookingsRes, paymentsRes, disputesRes, providersRes, customersRes] = await Promise.allSettled([
+          api.get('/admin/stats'),
+          api.get('/admin/bookings'),
+          api.get('/admin/payments/stats'),
+          api.get('/admin/disputes/stats'),
+          api.get('/admin/providers'),
+          api.get('/admin/customers'),
+        ]);
+
+        const stats     = statsRes.status === 'fulfilled'     ? (statsRes.value.data.data     || statsRes.value.data)     : {};
+        const bkData    = bookingsRes.status === 'fulfilled'  ? (bookingsRes.value.data.data  || []) : [];
+        const payStats  = paymentsRes.status === 'fulfilled'  ? (paymentsRes.value.data.data  || paymentsRes.value.data)  : {};
+        const dispStats = disputesRes.status === 'fulfilled'  ? (disputesRes.value.data.data  || disputesRes.value.data)  : {};
+        const providers = providersRes.status === 'fulfilled' ? (providersRes.value.data.data || []) : [];
+        const customers = customersRes.status === 'fulfilled' ? (customersRes.value.data.data || []) : [];
+
+        const recentBookings = Array.isArray(bkData) ? bkData.slice(0, 10) : [];
+        const statusBadge = (s) => {
+          const colors = { completed:'#16a34a', accepted:'#2563eb', pending:'#d97706', cancelled:'#dc2626', pending_final:'#7c3aed', resolved:'#16a34a', rejected:'#dc2626' };
+          const bgs    = { completed:'#dcfce7', accepted:'#dbeafe', pending:'#fef3c7', cancelled:'#fee2e2', pending_final:'#ede9fe', resolved:'#dcfce7', rejected:'#fee2e2' };
+          return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;background:${bgs[s]||'#f1f5f9'};color:${colors[s]||'#475569'}">${s||'—'}</span>`;
+        };
+
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>System Report – ${now}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#f0f4f8;color:#1e293b;padding:40px;font-size:13px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    .page-break{page-break-before:always}
+    .cover{background:linear-gradient(135deg,#1e40af 0%,#6366f1 50%,#8b5cf6 100%);color:#fff;border-radius:24px;padding:56px 48px;margin-bottom:28px;position:relative;overflow:hidden}
+    .cover::after{content:'';position:absolute;right:-60px;top:-60px;width:280px;height:280px;background:rgba(255,255,255,.07);border-radius:50%}
+    .cover-tag{font-size:10px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;opacity:.7;margin-bottom:12px}
+    .cover h1{font-size:36px;font-weight:900;line-height:1.15;letter-spacing:-.5px}
+    .cover-sub{margin-top:10px;opacity:.75;font-size:14px}
+    .chip{display:inline-block;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);padding:6px 16px;border-radius:30px;font-size:11px;font-weight:700;margin:4px}
+    .section{background:#fff;border-radius:18px;padding:28px 32px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid #e8edf2}
+    .section-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;color:#94a3b8;margin-bottom:22px;display:flex;align-items:center;gap:8px}
+    .section-title span{display:inline-block;width:3px;height:14px;background:linear-gradient(#6366f1,#3b82f6);border-radius:2px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}
+    .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:20px 18px}
+    .kpi .kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:10px}
+    .kpi .kpi-val{font-size:26px;font-weight:900;line-height:1}
+    .kpi .kpi-unit{font-size:11px;color:#64748b;margin-top:4px;font-weight:600}
+    .kpi-green{color:#16a34a}.kpi-blue{color:#2563eb}.kpi-amber{color:#d97706}.kpi-red{color:#dc2626}.kpi-purple{color:#7c3aed}
+    .setting-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9}
+    .setting-item:last-child{border-bottom:none}
+    .setting-key{font-size:12px;font-weight:600;color:#475569}
+    .setting-val{font-size:13px;font-weight:800;color:#1e293b}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;padding:8px 12px;border-bottom:2px solid #e2e8f0;background:#f8fafc}
+    td{padding:11px 12px;font-size:12px;color:#334155;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#f8fafc}
+    .footer{text-align:center;padding:24px 0 0;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;margin-top:8px}
+    @media print{body{padding:20px;background:#fff}.cover{border-radius:12px}}
+  </style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-tag">Official Administrative Report</div>
+  <h1>System Overview Report</h1>
+  <p class="cover-sub">Comprehensive platform infrastructure, financial and operational overview</p>
+  <div style="margin-top:28px">
+    <span class="chip">📅 ${now}</span>
+    <span class="chip">${config.maintenanceMode ? '🔴 MAINTENANCE ON' : '🟢 SYSTEM LIVE'}</span>
+    <span class="chip">💰 Commission: ${config.commissionRate}%</span>
+  </div>
+</div>
+
+<!-- PLATFORM SETTINGS -->
+<div class="section">
+  <div class="section-title"><span></span>Platform Configuration (Active Settings)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+    <div class="setting-item" style="padding-right:32px"><span class="setting-key">💰 Commission Rate</span><span class="setting-val kpi-purple">${config.commissionRate}%</span></div>
+    <div class="setting-item" style="padding-left:32px;border-left:1px solid #f1f5f9"><span class="setting-key">🌍 Max Service Radius</span><span class="setting-val kpi-blue">${config.maxServiceRadius} KM</span></div>
+    <div class="setting-item" style="padding-right:32px"><span class="setting-key">💵 Min Withdrawal Threshold</span><span class="setting-val">${fmt(config.minPayoutAmount)} ETB</span></div>
+    <div class="setting-item" style="padding-left:32px;border-left:1px solid #f1f5f9"><span class="setting-key">🔀 Split Payment Deposit</span><span class="setting-val">${depositPercentage}% Upfront</span></div>
+    <div class="setting-item" style="padding-right:32px"><span class="setting-key">🔒 Maintenance Mode</span><span class="setting-val" style="color:${config.maintenanceMode ? '#dc2626' : '#16a34a'}">${config.maintenanceMode ? 'ACTIVE' : 'OFFLINE'}</span></div>
+  </div>
+</div>
+
+<!-- PLATFORM KPIs -->
+<div class="section">
+  <div class="section-title"><span></span>Platform Statistics</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Bookings</div><div class="kpi-val kpi-blue">${fmt(stats.total_bookings)}</div></div>
+    <div class="kpi"><div class="kpi-label">Completed</div><div class="kpi-val kpi-green">${fmt(stats.completed_bookings)}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Customers</div><div class="kpi-val kpi-blue">${fmt(stats.total_customers ?? customers.length)}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Providers</div><div class="kpi-val kpi-purple">${fmt(stats.total_providers ?? providers.length)}</div></div>
+    <div class="kpi"><div class="kpi-label">Pending Providers</div><div class="kpi-val kpi-amber">${fmt(stats.pending_providers)}</div></div>
+    <div class="kpi"><div class="kpi-label">Open Disputes</div><div class="kpi-val kpi-red">${fmt(dispStats.pending ?? stats.active_disputes)}</div></div>
+  </div>
+</div>
+
+<!-- PAYMENT STATS -->
+<div class="section">
+  <div class="section-title"><span></span>Payment Analytics</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Revenue</div><div class="kpi-val kpi-green">${fmt(payStats.total_revenue ?? stats.total_revenue)}</div><div class="kpi-unit">ETB</div></div>
+    <div class="kpi"><div class="kpi-label">Total Volume</div><div class="kpi-val kpi-blue">${fmt(payStats.total_volume ?? stats.total_payments)}</div><div class="kpi-unit">ETB</div></div>
+    <div class="kpi"><div class="kpi-label">Pending Payments</div><div class="kpi-val kpi-amber">${fmt(payStats.pending_payments)}</div></div>
+    <div class="kpi"><div class="kpi-label">Success Rate</div><div class="kpi-val kpi-green">${payStats.success_rate ?? '—'}${payStats.success_rate ? '%' : ''}</div></div>
+  </div>
+</div>
+
+<!-- DISPUTE STATS -->
+<div class="section">
+  <div class="section-title"><span></span>Dispute Resolution Summary</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Disputes</div><div class="kpi-val kpi-red">${fmt(dispStats.total)}</div></div>
+    <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-val kpi-amber">${fmt(dispStats.pending)}</div></div>
+    <div class="kpi"><div class="kpi-label">Resolved</div><div class="kpi-val kpi-green">${fmt(dispStats.resolved)}</div></div>
+    <div class="kpi"><div class="kpi-label">Under Review</div><div class="kpi-val kpi-blue">${fmt(dispStats.under_review)}</div></div>
+  </div>
+</div>
+
+<!-- RECENT BOOKINGS -->
+${recentBookings.length > 0 ? `
+<div class="section page-break">
+  <div class="section-title"><span></span>Recent Booking Activity (Last ${recentBookings.length})</div>
+  <table>
+    <thead><tr><th>#</th><th>Customer</th><th>Provider</th><th>Service</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+    <tbody>
+      ${recentBookings.map((b, i) => `
+        <tr style="${i%2?'background:#fafbfc':''}">
+          <td style="font-weight:800;color:#94a3b8">#${b.id}</td>
+          <td style="font-weight:600">${b.customer_name || b.customer || '—'}</td>
+          <td style="font-weight:600">${b.provider_name || b.provider || '—'}</td>
+          <td style="color:#64748b">${b.service_name || b.service || '—'}</td>
+          <td style="font-weight:800">${fmt(b.total_price || b.amount)} <span style="font-size:10px;color:#94a3b8">ETB</span></td>
+          <td>${statusBadge(b.status)}</td>
+          <td style="color:#64748b;font-size:11px">${b.created_at ? new Date(b.created_at).toLocaleDateString('en-ET') : '—'}</td>
+        </tr>`).join('')}
+    </tbody>
+  </table>
+</div>` : ''}
+
+<div class="footer">
+  <strong>CONFIDENTIAL</strong> — This report was generated by the Admin Panel on ${now}.<br/>
+  For internal use only. Unauthorized distribution is prohibited.
+</div>
+</body>
+</html>`;
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `System-Report-${new Date().toISOString().split('T')[0]}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (fallbackErr) {
+        console.error('Comprehensive fallback report failed:', fallbackErr);
+      }
     } finally {
       setIsDownloading(false);
     }
@@ -612,29 +747,6 @@ const Settings = () => {
     e.target.value = '';
   };
 
-  const systemHealth = [
-    {
-      name: t('set_health_api'),
-      status: latency.api === 'OFFLINE' ? t('db_disconnected') : t('set_status_optimal'),
-      latency: latency.api,
-      icon: Server,
-      color: latency.api === 'OFFLINE' ? 'text-rose-500' : 'text-emerald-500'
-    },
-    {
-      name: t('set_health_mysql'),
-      status: stats ? t('set_status_active_sync') : t('set_status_reconnecting'),
-      latency: '14ms',
-      icon: Database,
-      color: stats ? 'text-emerald-500' : 'text-amber-500'
-    },
-    {
-      name: t('set_health_network'),
-      status: t('set_status_providers', { count: stats?.active || 0 }),
-      latency: stats ? t('set_status_optimal') : t('set_status_wait'),
-      icon: Zap,
-      color: 'text-sky-400'
-    },
-  ];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -653,6 +765,14 @@ const Settings = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
+            onClick={downloadReport}
+            disabled={isDownloading}
+            className="flex items-center gap-2 px-6 py-4 bg-admin-accent text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-blue-200/50 dark:shadow-none disabled:opacity-50"
+          >
+            {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            {t('set_infra_report_btn')}
+          </button>
+          <button
             onClick={() => { refreshStats(); alert("System health cache cleared."); }}
             className="p-4 bg-admin-card border-2 border-admin-border rounded-2xl text-slate-400 hover:text-admin-accent transition-all group active:scale-95 shadow-sm"
           >
@@ -661,10 +781,9 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-        {/* LEFT: Configuration Area */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="w-full space-y-6">
+        {/* Configuration Area */}
+        <div className="space-y-6">
 
           {/* Tab Navigation */}
           <div className="flex gap-2 p-2 bg-admin-card w-fit rounded-[2rem] border border-admin-border shadow-sm">
@@ -743,6 +862,35 @@ const Settings = () => {
                       <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black group-focus-within:text-admin-accent transition-colors">ETB</div>
                     </div>
                   </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
+                      <Percent size={14} className="text-admin-accent" /> {t('set_split_title')}
+                    </label>
+                    <div className="relative group">
+                      <input
+                        type="number"
+                        min="1"
+                        max="99"
+                        className="w-full border-2 border-admin-border bg-admin-card rounded-2xl py-5 px-6 focus:outline-none focus:border-admin-accent font-black text-xl text-admin-text transition-all shadow-sm"
+                        value={depositPercentage}
+                        onChange={(e) => setDepositPercentage(Math.min(99, Math.max(1, parseInt(e.target.value) || 1)))}
+                      />
+                      <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black group-focus-within:text-admin-accent transition-colors">%</div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 italic">{t('set_split_desc')}</p>
+                    
+                    <div className="w-full bg-admin-card border border-admin-border rounded-2xl p-3 mt-2">
+                      <div className="h-3 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex">
+                        <div className="bg-blue-500 transition-all duration-300" style={{ width: `${depositPercentage}%` }} />
+                        <div className="bg-green-400 flex-1" />
+                      </div>
+                      <div className="flex justify-between text-[9px] font-black mt-2 uppercase tracking-tighter">
+                        <span className="text-blue-500">{depositPercentage}% Upfront</span>
+                        <span className="text-green-500">{100 - depositPercentage}% Post</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className={`p-8 rounded-3xl border transition-all duration-700 flex flex-col md:flex-row items-center justify-between gap-6 
@@ -792,86 +940,7 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* --- INTEGRATED SPLIT PAYMENT SECTION --- */}
-                <div className="border-t border-admin-border pt-10 space-y-10">
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
-                      <Percent size={16} className="text-admin-accent" /> {t('set_split_title')}
-                    </h3>
-                    <p className="text-xs text-slate-400">{t('set_split_desc')}</p>
-                  </div>
-
-                  <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-6 space-y-2">
-                    <p className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">{t('set_split_how')}</p>
-                    <ul className="text-xs text-blue-600 dark:text-blue-300 space-y-1 list-disc list-inside">
-                      <li>{t('set_split_upfront_desc', { percent: depositPercentage })}</li>
-                      <li>{t('set_split_post_desc', { percent: 100 - depositPercentage })}</li>
-                    </ul>
-                  </div>
-
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                      <Percent size={14} className="text-admin-accent" /> {t('set_split_label')}
-                    </label>
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="number"
-                          min="1"
-                          max="99"
-                          className="w-32 border-2 border-admin-border bg-admin-card rounded-2xl py-4 px-6 focus:outline-none focus:border-admin-accent font-black text-2xl text-admin-text transition-all shadow-sm text-center"
-                          value={depositPercentage}
-                          onChange={(e) => setDepositPercentage(Math.min(99, Math.max(1, parseInt(e.target.value) || 1)))}
-                        />
-                        <span className="text-2xl font-black text-admin-text">%</span>
-                      </div>
-                      <div className="flex-1 w-full bg-admin-card border border-admin-border rounded-2xl p-4">
-                        <div className="h-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex">
-                          <div className="bg-blue-500 transition-all duration-300" style={{ width: `${depositPercentage}%` }} />
-                          <div className="bg-green-400 flex-1" />
-                        </div>
-                        <div className="flex justify-between text-[10px] font-black mt-2 uppercase tracking-tighter">
-                          <span className="text-blue-500">{depositPercentage}% {t('set_split_upfront')}</span>
-                          <span className="text-green-500">{100 - depositPercentage}% {t('set_split_post')}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleSaveDeposit}
-                    disabled={isSavingDeposit}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {isSavingDeposit ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                    {depositSaved ? `✓ ${t('set_split_saved')}` : t('set_split_update')}
-                  </button>
-
-                  {/* Overdue Payment Management */}
-                  <div className="border-t border-admin-border pt-8 space-y-4">
-                    <h3 className="text-sm font-black text-admin-text uppercase tracking-widest flex items-center gap-2">
-                      <AlertTriangle size={16} className="text-red-500" /> {t('set_overdue_title')}
-                    </h3>
-                    {stats?.overdue_bookings?.length > 0 ? (
-                      <div className="space-y-3">
-                        {stats.overdue_bookings.map((booking) => (
-                          <div key={booking.id} className="flex items-center justify-between bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-4">
-                            <div>
-                              <p className="text-xs font-black text-admin-text">Booking #{booking.id}</p>
-                              <p className="text-[10px] text-slate-400">{booking.customer_name} • {t('set_overdue_days', { count: booking.days_overdue })}</p>
-                            </div>
-                            <span className="text-red-500 font-black text-xs">{booking.amount_owed} ETB</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-6 text-center">
-                        <p className="text-xs font-black text-green-600 uppercase tracking-widest">{t('set_overdue_up_to_date')}</p>
-                      </div>
-                    )}
-                  </div>
                 </div>
-              </div>
             ) : activeTab === 'cities' ? (
               /* --- CITIES MANAGEMENT TAB --- */
               <div className="p-10 space-y-10">
@@ -1083,100 +1152,29 @@ const Settings = () => {
               </div>
             )}
 
-            <div className="px-10 py-8 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <ShieldCheck size={14} className="text-emerald-500" /> {t('set_save_verified')}
-              </div>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className={`
-                  flex items-center gap-3 px-12 py-5 rounded-[1.5rem] font-black tracking-widest uppercase text-xs shadow-2xl transition-all active:scale-95 
-                  ${isSaving
-                    ? 'bg-slate-200 bg-admin-card text-slate-400 cursor-not-allowed'
-                    : 'bg-admin-accent text-white hover:bg-blue-600 shadow-blue-200/50 dark:shadow-blue-900/50'}
-                `}
-              >
-                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                {isSaving ? t('user_mgmt_processing') : t('set_save_btn')}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: Live Ledger & Health */}
-        <div className="space-y-6">
-          <div className="bg-slate-900 dark:bg-admin-sidebar rounded-[3rem] p-10 text-white shadow-2xl border border-white/5 relative overflow-hidden group">
-            <div className="absolute -right-20 -top-20 w-64 h-64 bg-admin-accent/10 rounded-full blur-[80px] group-hover:bg-admin-accent/20 transition-all duration-1000"></div>
-
-            <h2 className="text-xs font-black flex items-center gap-3 mb-10 uppercase tracking-[0.3em] text-slate-400 italic">
-              <Activity size={18} className="text-admin-accent animate-pulse" />
-              {t('set_pulse_title')}
-            </h2>
-
-            <div className="space-y-8 relative z-10">
-              {systemHealth.map((item, index) => (
-                <div key={index} className="flex items-center justify-between group/item">
-                  <div className="flex items-center gap-5">
-                    <div className={`p-4 rounded-[1.5rem] bg-white/5 border border-white/10 ${item.color} group-hover/item:scale-110 group-hover/item:bg-white/10 transition-all duration-300`}>
-                      <item.icon size={22} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{item.name}</p>
-                      <p className="text-sm font-bold text-slate-100 tracking-tight">{item.status}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">{t('set_pulse_latency')}</p>
-                    <p className="text-xs font-mono font-black text-admin-accent">{item.latency}</p>
-                  </div>
+            {activeTab !== 'cities' && (
+              <div className="px-10 py-8 bg-admin-card border-t border-admin-border flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <ShieldCheck size={14} className="text-emerald-500" /> {t('set_save_verified')}
                 </div>
-              ))}
-            </div>
-
-            <div className="mt-12 pt-10 border-t border-white/5 relative z-10">
-              <div className="flex items-center gap-3 text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
-                <AlertTriangle size={16} className="text-amber-500" /> {t('set_security_logs')}
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className={`
+                    flex items-center gap-3 px-12 py-5 rounded-[1.5rem] font-black tracking-widest uppercase text-xs shadow-2xl transition-all active:scale-95 
+                    ${isSaving
+                      ? 'bg-slate-200 bg-admin-card text-slate-400 cursor-not-allowed'
+                      : 'bg-admin-accent text-white hover:bg-blue-600 shadow-blue-200/50 dark:shadow-blue-900/50'}
+                  `}
+                >
+                  {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  {isSaving ? t('user_mgmt_processing') : t('set_save_btn')}
+                </button>
               </div>
-              <div className="bg-white/5 p-6 rounded-2xl border border-white/5 space-y-4">
-                <p className="text-[10px] leading-relaxed text-slate-400 italic font-medium">
-                  • {t('set_log_stable')}
-                </p>
-                <p className="text-[10px] leading-relaxed text-slate-400 italic font-medium">
-                  • {t('set_log_no_penetration')}
-                </p>
-                <p className="text-[10px] leading-relaxed text-slate-500 italic mt-4 block">
-                  {t('set_last_login')} {window.location.hostname}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-indigo-600 to-admin-accent rounded-[3rem] p-10 text-white shadow-xl shadow-blue-200/50 border border-white/10 group overflow-hidden relative">
-            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform duration-700">
-              <ShieldCheck size={200} />
-            </div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] mb-4 opacity-70 italic">{t('set_infra_summary')}</p>
-            <h3 className="text-2xl font-black uppercase italic mb-6 leading-tight">{t('set_infra_ready_title')}</h3>
-            <p className="text-xs leading-relaxed font-medium opacity-90 mb-8 italic">
-              {t('set_infra_ready_desc')}
-            </p>
-            <button
-              onClick={downloadReport}
-              disabled={isDownloading}
-              className={`w-full backdrop-blur-md border border-white/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2
-                ${isDownloading
-                  ? 'bg-white/5 text-white/40 cursor-not-allowed'
-                  : 'bg-white/10 hover:bg-white hover:text-admin-accent'}`}
-            >
-              {isDownloading
-                ? <><Loader2 size={14} className="animate-spin" /> Generating Report...</>
-                : <><Download size={14} /> {t('set_infra_report_btn')}</>}
-            </button>
-          </div>
+            )}
         </div>
-
       </div>
+    </div>
     </div>
   );
 };
