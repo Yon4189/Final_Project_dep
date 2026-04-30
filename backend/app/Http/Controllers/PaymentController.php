@@ -181,9 +181,18 @@ class PaymentController extends Controller
         $response = $this->chapaService->initializePayment($paymentData);
 
         if ($response['status'] !== 'success') {
+            // Delete the pending payment record since Chapa rejected it
+            $payment->delete();
+
+            $chapaError = $response['message'] ?? 'Payment gateway error. Please try again.';
+            Log::error('Chapa payment init failed', [
+                'booking_id' => $bookingId,
+                'chapa_error' => $chapaError,
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Payment init failed'
+                'message' => $chapaError
             ], 400);
         }
 

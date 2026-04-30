@@ -91,17 +91,16 @@ export default function CustomerNotifications() {
     try {
       const response = await api.get<any>('/customer/notifications');
       if (response.success) {
+        // Backend returns: { notifications: { data: [...], ... }, unread_count: N }
         const raw = response.data?.notifications?.data
-          || response.data?.data
-          || response.data
-          || [];
+          ?? response.data?.data
+          ?? (Array.isArray(response.data) ? response.data : []);
         const arr = Array.isArray(raw) ? raw : [];
         setNotifications(arr.map(normalizeNotification));
         setUnreadCount(response.data?.unread_count ?? 0);
-        // Automatically mark all as read after fetching unread count
-        if (response.data?.unread_count > 0) {
-          markAllAsRead();
-        }
+        // NOTE: Do NOT auto-mark-all-as-read here.
+        // Notifications should only be marked read when the user taps them
+        // or clicks 'Mark all read' explicitly.
       }
     } catch (error) {
       console.error('Failed to load notifications:', error);
