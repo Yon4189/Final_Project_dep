@@ -18,18 +18,63 @@ import { useTheme } from './context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
-const getCategoryIcon = (name: string) => {
+const getCategoryIcon = (category: any) => {
+  // If the category has an icon from the database, use it
+  if (category.icon) return category.icon;
+
+  const name = category.name;
   const icons: { [key: string]: string } = {
     'Plumbing': '🔧',
     'Home Cleaning': '🧹',
     'Electrical Services': '⚡',
     'Internet & TV Setup': '📡',
     'Painting & Finishing': '🎨',
-    'Carpentry': '🪚',
+    'Carpentry': '🔧',
     'AC & Home Appliances': '❄️',
     'Home Maintenance': '🏠',
+    'Gardening': '🌱',
+    'Moving Services': '📦',
+    'Beauty & Salon': '💄',
+    'Tutoring': '📚',
   };
   return icons[name] || '🛠️';
+};
+
+const CategoryCard = ({ category, index, colors, styles }: any) => {
+  const [expanded, setExpanded] = useState(false);
+  const icon = getCategoryIcon(category);
+  const isImageUrl = icon && (icon.startsWith('http') || icon.startsWith('/storage') || icon.startsWith('data:image'));
+
+  return (
+    <TouchableOpacity
+      key={category.catagoryID || `cat-${index}`}
+      style={[styles.serviceCard, expanded && styles.serviceCardExpanded]}
+      onPress={() => setExpanded(!expanded)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.serviceIconContainer}>
+        {isImageUrl ? (
+          <Image source={{ uri: icon }} style={styles.serviceIconImage} />
+        ) : (
+          <Text style={styles.serviceIcon}>{icon}</Text>
+        )}
+      </View>
+      <View style={styles.serviceInfo}>
+        <Text style={styles.serviceName}>{category.name}</Text>
+        <Text
+          style={styles.serviceDescription}
+          numberOfLines={expanded ? undefined : 2}
+        >
+          {category.description}
+        </Text>
+        {category.description && category.description.length > 60 && (
+          <Text style={styles.readMoreText}>
+            {expanded ? 'Read Less' : 'Read More...'}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 };
 
 export default function LandingScreen() {
@@ -124,13 +169,14 @@ export default function LandingScreen() {
         </Text>
         <View style={styles.servicesGrid}>
           {categories.length > 0 ? (
-            categories.slice(0, 9).map((category, index) => (
-              <TouchableOpacity key={category.catagoryID || `cat-${index}`} style={styles.serviceCard}>
-                <Text style={styles.serviceIcon}>{getCategoryIcon(category.name)}</Text>
-                <Text style={styles.serviceName}>
-                  <Text>{category.name}</Text>
-                </Text>
-              </TouchableOpacity>
+            categories.map((category, index) => (
+              <CategoryCard
+                key={category.catagoryID || `cat-${index}`}
+                category={category}
+                index={index}
+                colors={colors}
+                styles={styles}
+              />
             ))
           ) : (
             <Text style={{ textAlign: 'center', width: '100%', color: colors.text.secondary }}>
@@ -295,22 +341,60 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   serviceCard: {
-    width: (width - 70) / 3,
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 10,
+    width: '48%',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+    padding: 15,
     backgroundColor: colors.background,
-    borderRadius: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 140,
+  },
+  serviceCardExpanded: {
+    width: '100%',
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+    elevation: 4,
+    zIndex: 10,
+  },
+  serviceIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   serviceIcon: {
-    fontSize: 30,
-    marginBottom: 8,
+    fontSize: 24,
+  },
+  serviceIconImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+  },
+  serviceInfo: {
+    width: '100%',
   },
   serviceName: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: 'bold',
     color: colors.text.primary,
-    textAlign: 'center',
+    marginBottom: 4,
+  },
+  serviceDescription: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    lineHeight: 16,
+  },
+  readMoreText: {
+    fontSize: 10,
+    color: colors.primary,
+    fontWeight: 'bold',
+    marginTop: 4,
   },
   roleSection: {
     padding: 20,

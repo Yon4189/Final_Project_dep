@@ -243,8 +243,8 @@ const ServicesTable = ({
               {activeTab === 'categories' ? (
                 <>
                   <th className="px-6 py-4">{t('serv_id')}</th>
+                  <th className="px-6 py-4">Icon</th>
                   <th className="px-6 py-4">{t('serv_name')}</th>
-                  <th className="px-6 py-4">{t('serv_status')}</th>
                   <th className="px-6 py-4">{t('serv_description')}</th>
                   <th className="px-6 py-4 text-right">{t('serv_actions')}</th>
                 </>
@@ -271,12 +271,8 @@ const ServicesTable = ({
                   {activeTab === 'categories' ? (
                     <>
                       <td className="px-6 py-4 font-mono text-sm text-admin-text-muted">#{item.catagoryID}</td>
+                      <td className="px-6 py-4 text-2xl">{item.icon || '🛠️'}</td>
                       <td className="px-6 py-4 font-semibold text-admin-text">{item.name}</td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider italic ${item.status === 'Active' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                          {item.status === 'Active' ? t('serv_status_active') : (item.status || t('serv_status_active'))}
-                        </span>
-                      </td>
                       <td className="px-6 py-4 text-xs text-admin-text-muted max-w-xs truncate italic">
                         {item.description || '—'}
                       </td>
@@ -334,17 +330,17 @@ const ServicesTable = ({
           currentItems.map((item) => (
             <div key={activeTab === 'categories' ? item.catagoryID : item.serviceID} className="bg-admin-card rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-mono text-xs text-slate-400">#{activeTab === 'categories' ? item.catagoryID : item.serviceID}</p>
-                  <p className="font-semibold text-black text-admin-text text-base">
-                    {activeTab === 'categories' ? item.name : item.title}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-2xl border border-admin-border">
+                    {item.icon || '🛠️'}
+                  </div>
+                  <div>
+                    <p className="font-mono text-xs text-slate-400">#{activeTab === 'categories' ? item.catagoryID : item.serviceID}</p>
+                    <p className="font-semibold text-black text-admin-text text-base">
+                      {activeTab === 'categories' ? item.name : item.title}
+                    </p>
+                  </div>
                 </div>
-                {activeTab === 'categories' && (
-                  <span className={`text-xs font-bold italic uppercase ${item.status === 'Active' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                    {item.status === 'Active' ? t('serv_status_active') : (item.status || t('serv_status_active'))}
-                  </span>
-                )}
               </div>
 
               {activeTab === 'services' && (

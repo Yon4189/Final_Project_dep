@@ -28,6 +28,8 @@ class CategoryController extends Controller
         // validate input
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'icon' => 'nullable|string|max:1000', // allow longer for base64 or URLs
+            'icon_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'description' => 'nullable|string',
         ]);
 
@@ -39,11 +41,18 @@ class CategoryController extends Controller
             ], 422);
         }
 
+        $iconPath = $request->icon;
+
+        if ($request->hasFile('icon_file')) {
+            $path = $request->file('icon_file')->store('categories', 'public');
+            $iconPath = asset('storage/' . $path);
+        }
+
         // Create category
         $category = Category::create([
             'name' => $request->name,
+            'icon' => $iconPath,
             'description' => $request->description,
-            'status' => $request->status ?? 'Active'
         ]);
 
         Cache::forget('categories_all'); // Invalidate cache
@@ -129,8 +138,15 @@ class CategoryController extends Controller
         }
 
         $category->name = $request->input('name', $category->name);
+        
+        if ($request->hasFile('icon_file')) {
+            $path = $request->file('icon_file')->store('categories', 'public');
+            $category->icon = asset('storage/' . $path);
+        } else {
+            $category->icon = $request->input('icon', $category->icon);
+        }
+
         $category->description = $request->input('description', $category->description);
-        $category->status = $request->input('status', $category->status);
         $category->save();
 
         Cache::forget('categories_all'); // Invalidate cache
@@ -141,8 +157,8 @@ class CategoryController extends Controller
             'data' => [
                 'catagoryID' => $category->catagoryID,
                 'name' => $category->name,
+                'icon' => $category->icon,
                 'description' => $category->description,
-                'status' => $category->status,
             ]
         ]);
     }

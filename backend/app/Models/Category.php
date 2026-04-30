@@ -16,8 +16,8 @@ class Category extends Model
     // Make status fillable as well
     protected $fillable = [  
         'name', 
+        'icon',
         'description', 
-        'status' 
     ];  
 
     // a category can have many services  

@@ -24,7 +24,9 @@ class CustomerSearchController extends Controller
         // Distance Filtering (Database Level)
         if ($inputs['latitude'] && $inputs['longitude']) {
             $query->nearest($inputs['latitude'], $inputs['longitude']);
-            if ($inputs['maxDistance'] < 999999) {
+            
+            // Increase range as requested - if maxDistance is large, we effectively skip filtering
+            if ($inputs['maxDistance'] > 0 && $inputs['maxDistance'] < 2000) {
                 $query->having('distance', '<=', (float)$inputs['maxDistance']);
             }
         }

@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Category;
-use App\Models\Provider;
+use App\Models\ServiceProvider;
 use App\Models\Service;
 use Illuminate\Support\Facades\DB;
 
@@ -13,22 +13,8 @@ class CustomerApiSeeder extends Seeder
     public function run()
     {
         // Clear existing data
+        DB::table('services')->delete();
         DB::table('service_providers')->delete();
-        DB::table('catagories')->delete();
-
-        // Create categories
-        $categories = [
-            ['catagoryID' => '1', 'name' => 'Plumbing', 'description' => 'Professional plumbing services'],
-            ['catagoryID' => '2', 'name' => 'Electrical', 'description' => 'Electrical installation and repair'],
-            ['catagoryID' => '3', 'name' => 'Cleaning', 'description' => 'Home and office cleaning'],
-            ['catagoryID' => '4', 'name' => 'Painting', 'description' => 'Interior and exterior painting'],
-            ['catagoryID' => '5', 'name' => 'Moving', 'description' => 'Professional moving services'],
-            ['catagoryID' => '6', 'name' => 'Gardening', 'description' => 'Lawn care and gardening'],
-        ];
-
-        foreach ($categories as $category) {
-            DB::table('catagories')->insert($category);
-        }
 
         // Create sample providers matching the actual table structure
         $providers = [
@@ -65,7 +51,7 @@ class CustomerApiSeeder extends Seeder
                 'profilePicture' => 'https://via.placeholder.com/150',
                 'idPhoto' => 'https://via.placeholder.com/150',
                 'status' => 'Active',
-                'bio' => 'Certified electrician specializing in residential and commercial services',
+                'bio' => 'Professional cleaning services for homes and offices',
                 'walletBalance' => 0,
                 'serviceRadiusKm' => 50,
                 'service_city' => 'Kazanchis',
@@ -88,7 +74,7 @@ class CustomerApiSeeder extends Seeder
                 'profilePicture' => 'https://via.placeholder.com/150',
                 'idPhoto' => 'https://via.placeholder.com/150',
                 'status' => 'Active',
-                'bio' => 'Professional cleaning services for homes and offices',
+                'bio' => 'Certified electrician specializing in residential and commercial services',
                 'walletBalance' => 0,
                 'serviceRadiusKm' => 50,
                 'service_city' => 'Mekelle',
@@ -111,7 +97,7 @@ class CustomerApiSeeder extends Seeder
                 'profilePicture' => 'https://via.placeholder.com/150',
                 'idPhoto' => 'https://via.placeholder.com/150',
                 'status' => 'Active',
-                'bio' => 'Professional painting and decorating services',
+                'bio' => 'Professional internet and TV setup services',
                 'walletBalance' => 0,
                 'serviceRadiusKm' => 50,
                 'service_city' => 'Piassa',
@@ -134,7 +120,7 @@ class CustomerApiSeeder extends Seeder
                 'profilePicture' => 'https://via.placeholder.com/150',
                 'idPhoto' => 'https://via.placeholder.com/150',
                 'status' => 'Active',
-                'bio' => 'Reliable moving and logistics services',
+                'bio' => 'Interior and exterior painting and finishing',
                 'walletBalance' => 0,
                 'serviceRadiusKm' => 50,
                 'service_city' => 'CMC',
@@ -151,10 +137,22 @@ class CustomerApiSeeder extends Seeder
 
         foreach ($providers as $provider) {
             DB::table('service_providers')->insert($provider);
+            
+            // Add a default service for each provider
+            DB::table('services')->insert([
+                'providerID' => $provider['providerID'],
+                'catagoryID' => $provider['catagoryID'],
+                'title' => 'General ' . Category::find($provider['catagoryID'])->name,
+                'description' => 'Professional ' . strtolower(Category::find($provider['catagoryID'])->name) . ' services.',
+                'estimatedPrice' => $provider['hourly_rate'] * 2,
+                'hourly_rate' => $provider['hourly_rate'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         echo "Sample data seeded successfully!\n";
-        echo "Categories: " . count($categories) . "\n";
         echo "Providers: " . count($providers) . "\n";
+        echo "Services: " . count($providers) . "\n";
     }
 }
