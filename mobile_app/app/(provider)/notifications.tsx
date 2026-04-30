@@ -92,11 +92,7 @@ export default function ProviderNotifications() {
           );
           setPage(payload?.current_page ?? page);
           setHasMore((payload?.last_page ?? page) > (payload?.current_page ?? page));
-
-          // Automatically mark all as read if there are unreads
-          if (response.data.unread_count > 0 && page === 1) {
-            markAllAsRead();
-          }
+          // NOTE: Do NOT auto-mark-all-as-read here.
         }
       } catch (error) {
         console.error('Failed to load provider notifications', error);

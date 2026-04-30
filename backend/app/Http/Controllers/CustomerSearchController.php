@@ -22,25 +22,15 @@ class CustomerSearchController extends Controller
         $query = ServiceProvider::approved();
 
         // Distance Filtering (Database Level)
-        if ($inputs['latitude'] && $inputs['longitude']) {
+        // SQLite does NOT have trig functions (acos, cos, sin, radians),
+        // so we skip distance calculation entirely on SQLite and sort by rating instead.
+        $isSqlite = DB::getDriverName() === 'sqlite';
+
+        if ($inputs['latitude'] && $inputs['longitude'] && !$isSqlite) {
             $query->nearest($inputs['latitude'], $inputs['longitude']);
             
             if ($inputs['maxDistance'] > 0 && $inputs['maxDistance'] < 2000) {
-                // SQLite doesn't support HAVING on non-aggregate aliases in the count() query used by paginate()
-                // We use whereRaw with the formula for SQLite, or having for others
-                if (DB::getDriverName() === 'sqlite') {
-                    $formula = "(6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) 
-                                * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) 
-                                + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0)))))";
-                    $query->whereRaw(\"$formula <= ?\", [
-                        $inputs['latitude'], 
-                        $inputs['longitude'], 
-                        $inputs['latitude'], 
-                        (float)$inputs['maxDistance']
-                    ]);
-                } else {
-                    $query->having('distance', '<=', (float)$inputs['maxDistance']);
-                }
+                $query->having('distance', '<=', (float)$inputs['maxDistance']);
             }
         }
 
@@ -486,8 +476,10 @@ class CustomerSearchController extends Controller
         // Build base query: approved providers only
         $query = ServiceProvider::whereIn('status', ['Active', 'approved']);
 
-        // Distance filtering is OPTIONAL — only applied when lat/lng AND radius are all provided
-        if ($latitude && $longitude) {
+        $isSqlite = DB::getDriverName() === 'sqlite';
+
+        // Distance filtering — SQLite lacks trig functions, so skip distance calc there
+        if ($latitude && $longitude && !$isSqlite) {
             $query->selectRaw(
                 '*, (6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0))))) AS distance',
                 [$latitude, $longitude, $latitude]
@@ -495,17 +487,12 @@ class CustomerSearchController extends Controller
 
             // Only filter by radius if explicitly provided
             if ($radius !== null) {
-                if (DB::getDriverName() === 'sqlite') {
-                    $formula = "(6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0)))))";
-                    $query->whereRaw(\"$formula <= ?\", [$latitude, $longitude, $latitude, (float)$radius]);
-                } else {
-                    $query->having('distance', '<=', (float) $radius);
-                }
+                $query->having('distance', '<=', (float) $radius);
             }
 
             $query->orderBy('distance');
         } else {
-            // No coordinates — just return approved providers sorted by rating
+            // No coordinates or SQLite — return approved providers sorted by rating
             $query->orderByDesc('rating');
         }
 
@@ -522,7 +509,7 @@ class CustomerSearchController extends Controller
                 'rating' => round($provider->rating, 1),
                 'reviewCount' => 0,
                 'verified' => in_array($provider->status, ['Active', 'approved']),
-                'distance' => round($provider->distance, 2),
+                'distance' => isset($provider->distance) ? round($provider->distance, 2) : null,
                 'location' => [
                     'latitude' => $provider->current_latitude,
                     'longitude' => $provider->current_longitude,
