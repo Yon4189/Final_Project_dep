@@ -313,6 +313,7 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     // ── Dashboard ─────────────────────────────────────────────────────────────
     Route::get('/stats',    [AdminAuthController::class, 'getStats']);
     Route::get('/search',   [AdminAuthController::class, 'globalSearch']);
+    Route::post('/backup',  [AdminAuthController::class, 'generateBackup']);
 
     // ── Settings ──────────────────────────────────────────────────────────────
     Route::get('/settings',         [AdminAuthController::class, 'getSettings']);

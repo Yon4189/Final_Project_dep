@@ -536,7 +536,14 @@ const resources = {
       "set_split_saved": "Saved!",
       "set_overdue_title": "Overdue Payment Management",
       "set_overdue_days": "{{count}} days overdue",
-      "set_overdue_up_to_date": "All payments up to date"
+      "set_overdue_up_to_date": "All payments up to date",
+      "set_tab_system": "System & Data",
+      "set_backup_title": "System Data Backup",
+      "set_backup_desc": "Generate a full export of all platform records including users, bookings, payments, and system settings. This data can be used for audit or recovery purposes.",
+      "set_backup_btn": "Generate Data Backup",
+      "set_backup_processing": "Backing Up...",
+      "set_backup_success": "System backup generated successfully!",
+      "set_backup_failed": "System backup failed. Check server logs."
     }
   },
   am: {
@@ -1051,7 +1058,14 @@ const resources = {
       "set_cities_deleted": "ከተማው በትክክል ተሰርዟል!",
       "set_cities_delete_failed": "ከተማውን መሰረዝ አልተቻለም",
       "set_cities_updated": "ከተማው በትክክል ታድሷል!",
-      "set_cities_update_failed": "ከተማውን ማደስ አልተቻለም",
+      "set_cities_update_failed": "ከተማውን ማደስ አልተሳካም",
+      "set_tab_system": "ስርዓት እና መረጃ",
+      "set_backup_title": "የስርዓት መረጃ ምትኬ (Backup)",
+      "set_backup_desc": "ተጠቃሚዎችን፣ ቀጠሮዎችን፣ ክፍያዎችን እና የስርዓት ቅንብሮችን ጨምሮ የሁሉንም የፕላትፎርም መረጃዎች ሙሉ ኤክስፖርት ያመነጩ። ይህ መረጃ ለኦዲት ወይም ለመረጃ መልሶ ማግኛ አገልግሎት ሊውል ይችላል።",
+      "set_backup_btn": "የመረጃ ምትኬ አምነጭ",
+      "set_backup_processing": "ምትኬ እየተወሰደ ነው...",
+      "set_backup_success": "የስርዓት መረጃ ምትኬ በተሳካ ሁኔታ ተዘጋጅቷል!",
+      "set_backup_failed": "የስርዓት መረጃ ምትኬ አልተሳካም። የአገልጋይ ምዝግብ ማስታወሻዎችን ይፈትሹ።",
       "set_split_title": "የተከፋፈለ ክፍያ ቅንብር",
       "set_split_desc": "ደንበኞች ቀጠሮ ሲይዙ አስቀድመው የሚከፍሉትን የቅድመ ክፍያ መቶኛ ይወስኑ።",
       "set_split_how": "የተከፋፈለ ክፍያ እንዴት እንደሚሰራ",
