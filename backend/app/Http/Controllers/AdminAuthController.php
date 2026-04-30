@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use App\Models\Booking;
+use App\Models\Dispute;
+use App\Models\Payment;
+use App\Models\ServiceCity;
+use App\Models\SystemSetting;
+use App\Models\Review;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Laravel\Sanctum\HasApiTokens;
@@ -98,6 +103,184 @@ class AdminAuthController extends Authenticatable
                 'success' => false,
                 'message' => 'Failed to fetch database stats',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate a full system data backup (JSON export)
+     * Exports all key tables, stripping sensitive fields like passwords.
+     */
+    public function generateBackup(Request $request)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $sections = $request->input('sections', ['all']);
+        $includeAll = in_array('all', $sections);
+
+        try {
+            $backup = [
+                'meta' => [
+                    'version'       => '1.0',
+                    'generated_at'  => now()->toIso8601String(),
+                    'generated_by'  => $admin->fullname ?? $admin->email,
+                    'admin_email'   => $admin->email,
+                    'platform'      => config('app.name', 'HB Service Finder'),
+                    'timezone'      => config('app.timezone', 'UTC'),
+                ],
+                'summary' => [],
+                'data'    => [],
+            ];
+
+            // ── Customers ────────────────────────────────────────────────────────
+            try {
+                if ($includeAll || in_array('customers', $sections)) {
+                    $customers = Customer::select([
+                        'customerID','fullname','email','phone','status',
+                        'profilePicture','service_address','created_at','updated_at'
+                    ])->get();
+                    $backup['data']['customers'] = $customers;
+                    $backup['summary']['customers'] = $customers->count();
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backup: Customers failed - " . $e->getMessage());
+                $backup['summary']['customers'] = 0;
+            }
+
+            // ── Service Providers ─────────────────────────────────────────────────
+            try {
+                if ($includeAll || in_array('providers', $sections)) {
+                    $providers = ServiceProvider::select([
+                        'providerID','fullname','email','phone','status',
+                        'catagoryID','service_city',
+                        'bio','profilePicture','approved_at','created_at','updated_at'
+                    ])->with('category:catagoryID,name')->get();
+                    $backup['data']['providers'] = $providers;
+                    $backup['summary']['providers'] = $providers->count();
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backup: Providers failed - " . $e->getMessage());
+                $backup['summary']['providers'] = 0;
+            }
+
+            // ── Bookings ──────────────────────────────────────────────────────────
+            try {
+                if ($includeAll || in_array('bookings', $sections)) {
+                    $bookings = Booking::select([
+                        'bookingID','customerID','providerID','serviceID',
+                        'status','payment_status','agreed_price',
+                        'platform_commission','provider_payout',
+                        'address_text','notes','scheduledDate',
+                        'created_at','updated_at','completed_at'
+                    ])->get();
+                    $backup['data']['bookings'] = $bookings;
+                    $backup['summary']['bookings'] = $bookings->count();
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backup: Bookings failed - " . $e->getMessage());
+                $backup['summary']['bookings'] = 0;
+            }
+
+            // ── Payments ──────────────────────────────────────────────────────────
+            try {
+                if ($includeAll || in_array('payments', $sections)) {
+                    $payments = Payment::select([
+                        'paymentID','bookingID','customerID','providerID',
+                        'tx_ref','amount','platform_commission','provider_amount',
+                        'status','payment_type','currency','paid_at','created_at'
+                    ])->get();
+                    $backup['data']['payments'] = $payments;
+                    $backup['summary']['payments'] = $payments->count();
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backup: Payments failed - " . $e->getMessage());
+                $backup['summary']['payments'] = 0;
+            }
+
+            // ── Disputes ──────────────────────────────────────────────────────────
+            try {
+                if ($includeAll || in_array('disputes', $sections)) {
+                    $disputes = Dispute::select([
+                        'disputeID','bookingID','raised_by_id','raised_by_type',
+                        'against_id','against_type','title','description',
+                        'status','priority','category','resolution_type',
+                        'refund_amount','admin_notes','resolved_at','created_at'
+                    ])->get();
+                    $backup['data']['disputes'] = $disputes;
+                    $backup['summary']['disputes'] = $disputes->count();
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backup: Disputes failed - " . $e->getMessage());
+                $backup['summary']['disputes'] = 0;
+            }
+
+            // ── Categories ────────────────────────────────────────────────────────
+            try {
+                if ($includeAll || in_array('categories', $sections)) {
+                    $categories = Category::all();
+                    $backup['data']['categories'] = $categories;
+                    $backup['summary']['categories'] = $categories->count();
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backup: Categories failed - " . $e->getMessage());
+                $backup['summary']['categories'] = 0;
+            }
+
+            // ── Services ──────────────────────────────────────────────────────────
+            try {
+                if ($includeAll || in_array('services', $sections)) {
+                    $services = Service::all();
+                    $backup['data']['services'] = $services;
+                    $backup['summary']['services'] = $services->count();
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backup: Services failed - " . $e->getMessage());
+                $backup['summary']['services'] = 0;
+            }
+
+            // ── Cities ────────────────────────────────────────────────────────────
+            if ($includeAll || in_array('cities', $sections)) {
+                $cities = ServiceCity::all();
+                $backup['data']['cities'] = $cities;
+                $backup['summary']['cities'] = $cities->count();
+            }
+
+            // ── Reviews ───────────────────────────────────────────────────────────
+            if ($includeAll || in_array('reviews', $sections)) {
+                $reviews = Review::all();
+                $backup['data']['reviews'] = $reviews;
+                $backup['summary']['reviews'] = $reviews->count();
+            }
+
+            // ── System Settings ───────────────────────────────────────────────────
+            if ($includeAll || in_array('settings', $sections)) {
+                $settings = SystemSetting::all();
+                $backup['data']['settings'] = $settings;
+                $backup['summary']['settings'] = $settings->count();
+            }
+
+            $backup['summary']['total_records'] = array_sum($backup['summary']);
+
+            Log::info('Admin generated system backup', [
+                'admin_id'      => $admin->adminID ?? null,
+                'admin_email'   => $admin->email,
+                'sections'      => $sections,
+                'total_records' => $backup['summary']['total_records'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data'    => $backup,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Backup generation failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate backup: ' . $e->getMessage(),
             ], 500);
         }
     }
