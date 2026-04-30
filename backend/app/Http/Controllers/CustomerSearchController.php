@@ -25,9 +25,22 @@ class CustomerSearchController extends Controller
         if ($inputs['latitude'] && $inputs['longitude']) {
             $query->nearest($inputs['latitude'], $inputs['longitude']);
             
-            // Increase range as requested - if maxDistance is large, we effectively skip filtering
             if ($inputs['maxDistance'] > 0 && $inputs['maxDistance'] < 2000) {
-                $query->having('distance', '<=', (float)$inputs['maxDistance']);
+                // SQLite doesn't support HAVING on non-aggregate aliases in the count() query used by paginate()
+                // We use whereRaw with the formula for SQLite, or having for others
+                if (DB::getDriverName() === 'sqlite') {
+                    $formula = "(6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) 
+                                * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) 
+                                + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0)))))";
+                    $query->whereRaw(\"$formula <= ?\", [
+                        $inputs['latitude'], 
+                        $inputs['longitude'], 
+                        $inputs['latitude'], 
+                        (float)$inputs['maxDistance']
+                    ]);
+                } else {
+                    $query->having('distance', '<=', (float)$inputs['maxDistance']);
+                }
             }
         }
 
@@ -482,7 +495,12 @@ class CustomerSearchController extends Controller
 
             // Only filter by radius if explicitly provided
             if ($radius !== null) {
-                $query->having('distance', '<=', (float) $radius);
+                if (DB::getDriverName() === 'sqlite') {
+                    $formula = "(6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0)))))";
+                    $query->whereRaw(\"$formula <= ?\", [$latitude, $longitude, $latitude, (float)$radius]);
+                } else {
+                    $query->having('distance', '<=', (float) $radius);
+                }
             }
 
             $query->orderBy('distance');

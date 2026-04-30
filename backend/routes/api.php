@@ -205,9 +205,8 @@ Route::middleware(['auth:customer', 'customer.active', 'log.sensitive'])->prefix
 // ==================== PROTECTED PROVIDER ROUTES ====================
 // auth:provider      — must have valid provider token
 // provider.approved  — account must be approved (not pending/suspended/rejected)
-Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->group(function () {
-
-    // ── Auth & Profile ────────────────────────────────────────────────────────
+// ── Provider routes that don't require approval ──────────────────────────
+Route::middleware(['auth:provider'])->prefix('provider')->group(function () {
     Route::post('/logout',              [OnlineStatusController::class, 'providerLogout']);
     Route::post('/logout-all',          [ServiceProviderAuthController::class, 'logoutAllDevices']);
     Route::post('/heartbeat',           [OnlineStatusController::class, 'providerHeartbeat']);
@@ -216,8 +215,13 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
     Route::post('/profile/password',    [ServiceProviderAuthController::class, 'changePassword']);
     Route::post('/location/update',     [ServiceProviderAuthController::class, 'updateLocation']);
     Route::post('/push-token',          [ServiceProviderAuthController::class, 'updatePushToken']);
+});
+
+// ── Provider routes that REQUIRE approval ───────────────────────────────
+Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->group(function () {
     Route::get('/bank-details',         [ServiceProviderAuthController::class, 'getBankDetails']);
     Route::put('/bank-details',         [ServiceProviderAuthController::class, 'updateBankDetails']);
+    Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     Route::get('/dashboard/stats',      [ProviderDashboardController::class, 'getStats']);
