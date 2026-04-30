@@ -20,8 +20,7 @@ export const useSearch = ({
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<Partial<SearchFilters>>({
     sortBy: 'rating',
-    maxDistance: 1000,
-    minRating: 0,
+    // No default maxDistance, minRating, or any other filter — all off by default
     ...initialFilters,
   });
   const [results, setResults] = useState<ServiceProvider[]>([]);
@@ -116,14 +115,14 @@ export const useSearch = ({
   }, [query, filters, performSearch, autoSearch]);
 
   const updateFilters = useCallback((newFilters: Partial<SearchFilters>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    // Replace filters entirely — don't merge with old values
+    setFilters({ sortBy: 'rating', ...newFilters });
   }, []);
 
   const resetFilters = useCallback(() => {
     setFilters({
       sortBy: 'rating',
-      maxDistance: 1000,
-      minRating: 0,
+      // No default filters — all off
     });
   }, []);
 

@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\Review;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Models\Withdrawal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -174,6 +175,12 @@ class ProviderDashboardController extends Controller
                 ->whereIn('status', ['completed', 'service_confirmed', 'waiting_customer_confirmation'])
                 ->count();
 
+            // Withdrawn = all withdrawals the provider submitted that weren't cancelled/rejected
+            // Pending withdrawals count too — money already left the available balance
+            $withdrawnTotal = (float) Withdrawal::where('providerID', $providerID)
+                ->whereNotIn('status', ['cancelled', 'rejected'])
+                ->sum('amount');
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -184,6 +191,7 @@ class ProviderDashboardController extends Controller
                     'lastMonth'              => $lastMonthEarnings,
                     'availableForWithdrawal' => $availableBalance,
                     'pendingClearance'       => $pendingBalance,
+                    'withdrawnTotal'         => $withdrawnTotal,
                     'completedJobs'          => $completedJobsCount,
                     'currency'               => 'ETB',
                 ]

@@ -1,5 +1,4 @@
-// app/(customer)/chat/index.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -12,6 +11,8 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
+    AppState,
+    AppStateStatus,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +24,7 @@ import { API_BASE_URL } from '@/app/config/api';
 import { formatDistanceToNow } from 'date-fns';
 import { customerService } from '@/app/services/customer.service';
 import type { ServiceProvider } from '@/app/types/customer.types';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function CustomerChatList() {
     const router = useRouter();
@@ -34,7 +36,8 @@ export default function CustomerChatList() {
     const [loadingProviders, setLoadingProviders] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'providers'
+    const [activeTab, setActiveTab] = useState('chats');
+    const appState = useRef(AppState.currentState);
 
     const fetchConversations = async () => {
         try {
@@ -65,10 +68,25 @@ export default function CustomerChatList() {
         }
     };
 
+    // Re-fetch conversations every time this screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchConversations();
+        }, [])
+    );
+
+    // Re-fetch when app comes back to foreground
     useEffect(() => {
-        fetchConversations();
+        const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+            if (appState.current.match(/inactive|background/) && nextState === 'active') {
+                fetchConversations();
+            }
+            appState.current = nextState;
+        });
+        return () => subscription.remove();
     }, []);
 
+    // Load providers when switching to that tab or searching
     useEffect(() => {
         if (activeTab === 'providers') {
             fetchProviders(searchQuery);

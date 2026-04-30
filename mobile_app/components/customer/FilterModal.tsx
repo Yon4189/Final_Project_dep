@@ -30,43 +30,37 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   initialFilters = {},
 }) => {
   const { t } = useTranslation();
-  const [sortBy, setSortBy] = useState(initialFilters.sortBy || 'rating');
+
+  // Default state = nothing selected / no filters active
+  const [sortBy, setSortBy] = useState<string | null>(initialFilters.sortBy || null);
   const [priceRange, setPriceRange] = useState({
     min: initialFilters.priceRange?.min || 0,
     max: initialFilters.priceRange?.max || 10000,
   });
   const [minRating, setMinRating] = useState(initialFilters.minRating || 0);
   const [availableNow, setAvailableNow] = useState(initialFilters.availableNow || false);
-  const [maxDistance, setMaxDistance] = useState(initialFilters.maxDistance || 50);
+  // null = no distance filter selected
+  const [maxDistance, setMaxDistance] = useState<number | null>(initialFilters.maxDistance || null);
 
   const handleApply = () => {
-    const filters = {
-      sortBy,
-      priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
-      minRating: minRating > 0 ? minRating : undefined,
-      availableNow,
-      maxDistance,
-    };
+    const filters: any = {};
+    if (sortBy) filters.sortBy = sortBy;
+    if (priceRange.min > 0 || priceRange.max < 10000) filters.priceRange = priceRange;
+    if (minRating > 0) filters.minRating = minRating;
+    if (availableNow) filters.availableNow = true;
+    if (maxDistance !== null) filters.maxDistance = maxDistance;
     onApply(filters);
     onClose();
   };
 
   const handleReset = () => {
-    setSortBy('rating');
+    setSortBy(null);
     setPriceRange({ min: 0, max: 10000 });
     setMinRating(0);
     setAvailableNow(false);
-    setMaxDistance(50);
-    
-    // Apply the reset filters immediately
-    const resetFilters = {
-      sortBy: 'rating',
-      priceRange: undefined,
-      minRating: undefined,
-      availableNow: false,
-      maxDistance: 50,
-    };
-    onApply(resetFilters);
+    setMaxDistance(null);
+    // Pass completely empty filters — no restrictions at all
+    onApply({});
     onClose();
   };
 
@@ -178,6 +172,16 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('filter.distance.title', 'Maximum Distance')}</Text>
               <View style={styles.sliderContainer}>
+                {/* "Any" option to clear distance filter */}
+                <TouchableOpacity
+                  key="any"
+                  style={[styles.distanceOption, maxDistance === null && styles.distanceOptionSelected]}
+                  onPress={() => setMaxDistance(null)}
+                >
+                  <Text style={[styles.distanceText, maxDistance === null && styles.distanceTextSelected]}>
+                    Any
+                  </Text>
+                </TouchableOpacity>
                 {[5, 10, 25, 50, 100].map((distance) => (
                   <TouchableOpacity
                     key={distance}

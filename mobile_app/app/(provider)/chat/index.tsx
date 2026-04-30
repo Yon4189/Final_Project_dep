@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -11,6 +11,8 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
+    AppState,
+    AppStateStatus,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +22,7 @@ import { Colors } from '@/app/constants/Colors';
 import { api } from '@/app/services/api';
 import { API_BASE_URL } from '@/app/config/api';
 import { formatDistanceToNow } from 'date-fns';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProviderChatList() {
     const router = useRouter();
@@ -29,6 +32,7 @@ export default function ProviderChatList() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const appState = useRef(AppState.currentState);
 
     const fetchConversations = async () => {
         try {
@@ -44,8 +48,22 @@ export default function ProviderChatList() {
         }
     };
 
+    // Re-fetch every time this screen comes into focus (e.g. navigating back from a chat)
+    useFocusEffect(
+        useCallback(() => {
+            fetchConversations();
+        }, [])
+    );
+
+    // Also re-fetch when app comes back to foreground
     useEffect(() => {
-        fetchConversations();
+        const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+            if (appState.current.match(/inactive|background/) && nextState === 'active') {
+                fetchConversations();
+            }
+            appState.current = nextState;
+        });
+        return () => subscription.remove();
     }, []);
 
     const onRefresh = useCallback(() => {

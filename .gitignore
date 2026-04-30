@@ -29,3 +29,10 @@ vendor/
 .vscode/
 .idea/
 
+
+#ignore all bat and md files
+*.bat
+*.md
+#exception for Read me file
+!README.md
+
