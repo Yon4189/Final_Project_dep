@@ -219,12 +219,17 @@ class NotificationController extends Controller
     }
 
 
-        /**
+    /**
      * Get notifications for authenticated customer
      */
     public function getCustomerNotifications(Request $request)
     {
         $customer = $request->user();
+        
+        Log::info('Fetching customer notifications', [
+            'customer_id' => $customer->customerID,
+            'user_type' => 'customer'
+        ]);
         
         $notifications = Notification::where('notifiable_type', 'customer')
             ->where('notifiable_id', $customer->customerID)
@@ -251,6 +256,11 @@ class NotificationController extends Controller
     public function getProviderNotifications(Request $request)
     {
         $provider = $request->user();
+        
+        Log::info('Fetching provider notifications', [
+            'provider_id' => $provider->providerID,
+            'user_type' => 'provider'
+        ]);
         
         $notifications = Notification::where('notifiable_type', 'provider')
             ->where('notifiable_id', $provider->providerID)

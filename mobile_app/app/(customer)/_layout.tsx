@@ -16,7 +16,7 @@ function NotificationBadge() {
   if (unreadCount === 0) {
     return (
       <TouchableOpacity
-        onPress={() => router.push('/notifications')}
+        onPress={() => router.push('/(customer)/notifications')}
         style={{ marginRight: 15 }}
       >
         <Ionicons name="notifications-outline" size={24} color={colors.primary} />
@@ -26,7 +26,7 @@ function NotificationBadge() {
 
   return (
     <TouchableOpacity
-      onPress={() => router.push('/notifications')}
+      onPress={() => router.push('/(customer)/notifications')}
       style={{ marginRight: 15, position: 'relative' }}
     >
       <Ionicons name="notifications-outline" size={24} color={colors.primary} />
@@ -50,8 +50,7 @@ export default function CustomerLayout() {
         headerTintColor: colors.text.primary,
         headerTitleStyle: { fontWeight: '600' },
         headerShadowVisible: false,
-        headerTopInsetEnabled: true,
-        statusBarTranslucent: false,
+
         contentStyle: { backgroundColor: colors.background },
         headerLeft: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>

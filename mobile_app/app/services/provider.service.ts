@@ -475,6 +475,10 @@ class ProviderService {
   async markNotificationAsRead(notificationId: string): Promise<ApiResponse<void>> {
     return api.post(`${this.BASE_PATH}/notifications/${notificationId}/read`);
   }
+
+  async markAllAsRead(): Promise<ApiResponse<void>> {
+    return api.post(`${this.BASE_PATH}/notifications/read-all`);
+  }
 }
 
 export const providerService = new ProviderService();

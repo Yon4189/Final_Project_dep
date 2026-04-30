@@ -669,7 +669,7 @@ export default function CustomerDashboard() {
           <View style={[styles.headerActions, { position: 'relative', right: 0 }]}>
             <TouchableOpacity
               style={[styles.iconButton, { marginRight: 4 }]}
-              onPress={() => router.push("/notifications")}
+              onPress={() => router.push("/(customer)/notifications")}
             >
               <Ionicons
                 name="notifications-outline"
