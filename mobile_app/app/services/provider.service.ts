@@ -97,9 +97,12 @@ class ProviderService {
     return response;
   }
 
-  async updateWorkingHours(workingHours: any): Promise<ApiResponse<ProviderProfile>> {
-    const response = await api.put<ProviderProfile>(`${this.BASE_PATH}/working-hours`, workingHours);
-    return response;
+  async getSchedule(): Promise<ApiResponse<any[]>> {
+    return api.get<any[]>(`${this.BASE_PATH}/schedule`);
+  }
+
+  async updateSchedule(schedule: any[]): Promise<ApiResponse<void>> {
+    return api.post<void>(`${this.BASE_PATH}/schedule`, { schedule });
   }
 
   async uploadProfileImage(formData: FormData): Promise<ApiResponse<{ url: string }>> {
