@@ -32,7 +32,7 @@ class ServiceProvider extends Authenticatable
         'password', 
         'service_city', 
         'catagoryID', 
-        'idPhoto', 
+        'idPhoto', 'idPhotoBack', 
         'idPhotoType', 
         'credentialPhoto', 
         'status', 
