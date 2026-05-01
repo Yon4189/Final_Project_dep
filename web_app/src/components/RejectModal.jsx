@@ -10,6 +10,7 @@ const RejectModal = ({
   onReasonChange,
   onSubmit,
   onCancel,
+  isLoading = false,
 }) => {
   const { t } = useTranslation();
   const modalRef = useRef(null);
@@ -32,13 +33,13 @@ const RejectModal = ({
   // Handle ESC key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && show) {
+      if (e.key === 'Escape' && show && !isLoading) {
         onCancel();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [show, onCancel]);
+  }, [show, onCancel, isLoading]);
 
   if (!show) return null;
 
@@ -60,7 +61,8 @@ const RejectModal = ({
           </h2>
           <button
             onClick={onCancel}
-            className="focus:outline-none focus:ring-2 focus:ring-white rounded-full"
+            disabled={isLoading}
+            className="focus:outline-none focus:ring-2 focus:ring-white rounded-full disabled:opacity-50"
             aria-label={t('modal_cancel')}
           >
             <XCircle size={28} />
@@ -72,7 +74,8 @@ const RejectModal = ({
           </label>
           <textarea
             ref={textareaRef}
-            className="w-full border border-admin-border rounded-xl p-3 text-sm text-admin-text focus:outline-none focus:ring-2 focus:ring-red-400 bg-admin-card transition-colors"
+            disabled={isLoading}
+            className="w-full border border-admin-border rounded-xl p-3 text-sm text-admin-text focus:outline-none focus:ring-2 focus:ring-red-400 bg-admin-card transition-colors disabled:opacity-50"
             rows={3}
             placeholder={defaultReason}
             value={inputReason}
@@ -84,16 +87,24 @@ const RejectModal = ({
           <button
             ref={cancelButtonRef}
             onClick={onCancel}
-            className="bg-admin-card hover:bg-slate-100 dark:hover:bg-slate-700 text-admin-text font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500 border border-admin-border"
+            disabled={isLoading}
+            className="bg-admin-card hover:bg-slate-100 dark:hover:bg-slate-700 text-admin-text font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-slate-500 border border-admin-border disabled:opacity-50"
           >
             {t('modal_cancel')}
           </button>
           <button
             onClick={onSubmit}
-            className="bg-red-500 hover:bg-red-600 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-red-400"
+            disabled={isLoading}
+            className="bg-red-500 hover:bg-red-600 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-red-400 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             aria-label={t('modal_submit')}
           >
-            {t('modal_submit')}
+            {isLoading && (
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {isLoading ? t('processing') || '...' : t('modal_submit')}
           </button>
         </div>
       </div>

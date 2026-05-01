@@ -56,6 +56,15 @@ const Dashboard = () => {
       if (response.data.success) {
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         queryClient.invalidateQueries({ queryKey: ['pendingProviders'] });
+        if (status === 'rejected') {
+          setRejectModal({
+            show: false,
+            providerId: null,
+            providerName: '',
+            defaultReason: t('modal_reject_placeholder'),
+            inputReason: '',
+          });
+        }
         alert(status === 'approved' ? t('alert_approved') : t('alert_rejected'));
       }
     } catch (error) {
@@ -85,7 +94,6 @@ const Dashboard = () => {
       alert(t('alert_provide_reason'));
       return;
     }
-    setRejectModal((prev) => ({ ...prev, show: false }));
     processVerification(rejectModal.providerId, 'rejected', rejectModal.inputReason);
   };
 
@@ -132,6 +140,7 @@ const Dashboard = () => {
         onReasonChange={(value) => setRejectModal((prev) => ({ ...prev, inputReason: value }))}
         onSubmit={handleRejectSubmit}
         onCancel={handleRejectCancel}
+        isLoading={processingId === rejectModal.providerId}
       />
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
