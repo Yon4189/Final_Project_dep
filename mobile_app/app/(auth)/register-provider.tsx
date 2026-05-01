@@ -320,8 +320,8 @@ export default function RegisterProviderScreen() {
       // Map front ID to 'idPhoto' (Required by backend)
       if (idPhotoFront) data.append('idPhoto', idPhotoFront as any);
       
-      // Map back ID to 'credentialPhoto' (Optional in backend, but we use it for back side)
-      if (idPhotoBack) data.append('credentialPhoto', idPhotoBack as any);
+      // Map back ID to 'idPhotoBack' (Required by backend)
+      if (idPhotoBack) data.append('idPhotoBack', idPhotoBack as any);
       
       // Append certificates (optional)
       certificates.forEach((cert, index) => {
@@ -491,6 +491,7 @@ export default function RegisterProviderScreen() {
                   <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
                 </TouchableOpacity>
                 <AppInput label={t("auth.serviceName", "Service Name")} value={offering.serviceName} onChangeText={(t) => updateServiceOffering(index, 'serviceName', t)} placeholder={t("auth.egPlumbing", "e.g., Plumbing")} required />
+                <AppInput label={t("auth.serviceDescription", "Service Description")} value={offering.description} onChangeText={(t) => updateServiceOffering(index, 'description', t)} placeholder={t("auth.serviceDescPlaceholder", "Briefly describe the service")} multiline />
                 <AppInput label={t("auth.basePrice", "Base Price (ETB)")} value={offering.basePrice} onChangeText={(t) => updateServiceOffering(index, 'basePrice', t.replace(/[^0-9]/g, ''))} placeholder="1000" keyboardType="numeric" required />
               </View>
             ))}
