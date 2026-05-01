@@ -256,13 +256,7 @@ class ServiceProviderAuthController extends Controller
         // Only block rejected and suspended accounts from logging in
         // Pending accounts CAN login to complete their profile
         
-        // Check account status - rejected
-        if (in_array(strtolower($provider->status), ['rejected'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account registration was rejected. Please contact support for more information'
-            ], 403);
-        }
+
 
         // Check account status - suspended
         if (in_array(strtolower($provider->status), ['suspended'])) {
@@ -535,6 +529,13 @@ class ServiceProviderAuthController extends Controller
             if ($request->has($field)) {
                 $provider->$field = $request->$field;
             }
+        }
+        
+        // If the provider was rejected, set status back to pending after update
+        if (strtolower($provider->status) === 'rejected') {
+            $provider->status = 'pending';
+            $provider->rejected_at = null;
+            $provider->rejection_reason = null;
         }
 
         $provider->save();

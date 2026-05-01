@@ -426,6 +426,24 @@ export default function ProviderDashboard() {
     <View style={styles.mainContainer}>
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         {renderHeader()}
+        {profile?.status === 'rejected' && (
+          <View style={styles.rejectionBanner}>
+            <View style={styles.rejectionHeader}>
+              <Ionicons name="alert-circle" size={24} color={colors.error} />
+              <Text style={styles.rejectionTitle}>{t('dashboard.rejectedTitle', 'Account Rejected')}</Text>
+            </View>
+            <Text style={styles.rejectionReason}>
+              {profile?.rejection_reason || t('dashboard.rejectedDefaultMsg', 'Your application was not approved. Please update your profile information and try again.')}
+            </Text>
+            <TouchableOpacity 
+              style={styles.rejectionAction}
+              onPress={() => router.push('/profile/edit')}
+            >
+              <Text style={styles.rejectionActionText}>{t('dashboard.editProfile', 'Edit Profile')}</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.surface} />
+            </TouchableOpacity>
+          </View>
+        )}
         {renderTabs()}
         <View style={styles.mainContent}>
           {renderListContent()}
@@ -606,4 +624,43 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   drawerItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 15, marginBottom: 5 },
   drawerItemText: { fontSize: 16, fontWeight: '500', color: colors.text.primary, marginLeft: 15 },
   drawerDivider: { height: 1, backgroundColor: colors.border, marginVertical: 15, marginHorizontal: 15 },
+  rejectionBanner: {
+    margin: 20,
+    padding: 16,
+    backgroundColor: colors.error + '10',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.error + '30',
+  },
+  rejectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  rejectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.error,
+  },
+  rejectionReason: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  rejectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.error,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 8,
+  },
+  rejectionActionText: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
 });
