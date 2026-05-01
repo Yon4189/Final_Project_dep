@@ -21,14 +21,9 @@ class CustomerSearchController extends Controller
         // Initialize Query with approved status
         $query = ServiceProvider::approved();
 
-        // Distance Filtering (Database Level)
-        // SQLite does NOT have trig functions (acos, cos, sin, radians),
-        // so we skip distance calculation entirely on SQLite and sort by rating instead.
-        $isSqlite = DB::getDriverName() === 'sqlite';
-
-        if ($inputs['latitude'] && $inputs['longitude'] && !$isSqlite) {
+        // Distance Filtering (Database Level) — only when BOTH coordinates AND explicit max_distance are provided
+        if ($inputs['latitude'] && $inputs['longitude'] && $request->has('max_distance')) {
             $query->nearest($inputs['latitude'], $inputs['longitude']);
-            
             if ($inputs['maxDistance'] > 0 && $inputs['maxDistance'] < 2000) {
                 $query->having('distance', '<=', (float)$inputs['maxDistance']);
             }
@@ -106,7 +101,8 @@ class CustomerSearchController extends Controller
             $q->where('rating', '>=', $minRating);
         })
         ->when($inputs['availableNow'], function ($q) {
-            $q->where('is_online', true);
+            // "Available Now" = app is open (heartbeat active) AND provider set themselves as available
+            $q->where('is_online', true)->where('is_available', true);
         });
 
         // Price Range Filter
@@ -233,7 +229,6 @@ class CustomerSearchController extends Controller
         $limit = $request->query('limit', 5);
         
         $providers = ServiceProvider::whereIn('status', ['Active', 'approved'])
-            ->where('rating', '>=', 4.0)
             ->orderByDesc('rating')
             ->limit($limit)
             ->get();
@@ -481,16 +476,20 @@ class CustomerSearchController extends Controller
         // Distance filtering — SQLite lacks trig functions, so skip distance calc there
         if ($latitude && $longitude && !$isSqlite) {
             $query->selectRaw(
-                '*, (6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0))))) AS distance',
+                'service_providers.*, CASE 
+                    WHEN current_latitude IS NOT NULL AND current_longitude IS NOT NULL 
+                    THEN (6371 * acos(cos(radians(?)) * cos(radians(current_latitude)) * cos(radians(current_longitude) - radians(?)) + sin(radians(?)) * sin(radians(current_latitude))))
+                    ELSE NULL 
+                END AS distance',
                 [$latitude, $longitude, $latitude]
             );
 
             // Only filter by radius if explicitly provided
             if ($radius !== null) {
-                $query->having('distance', '<=', (float) $radius);
+                $query->havingRaw('distance IS NULL OR distance <= ?', [(float) $radius]);
             }
 
-            $query->orderBy('distance');
+            $query->orderByRaw('distance IS NULL ASC')->orderBy('distance');
         } else {
             // No coordinates or SQLite — return approved providers sorted by rating
             $query->orderByDesc('rating');

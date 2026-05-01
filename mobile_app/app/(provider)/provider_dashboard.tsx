@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Modal,
   Animated,
   PanResponder,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,6 +25,7 @@ import { useProviderStore } from '@/app/store/providerStore';
 import { useProviderQueries, useProviderRequests } from '@/hooks/useProviderQueries';
 import { useProviderNotificationCount } from '@/hooks/useProviderNotifications';
 import * as pusherClient from '@/app/services/pusherClient';
+import { api } from '@/app/services/api';
 import { PriceText } from '@/components/common/PriceText';
 import { API_BASE_URL } from '@/app/config/api';
 import { useConversations } from '@/hooks/useChat';
@@ -121,6 +124,59 @@ export default function ProviderDashboard() {
     }
   }, [profile?.providerID]);
 
+  // ── Real liveness heartbeat ──────────────────────────────────────────────
+  // Sends a heartbeat every 30s while the app is in the foreground.
+  // Marks the provider offline immediately when the app backgrounds or unmounts.
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  const sendHeartbeat = async () => {
+    try {
+      await api.post('/provider/heartbeat', {});
+    } catch {
+      // Silently ignore — network blip shouldn't crash the dashboard
+    }
+  };
+
+  const markOffline = async () => {
+    try {
+      await api.post('/provider/heartbeat/offline', {});
+    } catch {
+      // Silently ignore
+    }
+  };
+
+  useEffect(() => {
+    // Start heartbeat immediately on mount
+    sendHeartbeat();
+    heartbeatRef.current = setInterval(sendHeartbeat, 30_000);
+
+    // Pause/resume heartbeat based on app foreground state
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (nextState === 'active' && prev !== 'active') {
+        // App came to foreground — send heartbeat immediately and restart interval
+        sendHeartbeat();
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+        heartbeatRef.current = setInterval(sendHeartbeat, 30_000);
+      } else if (nextState !== 'active' && prev === 'active') {
+        // App went to background — stop interval and mark offline
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+        markOffline();
+      }
+    });
+
+    return () => {
+      // Cleanup on unmount
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      subscription.remove();
+      markOffline();
+    };
+  }, []);
+  // ── End heartbeat ────────────────────────────────────────────────────────
+
   const renderHeader = () => (
     <LinearGradient
       colors={[colors.primary, colors.primaryDark || colors.primary]}
@@ -182,15 +238,23 @@ export default function ProviderDashboard() {
 
       <View style={styles.availabilityCard}>
         <View style={styles.availabilityInfo}>
-          <View style={[styles.dot, { backgroundColor: profile?.isAvailable ? colors.success : colors.error }]} />
-          <Text style={styles.availabilityLabel}>{profile?.isAvailable ? t("providerDashboard.availableForWork", "Available for work") : t("providerDashboard.notAvailable", "Not available")}</Text>
+          {/* Dot reflects real liveness: green = heartbeat active, grey = offline/backgrounded */}
+          <View style={[styles.dot, { backgroundColor: (profile as any)?.is_online ? colors.success : '#9ca3af' }]} />
+          <View>
+            <Text style={styles.availabilityLabel}>
+              {profile?.isAvailable ? t("providerDashboard.availableForWork", "Available for work") : t("providerDashboard.notAvailable", "Not available")}
+            </Text>
+            <Text style={[styles.availabilitySubLabel, { color: (profile as any)?.is_online ? colors.success : '#9ca3af' }]}>
+              {(profile as any)?.is_online ? t("providerDashboard.online", "● Online") : t("providerDashboard.offline", "○ Offline")}
+            </Text>
+          </View>
         </View>
         <TouchableOpacity 
           style={[styles.toggleBtn, { backgroundColor: profile?.isAvailable ? colors.success + '20' : colors.error + '20' }]} 
           onPress={toggleAvailability}
         >
           <Text style={[styles.toggleText, { color: profile?.isAvailable ? colors.success : colors.error }]}>
-            {profile?.isAvailable ? t("providerDashboard.online", "Online") : t("providerDashboard.offline", "Offline")}
+            {profile?.isAvailable ? t("providerDashboard.setUnavailable", "Set Unavailable") : t("providerDashboard.setAvailable", "Set Available")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -490,6 +554,7 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   availabilityInfo: { flexDirection: 'row', alignItems: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
   availabilityLabel: { color: colors.surface, fontSize: 14, fontWeight: '500' },
+  availabilitySubLabel: { fontSize: 11, fontWeight: '500', marginTop: 2 },
   toggleBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   toggleText: { fontSize: 12, fontWeight: 'bold' },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, gap: 10 },

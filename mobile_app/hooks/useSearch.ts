@@ -112,7 +112,8 @@ export const useSearch = ({
   }, [query, filters, performSearch, autoSearch, location, locationLoading]);
 
   const updateFilters = useCallback((newFilters: Partial<SearchFilters>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    // Replace filters entirely — don't merge with old values
+    setFilters({ sortBy: 'rating', ...newFilters });
   }, []);
 
   const resetFilters = useCallback(() => {

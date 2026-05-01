@@ -65,7 +65,14 @@ class ServiceProvider extends Authenticatable
         'hourly_rate',
         'total_earned',
         'success_rate',
+        'is_available',
         'is_online',
+        'last_seen_at',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     protected $casts = [
@@ -78,11 +85,7 @@ class ServiceProvider extends Authenticatable
         'current_longitude' => 'decimal:8',
         'rating' => 'float',
         'certifications' => 'array',
-    ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
+        'is_available' => 'boolean',
     ];
 
     /**
@@ -283,12 +286,21 @@ class ServiceProvider extends Authenticatable
      */
     public function scopeNearest($query, $latitude, $longitude)
     {
-        $sql = "(6371 * acos(cos(radians(?)) * cos(radians(COALESCE(current_latitude, 0))) 
-                * cos(radians(COALESCE(current_longitude, 0)) - radians(?)) 
-                + sin(radians(?)) * sin(radians(COALESCE(current_latitude, 0))))) AS distance";
+        // Calculate distance only for providers that have GPS coordinates set.
+        // Providers without coordinates get distance = NULL and sort last.
+        $sql = "CASE 
+                    WHEN current_latitude IS NOT NULL AND current_longitude IS NOT NULL 
+                    THEN (6371 * acos(
+                        cos(radians(?)) * cos(radians(current_latitude)) 
+                        * cos(radians(current_longitude) - radians(?)) 
+                        + sin(radians(?)) * sin(radians(current_latitude))
+                    ))
+                    ELSE NULL 
+                END AS distance";
         
         return $query->select('service_providers.*')
             ->selectRaw($sql, [$latitude, $longitude, $latitude])
+            ->orderByRaw('distance IS NULL ASC') // providers with GPS first
             ->orderBy('distance');
     }
 

@@ -211,11 +211,13 @@ Route::middleware(['auth:provider'])->prefix('provider')->group(function () {
     Route::post('/logout',              [OnlineStatusController::class, 'providerLogout']);
     Route::post('/logout-all',          [ServiceProviderAuthController::class, 'logoutAllDevices']);
     Route::post('/heartbeat',           [OnlineStatusController::class, 'providerHeartbeat']);
+    Route::post('/heartbeat/offline',   [OnlineStatusController::class, 'providerMarkOffline']);
     Route::get('/profile',              [ServiceProviderAuthController::class, 'profile']);
     Route::post('/profile/update',      [ServiceProviderAuthController::class, 'updateProfile']);
     Route::post('/profile/password',    [ServiceProviderAuthController::class, 'changePassword']);
     Route::post('/location/update',     [ServiceProviderAuthController::class, 'updateLocation']);
     Route::post('/push-token',          [ServiceProviderAuthController::class, 'updatePushToken']);
+    Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
 });
 
 // ── Provider routes that REQUIRE approval ───────────────────────────────

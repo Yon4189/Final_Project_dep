@@ -30,7 +30,9 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   initialFilters = {},
 }) => {
   const { t } = useTranslation();
-  const [sortBy, setSortBy] = useState(initialFilters.sortBy || 'rating');
+
+  // Default state = nothing selected / no filters active
+  const [sortBy, setSortBy] = useState<string | null>(initialFilters.sortBy || null);
   const [priceRange, setPriceRange] = useState({
     min: initialFilters.priceRange?.min || 0,
     max: initialFilters.priceRange?.max || 10000,
@@ -52,7 +54,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   };
 
   const handleReset = () => {
-    setSortBy('rating');
+    setSortBy(null);
     setPriceRange({ min: 0, max: 10000 });
     setMinRating(0);
     setAvailableNow(false);

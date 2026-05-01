@@ -200,6 +200,26 @@ class WalletService
                             $this->releasePayment($depositPayment);
                         }
                         
+                        // Add final payment to pending balance first
+                        $wallet = Wallet::firstOrCreate(
+                            ['providerID' => $payment->providerID],
+                            ['available_balance' => 0, 'pending_balance' => 0]
+                        );
+                        
+                        $lockedWallet = Wallet::where('walletID', $wallet->walletID)
+                            ->lockForUpdate()
+                            ->first();
+                        $lockedWallet->pending_balance += $payment->provider_amount;
+                        $lockedWallet->save();
+
+                        WalletTransaction::create([
+                            'walletID' => $lockedWallet->walletID,
+                            'type' => 'pending_credit',
+                            'amount' => $payment->provider_amount,
+                            'description' => 'Final payment held for booking #' . $booking->bookingID,
+                            'bookingID' => $booking->bookingID
+                        ]);
+                        
                         // Mark final payment as releasable and release it
                         $payment->status = 'releasable';
                         $payment->save();

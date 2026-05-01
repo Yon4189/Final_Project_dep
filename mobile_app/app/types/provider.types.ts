@@ -194,11 +194,12 @@ export interface EarningsSummary {
   pendingEarnings: number;
   availableForWithdrawal: number;
   withdrawnTotal: number;
+  today: number;
   thisWeek: number;
   thisMonth: number;
   lastMonth: number;
   currency: string;
-  completedJobs: number; // ← Add this line
+  completedJobs: number;
   avgRating: number;
   responseRate: number;
   rank: string;

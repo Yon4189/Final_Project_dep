@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,12 +49,28 @@ export function ReviewModal({ visible, onClose, bookingId, providerName, service
         comment,
         is_anonymous: isAnonymous,
       });
-      onSuccess?.();
-      onClose();
-      // Reset state for next time
-      setRating(0);
-      setComment('');
-      setIsAnonymous(false);
+      
+      // Show success message
+      Alert.alert(
+        t('reviews.successTitle', 'Thank You!'),
+        t('reviews.successMessage', 'Your review has been submitted successfully. Thank you for your feedback!'),
+        [
+          {
+            text: t('common.ok', 'OK'),
+            onPress: () => {
+              // Reset state
+              setRating(0);
+              setComment('');
+              setIsAnonymous(false);
+              setError(null);
+              
+              // Call success callback and close
+              onSuccess?.();
+              onClose();
+            }
+          }
+        ]
+      );
     } catch (err: any) {
       setError(err.message || t('reviews.submitError', 'Failed to submit review'));
     }

@@ -331,13 +331,18 @@ class ServiceProviderAuthController extends Controller
     }
 
     /**
+     * Toggle provider availability (accepting jobs or not)
+     * PATCH /api/provider/availability
+     * 
+     * Note: This method is defined later in the file
+     */
+
+    /**
      * Get authenticated provider profile
      */
     public function profile(Request $request)
     {
         $provider = $request->user();
-        
-        // Load relationships
         $provider->load(['services', 'category']);
 
         return response()->json([
@@ -380,18 +385,54 @@ class ServiceProviderAuthController extends Controller
         ]);
 
         $provider = $request->user();
+        
+        // Update both is_available and is_online to keep them in sync
+        $provider->is_available = $request->isAvailable;
         $provider->is_online = $request->isAvailable;
         $provider->last_seen_at = now();
         $provider->save();
 
         return response()->json([
             'success' => true,
-            'message' => 'Availability updated successfully',
+            'message' => $request->isAvailable ? 'You are now available for work' : 'You are now unavailable',
             'data' => [
-                'isAvailable' => (bool) $provider->is_online,
+                'isAvailable' => (bool) $provider->is_available,
                 'is_online' => (bool) $provider->is_online
             ]
         ]);
+    }
+
+    /**
+     * Build the profile data array (shared between profile() and updateAvailability())
+     */
+    private function buildProfileData(ServiceProvider $provider): array
+    {
+        return [
+            'providerID'             => $provider->providerID,
+            'fullname'               => $provider->fullname,
+            'email'                  => $provider->email,
+            'phone'                  => $provider->phone,
+            'profilePicture'         => $provider->profilePicture,
+            'service_city'           => $provider->service_city,
+            'bio'                    => $provider->bio,
+            'rating'                 => $provider->rating,
+            'completed_jobs'         => $provider->completed_jobs,
+            'accepted_jobs'          => $provider->accepted_jobs,
+            'success_rate'           => $provider->success_rate,
+            'walletBalance'          => $provider->walletBalance,
+            'serviceRadiusKm'        => $provider->serviceRadiusKm,
+            'current_latitude'       => $provider->current_latitude,
+            'current_longitude'      => $provider->current_longitude,
+            'status'                 => $provider->status,
+            'isAvailable'            => (bool) $provider->is_available,
+            'is_online'              => (bool) $provider->is_online,
+            'last_seen_at'           => $provider->last_seen_at,
+            'category'               => $provider->category,
+            'services'               => $provider->services,
+            'business_license'       => $provider->business_license,
+            'insurance_certificate'  => $provider->insurance_certificate,
+            'certifications'         => $provider->certifications,
+        ];
     }
 
     /**

@@ -99,6 +99,7 @@ module.exports = ({ config }) => {
       "expo-router",
       "expo-localization",
       "expo-secure-store",
+      "expo-web-browser",
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",

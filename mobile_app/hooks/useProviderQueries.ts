@@ -524,18 +524,16 @@ export function useProviderQueries() {
 
   // Create earnings object from summary data
   const earnings = earningsSummaryQuery.data ? {
-  // If you have a 'today' property, add it to the type
-  // Otherwise, use what's available
-  today: 0, // Or calculate from transactions
-  week: earningsSummaryQuery.data.thisWeek || 0,
-  month: earningsSummaryQuery.data.thisMonth || 0,
-  available: earningsSummaryQuery.data.availableForWithdrawal || 0,
-} : {
-  today: 0,
-  week: 0,
-  month: 0,
-  available: 0,
-};
+    today: earningsSummaryQuery.data.today || 0,
+    week:  earningsSummaryQuery.data.thisWeek || 0,
+    month: earningsSummaryQuery.data.thisMonth || 0,
+    available: earningsSummaryQuery.data.availableForWithdrawal || 0,
+  } : {
+    today: 0,
+    week: 0,
+    month: 0,
+    available: 0,
+  };
   const isLoading = 
     profileQuery.isLoading || 
     statsQuery.isLoading || 

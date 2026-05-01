@@ -308,7 +308,8 @@ export default function CustomerDashboard() {
   };
 
   const handleFilterApply = (newFilters: any) => {
-    updateFilters(newFilters);
+    // Replace all filters entirely (don't merge) so reset works correctly
+    updateFilters({ sortBy: 'rating', ...newFilters });
   };
 
   const handleVoiceSearch = async () => {
