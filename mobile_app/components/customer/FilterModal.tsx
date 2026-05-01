@@ -39,16 +39,16 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   });
   const [minRating, setMinRating] = useState(initialFilters.minRating || 0);
   const [availableNow, setAvailableNow] = useState(initialFilters.availableNow || false);
-  // null = no distance filter selected
-  const [maxDistance, setMaxDistance] = useState<number | null>(initialFilters.maxDistance || null);
+  const [maxDistance, setMaxDistance] = useState(initialFilters.maxDistance || 1000);
 
   const handleApply = () => {
-    const filters: any = {};
-    if (sortBy) filters.sortBy = sortBy;
-    if (priceRange.min > 0 || priceRange.max < 10000) filters.priceRange = priceRange;
-    if (minRating > 0) filters.minRating = minRating;
-    if (availableNow) filters.availableNow = true;
-    if (maxDistance !== null) filters.maxDistance = maxDistance;
+    const filters = {
+      sortBy,
+      priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
+      minRating: minRating > 0 ? minRating : undefined,
+      availableNow,
+      maxDistance: maxDistance < 1000 ? maxDistance : undefined,
+    };
     onApply(filters);
     onClose();
   };
@@ -58,9 +58,17 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     setPriceRange({ min: 0, max: 10000 });
     setMinRating(0);
     setAvailableNow(false);
-    setMaxDistance(null);
-    // Pass completely empty filters — no restrictions at all
-    onApply({});
+    setMaxDistance(1000);
+    
+    // Apply the reset filters immediately
+    const resetFilters = {
+      sortBy: 'rating',
+      priceRange: undefined,
+      minRating: undefined,
+      availableNow: false,
+      maxDistance: undefined,
+    };
+    onApply(resetFilters);
     onClose();
   };
 
@@ -172,24 +180,14 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('filter.distance.title', 'Maximum Distance')}</Text>
               <View style={styles.sliderContainer}>
-                {/* "Any" option to clear distance filter */}
-                <TouchableOpacity
-                  key="any"
-                  style={[styles.distanceOption, maxDistance === null && styles.distanceOptionSelected]}
-                  onPress={() => setMaxDistance(null)}
-                >
-                  <Text style={[styles.distanceText, maxDistance === null && styles.distanceTextSelected]}>
-                    Any
-                  </Text>
-                </TouchableOpacity>
-                {[5, 10, 25, 50, 100].map((distance) => (
+                {[5, 10, 25, 50, 100, 1000].map((distance) => (
                   <TouchableOpacity
                     key={distance}
                     style={[styles.distanceOption, maxDistance === distance && styles.distanceOptionSelected]}
                     onPress={() => setMaxDistance(distance)}
                   >
                     <Text style={[styles.distanceText, maxDistance === distance && styles.distanceTextSelected]}>
-                      {distance}km
+                      {distance === 1000 ? t('filter.distance.any', 'Any') : `${distance}km`}
                     </Text>
                   </TouchableOpacity>
                 ))}

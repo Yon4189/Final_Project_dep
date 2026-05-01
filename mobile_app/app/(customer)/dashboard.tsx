@@ -1,4 +1,4 @@
-// app/(customer)/customer_dashboard.tsx
+// app/(customer)/dashboard.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -20,14 +20,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useTranslation } from "react-i18next";
 import { useTheme } from "@/app/context/ThemeContext";
 import { Colors, ThemeColors } from "@/app/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 import { useLocation } from "../../hooks/useLocation";
 import { useSearch } from "../../hooks/useSearch";
-import { useVoiceRecognition } from "../../hooks/useVoiceRecognition";
 import { useTopRatedProviders, useUnreadNotificationsCount } from "@/hooks/useCustomerQueries";
 import { useConversations } from "@/hooks/useChat";
 import { ServiceSearch } from "../../components/customer/ServiceSearch";
@@ -57,7 +55,6 @@ if (Platform.OS === "web") {
 
 export default function CustomerDashboard() {
   const router = useRouter();
-  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { location, loading: locationLoading } = useLocation();
 
@@ -82,9 +79,6 @@ export default function CustomerDashboard() {
   const { data: topRatedProviders, isLoading: topRatedLoading } =
     useTopRatedProviders(5);
 
-  console.log("Dashboard - Top Rated Hook - Loading:", topRatedLoading);
-  console.log("Dashboard - Top Rated Hook - Data:", topRatedProviders);
-
   const [showMapView, setShowMapView] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedProvider, setSelectedProvider] =
@@ -107,15 +101,6 @@ export default function CustomerDashboard() {
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loadingComplaints, setLoadingComplaints] = useState(false);
   const [pendingComplaints, setPendingComplaints] = useState(0);
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
-
-  const { 
-    isListening, 
-    transcript, 
-    error: voiceError, 
-    startListening, 
-    stopListening 
-  } = useVoiceRecognition();
   
   // Sidebar animation and gesture handling
   const sidebarAnim = React.useRef(new Animated.Value(0)).current;
@@ -195,7 +180,15 @@ export default function CustomerDashboard() {
     loadServiceCategories();
   }, []);
 
-
+  // Trigger initial search when location becomes available
+  useEffect(() => {
+    if (location && !locationLoading) {
+      console.log(
+        "Dashboard - Location available, triggering initial search...",
+      );
+      refreshSearch();
+    }
+  }, [location, locationLoading, refreshSearch]);
 
   const loadUserData = async () => {
     try {
@@ -288,7 +281,7 @@ export default function CustomerDashboard() {
 
     // Navigate to search results with category filter
     router.push({
-      pathname: "/search/results",
+      pathname: "/(customer)/search/results",
       params: {
         categoryId,
         sortBy: "rating",
@@ -299,7 +292,7 @@ export default function CustomerDashboard() {
   };
 
   const handleViewAllCategories = () => {
-    router.push("/categories");
+    router.push("/(customer)/categories");
   };
 
   const handleProviderSelect = (provider: ServiceProvider) => {
@@ -308,57 +301,15 @@ export default function CustomerDashboard() {
   };
 
   const handleFilterApply = (newFilters: any) => {
-    // Replace all filters entirely (don't merge) so reset works correctly
-    updateFilters({ sortBy: 'rating', ...newFilters });
+    updateFilters(newFilters);
   };
 
-  const handleVoiceSearch = async () => {
-    const started = await startListening();
-    if (started) {
-      setShowVoiceModal(true);
-    } else if (voiceError) {
-      Alert.alert("Voice Search", voiceError);
-    }
+  const handleVoiceSearch = () => {
+    Alert.alert("Voice Search", "Voice search feature coming soon!");
   };
-
-  // Handle voice search result
-  useEffect(() => {
-    if (!isListening && transcript && showVoiceModal) {
-      const lowerTranscript = transcript.toLowerCase().trim();
-      
-      // Try to find matching category
-      const matchedCategory = serviceCategories.find(cat => 
-        cat.name.toLowerCase().includes(lowerTranscript) || 
-        lowerTranscript.includes(cat.name.toLowerCase())
-      );
-      
-      if (matchedCategory) {
-        handleCategorySelect(matchedCategory.id);
-      } else {
-        setQuery(transcript);
-        // We don't call refreshSearch() here because the query useEffect will trigger it
-      }
-      
-      // Close modal after a short delay to let user see the transcript
-      setTimeout(() => setShowVoiceModal(false), 800);
-    }
-  }, [isListening, transcript, serviceCategories, showVoiceModal]);
 
   const handleServiceRequest = async (requestData: any) => {
     try {
-      // Block frozen accounts from creating new bookings
-      if (user?.account_status === 'frozen') {
-        Alert.alert(
-          'Account Frozen',
-          'Your account is frozen due to an overdue payment. Please complete the outstanding payment to restore access.',
-          [
-            { text: 'Pay Now', onPress: () => router.push('/(customer)/bookings') },
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
-        return;
-      }
-
       // Create service request
       const bookingResponse = await customerService.createBooking({
         providerID: selectedProvider?.id || "",
@@ -384,7 +335,7 @@ export default function CustomerDashboard() {
           [
             {
               text: "View My Bookings",
-              onPress: () => router.push("/bookings"),
+              onPress: () => router.push("/(customer)/bookings"),
             },
             {
               text: "OK",
@@ -409,17 +360,17 @@ export default function CustomerDashboard() {
 
   const handleLogout = async () => {
     closeMenu();
-    Alert.alert(t('common.logout', 'Logout'), t('auth.confirmLogout', 'Are you sure you want to logout?'), [
-      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
       { 
-        text: t('common.logout', 'Logout'), 
+        text: 'Logout', 
         style: 'destructive',
         onPress: async () => {
           try {
             await SecureStore.deleteItemAsync('auth_token');
             await SecureStore.deleteItemAsync('user_data');
             useCustomerStore.getState().reset();
-            router.replace('/login');
+            router.replace('/(auth)/login');
           } catch (error) {
             console.error('Logout error:', error);
           }
@@ -431,7 +382,7 @@ export default function CustomerDashboard() {
   const renderHamburgerMenu = () => {
     const menuItems = [
       {
-        label: t('common.home', 'Home'),
+        label: 'Home',
         icon: 'home' as const,
         color: Colors.primary,
         onPress: () => {
@@ -440,7 +391,7 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: t('common.messages', 'Messages'),
+        label: 'Messages',
         icon: 'chatbubble-ellipses-outline' as const,
         color: Colors.info || '#007AFF',
         onPress: () => {
@@ -449,25 +400,34 @@ export default function CustomerDashboard() {
         },
       },
       {
-        label: t('common.bookings', 'Bookings'),
+        label: 'Bookings',
         icon: 'calendar-outline' as const,
         color: Colors.primary,
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/bookings');
+          router.push('/(customer)/bookings');
         },
       },
       {
-        label: t('common.disputes', 'Disputes'),
+        label: 'Disputes',
         icon: 'warning-outline' as const,
         color: Colors.warning || '#FF9500',
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/complaints');
+          router.push('/(customer)/complaints');
         },
       },
       {
-        label: t('common.logout', 'Logout'),
+        label: 'Wallet',
+        icon: 'wallet-outline' as const,
+        color: Colors.success || '#34C759',
+        onPress: () => {
+          setShowHamburgerMenu(false);
+          router.push('/(customer)/wallet');
+        },
+      },
+      {
+        label: 'Logout',
         icon: 'log-out-outline' as const,
         color: Colors.error || '#FF3B30',
         onPress: handleLogout,
@@ -559,63 +519,6 @@ export default function CustomerDashboard() {
     );
   };
 
-  const renderVoiceSearchModal = () => (
-    <Modal
-      visible={showVoiceModal}
-      transparent
-      animationType="fade"
-      onRequestClose={() => {
-        stopListening();
-        setShowVoiceModal(false);
-      }}
-    >
-      <View style={styles.voiceModalOverlay}>
-        <View style={[styles.voiceModalContent, { backgroundColor: colors.surface }]}>
-          <View style={styles.voiceIconContainer}>
-            <Animated.View style={[
-              styles.voicePulse,
-              {
-                backgroundColor: colors.primary,
-                transform: [{ scale: isListening ? 1.2 : 1 }],
-                opacity: isListening ? 0.3 : 0
-              }
-            ]} />
-            <TouchableOpacity 
-              style={[styles.voiceMicButton, { backgroundColor: colors.primary }]}
-              onPress={stopListening}
-            >
-              <Ionicons name={isListening ? "mic" : "mic-off"} size={32} color="white" />
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={[styles.voiceStatusText, { color: colors.text.primary }]}>
-            {isListening ? t('search.listening', 'Listening...') : t('search.processing', 'Processing...')}
-          </Text>
-          
-          <Text style={[styles.voiceTranscript, { color: colors.text.secondary }]}>
-            {transcript || t('search.saySomething', 'Say something...')}
-          </Text>
-
-          {voiceError && (
-            <Text style={styles.voiceErrorText}>{voiceError}</Text>
-          )}
-
-          <TouchableOpacity 
-            style={[styles.voiceCloseButton, { borderColor: colors.border }]}
-            onPress={() => {
-              stopListening();
-              setShowVoiceModal(false);
-            }}
-          >
-            <Text style={[styles.voiceCloseText, { color: colors.text.primary }]}>
-              {t('common.cancel', 'Cancel')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
   const renderHeader = () => {
     // Get user's first name from fullname
     let displayName = "User";
@@ -639,9 +542,9 @@ export default function CustomerDashboard() {
         <View style={[styles.headerTopRow, { justifyContent: 'center', marginBottom: 12 }]}>
           <View style={styles.greetingContainer}>
             <Text style={styles.greeting}>
-              {t("customerDashboard.welcomeBack", "Welcome back,")} {loadingUser ? "👋" : displayName}
+              Welcome back, {loadingUser ? "👋" : displayName}
             </Text>
-            <Text style={styles.subtitle}>{t("customerDashboard.findProviders", "Find trusted service providers")}</Text>
+            <Text style={styles.subtitle}>Find trusted service providers</Text>
           </View>
         </View>
 
@@ -680,7 +583,7 @@ export default function CustomerDashboard() {
 
             <TouchableOpacity
               style={styles.profileButton}
-              onPress={() => router.push("/profile")}
+              onPress={() => router.push("/(customer)/profile")}
             >
               {(() => {
                 const pic = user?.profilePicture || user?.profile_picture;
@@ -718,7 +621,7 @@ export default function CustomerDashboard() {
       return (
         <View style={styles.categoriesSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("customerDashboard.serviceCategories", "Service Categories")}</Text>
+            <Text style={styles.sectionTitle}>Service Categories</Text>
           </View>
           <ScrollView
             horizontal
@@ -746,9 +649,9 @@ export default function CustomerDashboard() {
     return (
       <View style={styles.categoriesSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t("customerDashboard.serviceCategories", "Service Categories")}</Text>
+          <Text style={styles.sectionTitle}>Service Categories</Text>
           <TouchableOpacity onPress={handleViewAllCategories}>
-            <Text style={styles.seeAllText}>{t("common.seeAll", "See All")}</Text>
+            <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -766,11 +669,7 @@ export default function CustomerDashboard() {
               onPress={() => handleCategorySelect(category.id)}
             >
               <View style={styles.categoryIconContainer}>
-                {category.icon && (category.icon.startsWith('http') || category.icon.startsWith('/storage')) ? (
-                  <Image source={{ uri: category.icon }} style={styles.categoryIconImage} />
-                ) : (
-                  <Text style={styles.categoryIcon}>{category.icon}</Text>
-                )}
+                <Text style={styles.categoryIcon}>{category.icon}</Text>
               </View>
               <Text style={styles.categoryName}>{category.name}</Text>
             </TouchableOpacity>
@@ -788,10 +687,10 @@ export default function CustomerDashboard() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleContainer}>
             <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>{t("customerDashboard.recentChats", "Recent Chats")}</Text>
+            <Text style={styles.sectionTitle}>Recent Chats</Text>
           </View>
           <TouchableOpacity onPress={() => router.push("/(customer)/chat/index")}>
-            <Text style={styles.seeAllText}>{t("common.seeAll", "See All")}</Text>
+            <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -836,16 +735,11 @@ export default function CustomerDashboard() {
   };
 
   const renderTopRated = () => {
-    console.log("Dashboard - renderTopRated called");
-    console.log("Dashboard - topRatedLoading:", topRatedLoading);
-    console.log("Dashboard - topRatedProviders:", topRatedProviders);
-    
     if (topRatedLoading) {
       return <LoadingSpinner />;
     }
 
     if (!topRatedProviders?.length) {
-      console.log("Dashboard - No top rated providers to display");
       return null;
     }
 
@@ -870,10 +764,10 @@ export default function CustomerDashboard() {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleContainer}>
             <Ionicons name="star" size={20} color={colors.warning} />
-            <Text style={styles.sectionTitle}>{t("customerDashboard.topRatedPros", "Top Rated Pros")}</Text>
+            <Text style={styles.sectionTitle}>Top Rated Pros</Text>
           </View>
           <TouchableOpacity onPress={handleViewAllTopRated}>
-            <Text style={styles.seeAllText}>{t("common.viewAll", "View All")}</Text>
+            <Text style={styles.seeAllText}>View All</Text>
           </TouchableOpacity>
         </View>
 
@@ -1022,23 +916,6 @@ export default function CustomerDashboard() {
   return (
     <View style={styles.container}>
       {renderHeader()}
-
-      {/* Account frozen banner */}
-      {user?.account_status === 'frozen' && (
-        <TouchableOpacity
-          style={{ backgroundColor: Colors.error, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-          onPress={() => router.push('/(customer)/bookings')}
-        >
-          <Ionicons name="lock-closed" size={18} color="#fff" />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Account Frozen</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>
-              Your account is frozen due to an overdue payment. Tap to pay and restore access.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color="#fff" />
-        </TouchableOpacity>
-      )}
 
       <View style={styles.searchContainer}>
         <ServiceSearch
@@ -1221,7 +1098,6 @@ export default function CustomerDashboard() {
       />
 
       {renderHamburgerMenu()}
-      {renderVoiceSearchModal()}
     </View>
   );
 }
@@ -1398,11 +1274,6 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   categoryIcon: {
     fontSize: 24,
-  },
-  categoryIconImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
   },
   categoryName: {
     fontSize: 12,
@@ -1703,73 +1574,6 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: 6,
     backgroundColor: colors.background,
     borderRadius: 12,
-  },
-  voiceModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  voiceModalContent: {
-    width: '100%',
-    maxWidth: 320,
-    borderRadius: 24,
-    padding: 30,
-    alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-  },
-  voiceIconContainer: {
-    width: 100,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  voicePulse: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  voiceMicButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  voiceStatusText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  voiceTranscript: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 30,
-    minHeight: 40,
-  },
-  voiceErrorText: {
-    color: Colors.error,
-    fontSize: 14,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  voiceCloseButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    borderWidth: 1,
-  },
-  voiceCloseText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   menuItem: {
     flexDirection: 'row',
