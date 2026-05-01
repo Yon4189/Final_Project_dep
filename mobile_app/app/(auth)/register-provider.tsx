@@ -23,7 +23,6 @@ import AppInput from '../../components/AppInput';
 import { ThemeColors } from '../constants/Colors';
 import { api } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
-import { launchGoogleOAuth } from '../services/googleAuth.service';
 
 const ID_PHOTO_TYPES = ['Passport', 'Driver License', 'National ID', 'Kebele ID'];
 
@@ -82,7 +81,6 @@ export default function RegisterProviderScreen() {
   const [certificates, setCertificates] = useState<{ file: any; uri: string; name: string }[]>([]);
 
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [showIdTypeModal, setShowIdTypeModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
@@ -133,32 +131,6 @@ export default function RegisterProviderScreen() {
       Alert.alert(t('common.warning', 'Warning'), t('auth.categoryLoadError', 'Could not load categories. Please try again later.'));
     } finally {
       setLoadingCategories(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      const { accessToken, userInfo, error } = await launchGoogleOAuth();
-      if (error === 'cancelled') return;
-      if (error || !accessToken) {
-        Alert.alert('Error', error || 'Google sign-in failed.');
-        return;
-      }
-      // Pre-fill name and email from Google
-      setFormData(prev => ({
-        ...prev,
-        fullname: userInfo?.name || prev.fullname,
-        email: userInfo?.email || prev.email,
-      }));
-      Alert.alert(
-        t('auth.googleLinked', 'Google Account Linked!'),
-        t('auth.googleProviderPrompt', 'Your info has been pre-filled from Google. Please complete the remaining fields (phone, city, services, ID) to finish registration.'),
-      );
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Google sign-in failed.');
-    } finally {
-      setGoogleLoading(false);
     }
   };
 
@@ -446,28 +418,6 @@ export default function RegisterProviderScreen() {
           <AppInput label={t("auth.fullName", "Full Name")} value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder={t("auth.fullNamePlaceholder", "John Doe")} required />
           <AppInput label={t("auth.email", "Email")} value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder={t("login.emailPlaceholder", "email@example.com")} autoCapitalize="none" keyboardType="email-address" required />
 
-          {/* Google Pre-fill — placed right after email */}
-          <View style={styles.googleDivider}>
-            <View style={styles.googleDividerLine} />
-            <Text style={styles.googleDividerText}>{t('auth.orContinueWith', 'or continue with')}</Text>
-            <View style={styles.googleDividerLine} />
-          </View>
-          <TouchableOpacity
-            style={[styles.googleButton, (loading || googleLoading) && { opacity: 0.6 }]}
-            onPress={handleGoogleSignIn}
-            disabled={loading || googleLoading}
-            activeOpacity={0.8}
-          >
-            {googleLoading ? (
-              <ActivityIndicator size="small" color="#DB4437" />
-            ) : (
-              <Ionicons name="logo-google" size={20} color="#DB4437" />
-            )}
-            <Text style={styles.googleButtonText}>
-              {googleLoading ? t('login.signingIn', 'Please wait...') : t('auth.continueWithGoogle', 'Continue with Google')}
-            </Text>
-          </TouchableOpacity>
-
           <AppInput label={t("auth.phoneNumber", "Phone Number")} value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required />
 
           <View style={styles.inputGroup}>
@@ -726,25 +676,4 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   errorText: { marginTop: 12, color: colors.error, fontSize: 14, textAlign: 'center' },
   retryButton: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 8 },
   retryText: { color: '#FFFFFF', fontWeight: '600' },
-  googleButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 10,
-    borderWidth: 1.5,
-    borderColor: '#DB4437',
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginTop: 12,
-    marginBottom: 4,
-    backgroundColor: colors.surface,
-  },
-  googleButtonText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: '#DB4437',
-  },
-  googleDivider: { flexDirection: 'row' as const, alignItems: 'center' as const, marginVertical: 12 },
-  googleDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  googleDividerText: { marginHorizontal: 10, color: colors.text.secondary, fontSize: 13 },
 });

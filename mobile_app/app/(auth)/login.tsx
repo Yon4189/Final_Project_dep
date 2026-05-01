@@ -20,7 +20,6 @@ import AppInput from "../../components/AppInput";
 import { ThemeColors } from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
-import { loginWithGoogleToken, loginWithGoogleTokenProvider, launchGoogleOAuth } from "../services/googleAuth.service";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProviderStore } from "../store/providerStore";
 import { useCustomerStore } from "../store/customerStore";
@@ -37,69 +36,7 @@ export default function LoginScreen() {
   });
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<"customer" | "provider">("customer");
-  const [googleLoading, setGoogleLoading] = useState(false);
   const queryClient = useQueryClient();
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      const { accessToken, userInfo, error } = await launchGoogleOAuth();
-
-      if (error === 'cancelled') return;
-      if (error || !accessToken) {
-        Alert.alert('Error', error || 'Google sign-in failed. Please try again.');
-        return;
-      }
-
-      // Use access token as the token sent to backend
-      const idToken = accessToken;
-
-      if (userType === 'customer') {
-        const loginRes = await loginWithGoogleToken(idToken);
-        if (loginRes.success && loginRes.data) {
-          await api.setCustomerToken(loginRes.data.token, undefined);
-          await api.setUserData({
-            id: loginRes.data.customerID,
-            fullname: loginRes.data.fullname,
-            email: loginRes.data.email,
-            phone: loginRes.data.phone,
-            profilePicture: loginRes.data.profilePicture,
-            user_type: 'customer',
-          });
-          queryClient.clear();
-          useCustomerStore.getState().reset();
-          useProviderStore.getState().reset();
-          router.replace('/customer_dashboard');
-        } else {
-          Alert.alert('Error', loginRes.message || 'Google login failed');
-        }
-      } else {
-        // Provider Google login
-        const loginRes = await loginWithGoogleTokenProvider(idToken);
-        if (loginRes.success && loginRes.data) {
-          await api.setProviderToken(loginRes.data.token, undefined);
-          await api.setUserData({
-            id: loginRes.data.providerID,
-            fullname: loginRes.data.fullname,
-            email: loginRes.data.email,
-            phone: loginRes.data.phone,
-            profilePicture: loginRes.data.profilePicture,
-            user_type: 'provider',
-          });
-          queryClient.clear();
-          useCustomerStore.getState().reset();
-          useProviderStore.getState().reset();
-          router.replace('/provider_dashboard');
-        } else {
-          Alert.alert('Error', loginRes.message || 'Google login failed for provider');
-        }
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Google sign-in failed');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -401,23 +338,6 @@ export default function LoginScreen() {
             disabled={loading}
           />
 
-          {/* Google Sign-In (both customer and provider) */}
-          <TouchableOpacity
-            style={[styles.googleButton, (loading || googleLoading) && { opacity: 0.6 }]}
-            onPress={handleGoogleSignIn}
-            disabled={loading || googleLoading}
-            activeOpacity={0.8}
-          >
-            {googleLoading ? (
-              <ActivityIndicator size="small" color="#DB4437" />
-            ) : (
-              <Ionicons name="logo-google" size={20} color="#DB4437" />
-            )}
-            <Text style={styles.googleButtonText}>
-              {googleLoading ? t('login.signingIn', 'Signing in...') : t('login.continueWithGoogle', 'Continue with Google')}
-            </Text>
-          </TouchableOpacity>
-
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -571,21 +491,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   registerButton: {
     marginBottom: 10,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginTop: 12,
-    backgroundColor: colors.primary,
-  },
-  googleButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#ffffff',
   },
   loadingOverlay: {
     position: 'absolute',
