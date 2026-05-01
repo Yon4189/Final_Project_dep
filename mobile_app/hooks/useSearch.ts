@@ -20,8 +20,6 @@ export const useSearch = ({
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<Partial<SearchFilters>>({
     sortBy: 'rating',
-    maxDistance: 1000,
-    minRating: 0,
     ...initialFilters,
   });
   const [results, setResults] = useState<ServiceProvider[]>([]);
@@ -39,7 +37,7 @@ export const useSearch = ({
     setError(null);
 
     try {
-      console.log('Search - Performing search:', { query, filters, page: searchPage, location });
+      console.log('Search - Performing search:', { query, filters, page: searchPage });
       
       const searchParams: any = {
         query: query || undefined,
@@ -54,7 +52,8 @@ export const useSearch = ({
 
       // Add price range if provided
       if (filters.priceRange) {
-        searchParams.priceRange = filters.priceRange;
+        searchParams.price_min = filters.priceRange.min;
+        searchParams.price_max = filters.priceRange.max;
       }
 
       // Add verified filter if provided
@@ -67,9 +66,7 @@ export const useSearch = ({
         searchParams.available_now = filters.availableNow;
       }
 
-      console.log('Search - Calling searchProviders with params:', searchParams);
       const response = await customerService.searchProviders(searchParams);
-      console.log('Search - Response:', { success: response.success, dataLength: response.data?.length, message: response.message });
       
       if (response.success && response.data) {
         const newResults = response.data;
@@ -85,7 +82,6 @@ export const useSearch = ({
         
         console.log(`Search - Found ${newResults.length} providers`);
       } else {
-        console.log('Search - Failed:', response.message);
         setError(response.message || 'Search failed');
       }
     } catch (err: any) {
@@ -94,11 +90,11 @@ export const useSearch = ({
     } finally {
       setLoading(false);
     }
-  }, [query, filters, location]);
+  }, [query, filters]);
 
-  // Debounced search for query/filter changes
+  // Debounced search for query/filter/location changes
   useEffect(() => {
-    if (!autoSearch) return;
+    if (!autoSearch || locationLoading) return;
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -113,7 +109,7 @@ export const useSearch = ({
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [query, filters, performSearch, autoSearch]);
+  }, [query, filters, performSearch, autoSearch, location, locationLoading]);
 
   const updateFilters = useCallback((newFilters: Partial<SearchFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
@@ -122,8 +118,6 @@ export const useSearch = ({
   const resetFilters = useCallback(() => {
     setFilters({
       sortBy: 'rating',
-      maxDistance: 1000,
-      minRating: 0,
     });
   }, []);
 
