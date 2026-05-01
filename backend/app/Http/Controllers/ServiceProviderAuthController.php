@@ -536,6 +536,9 @@ class ServiceProviderAuthController extends Controller
             $provider->status = 'pending';
             $provider->rejected_at = null;
             $provider->rejection_reason = null;
+            
+            // Notify admins that the profile has been updated for re-review
+            $this->notificationService->notifyAdminsProviderProfileUpdated($provider);
         }
 
         $provider->save();

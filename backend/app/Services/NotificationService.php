@@ -377,4 +377,22 @@ class NotificationService
             ]
         );
     }
+
+    /**
+     * Notify admins when a previously rejected provider updates their profile
+     */
+    public function notifyAdminsProviderProfileUpdated($provider)
+    {
+        return $this->toAdmins(
+            'provider_re_verification',
+            'Provider Updated Profile',
+            "Previously rejected provider {$provider->fullname} has updated their profile and requires re-verification.",
+            [
+                'provider_id' => $provider->providerID,
+                'provider_name' => $provider->fullname,
+                'provider_email' => $provider->email,
+                'provider_phone' => $provider->phone,
+            ]
+        );
+    }
 }
