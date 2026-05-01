@@ -409,9 +409,13 @@ class ServiceProviderAuthController extends Controller
 
         $validator = Validator::make($request->all(), [
             'fullname' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:service_providers,email,' . $provider->providerID . ',providerID',
             'phone' => 'sometimes|string|unique:service_providers,phone,' . $provider->providerID . ',providerID',
             'bio' => 'nullable|string|max:500',
             'service_city' => 'sometimes|string|max:255',
+            'idPhotoType' => 'sometimes|string|max:255',
+            'idPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+            'idPhotoBack' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             'serviceRadiusKm' => 'nullable|numeric|min:1|max:100',
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'business_license' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:4096',
@@ -442,6 +446,27 @@ class ServiceProviderAuthController extends Controller
             $provider->profilePicture = 'profilepics/' . $profileName;
         }
 
+        // Handle id photo uploads
+        if ($request->hasFile('idPhoto')) {
+            if ($provider->idPhoto && file_exists(public_path($provider->idPhoto))) {
+                unlink(public_path($provider->idPhoto));
+            }
+            $file = $request->file('idPhoto');
+            $idPhotoName = Str::random(20) . '_id.' . $file->getClientOriginalExtension();
+            $file->move(public_path('idphoto'), $idPhotoName);
+            $provider->idPhoto = 'idphoto/' . $idPhotoName;
+        }
+
+        if ($request->hasFile('idPhotoBack')) {
+            if ($provider->idPhotoBack && file_exists(public_path($provider->idPhotoBack))) {
+                unlink(public_path($provider->idPhotoBack));
+            }
+            $file = $request->file('idPhotoBack');
+            $idPhotoBackName = Str::random(20) . '_id_back.' . $file->getClientOriginalExtension();
+            $file->move(public_path('idphoto'), $idPhotoBackName);
+            $provider->idPhotoBack = 'idphoto/' . $idPhotoBackName;
+        }
+
         // Handle documents
         $documents = ['business_license', 'insurance_certificate'];
         foreach ($documents as $doc) {
@@ -462,7 +487,7 @@ class ServiceProviderAuthController extends Controller
         }
 
         // Update other fields
-        $fillable = ['fullname', 'phone', 'bio', 'service_city', 'serviceRadiusKm', 
+        $fillable = ['fullname', 'email', 'phone', 'bio', 'service_city', 'idPhotoType', 'serviceRadiusKm', 
                      'current_latitude', 'current_longitude'];
         
         foreach ($fillable as $field) {
