@@ -519,6 +519,7 @@ class AdminAuthController extends Authenticatable
             'estimated_cost'      => $service->estimatedPrice ?? $service->estimatedCost ?? $provider->estimatedPrice ?? null,
             'submission_date'     => $provider->created_at ? $provider->created_at->format('M d, Y') : 'N/A',
             'idPhoto'             => $provider->idPhoto,
+            'idPhotoBack'         => $provider->idPhotoBack,
             'idPhotoType'         => $provider->idPhotoType,
             'credentialPhoto'     => $provider->credentialPhoto,
             'status'              => $provider->status,

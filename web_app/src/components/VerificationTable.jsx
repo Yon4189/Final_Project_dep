@@ -278,9 +278,11 @@ const VerificationTable = ({
               currentItems.map((item) => {
                 const profileUrl = getBackendUrl(item.profilePicture);
                 const idPhotoUrl = getBackendUrl(item.idPhoto);
+                const idPhotoBackUrl = getBackendUrl(item.idPhotoBack);
                 const credentialUrl = getBackendUrl(item.credentialPhoto);
                 const hasProfilePhoto = !!profileUrl;
                 const hasIdPhoto = !!idPhotoUrl;
+                const hasIdPhotoBack = !!idPhotoBackUrl;
                 const hasCredential = !!credentialUrl;
                 const status = item.status?.toLowerCase() || 'pending';
 
@@ -363,7 +365,18 @@ const VerificationTable = ({
                               : 'bg-slate-100 bg-admin-card text-slate-400 cursor-not-allowed'
                           }`}
                         >
-                          <ImageIcon size={12} /> {t('vqueue_id')}
+                          <ImageIcon size={12} /> {t('vqueue_id_front')}
+                        </button>
+                        <button
+                          onClick={() => hasIdPhotoBack && window.open(idPhotoBackUrl, '_blank')}
+                          disabled={!hasIdPhotoBack}
+                          className={`w-28 py-1.5 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 transition ${
+                            hasIdPhotoBack
+                              ? 'bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-900 dark:hover:bg-slate-600'
+                              : 'bg-slate-100 bg-admin-card text-slate-400 cursor-not-allowed'
+                          }`}
+                        >
+                          <ImageIcon size={12} /> {t('vqueue_id_back')}
                         </button>
                         <button
                           onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
@@ -450,9 +463,11 @@ const VerificationTable = ({
           currentItems.map((item) => {
             const profileUrl = getBackendUrl(item.profilePicture);
             const idPhotoUrl = getBackendUrl(item.idPhoto);
+            const idPhotoBackUrl = getBackendUrl(item.idPhotoBack);
             const credentialUrl = getBackendUrl(item.credentialPhoto);
             const hasProfilePhoto = !!profileUrl;
             const hasIdPhoto = !!idPhotoUrl;
+            const hasIdPhotoBack = !!idPhotoBackUrl;
             const hasCredential = !!credentialUrl;
             const status = item.status?.toLowerCase() || 'pending';
 
@@ -509,10 +524,15 @@ const VerificationTable = ({
                 )}
 
                 <div className="flex gap-2">
-                  <button onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')} disabled={!hasIdPhoto} className={`flex-1 py-2 rounded-lg text-xs font-semibold text-center ${
+                  <button onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')} disabled={!hasIdPhoto} className={`flex-1 py-2 rounded-lg text-[10px] font-semibold text-center ${
                     hasIdPhoto ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}>
-                    <ImageIcon size={12} className="inline mr-1" /> {t('vqueue_id')}
+                    <ImageIcon size={12} className="inline mr-1" /> {t('vqueue_id_front')}
+                  </button>
+                  <button onClick={() => hasIdPhotoBack && window.open(idPhotoBackUrl, '_blank')} disabled={!hasIdPhotoBack} className={`flex-1 py-2 rounded-lg text-[10px] font-semibold text-center ${
+                    hasIdPhotoBack ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}>
+                    <ImageIcon size={12} className="inline mr-1" /> {t('vqueue_id_back')}
                   </button>
                   <button onClick={() => hasCredential && window.open(credentialUrl, '_blank')} disabled={!hasCredential} className={`flex-1 py-2 rounded-lg text-xs font-semibold text-center ${
                     hasCredential ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
