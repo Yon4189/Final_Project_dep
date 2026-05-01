@@ -21,7 +21,7 @@ import {
 import AppButton from "../../components/AppButton";
 import AppInput from "../../components/AppInput";
 import { ThemeColors } from "../constants/Colors";
-import { LOCATIONS } from "../constants/Services";
+
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from "../context/ThemeContext";
 import { launchGoogleOAuth, registerWithGoogle } from "../services/googleAuth.service";
@@ -232,9 +232,10 @@ export default function RegisterCustomerScreen() {
       } else {
         // Handle backend validation errors
         if (response?.errors) {
+          const errors = response.errors;
           const backendErrors: { [key: string]: string } = {};
-          Object.keys(response.errors).forEach(key => {
-            const errorArray = response.errors[key];
+          Object.keys(errors).forEach(key => {
+            const errorArray = errors[key];
             backendErrors[key] = Array.isArray(errorArray) ? errorArray[0] : errorArray;
           });
           setValidationErrors(backendErrors);
@@ -251,9 +252,10 @@ export default function RegisterCustomerScreen() {
       
       // Handle backend validation errors from catch block
       if (err.response?.data?.errors) {
+        const errors = err.response.data.errors;
         const backendErrors: { [key: string]: string } = {};
-        Object.keys(err.response.data.errors).forEach(key => {
-          const errorArray = err.response.data.errors[key];
+        Object.keys(errors).forEach(key => {
+          const errorArray = errors[key];
           backendErrors[key] = Array.isArray(errorArray) ? errorArray[0] : errorArray;
         });
         setValidationErrors(backendErrors);
@@ -406,12 +408,15 @@ export default function RegisterCustomerScreen() {
                 <TouchableOpacity onPress={() => setShowLocationModal(false)}><Ionicons name="close" size={24} color={colors.text.secondary} /></TouchableOpacity>
               </View>
               <FlatList
-                data={LOCATIONS}
-                keyExtractor={(item) => item}
-                renderItem={({ item }) => renderModalItem(item, () => {
-                  setFormData({ ...formData, location: item });
-                  setShowLocationModal(false);
-                })}
+                data={cities}
+                keyExtractor={(item) => (item.cityID || item.id || Math.random()).toString()}
+                renderItem={({ item }) => {
+                  const cityName = typeof item === 'string' ? item : item.name;
+                  return renderModalItem(cityName, () => {
+                    setFormData({ ...formData, location: cityName });
+                    setShowLocationModal(false);
+                  });
+                }}
               />
             </View>
           </View>

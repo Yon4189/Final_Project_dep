@@ -53,6 +53,7 @@ class ServiceProviderAuthController extends Controller
             'catagoryID' => 'required|exists:catagories,catagoryID',
             'profilePicture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'idPhoto' => 'required|image|mimes:jpeg,jpg,png|max:2048', // ID photo is REQUIRED
+            'idPhotoBack' => 'required|image|mimes:jpeg,jpg,png|max:2048', // ID photo back is REQUIRED
             'credentialPhoto' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             'certificates' => 'nullable|array',
             'certificates.*' => 'image|mimes:jpeg,jpg,png|max:4096',
@@ -107,6 +108,19 @@ class ServiceProviderAuthController extends Controller
                 $idPhotoPath = 'idphoto/' . $idPhotoName;
             }
 
+            $idPhotoBackPath = null;
+            if ($request->hasFile('idPhotoBack')) {
+                try {
+                    $fileValidator->validateDocument($request->file('idPhotoBack'), 4096);
+                } catch (\InvalidArgumentException $e) {
+                    return response()->json(['success' => false, 'message' => 'ID photo back: ' . $e->getMessage()], 422);
+                }
+                $file = $request->file('idPhotoBack');
+                $idPhotoBackName = $fileValidator->safeFilename($file, 'id_back');
+                $file->move(public_path('idphoto'), $idPhotoBackName);
+                $idPhotoBackPath = 'idphoto/' . $idPhotoBackName;
+            }
+
             $credentialPhotoPath = null;
             if ($request->hasFile('credentialPhoto')) {
                 try {
@@ -146,6 +160,7 @@ class ServiceProviderAuthController extends Controller
                 'catagoryID' => $request->catagoryID,
                 'profilePicture' => $profilePath,
                 'idPhoto' => $idPhotoPath,
+                'idPhotoBack' => $idPhotoBackPath,
                 'credentialPhoto' => $credentialPhotoPath,
                 'idPhotoType' => $request->idPhotoType,
                 'certifications' => $certPaths, // Store array of paths
