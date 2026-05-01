@@ -471,8 +471,10 @@ class CustomerSearchController extends Controller
         // Build base query: approved providers only
         $query = ServiceProvider::whereIn('status', ['Active', 'approved']);
 
-        // Distance filtering is OPTIONAL — only applied when lat/lng AND radius are all provided
-        if ($latitude && $longitude) {
+        $isSqlite = DB::getDriverName() === 'sqlite';
+
+        // Distance filtering — SQLite lacks trig functions, so skip distance calc there
+        if ($latitude && $longitude && !$isSqlite) {
             $query->selectRaw(
                 'service_providers.*, CASE 
                     WHEN current_latitude IS NOT NULL AND current_longitude IS NOT NULL 
@@ -489,7 +491,7 @@ class CustomerSearchController extends Controller
 
             $query->orderByRaw('distance IS NULL ASC')->orderBy('distance');
         } else {
-            // No coordinates — just return approved providers sorted by rating
+            // No coordinates or SQLite — return approved providers sorted by rating
             $query->orderByDesc('rating');
         }
 
@@ -506,7 +508,7 @@ class CustomerSearchController extends Controller
                 'rating' => round($provider->rating, 1),
                 'reviewCount' => 0,
                 'verified' => in_array($provider->status, ['Active', 'approved']),
-                'distance' => round($provider->distance, 2),
+                'distance' => isset($provider->distance) ? round($provider->distance, 2) : null,
                 'location' => [
                     'latitude' => $provider->current_latitude,
                     'longitude' => $provider->current_longitude,

@@ -15,10 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@/app/constants/Colors';
-import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from '@/app/config/api';
-
-const API_URL = API_BASE_URL;
+import { providerService } from '@/app/services/provider.service';
 
 const WEEKDAYS = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
@@ -44,21 +41,14 @@ export default function ManageScheduleScreen() {
 
   const fetchSchedule = async () => {
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      const response = await fetch(`${API_URL}/provider/schedule`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      const json = await response.json();
-      if (json.success) {
-        setSchedule(json.data);
+      const response = await providerService.getSchedule();
+      if (response.success && response.data) {
+        setSchedule(response.data);
       } else {
-        Alert.alert(t('common.error', 'Error'), json.message || t('profile.scheduleLoadError', 'Failed to load schedule'));
+        Alert.alert(t('common.error', 'Error'), response.message || t('profile.scheduleLoadError', 'Failed to load schedule'));
       }
-    } catch (error) {
-      Alert.alert(t('common.error', 'Error'), t('login.networkError', 'Network error'));
+    } catch (error: any) {
+      Alert.alert(t('common.error', 'Error'), error.message || t('login.networkError', 'Network error'));
     } finally {
       setIsLoading(false);
     }
@@ -67,26 +57,16 @@ export default function ManageScheduleScreen() {
   const saveSchedule = async () => {
     setIsSaving(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      const response = await fetch(`${API_URL}/provider/schedule`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ schedule })
-      });
-      const json = await response.json();
-      if (json.success) {
+      const response = await providerService.updateSchedule(schedule);
+      if (response.success) {
         Alert.alert(t('common.success', 'Success'), t('profile.scheduleUpdated', 'Working hours updated successfully'), [
           { text: t('common.ok', 'OK'), onPress: () => router.back() }
         ]);
       } else {
-        Alert.alert(t('common.error', 'Validation Error'), json.message || t('profile.timeFormatAdvice', 'Check your times (HH:MM format). End time must be after start time.'));
+        Alert.alert(t('common.error', 'Validation Error'), response.message || t('profile.timeFormatAdvice', 'Check your times (HH:MM format). End time must be after start time.'));
       }
-    } catch (error) {
-      Alert.alert(t('common.error', 'Error'), t('profile.saveError', 'Network error while saving'));
+    } catch (error: any) {
+      Alert.alert(t('common.error', 'Error'), error.message || t('profile.saveError', 'Network error while saving'));
     } finally {
       setIsSaving(false);
     }

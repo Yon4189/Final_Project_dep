@@ -44,7 +44,11 @@ export default function ProviderDashboard() {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
-  const { profile, toggleAvailability } = useProviderStore();
+  const { profile, toggleAvailability, loadProfile } = useProviderStore();
+  
+  useEffect(() => {
+    loadProfile();
+  }, []);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'accepted' | 'pending' | 'completed'>('accepted');
   const [showRecentMessages, setShowRecentMessages] = useState(false);
@@ -206,7 +210,7 @@ export default function ProviderDashboard() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/notifications')}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(provider)/notifications')}>
             <Ionicons name="notifications-outline" size={24} color={colors.surface} />
             {unreadNotificationCount > 0 && (
               <View style={styles.badge}>

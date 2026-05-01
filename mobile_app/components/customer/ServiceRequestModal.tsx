@@ -81,7 +81,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const [address, setAddress] = useState(userLocation?.address || '');
   const [description, setDescription] = useState('');
   const [userData, setUserData] = useState<any>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default true - user is already on the authenticated dashboard
   const [loading, setLoading] = useState(false);
 
   // New Address selection state
@@ -251,23 +251,36 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
   const checkAuthAndLoadUser = async () => {
     try {
-      const authenticated = await api.isAuthenticated();
+      console.log('[ServiceRequestModal] Checking auth...');
+      // Wait for the API service to finish loading tokens from storage
+      await api.waitForReady();
+      
+      const authenticated = api.isAuthenticated();
+      console.log('[ServiceRequestModal] Auth result:', { authenticated });
+      
       setIsAuthenticated(authenticated);
       
       if (authenticated) {
         await loadUserData();
       } else {
-        console.log('User not authenticated');
-        console.log('User not authenticated');
+        // User is genuinely not logged in (e.g. arrived via a provider's shared link)
+        // Show login/register prompt
         Alert.alert(
-          t('booking.authRequired', 'Authentication Required'),
-          t('booking.loginToContinue', 'Please log in to continue with your service request.'),
+          t('booking.authRequired', 'Account Required'),
+          t('booking.loginOrRegister', 'You need an account to book a service. Please log in or create a new account.'),
           [
             {
               text: t('login.loginButton', 'Login'),
               onPress: () => {
                 onClose();
                 router.push('/(auth)/login');
+              }
+            },
+            {
+              text: t('register.registerButton', 'Register'),
+              onPress: () => {
+                onClose();
+                router.push('/(auth)/register');
               }
             },
             {
@@ -279,6 +292,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
       }
     } catch (error) {
       console.error('Auth check error:', error);
+      // On error, try to load user data anyway — don't block the dashboard user
+      setIsAuthenticated(true);
+      await loadUserData();
     }
   };
 
@@ -501,27 +517,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const handleSendRequest = async () => {
     if (!validateForm() || !provider) return;
 
-    const authenticated = await api.isAuthenticated();
-    if (!authenticated) {
-      Alert.alert(
-        t('booking.sessionExpired', 'Session Expired'),
-        t('booking.relogin', 'Your session has expired. Please log in again.'),
-        [
-          {
-            text: t('login.loginButton', 'Login'),
-            onPress: () => {
-              onClose();
-              router.push('/(auth)/login');
-            }
-          },
-          {
-            text: t('common.cancel', 'Cancel'),
-            style: 'cancel'
-          }
-        ]
-      );
-      return;
-    }
+    // Skip the pre-flight auth check — the customer is already logged in
+    // on the dashboard. If the token has truly expired, the API interceptor
+    // will return a 401 which is handled in the catch block below.
 
     setLoading(true);
     try {

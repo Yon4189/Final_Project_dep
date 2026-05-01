@@ -75,8 +75,14 @@ class ApiService {
     config: AxiosRequestConfig;
   }> = [];
   private listeners: ApiEventListener[] = [];
+  private readyPromise: Promise<void>;
+  private resolveReady!: () => void;
 
   constructor() {
+    this.readyPromise = new Promise((resolve) => {
+      this.resolveReady = resolve;
+    });
+
     this.api = axios.create({
       baseURL: API_BASE_URL,
       timeout: API_TIMEOUT,
@@ -94,7 +100,15 @@ class ApiService {
     // Load stored token immediately
     this.loadStoredToken().then(() => {
       console.log('Token loaded on initialization:', this.isAuthenticated());
+      this.resolveReady();
     });
+  }
+
+  /**
+   * Ensures that the stored tokens have been loaded before proceeding
+   */
+  public async waitForReady(): Promise<void> {
+    await this.readyPromise;
   }
 
   // Event handling
@@ -112,6 +126,7 @@ class ApiService {
   // Token management
   private async loadStoredToken(): Promise<void> {
     try {
+      console.log('[ApiService] Loading stored tokens...');
       const [providerToken, customerToken, refreshToken, userTypeStr] = await Promise.all([
         storage.getItem(PROVIDER_TOKEN_KEY),
         storage.getItem(CUSTOMER_TOKEN_KEY),
@@ -124,7 +139,7 @@ class ApiService {
       this.refreshToken = refreshToken;
       this.userType = userTypeStr as 'provider' | 'customer' | null;
 
-      console.log('Tokens loaded:', {
+      console.log('[ApiService] Tokens loaded result:', {
         hasProviderToken: !!this.providerToken,
         hasCustomerToken: !!this.customerToken,
         hasRefreshToken: !!this.refreshToken,
@@ -132,7 +147,7 @@ class ApiService {
         isAuthenticated: this.isAuthenticated()
       });
     } catch (error) {
-      console.warn('Failed to load stored token:', error);
+      console.error('[ApiService] Failed to load stored token:', error);
     }
   }
 
@@ -161,6 +176,7 @@ class ApiService {
   }
 
   public async setCustomerToken(token: string, refreshToken?: string): Promise<void> {
+    console.log('[ApiService] Setting customer token...', { hasToken: !!token });
     this.customerToken = token;
     this.providerToken = null;
     this.userType = 'customer';
@@ -178,9 +194,9 @@ class ApiService {
       if (refreshToken) {
         await storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       }
-      console.log('Customer token stored successfully');
+      console.log('[ApiService] Customer token stored successfully');
     } catch (error) {
-      console.warn('Failed to store customer token:', error);
+      console.error('[ApiService] Failed to store customer token:', error);
     }
   }
 

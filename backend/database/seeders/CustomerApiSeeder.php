@@ -7,14 +7,17 @@ use App\Models\Category;
 use App\Models\ServiceProvider;
 use App\Models\Service;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CustomerApiSeeder extends Seeder
 {
     public function run()
     {
-        // Clear existing data
-        DB::table('services')->delete();
-        DB::table('service_providers')->delete();
+        // Clear existing data safely
+        Schema::disableForeignKeyConstraints();
+        Service::truncate();
+        ServiceProvider::truncate();
+        Schema::enableForeignKeyConstraints();
 
         // Create sample providers matching the actual table structure
         $providers = [
@@ -135,19 +138,21 @@ class CustomerApiSeeder extends Seeder
             ],
         ];
 
-        foreach ($providers as $provider) {
-            DB::table('service_providers')->insert($provider);
+        foreach ($providers as $data) {
+            // Using forceCreate to allow setting the primary key providerID
+            $provider = ServiceProvider::forceCreate($data);
             
+            $category = Category::find($data['catagoryID']);
+            $categoryName = $category ? $category->name : 'Service';
+
             // Add a default service for each provider
-            DB::table('services')->insert([
-                'providerID' => $provider['providerID'],
-                'catagoryID' => $provider['catagoryID'],
-                'title' => 'General ' . Category::find($provider['catagoryID'])->name,
-                'description' => 'Professional ' . strtolower(Category::find($provider['catagoryID'])->name) . ' services.',
-                'estimatedPrice' => $provider['hourly_rate'] * 2,
-                'hourly_rate' => $provider['hourly_rate'],
-                'created_at' => now(),
-                'updated_at' => now(),
+            Service::create([
+                'providerID' => $provider->providerID,
+                'catagoryID' => $data['catagoryID'],
+                'title' => 'General ' . $categoryName,
+                'description' => 'Professional ' . strtolower($categoryName) . ' services.',
+                'estimatedPrice' => $data['hourly_rate'] * 2,
+                'hourly_rate' => $data['hourly_rate'],
             ]);
         }
 

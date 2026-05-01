@@ -350,7 +350,55 @@ class ServiceProviderAuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $this->buildProfileData($provider),
+            'data' => [
+                'providerID' => $provider->providerID,
+                'fullname' => $provider->fullname,
+                'email' => $provider->email,
+                'phone' => $provider->phone,
+                'profilePicture' => $provider->profilePicture,
+                'service_city' => $provider->service_city,
+                'bio' => $provider->bio,
+                'rating' => $provider->rating,
+                'completed_jobs' => $provider->completed_jobs,
+                'accepted_jobs' => $provider->accepted_jobs,
+                'success_rate' => $provider->success_rate,
+                'walletBalance' => $provider->walletBalance,
+                'serviceRadiusKm' => $provider->serviceRadiusKm,
+                'current_latitude' => $provider->current_latitude,
+                'current_longitude' => $provider->current_longitude,
+                'status' => $provider->status,
+                'category' => $provider->category,
+                'services' => $provider->services,
+                'business_license' => $provider->business_license,
+                'insurance_certificate' => $provider->insurance_certificate,
+                'certifications' => $provider->certifications,
+                'isAvailable' => (bool) $provider->is_online,
+                'is_online' => (bool) $provider->is_online,
+            ]
+        ]);
+    }
+
+    /**
+     * Update provider availability (Online/Offline status)
+     */
+    public function updateAvailability(Request $request)
+    {
+        $request->validate([
+            'isAvailable' => 'required|boolean'
+        ]);
+
+        $provider = $request->user();
+        $provider->is_online = $request->isAvailable;
+        $provider->last_seen_at = now();
+        $provider->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Availability updated successfully',
+            'data' => [
+                'isAvailable' => (bool) $provider->is_online,
+                'is_online' => (bool) $provider->is_online
+            ]
         ]);
     }
 

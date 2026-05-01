@@ -620,8 +620,16 @@ class CustomerService {
 
   // ==================== Notifications ====================
 
-  async getNotifications(page: number = 1): Promise<ApiResponse<any[]>> {
-    return api.get<any[]>(`${this.BASE_PATH}/notifications?page=${page}`);
+  async getNotifications(page: number = 1): Promise<ApiResponse<{
+    notifications: {
+      current_page: number;
+      data: any[];
+      last_page: number;
+      total: number;
+    };
+    unread_count: number;
+  }>> {
+    return api.get(`${this.BASE_PATH}/notifications?page=${page}`);
   }
 
   async markNotificationRead(id: string): Promise<ApiResponse<void>> {

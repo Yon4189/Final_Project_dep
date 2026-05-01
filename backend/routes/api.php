@@ -85,9 +85,18 @@ Route::middleware('throttle:20,1')->prefix('customer')->group(function () {
 // Public provider reviews
 Route::middleware('throttle:20,1')->get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);
 
-// ==================== PROTECTED CUSTOMER ROUTES ====================
-// auth:customer  — must have valid customer token
 // customer.active — account must not be suspended
+
+// ── Customer Notifications (Accessible even if suspended) ────────────────────
+Route::middleware(['auth:customer'])->prefix('customer/notifications')->group(function () {
+    Route::get('/',                 [NotificationController::class, 'getCustomerNotifications']);
+    Route::get('/unread-count',     [NotificationController::class, 'unreadCount']);
+    Route::patch('/{id}/read',      [NotificationController::class, 'markAsRead']);
+    Route::patch('/read-all',       [NotificationController::class, 'markAllAsRead']);
+    Route::get('/settings',         [CustomerController::class, 'getNotificationSettings']);
+    Route::put('/settings',         [CustomerController::class, 'updateNotificationSettings']);
+});
+
 Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->group(function () {
 
     // ── Profile ──────────────────────────────────────────────────────────────
@@ -165,14 +174,6 @@ Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->gro
         });
     });
 
-    // ── Notifications ─────────────────────────────────────────────────────────
-    Route::get('/notifications',                [NotificationController::class, 'getCustomerNotifications']);
-    Route::get('/notifications/unread-count',   [NotificationController::class, 'unreadCount']);
-    Route::patch('/notifications/{id}/read',    [NotificationController::class, 'markAsRead']);
-    Route::patch('/notifications/read-all',     [NotificationController::class, 'markAllAsRead']);
-    Route::get('/notifications/settings',       [CustomerController::class, 'getNotificationSettings']);
-    Route::put('/notifications/settings',       [CustomerController::class, 'updateNotificationSettings']);
-
     // ── Search ────────────────────────────────────────────────────────────────
     Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
 
@@ -205,9 +206,8 @@ Route::middleware(['auth:customer', 'customer.active', 'log.sensitive'])->prefix
 // ==================== PROTECTED PROVIDER ROUTES ====================
 // auth:provider      — must have valid provider token
 // provider.approved  — account must be approved (not pending/suspended/rejected)
-Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->group(function () {
-
-    // ── Auth & Profile ────────────────────────────────────────────────────────
+// ── Provider routes that don't require approval ──────────────────────────
+Route::middleware(['auth:provider'])->prefix('provider')->group(function () {
     Route::post('/logout',              [OnlineStatusController::class, 'providerLogout']);
     Route::post('/logout-all',          [ServiceProviderAuthController::class, 'logoutAllDevices']);
     Route::post('/heartbeat',           [OnlineStatusController::class, 'providerHeartbeat']);
@@ -218,8 +218,23 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
     Route::post('/location/update',     [ServiceProviderAuthController::class, 'updateLocation']);
     Route::post('/push-token',          [ServiceProviderAuthController::class, 'updatePushToken']);
     Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
+});
+
+// ── Provider routes that REQUIRE approval ───────────────────────────────
+
+// ── Provider Notifications (Accessible even if pending) ─────────────────────
+Route::middleware(['auth:provider'])->prefix('provider/notifications')->group(function () {
+    Route::get('/',                 [NotificationController::class, 'getProviderNotifications']);
+    Route::get('/unread-count',     [NotificationController::class, 'unreadCount']);
+    Route::post('/read-all',        [NotificationController::class, 'markAllAsRead']);
+    Route::post('/{id}/read',       [NotificationController::class, 'markAsRead']);
+    Route::delete('/{id}',          [NotificationController::class, 'destroy']);
+});
+
+Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->group(function () {
     Route::get('/bank-details',         [ServiceProviderAuthController::class, 'getBankDetails']);
     Route::put('/bank-details',         [ServiceProviderAuthController::class, 'updateBankDetails']);
+    Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     Route::get('/dashboard/stats',      [ProviderDashboardController::class, 'getStats']);
@@ -281,11 +296,6 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
     Route::put('/bank-accounts/{id}',       [WalletController::class, 'updateBankAccount']);
     Route::delete('/bank-accounts/{id}',    [WalletController::class, 'deleteBankAccount']);
 
-    // ── Notifications ─────────────────────────────────────────────────────────
-    Route::get('/notifications',                [NotificationController::class, 'getProviderNotifications']);
-    Route::post('/notifications/{id}/read',     [NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/read-all',      [NotificationController::class, 'markAllAsRead']);
-
     // ── Tracking ──────────────────────────────────────────────────────────────
     Route::post('/tracking/update',                     [ProviderTrackingController::class, 'updateLocation']);
     Route::get('/tracking/booking/{bookingID}',         [ProviderTrackingController::class, 'getBookingRoute']);
@@ -311,6 +321,7 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     // ── Dashboard ─────────────────────────────────────────────────────────────
     Route::get('/stats',    [AdminAuthController::class, 'getStats']);
     Route::get('/search',   [AdminAuthController::class, 'globalSearch']);
+    Route::post('/backup',  [AdminAuthController::class, 'generateBackup']);
 
     // ── Settings ──────────────────────────────────────────────────────────────
     Route::get('/settings',         [AdminAuthController::class, 'getSettings']);

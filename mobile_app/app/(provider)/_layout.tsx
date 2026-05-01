@@ -38,8 +38,7 @@ export default function ProviderLayout() {
           fontSize: 18,
         },
         headerShadowVisible: false,
-        headerTopInsetEnabled: true,
-        statusBarTranslucent: false,
+
         contentStyle: {
           backgroundColor: colors.background,
         },

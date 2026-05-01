@@ -31,8 +31,6 @@ class ChapaService
             'payload' => $data
         ]);
 
-        
-
         try {
            $fullUrl = 'https://api.chapa.co/v1/transaction/initialize';
             $response = $this->client->post($fullUrl, [
@@ -52,25 +50,30 @@ class ChapaService
             ];
 
         } catch (RequestException $e) {
-            $errorMessage = $e->getMessage();
-            
-            // Truncate to 255 characters to fit your column
-            $truncatedMessage = substr($errorMessage, 0, 250);
-            
-            Log::error('Chapa initialization failed', [
-                'error' => $errorMessage
-            ]);
-            
+            // Extract Chapa's actual error body (not just Guzzle's message)
+            $chapaMessage = 'Payment gateway error';
+            if ($e->hasResponse()) {
+                $errorBody = json_decode($e->getResponse()->getBody()->getContents(), true);
+                $chapaMessage = $errorBody['message'] ?? $errorBody['error'] ?? $e->getMessage();
+                Log::error('Chapa initialization failed', [
+                    'chapa_status' => $e->getResponse()->getStatusCode(),
+                    'chapa_error' => $errorBody,
+                ]);
+            } else {
+                $chapaMessage = $e->getMessage();
+                Log::error('Chapa initialization network error', ['error' => $chapaMessage]);
+            }
+
             return [
                 'status' => 'error',
-                'message' => $truncatedMessage  // Truncated version
+                'message' => $chapaMessage
             ];
-            
+
         } catch (\Exception $e) {
             Log::error('Chapa exception: ' . $e->getMessage());
             return [
                 'status' => 'error',
-                'message' => 'Could not connect to payment gateway'
+                'message' => 'Could not connect to payment gateway: ' . $e->getMessage()
             ];
         }
     }

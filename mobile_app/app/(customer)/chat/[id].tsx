@@ -26,6 +26,8 @@ import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
 import { subscribeToConversation, unsubscribeFromConversation } from '@/app/services/pusherClient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 interface Message {
   id: string;               // unique client-side key (either "temp_..." or "msg_<id>")
@@ -35,6 +37,12 @@ interface Message {
   sender_id: number;
   created_at: string;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
+  // File attachment fields
+  file_url?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
+  mime_type?: string | null;
 }
 
 interface Conversation {
@@ -377,6 +385,102 @@ export default function ChatScreen() {
     }
   };
 
+  const sendFile = async (uri: string, name: string, mimeType: string) => {
+    if (!conversation?.conversationID || !isMounted.current) return;
+    setIsSending(true);
+
+    const tempId = `temp_file_${Date.now()}_${Math.random()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      message: '',
+      file_name: name,
+      file_type: mimeType,
+      mime_type: mimeType,
+      sender_type: 'customer',
+      sender_id: customerId || 0,
+      created_at: new Date().toISOString(),
+      status: 'sending',
+    };
+    setMessages(prev => [...prev, optimisticMessage]);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      const formData = new FormData();
+      formData.append('conversationID', String(conversation.conversationID));
+      formData.append('message', '');
+      formData.append('file', { uri, name, type: mimeType } as any);
+
+      const response = await api.upload<any>('/chat/messages', formData);
+
+      if (response.success && response.data?.message && isMounted.current) {
+        const realMessage = normalizeMessage(response.data.message);
+        realMessage.status = 'sent';
+        setMessages(prev => prev.map(msg => (msg.id === tempId ? realMessage : msg)));
+      } else {
+        if (isMounted.current) {
+          setMessages(prev => prev.filter(msg => msg.id !== tempId));
+          Alert.alert(t('common.error', 'Error'), t('chat.sendError', 'Failed to send file. Please try again.'));
+        }
+      }
+    } catch (error: any) {
+      console.error('Error sending file:', error);
+      if (isMounted.current) {
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
+        Alert.alert(t('common.error', 'Error'), t('chat.sendErrorConnection', 'Failed to send file. Please check your connection.'));
+      }
+    } finally {
+      if (isMounted.current) setIsSending(false);
+    }
+  };
+
+  const handleAttachment = () => {
+    Alert.alert(
+      t('chat.sendFile', 'Send File'),
+      t('chat.chooseFileType', 'Choose what to send'),
+      [
+        {
+          text: t('chat.photo', 'Photo / Image'),
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert(t('common.error', 'Error'), 'Permission to access photos is required.');
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              quality: 0.8,
+              allowsEditing: false,
+            });
+            if (!result.canceled && result.assets[0]) {
+              const asset = result.assets[0];
+              const name = asset.fileName || `photo_${Date.now()}.jpg`;
+              const mimeType = asset.mimeType || 'image/jpeg';
+              await sendFile(asset.uri, name, mimeType);
+            }
+          },
+        },
+        {
+          text: t('chat.document', 'Document'),
+          onPress: async () => {
+            const result = await DocumentPicker.getDocumentAsync({
+              type: ['application/pdf', 'application/msword',
+                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                     'application/vnd.ms-excel',
+                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     'text/plain'],
+              copyToCacheDirectory: true,
+            });
+            if (!result.canceled && result.assets[0]) {
+              const asset = result.assets[0];
+              await sendFile(asset.uri, asset.name, asset.mimeType || 'application/octet-stream');
+            }
+          },
+        },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+      ]
+    );
+  };
+
   // ... (handleCall, handleShare, handleViewProfile, handleViewBooking remain the same) ...
   const handleCall = () => {
     const phoneNumber = provider?.phone || provider?.phoneNumber;
@@ -440,6 +544,7 @@ export default function ChatScreen() {
     const isCustomer = item.sender_type === 'customer';
     const showDate = index === 0 ||
       new Date(item.created_at).toDateString() !== new Date(messages[index - 1]?.created_at).toDateString();
+    const isImage = item.mime_type?.startsWith('image/');
 
     return (
       <>
@@ -450,9 +555,42 @@ export default function ChatScreen() {
         )}
         <View style={[styles.messageContainer, isCustomer ? styles.customerMessage : styles.providerMessage]}>
           <View style={[styles.messageBubble, isCustomer ? styles.customerBubble : styles.providerBubble]}>
-            <Text style={[styles.messageText, isCustomer ? styles.customerMessageText : styles.providerMessageText]}>
-              {item.message}
-            </Text>
+            {/* File attachment rendering */}
+            {item.file_url && isImage && (
+              <TouchableOpacity onPress={() => Linking.openURL(item.file_url!)}>
+                <Image
+                  source={{ uri: item.file_url }}
+                  style={styles.attachmentImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            )}
+            {item.file_url && !isImage && (
+              <TouchableOpacity
+                style={styles.fileAttachment}
+                onPress={() => Linking.openURL(item.file_url!)}
+              >
+                <Ionicons name="document-outline" size={20} color={isCustomer ? Colors.surface : Colors.primary} />
+                <Text style={[styles.fileName, isCustomer ? { color: Colors.surface } : { color: Colors.text.primary }]} numberOfLines={1}>
+                  {item.file_name || 'File'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {/* Optimistic file (no URL yet) */}
+            {!item.file_url && item.file_name && (
+              <View style={styles.fileAttachment}>
+                <ActivityIndicator size="small" color={isCustomer ? Colors.surface : Colors.primary} />
+                <Text style={[styles.fileName, isCustomer ? { color: Colors.surface } : { color: Colors.text.primary }]} numberOfLines={1}>
+                  {item.file_name}
+                </Text>
+              </View>
+            )}
+            {/* Text message */}
+            {!!item.message && (
+              <Text style={[styles.messageText, isCustomer ? styles.customerMessageText : styles.providerMessageText]}>
+                {item.message}
+              </Text>
+            )}
             <View style={styles.messageFooter}>
               <Text style={[styles.timestamp, isCustomer ? styles.customerTimestamp : styles.providerTimestamp]}>
                 {formatTime(item.created_at)}

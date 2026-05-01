@@ -76,6 +76,8 @@ class ServiceProvider extends Authenticatable
     ];
 
     protected $casts = [
+        'is_online' => 'boolean',
+        'last_seen_at' => 'datetime',
         'email_verified_at' => 'datetime',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
@@ -86,6 +88,11 @@ class ServiceProvider extends Authenticatable
         'is_available' => 'boolean',
         'is_online' => 'boolean',
         'last_seen_at' => 'datetime',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     /**

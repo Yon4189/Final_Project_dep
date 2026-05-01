@@ -21,6 +21,12 @@ class EnsureProviderApproved
         }
 
         $status = strtolower($provider->status ?? '');
+        
+        \Log::info('Checking provider approval', [
+            'providerID' => $provider->providerID,
+            'status' => $status,
+            'in_array_check' => in_array($status, ['suspended', 'rejected', 'pending'])
+        ]);
 
         if (in_array($status, ['suspended', 'rejected', 'pending'])) {
             return response()->json([

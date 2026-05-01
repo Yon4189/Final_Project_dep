@@ -89,19 +89,15 @@ export default function CustomerNotifications() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const response = await api.get<any>('/customer/notifications');
-      if (response.success) {
-        const raw = response.data?.notifications?.data
-          || response.data?.data
-          || response.data
-          || [];
-        const arr = Array.isArray(raw) ? raw : [];
-        setNotifications(arr.map(normalizeNotification));
-        setUnreadCount(response.data?.unread_count ?? 0);
-        // Automatically mark all as read after fetching unread count
-        if (response.data?.unread_count > 0) {
-          markAllAsRead();
-        }
+      setLoading(true);
+      const response = await customerService.getNotifications();
+      if (response.success && response.data) {
+        // Backend returns: { notifications: { data: [...], ... }, unread_count: N }
+        const payload = response.data.notifications;
+        const raw = payload?.data ?? [];
+        setNotifications(raw.map(normalizeNotification));
+        setUnreadCount(response.data.unread_count ?? 0);
+        // NOTE: Do NOT auto-mark-all-as-read here.
       }
     } catch (error) {
       console.error('Failed to load notifications:', error);

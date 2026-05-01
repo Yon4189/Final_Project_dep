@@ -65,6 +65,7 @@ export default function ProviderNotifications() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const insets = useSafeAreaInsets();
 
   const normalizedNotifications = useCallback(
@@ -90,13 +91,14 @@ export default function ProviderNotifications() {
           setNotifications(prev =>
             page === 1 ? normalized : [...prev, ...normalized]
           );
-          setPage(payload?.current_page ?? page);
-          setHasMore((payload?.last_page ?? page) > (payload?.current_page ?? page));
-
-          // Automatically mark all as read if there are unreads
-          if (response.data.unread_count > 0 && page === 1) {
-            markAllAsRead();
+          
+          if (payload?.current_page) {
+            setPage(payload.current_page);
           }
+          
+          setHasMore((payload?.last_page ?? 1) > (payload?.current_page ?? 1));
+          setUnreadCount(response.data.unread_count ?? 0);
+          // NOTE: Do NOT auto-mark-all-as-read here.
         }
       } catch (error) {
         console.error('Failed to load provider notifications', error);
@@ -131,15 +133,13 @@ export default function ProviderNotifications() {
     return true;
   });
 
-  // Count unread notifications
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   const markAsRead = async (notificationId: string) => {
     setNotifications(prev => 
       prev.map(n => 
         n.id === notificationId ? { ...n, read: true } : n
       )
     );
+    setUnreadCount(prev => Math.max(0, prev - 1));
 
     try {
       await providerService.markNotificationAsRead(notificationId);
