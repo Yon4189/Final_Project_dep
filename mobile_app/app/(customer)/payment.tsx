@@ -677,7 +677,7 @@ export default function PaymentScreen() {
           }}
         />
       ) : (
-        showReviewModal && console.error('ReviewModal cannot be shown: bookingId is undefined', { params, bookingId })
+        showReviewModal && (console.error('ReviewModal cannot be shown: bookingId is undefined', { params, bookingId }), null)
       )}
     </View>
   );

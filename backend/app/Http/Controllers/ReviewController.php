@@ -41,14 +41,30 @@ class ReviewController extends Controller
             ], 404);
         }
 
-        // Check if already reviewed
-        $existingReview = Review::where('bookingID', $bookingID)->first();
+        // Check if already reviewed by this customer
+        $existingReview = Review::where('bookingID', $bookingID)
+            ->where('customerID', $customer->customerID)
+            ->first();
+        
         if ($existingReview) {
+            \Log::info('Duplicate review attempt detected', [
+                'bookingID' => $bookingID,
+                'customerID' => $customer->customerID,
+                'existing_review_id' => $existingReview->reviewID,
+                'existing_review_created_at' => $existingReview->created_at
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'This booking has already been reviewed'
+                'message' => 'You have already reviewed this booking'
             ], 400);
         }
+        
+        \Log::info('Creating new review', [
+            'bookingID' => $bookingID,
+            'customerID' => $customer->customerID,
+            'rating' => $request->rating
+        ]);
         // Create the review
         $review = Review::create([
             'bookingID' => $bookingID,
@@ -58,6 +74,14 @@ class ReviewController extends Controller
             'rating' => $request->rating,
             'comment' => $request->comment,
             'is_anonymous' => $request->is_anonymous ?? false
+        ]);
+
+        \Log::info('Review created successfully', [
+            'reviewID' => $review->reviewID,
+            'bookingID' => $bookingID,
+            'customerID' => $booking->customerID,
+            'providerID' => $booking->providerID,
+            'rating' => $request->rating
         ]);
 
         // Update provider's average rating
@@ -116,10 +140,26 @@ class ReviewController extends Controller
             $avg = round($stats->avg_rating ?? 0, 2);
             $total = $stats->total ?? 0;
             
+            \Log::info('Updating provider rating', [
+                'providerID' => $providerID,
+                'old_rating' => $provider->rating,
+                'new_rating' => $avg,
+                'old_total_reviews' => $provider->total_reviews,
+                'new_total_reviews' => $total
+            ]);
+            
             $provider->average_rating = $avg;
             $provider->rating = $avg;
             $provider->total_reviews = $total;
             $provider->save();
+            
+            \Log::info('Provider rating updated successfully', [
+                'providerID' => $providerID,
+                'rating' => $avg,
+                'total_reviews' => $total
+            ]);
+        } else {
+            \Log::error('Provider not found for rating update', ['providerID' => $providerID]);
         }
     }
 }

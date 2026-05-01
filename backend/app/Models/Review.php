@@ -24,4 +24,14 @@ class Review extends Model
     public function customer() {
         return $this->belongsTo(Customer::class, 'customerID', 'customerID'); // fk, owner key
     }
+
+    // a review belongs to a service
+    public function service() {
+        return $this->belongsTo(Service::class, 'serviceID', 'serviceID');
+    }
+
+    // a review belongs to a provider
+    public function provider() {
+        return $this->belongsTo(ServiceProvider::class, 'providerID', 'providerID');
+    }
 }
