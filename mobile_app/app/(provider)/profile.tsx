@@ -22,20 +22,9 @@ import { useProviderStore } from '@/app/store/providerStore';
 import { useTheme } from '../context/ThemeContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { formatPhoneNumber } from '../utils/formatters';
-import type { WorkingHours } from '../types/provider.types';
 import { api } from '@/app/services/api';
 import { API_BASE_URL } from '@/app/config/api';
 import { useUpdateProfile } from '@/hooks/useProviderQueries';
-
-const WEEKDAYS = [
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-  'sunday',
-];
 
 export default function ProviderProfile() {
   const router = useRouter();
@@ -61,8 +50,6 @@ export default function ProviderProfile() {
 
   const updateProfileMutation = useUpdateProfile();
   const [uploading, setUploading] = useState(false);
-  const [editingHours, setEditingHours] = useState(false);
-  const [workingHours, setWorkingHours] = useState<WorkingHours | null>(profile?.workingHours || null);
 
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -271,11 +258,10 @@ export default function ProviderProfile() {
         onPress={() => router.push('/(provider)/profile/edit')}
       >
         <View style={styles.infoLeft}>
-          <Ionicons name="location-outline" size={20} color={colors.primary} />
-          <Text style={styles.infoLabel}>{t('profile.address', 'Address')}</Text>
+          <Ionicons name="create-outline" size={20} color={colors.primary} />
+          <Text style={styles.infoLabel}>{t('profile.editProfile', 'Edit Profile')}</Text>
         </View>
         <View style={styles.infoRight}>
-          <Text style={styles.infoValue} numberOfLines={1}>{profile?.address || t('common.notSet', 'Not set')}</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
         </View>
       </TouchableOpacity>
@@ -309,47 +295,7 @@ export default function ProviderProfile() {
     </View>
   );
 
-  const renderWorkingHours = () => {
-    const hours = profile?.workingHours || workingHours;
 
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('providerProfile.workingHours', 'Working Hours')}</Text>
-          <TouchableOpacity onPress={() => router.push('/(provider)/profile/schedule')}>
-            <Text style={styles.editText}>{t('providerProfile.manage', 'Manage')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {WEEKDAYS.map((day) => {
-          const dayKey = day.toLowerCase() as keyof WorkingHours;
-          const schedule = hours?.[dayKey] as { isAvailable: boolean; startTime?: string; endTime?: string } | undefined;
-
-          return (
-            <View key={day} style={styles.hoursRow}>
-              <Text style={styles.hoursDay}>{t(`weekdays.${day.toLowerCase()}`, day)}</Text>
-              {editingHours ? (
-                <TouchableOpacity style={styles.hoursEdit}>
-                  <Text style={styles.hoursEditText}>
-                    {schedule?.isAvailable 
-                      ? `${schedule.startTime || '09:00'} - ${schedule.endTime || '17:00'}`
-                      : 'Closed'}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.text.secondary} />
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.hoursTime}>
-                  {schedule?.isAvailable 
-                    ? `${schedule.startTime || '09:00'} - ${schedule.endTime || '17:00'}`
-                    : t('profile.closed', 'Closed')}
-                </Text>
-              )}
-            </View>
-          );
-        })}
-      </View>
-    );
-  };
 
   const renderDocuments = () => (
     <View style={styles.section}>
@@ -485,16 +431,7 @@ export default function ProviderProfile() {
         <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.settingRow}
-        onPress={() => Alert.alert(t('profile.helpSupport', 'Help & Support'), t('profile.supportTelegram', 'Our support team is currently active on Telegram: @handyman_support'))}
-      >
-        <View style={styles.settingLeft}>
-          <Ionicons name="help-circle-outline" size={20} color={colors.text.primary} />
-          <Text style={styles.settingLabel}>{t('profile.helpSupport', 'Help & Support')}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
-      </TouchableOpacity>
+
 
       <TouchableOpacity 
         style={styles.settingRow}
@@ -529,7 +466,6 @@ export default function ProviderProfile() {
         {renderBadges()}
         {renderContactInfo()}
         {renderBusinessInfo()}
-        {renderWorkingHours()}
         {renderDocuments()}
         {renderBankInfo()}
         {renderSettings()}

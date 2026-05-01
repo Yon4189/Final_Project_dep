@@ -11,14 +11,22 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/app/context/ThemeContext';
 import { ThemeColors } from '@/app/constants/Colors';
 import { useProviderQueries } from '@/hooks/useProviderQueries';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { api } from '@/app/services/api';
+import { API_BASE_URL } from '@/app/config/api';
+
+const ID_PHOTO_TYPES = ['Passport', 'Driver License', 'National ID', 'Kebele ID'];
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -32,10 +40,34 @@ export default function EditProfileScreen() {
     bio: '',
     phone: '',
     email: '',
-    address: '',
     yearsExperience: '',
     hourlyRate: '',
+    service_city: '',
+    idPhotoType: '',
   });
+
+  const [cities, setCities] = useState<any[]>([]);
+  const [showCityModal, setShowCityModal] = useState(false);
+  const [showIdTypeModal, setShowIdTypeModal] = useState(false);
+
+  const [idPhotoFront, setIdPhotoFront] = useState<any>(null);
+  const [idPhotoFrontUri, setIdPhotoFrontUri] = useState<string | null>(null);
+  const [idPhotoBack, setIdPhotoBack] = useState<any>(null);
+  const [idPhotoBackUri, setIdPhotoBackUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const resp = await api.get<any>('/cities');
+        if (resp.success && resp.data) {
+          setCities(Array.isArray(resp.data) ? resp.data : []);
+        }
+      } catch (err) {
+        console.log('Error fetching cities:', err);
+      }
+    };
+    fetchCities();
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -44,29 +76,68 @@ export default function EditProfileScreen() {
         bio: profile.bio || '',
         phone: profile.phone || '',
         email: profile.email || '',
-        address: profile.address || '',
         yearsExperience: String(profile.yearsExperience || ''),
         hourlyRate: String(profile.hourlyRate || ''),
+        service_city: profile.service_city || '',
+        idPhotoType: profile.idPhotoType || '',
       });
+      
+      const apiBaseUrl = API_BASE_URL.replace('/api', '');
+      if (profile.idPhoto) {
+        setIdPhotoFrontUri(profile.idPhoto.startsWith('http') ? profile.idPhoto : `${apiBaseUrl}/${profile.idPhoto}`);
+      }
+      if (profile.idPhotoBack) {
+        setIdPhotoBackUri(profile.idPhotoBack.startsWith('http') ? profile.idPhotoBack : `${apiBaseUrl}/${profile.idPhotoBack}`);
+      }
     }
   }, [profile]);
 
+  const pickImage = async (type: 'idFront' | 'idBack') => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(t('auth.permissionNeeded', 'Permission needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [3, 2],
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      const filename = asset.uri.split('/').pop() || 'id.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+      const file = { uri: asset.uri, name: filename, type: mimeType };
+      if (type === 'idFront') { setIdPhotoFrontUri(asset.uri); setIdPhotoFront(file); }
+      else if (type === 'idBack') { setIdPhotoBackUri(asset.uri); setIdPhotoBack(file); }
+    }
+  };
+
   const handleSave = async () => {
-    if (!form.businessName || !form.phone) {
-      Alert.alert(t('common.error', 'Error'), t('profile.namePhoneRequired', 'Business Name and Phone are required'));
+    if (!form.businessName || !form.phone || !form.service_city || !form.idPhotoType) {
+      Alert.alert(t('common.error', 'Error'), t('profile.fillRequired', 'Please fill all required fields (Name, Phone, City, ID Type).'));
       return;
     }
 
     try {
-      await updateProfile.mutateAsync({
-        businessName: form.businessName,
-        bio: form.bio,
-        phone: form.phone,
-        email: form.email,
-        address: form.address,
-        yearsExperience: parseInt(form.yearsExperience) || 0,
-        hourlyRate: parseFloat(form.hourlyRate) || 0,
-      });
+      const formData = new FormData();
+      formData.append('fullname', form.businessName);
+      formData.append('bio', form.bio);
+      formData.append('phone', form.phone);
+      formData.append('email', form.email);
+      formData.append('service_city', form.service_city);
+      formData.append('idPhotoType', form.idPhotoType);
+      
+      // Send these so they don't get lost, though they might not be updated by this specific API payload
+      if (form.yearsExperience) formData.append('yearsExperience', form.yearsExperience);
+      if (form.hourlyRate) formData.append('hourlyRate', form.hourlyRate);
+
+      if (idPhotoFront) formData.append('idPhoto', idPhotoFront as any);
+      if (idPhotoBack) formData.append('idPhotoBack', idPhotoBack as any);
+
+      await updateProfile.mutateAsync(formData as any);
       // onSuccess in mutation hook will handle the back navigation or alert
     } catch (error) {
       // onError in mutation hook will handle the error alert
@@ -76,6 +147,14 @@ export default function EditProfileScreen() {
   if (isLoading) {
     return <LoadingSpinner fullScreen />;
   }
+
+  const renderModalItem = (item: string | any, onSelect: () => void) => (
+    <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
+      <Text style={styles.modalItemText}>
+        {typeof item === 'string' ? item : item.name || item.cityName || item}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <KeyboardAvoidingView 
@@ -166,13 +245,57 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.address', 'Physical Address')}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={t('profile.addressPlaceholder', 'Enter business address')}
-              value={form.address}
-              onChangeText={(text) => setForm({ ...form, address: text })}
-            />
+            <Text style={styles.label}>{t('auth.serviceCity', 'Service City')} *</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setShowCityModal(true)}>
+              <Text style={form.service_city ? styles.dropdownText : styles.dropdownPlaceholder}>{form.service_city || t("auth.selectServiceCity", "Select your service city")}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
+            </TouchableOpacity>
+          </View>
+
+
+        </View>
+
+        <Text style={styles.sectionTitle}>{t('auth.idDocument', 'ID Document')}</Text>
+        <View style={styles.card}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('auth.idDocumentType', 'ID Document Type')} *</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setShowIdTypeModal(true)}>
+              <Text style={form.idPhotoType ? styles.dropdownText : styles.dropdownPlaceholder}>{form.idPhotoType || t("auth.selectIdType", "Select ID type")}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.text.secondary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.uploadContainer}>
+            <Text style={styles.label}>
+              {t('auth.idCardPhoto', 'ID Card Photos')} *
+            </Text>
+            <Text style={styles.uploadHint}>{t('auth.idBothSides', 'Upload both the front and back of your ID card')}</Text>
+
+            <View style={styles.idPhotoRow}>
+              {/* Front */}
+              <TouchableOpacity style={styles.idHalfPicker} onPress={() => pickImage('idFront')}>
+                {idPhotoFrontUri ? (
+                  <Image source={{ uri: idPhotoFrontUri }} style={styles.idHalfImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera" size={32} color={colors.primary} />
+                    <Text style={styles.imagePlaceholderText}>{t('auth.frontSide', 'Front Side')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Back */}
+              <TouchableOpacity style={styles.idHalfPicker} onPress={() => pickImage('idBack')}>
+                {idPhotoBackUri ? (
+                  <Image source={{ uri: idPhotoBackUri }} style={styles.idHalfImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera" size={32} color={colors.primary} />
+                    <Text style={styles.imagePlaceholderText}>{t('auth.backSide', 'Back Side')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -193,6 +316,33 @@ export default function EditProfileScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Modals */}
+      <Modal visible={showCityModal} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t("auth.selectServiceCityModal", "Select Service City")}</Text>
+              <TouchableOpacity onPress={() => setShowCityModal(false)}><Ionicons name="close" size={24} color={colors.text.secondary} /></TouchableOpacity>
+            </View>
+            <FlatList data={cities} keyExtractor={(item) => (item.cityID || item.id || Math.random()).toString()} renderItem={({ item }) => renderModalItem(item.name || item, () => { setForm({ ...form, service_city: item.name || item }); setShowCityModal(false); })} />
+            <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowCityModal(false)}><Text style={styles.modalCancelText}>{t("common.cancel", "Cancel")}</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showIdTypeModal} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t("auth.selectIdTypeModal", "Select ID Type")}</Text>
+              <TouchableOpacity onPress={() => setShowIdTypeModal(false)}><Ionicons name="close" size={24} color={colors.text.secondary} /></TouchableOpacity>
+            </View>
+            <FlatList data={ID_PHOTO_TYPES} keyExtractor={(item) => item} renderItem={({ item }) => renderModalItem(item, () => { setForm({ ...form, idPhotoType: item }); setShowIdTypeModal(false); })} />
+            <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowIdTypeModal(false)}><Text style={styles.modalCancelText}>{t("common.cancel", "Cancel")}</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -210,8 +360,26 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, height: 48, fontSize: 15, color: colors.text.primary },
   textArea: { height: 100, paddingTop: 12, textAlignVertical: 'top' },
   row: { flexDirection: 'row' },
+  dropdown: { backgroundColor: colors.background, paddingHorizontal: 12, height: 48, borderRadius: 8, borderWidth: 1, borderColor: colors.border, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dropdownPlaceholder: { color: colors.text.secondary, fontSize: 15 },
+  dropdownText: { color: colors.text.primary, fontSize: 15 },
+  uploadContainer: { marginBottom: 10 },
+  uploadHint: { fontSize: 12, color: colors.text.secondary, marginBottom: 10, marginTop: -4 },
+  idPhotoRow: { flexDirection: 'row', gap: 12 },
+  idHalfPicker: { flex: 1, height: 120, borderRadius: 10, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed', overflow: 'hidden', backgroundColor: colors.background },
+  idHalfImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  imagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  imagePlaceholderText: { marginTop: 8, color: colors.text.secondary, fontSize: 12, fontWeight: '500' },
   saveButton: { backgroundColor: colors.primary, height: 52, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 10 },
   saveButtonText: { color: colors.surface, fontSize: 16, fontWeight: 'bold' },
   cancelButton: { height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
   cancelButtonText: { color: colors.text.secondary, fontSize: 15 },
+  modalContainer: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "80%" },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 20, fontWeight: "bold", color: colors.text.primary },
+  modalItem: { padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalItemText: { fontSize: 16, color: colors.text.primary },
+  modalCancelButton: { marginTop: 20, paddingVertical: 14, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  modalCancelText: { fontSize: 16, color: colors.text.primary },
 });
