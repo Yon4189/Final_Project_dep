@@ -138,6 +138,7 @@ const Verification = () => {
         onReasonChange={(value) => setRejectModal(prev => ({ ...prev, reason: value }))}
         onSubmit={handleRejectSubmit}
         onCancel={() => setRejectModal({ show: false, provider: null, reason: '' })}
+        isLoading={processingId === rejectModal.provider?.id}
       />
 
       {/* Header */}

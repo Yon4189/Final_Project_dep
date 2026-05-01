@@ -226,7 +226,7 @@ const Settings = () => {
       }
 
       // Persist deposit percentage
-      await api.put('/admin/settings/deposit-percentage', { deposit_percentage: depositPercentage });
+      await api.put('/admin/settings/deposit-percentage', { percentage: depositPercentage });
       queryClient.invalidateQueries({ queryKey: ['depositPercentage'] });
 
       // Attempt to persist settings to backend

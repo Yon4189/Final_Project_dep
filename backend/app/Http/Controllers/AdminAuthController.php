@@ -559,7 +559,26 @@ class AdminAuthController extends Authenticatable
         if (!$customer) {
             return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
         }
+        $userName = $customer->fullname;
+        $userEmail = $customer->email;
         $customer->delete();
+
+        // Send Notification Email
+        try {
+            Mail::html("
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: #ef4444;'>Account Deleted</h2>
+                    <p>Hello <strong>{$userName}</strong>,</p>
+                    <p>We wish to inform you that your customer account on <strong>Ethio HandyMan</strong> has been <strong>permanently deleted</strong> by the administration.</p>
+                    <p>This action is final. If you have any questions, please contact our support team.</p>
+                </div>", function ($message) use ($userEmail) {
+                $message->to($userEmail)
+                        ->subject("Ethio HandyMan: Account Deleted");
+            });
+        } catch (\Exception $e) {
+            Log::error("Mail Error (Delete Customer): " . $e->getMessage());
+        }
+
         return response()->json(['success' => true, 'message' => 'Customer deleted successfully']);
     }
 
@@ -572,7 +591,26 @@ class AdminAuthController extends Authenticatable
         if (!$provider) {
             return response()->json(['success' => false, 'message' => 'Provider not found'], 404);
         }
+        $userName = $provider->fullname;
+        $userEmail = $provider->email;
         $provider->delete();
+
+        // Send Notification Email
+        try {
+            Mail::html("
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: #ef4444;'>Account Deleted</h2>
+                    <p>Hello <strong>{$userName}</strong>,</p>
+                    <p>We wish to inform you that your Service Provider account on <strong>Ethio HandyMan</strong> has been <strong>permanently deleted</strong> by the administration.</p>
+                    <p>This action is final. If you have any questions, please contact our support team.</p>
+                </div>", function ($message) use ($userEmail) {
+                $message->to($userEmail)
+                        ->subject("Ethio HandyMan: Account Deleted");
+            });
+        } catch (\Exception $e) {
+            Log::error("Mail Error (Delete Provider): " . $e->getMessage());
+        }
+
         return response()->json(['success' => true, 'message' => 'Provider deleted successfully']);
     }
 
@@ -589,13 +627,37 @@ class AdminAuthController extends Authenticatable
         // Toggle between approved and suspended (use lowercase consistently)
         $currentStatus = strtolower($customer->status);
         
-        if (in_array($currentStatus, ['active', 'approved'])) {
+        $isSuspending = in_array($currentStatus, ['active', 'approved']);
+        
+        if ($isSuspending) {
             $customer->status = 'suspended'; // Use lowercase
+            $title = "Account Suspended";
+            $color = "#8b5cf6";
+            $body = "We wish to inform you that your account has been <strong>suspended</strong> by our administration team. During suspension, you will not be able to book new services.";
         } else {
             $customer->status = 'approved'; // Use lowercase
+            $title = "Account Reactivated";
+            $color = "#16a34a";
+            $body = "Good news! Your account has been <strong>reactivated</strong> by our administration team. You can now continue booking services as usual.";
         }
         
         $customer->save();
+
+        // Send Notification Email
+        try {
+            Mail::html("
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: {$color};'>{$title}</h2>
+                    <p>Hello <strong>{$customer->fullname}</strong>,</p>
+                    <p>{$body}</p>
+                    <p>If you have any questions, please contact our support team.</p>
+                </div>", function ($message) use ($customer, $title) {
+                $message->to($customer->email)
+                        ->subject("Ethio HandyMan: {$title}");
+            });
+        } catch (\Exception $e) {
+            Log::error("Mail Error (Toggle Customer): " . $e->getMessage());
+        }
         
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $customer->status]);
     }
@@ -613,13 +675,37 @@ class AdminAuthController extends Authenticatable
         // Toggle between approved and suspended (use lowercase consistently)
         $currentStatus = strtolower($provider->status);
         
-        if (in_array($currentStatus, ['active', 'approved'])) {
+        $isSuspending = in_array($currentStatus, ['active', 'approved']);
+        
+        if ($isSuspending) {
             $provider->status = 'suspended'; // Use lowercase
+            $title = "Account Suspended";
+            $color = "#8b5cf6";
+            $body = "We wish to inform you that your Service Provider account has been <strong>suspended</strong> by our administration team. During suspension, you will not be able to receive new service requests.";
         } else {
             $provider->status = 'approved'; // Use lowercase
+            $title = "Account Reactivated";
+            $color = "#16a34a";
+            $body = "Good news! Your Service Provider account has been <strong>reactivated</strong> by our administration team. You can now continue offering your services as usual.";
         }
         
         $provider->save();
+
+        // Send Notification Email
+        try {
+            Mail::html("
+                <div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee;'>
+                    <h2 style='color: {$color};'>{$title}</h2>
+                    <p>Hello <strong>{$provider->fullname}</strong>,</p>
+                    <p>{$body}</p>
+                    <p>If you have any questions, please contact our support team.</p>
+                </div>", function ($message) use ($provider, $title) {
+                $message->to($provider->email)
+                        ->subject("Ethio HandyMan: {$title}");
+            });
+        } catch (\Exception $e) {
+            Log::error("Mail Error (Toggle Provider): " . $e->getMessage());
+        }
         
         return response()->json(['success' => true, 'message' => 'Status updated', 'status' => $provider->status]);
     }
