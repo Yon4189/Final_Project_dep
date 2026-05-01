@@ -318,27 +318,9 @@ class ServiceProviderAuthController extends Controller
     /**
      * Toggle provider availability (accepting jobs or not)
      * PATCH /api/provider/availability
+     * 
+     * Note: This method is defined later in the file
      */
-    public function updateAvailability(Request $request)
-    {
-        $provider = $request->user();
-
-        $request->validate([
-            'isAvailable' => 'required|boolean',
-        ]);
-
-        $provider->is_available = $request->isAvailable;
-        $provider->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => $request->isAvailable ? 'You are now available for work' : 'You are now unavailable',
-            'data' => array_merge($this->buildProfileData($provider), [
-                'isAvailable' => (bool) $provider->is_available,
-                'is_online'   => (bool) $provider->is_online,
-            ]),
-        ]);
-    }
 
     /**
      * Get authenticated provider profile
@@ -388,15 +370,18 @@ class ServiceProviderAuthController extends Controller
         ]);
 
         $provider = $request->user();
+        
+        // Update both is_available and is_online to keep them in sync
+        $provider->is_available = $request->isAvailable;
         $provider->is_online = $request->isAvailable;
         $provider->last_seen_at = now();
         $provider->save();
 
         return response()->json([
             'success' => true,
-            'message' => 'Availability updated successfully',
+            'message' => $request->isAvailable ? 'You are now available for work' : 'You are now unavailable',
             'data' => [
-                'isAvailable' => (bool) $provider->is_online,
+                'isAvailable' => (bool) $provider->is_available,
                 'is_online' => (bool) $provider->is_online
             ]
         ]);

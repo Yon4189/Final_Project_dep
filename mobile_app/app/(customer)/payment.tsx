@@ -31,6 +31,13 @@ export default function PaymentScreen() {
 
   // 1. Hooks
   const bookingId = params.bookingId as string;
+  
+  // Debug logging for bookingId
+  console.log('=== PAYMENT SCREEN PARAMS ===');
+  console.log('params:', params);
+  console.log('bookingId from params:', bookingId);
+  console.log('========================');
+  
   const { data: bookingResponse, isLoading: bookingLoading, refetch: refetchBooking } = useBookingDetails(bookingId || '');
   const booking = (bookingResponse as any)?.data ?? bookingResponse;
   const { data: paymentMethods, isLoading: loadingMethods } = usePaymentMethods();
@@ -162,7 +169,19 @@ export default function PaymentScreen() {
           
           // Check if this was a final payment - if so, show review modal
           if (isFinalPayment) {
-            setShowReviewModal(true);
+            if (bookingId) {
+              setShowReviewModal(true);
+            } else {
+              console.error('Cannot show review modal: bookingId is undefined');
+              Alert.alert(
+                t('payment.statusSuccess', 'Payment Successful!'), 
+                t('payment.processedSuccessfully', 'Processed successfully.'), 
+                [
+                  { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+                  { text: t('common.ok', 'OK'), onPress: () => router.back() },
+                ]
+              );
+            }
           } else {
             // Deposit payment - just show success message
             Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.paymentProcessed', 'Your payment has been processed successfully.'), [
@@ -222,7 +241,19 @@ export default function PaymentScreen() {
             
             // Check if this was a final payment - if so, show review modal
             if (isFinalPayment) {
-              setShowReviewModal(true);
+              if (bookingId) {
+                setShowReviewModal(true);
+              } else {
+                console.error('Cannot show review modal: bookingId is undefined');
+                Alert.alert(
+                  t('payment.statusSuccess', 'Payment Successful!'), 
+                  t('payment.processedSuccessfully', 'Processed successfully.'), 
+                  [
+                    { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
+                    { text: t('common.ok', 'OK'), onPress: () => router.back() },
+                  ]
+                );
+              }
             } else {
               Alert.alert(t('payment.statusSuccess', 'Payment Successful!'), t('payment.processedSuccessfully', 'Processed successfully.'), [
                 { text: t('bookings.viewBookings', 'View Bookings'), onPress: () => router.push('/(customer)/bookings') },
@@ -630,20 +661,24 @@ export default function PaymentScreen() {
       </ScrollView>
       
       {/* Review Modal - shown after final payment */}
-      <ReviewModal
-        visible={showReviewModal}
-        onClose={() => {
-          setShowReviewModal(false);
-          router.push('/(customer)/bookings');
-        }}
-        bookingId={bookingId}
-        providerName={providerName}
-        serviceName={serviceTitle}
-        onSuccess={() => {
-          setShowReviewModal(false);
-          router.push('/(customer)/bookings');
-        }}
-      />
+      {bookingId ? (
+        <ReviewModal
+          visible={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            router.push('/(customer)/bookings');
+          }}
+          bookingId={bookingId}
+          providerName={providerName}
+          serviceName={serviceTitle}
+          onSuccess={() => {
+            setShowReviewModal(false);
+            router.push('/(customer)/bookings');
+          }}
+        />
+      ) : (
+        showReviewModal && console.error('ReviewModal cannot be shown: bookingId is undefined', { params, bookingId })
+      )}
     </View>
   );
 }

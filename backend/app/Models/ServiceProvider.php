@@ -86,13 +86,6 @@ class ServiceProvider extends Authenticatable
         'rating' => 'float',
         'certifications' => 'array',
         'is_available' => 'boolean',
-        'is_online' => 'boolean',
-        'last_seen_at' => 'datetime',
-    ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
     ];
 
     /**
