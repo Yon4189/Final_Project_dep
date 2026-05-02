@@ -607,13 +607,14 @@ class PaymentController extends Controller
     {
         $stats = [
             'total_payments' => Payment::count(),
-            'successful_payments' => Payment::whereIn('status', ['held', 'releasable', 'released'])->count(),
+            'successful_payments' => Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->count(),
             'failed_payments' => Payment::where('status', 'failed')->count(),
             'pending_payments' => Payment::whereIn('status', ['pending', 'processing'])->count(),
             'held_payments' => Payment::where('status', 'held')->count(),
             'released_payments' => Payment::where('status', 'released')->count(),
-            'total_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('amount'),
-            'platform_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released'])->sum('platform_commission'),
+            'total_volume' => Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->sum('amount'),
+            'platform_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->sum('platform_commission'),
+            'provider_revenue' => Payment::whereIn('status', ['held', 'releasable', 'released', 'paid'])->sum('provider_amount'),
         ];
 
         return response()->json([
