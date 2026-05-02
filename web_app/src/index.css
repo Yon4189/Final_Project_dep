@@ -182,3 +182,22 @@ h1, h2, h3, h4, h5, h6 {
 .text-\[9px\], .text-\[10px\], .text-\[8px\] {
   font-size: 11px !important;
 }
+
+/* Progress bar animation */
+@keyframes progress-fast {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-progress-fast {
+  animation: progress-fast 1s infinite linear;
+  width: 100%;
+}
+
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.custom-scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

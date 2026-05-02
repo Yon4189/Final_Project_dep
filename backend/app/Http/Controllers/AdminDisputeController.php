@@ -768,17 +768,36 @@ class AdminDisputeController extends Controller
 
         $isTyping = $request->boolean('is_typing', false);
         
-        // Store typing status in cache (expires in 5 seconds)
-        $cacheKey = "dispute_{$disputeID}_typing_admin_{$admin->id}";
+        // Use a single cache key per dispute to store all typing users
+        // This is more compatible across different cache drivers (file, database, etc.)
+        $cacheKey = "dispute_{$disputeID}_typing_users";
+        $typingUsers = cache()->get($cacheKey, []);
+        
+        $userId = $admin->adminID; // Use adminID as per our project convention
+        
         if ($isTyping) {
-            cache()->put($cacheKey, [
-                'user_id' => $admin->id,
+            // Add or update this user in the list
+            $typingUsers[$userId] = [
+                'user_id' => $userId,
                 'user_type' => 'admin',
-                'name' => $admin->name,
-                'timestamp' => now()
-            ], now()->addSeconds(5));
+                'name' => $admin->fullname ?? $admin->name,
+                'timestamp' => time()
+            ];
         } else {
+            // Remove this user from the list
+            unset($typingUsers[$userId]);
+        }
+
+        // Clean up stale typing statuses (older than 10 seconds)
+        $now = time();
+        $typingUsers = array_filter($typingUsers, function($user) use ($now) {
+            return ($now - $user['timestamp']) < 10;
+        });
+
+        if (empty($typingUsers)) {
             cache()->forget($cacheKey);
+        } else {
+            cache()->put($cacheKey, $typingUsers, now()->addMinutes(1));
         }
 
         return response()->json(['success' => true]);
@@ -803,24 +822,26 @@ class AdminDisputeController extends Controller
             return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
         }
 
-        // Get all typing users for this dispute
-        $typingUsers = [];
+        $cacheKey = "dispute_{$disputeID}_typing_users";
+        $typingUsersMap = cache()->get($cacheKey, []);
         
-        // Check admin typing status
-        $adminCacheKey = "dispute_{$disputeID}_typing_admin_*";
-        $adminKeys = cache()->getStore()->connection()->keys($adminCacheKey);
-        
-        foreach ($adminKeys as $key) {
-            $data = cache()->get($key);
-            if ($data) {
-                $typingUsers[] = $data;
-            }
+        // Filter out stale entries and the current admin
+        $now = time();
+        $filteredUsers = [];
+        foreach ($typingUsersMap as $userId => $data) {
+            // Skip stale entries
+            if (($now - $data['timestamp']) >= 10) continue;
+            
+            // Skip the current admin so they don't see themselves typing
+            if ($data['user_type'] === 'admin' && $userId == $admin->adminID) continue;
+            
+            $filteredUsers[] = $data;
         }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'typing_users' => $typingUsers
+                'typing_users' => $filteredUsers
             ]
         ]);
     }

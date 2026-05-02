@@ -11,12 +11,19 @@ import { disputeAPI } from '../api/dispute';
  * @param {boolean} enabled - Whether polling is enabled (default: true)
  * @returns {object} - { isPolling, lastUpdate, messageCount, error }
  */
-export const useDisputePolling = (disputeID, interval = 3000, enabled = true) => {
+export const useDisputePolling = (disputeID, interval = 3000, enabled = true, initialMessageCount = 0) => {
   const queryClient = useQueryClient();
   const pollingIntervalRef = useRef(null);
-  const lastMessageCountRef = useRef(0);
+  const lastMessageCountRef = useRef(initialMessageCount);
   const lastUpdateRef = useRef(null);
   const isPollingRef = useRef(false);
+
+  // Sync internal count with initial count when data is manually refreshed
+  useEffect(() => {
+    if (initialMessageCount > lastMessageCountRef.current) {
+      lastMessageCountRef.current = initialMessageCount;
+    }
+  }, [initialMessageCount]);
 
   const pollMessages = useCallback(async () => {
     if (!disputeID || !enabled) return;
