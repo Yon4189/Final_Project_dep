@@ -43,7 +43,7 @@ export const useDisputePolling = (disputeID, interval = 3000, enabled = true, in
 
           // Invalidate the query to trigger a re-render
           queryClient.invalidateQueries({
-            queryKey: ['disputes', disputeID]
+            queryKey: ['dispute', String(disputeID)]
           });
 
           // Trigger a custom event for new messages

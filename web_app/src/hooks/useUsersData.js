@@ -18,6 +18,7 @@ export const useUsersData = (userType) => {
         status: (u.status || 'Active').charAt(0).toUpperCase() + (u.status || 'Active').slice(1).toLowerCase(),
         location: u.location || u.service_city || 'Not Provided',
         profilePicture: u.profilePicture || null,
+        walletBalance: u.walletBalance || 0,
         joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : '',
       }));
     },

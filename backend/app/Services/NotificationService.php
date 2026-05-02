@@ -108,9 +108,9 @@ class NotificationService
             
             // Trigger WebSocket broadcast
             event(new BookingUpdated($notification));
-
-            // Send push notification
-            $this->sendPushNotification($notification);
+            
+            // Queue push notification to background to avoid blocking
+            \App\Jobs\SendPushNotificationJob::dispatch($notification);
             
             return $notification;
         } catch (\Exception $e) {
@@ -146,7 +146,8 @@ class NotificationService
                 'title' => $notification->title
             ]);
 
-            $response = Http::timeout(5)->post('https://exp.host/--/api/v2/push/send', [
+            // Reduced timeout to 2s to prevent blocking the main thread for too long
+            $response = Http::timeout(2)->post('https://exp.host/--/api/v2/push/send', [
                 'to' => $user->expo_push_token,
                 'title' => $notification->title ?? 'New Notification',
                 'body' => $notification->message,
@@ -158,11 +159,6 @@ class NotificationService
                 'sound' => 'default',
                 'priority' => 'high'
             ]);
-
-            // If $response is a LazyPromise (async), wait for it to get the Response object
-            if ($response instanceof \Illuminate\Http\Client\Promises\LazyPromise) {
-                $response = $response->wait();
-            }
 
             if ($response->successful()) {
                 $notification->update([
@@ -262,16 +258,16 @@ class NotificationService
      */
     public function notifyAdminsNewDispute($dispute, $booking)
     {
-        $raisedBy = $dispute->raised_by === 'customer' ? 'Customer' : 'Provider';
+        $raisedBy = $dispute->raised_by_type === 'customer' ? 'Customer' : 'Provider';
         return $this->toAdmins(
             'dispute',
             'New Dispute Created',
-            "{$raisedBy} raised a dispute for booking #{$booking->bookingID}: {$dispute->reason}",
+            "{$raisedBy} raised a dispute for booking #{$booking->bookingID}: " . substr($dispute->description, 0, 100),
             [
                 'dispute_id' => $dispute->disputeID,
                 'booking_id' => $booking->bookingID,
-                'raised_by' => $dispute->raised_by,
-                'reason' => $dispute->reason,
+                'raised_by' => $dispute->raised_by_type,
+                'title' => $dispute->title,
                 'status' => $dispute->status,
             ]
         );

@@ -144,13 +144,14 @@ Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->gro
 
     Route::post('/bookings/{bookingID}/dispute',    [DisputeController::class, 'customerRaiseDispute']);
     Route::get('/disputes',                         [DisputeController::class, 'getCustomerDisputes']);
-    Route::middleware('ownership:dispute,disputeID,raised_by_id')->group(function () {
+    Route::middleware('ownership:dispute,disputeID,raised_by_id|against_id')->group(function () {
         Route::get('/disputes/{disputeID}',                     [DisputeController::class, 'show']);
         Route::post('/disputes/{disputeID}/messages',           [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
         Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
         Route::get('/disputes/{disputeID}/messages/search',     [DisputeController::class, 'searchMessages']);
         Route::put('/disputes/messages/{messageID}',            [DisputeController::class, 'editMessage']);
-        Route::delete('/disputes/messages/{messageID}',         [DisputeController::class, 'deleteUserMessage']);
+        Route::delete('/disputes/{disputeID}/messages/{messageID}', [DisputeController::class, 'deleteMessage']);
+        Route::delete('/disputes/{disputeID}/clear-history',    [DisputeController::class, 'clearHistory']);
     });
 
     // ── Locations ────────────────────────────────────────────────────────────
@@ -268,13 +269,14 @@ Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->g
     // ── Disputes ──────────────────────────────────────────────────────────────
     Route::post('/bookings/{bookingID}/dispute',    [DisputeController::class, 'providerRaiseDispute']);
     Route::get('/disputes',                         [DisputeController::class, 'getProviderDisputes']);
-    Route::middleware('ownership:dispute,disputeID,raised_by_id')->group(function () {
+    Route::middleware('ownership:dispute,disputeID,raised_by_id|against_id')->group(function () {
         Route::get('/disputes/{disputeID}',                 [DisputeController::class, 'show']);
         Route::post('/disputes/{disputeID}/messages',       [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
         Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
         Route::get('/disputes/{disputeID}/messages/search', [DisputeController::class, 'searchMessages']);
         Route::put('/disputes/messages/{messageID}',        [DisputeController::class, 'editMessage']);
-        Route::delete('/disputes/messages/{messageID}',     [DisputeController::class, 'deleteUserMessage']);
+        Route::delete('/disputes/{disputeID}/messages/{messageID}', [DisputeController::class, 'deleteMessage']);
+        Route::delete('/disputes/{disputeID}/clear-history',    [DisputeController::class, 'clearHistory']);
     });
 
     // ── Wallet & Withdrawals ──────────────────────────────────────────────────
@@ -389,6 +391,7 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     Route::get('/disputes/{disputeID}/typing',      [AdminDisputeController::class, 'getTypingStatus']);
     Route::post('/disputes/{disputeID}/messages/reply', [AdminDisputeController::class, 'replyToMessage'])->middleware('throttle:10,1');
     Route::get('/disputes/{disputeID}/messages/{messageID}/thread', [AdminDisputeController::class, 'getMessageThread']);
+    Route::delete('/disputes/{disputeID}/clear-history', [AdminDisputeController::class, 'clearHistory']);
 
     // ── Admin Settings (split payment) ────────────────────────────────────────
     Route::get('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'getDepositPercentage']);

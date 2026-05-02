@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -6,11 +6,10 @@ import {
   AlertCircle, CheckCircle, RefreshCcw, XCircle,
   User, Wrench, MessageSquare, ExternalLink, Search,
   Loader2, Filter, ChevronRight, MessageSquareText, Trash2,
-  ArrowLeft, Mail, Phone, Send, Lock
+  ArrowLeft, Mail, Phone, Send, Lock, Pencil, Trash
 } from 'lucide-react';
 import { disputeAPI } from '../api/dispute';
 import DescriptionModal from '../components/DescriptionModal';
-import useDisputePolling from '../hooks/useDisputePolling';
 import useTypingIndicator from '../hooks/useTypingIndicator';
 import { useTheme } from '../context/ThemeContext';
 
@@ -36,6 +35,17 @@ const Disputes = () => {
   const [descModal, setDescModal] = useState({ show: false, content: '', title: '' });
   const [pollingEnabled, setPollingEnabled] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const scrollRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [selectedDispute?.messages]);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -49,12 +59,15 @@ const Disputes = () => {
   const {
     data: detailData,
     isLoading: detailLoading,
+    isFetching: isFetchingDetail,
     isError: detailError
   } = useQuery({
     queryKey: ['dispute', urlDisputeId],
     queryFn: () => urlDisputeId ? disputeAPI.getDisputeDetails(urlDisputeId) : null,
     enabled: !!urlDisputeId,
-    staleTime: 5000,
+    staleTime: 10000,
+    refetchInterval: 30000, // Poll less frequently (30s)
+    placeholderData: (previousData) => previousData,
   });
 
   useEffect(() => {
@@ -70,24 +83,29 @@ const Disputes = () => {
       });
       // Automatically switch to discussion tab on fresh load
       setActiveChatTab('discussion');
-    } else if (detailData && !detailData.success) {
+    } else if (detailData && !detailData.success && !selectedDispute) {
       setSelectedDispute(null);
     }
   }, [detailData]);
 
-  // Enable polling when a dispute is selected
-  const pollingStatus = useDisputePolling(
-    urlDisputeId,
-    3000,
-    pollingEnabled && !!urlDisputeId,
-    selectedDispute?.messages?.length || 0
-  );
+
 
   // Typing indicator
   const { typingUsers, setTyping } = useTypingIndicator(
     urlDisputeId,
-    pollingEnabled && !!urlDisputeId
+    !!urlDisputeId
   );
+
+  // Auto-set typing status when newMessage changes
+  useEffect(() => {
+    if (newMessage.trim()) {
+      setTyping(true);
+      const timeout = setTimeout(() => setTyping(false), 3000);
+      return () => clearTimeout(timeout);
+    } else {
+      setTyping(false);
+    }
+  }, [newMessage, urlDisputeId]);
 
   const cleanTitle = (title) => {
     if (!title) return '';
@@ -158,6 +176,7 @@ const Disputes = () => {
       return { disputes: disputesData, stats: statsData };
     },
     staleTime: 30000,
+    refetchInterval: 60000, // Poll for new disputes every 60 seconds
     placeholderData: (previousData) => previousData,
   });
 
@@ -177,6 +196,7 @@ const Disputes = () => {
     if (!selectedDispute) return;
 
     try {
+      setUpdatingStatus(true);
       const data = {
         status,
         notes: resolutionData.notes,
@@ -186,14 +206,17 @@ const Disputes = () => {
 
       const response = await disputeAPI.updateDisputeStatus(selectedDispute.disputeID, data);
       if (response.success) {
-        alert(t('serv_msg_cat_updated'));
+        alert(t('dispute_msg_updated'));
         setSelectedDispute(null);
         queryClient.invalidateQueries({ queryKey: ['disputes'] });
         queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        navigate('/admin/disputes');
       }
     } catch (error) {
       console.error('Failed to update dispute:', error);
       alert(error.response?.data?.message || t('user_mgmt_err_status'));
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -258,10 +281,13 @@ const Disputes = () => {
       if (response.success) {
         setReplyText('');
         setReplyingToMessageId(null);
-        // Refresh dispute details
-        const detailRes = await disputeAPI.getDisputeDetails(selectedDispute.disputeID);
-        if (detailRes.success) {
-          setSelectedDispute(detailRes.data.dispute);
+        // Optimistically update message list
+        const sentMsg = response.data.message || response.data;
+        if (sentMsg) {
+          setSelectedDispute(prev => ({
+            ...prev,
+            messages: [...(prev.messages || []), sentMsg]
+          }));
         }
       }
     } catch (error) {
@@ -273,27 +299,83 @@ const Disputes = () => {
   const handleSendMessage = async (isAdminOnly = false) => {
     if (!newMessage.trim() || !selectedDispute) return;
 
+    const messageText = newMessage.trim();
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg = {
+      messageID: tempId,
+      message: messageText,
+      sender_type: 'admin',
+      recipient_type: recipientType,
+      is_admin_only: isAdminOnly,
+      created_at: new Date().toISOString(),
+      sender: { fullname: 'You' }, // Current admin
+      status: 'sending' // Local flag
+    };
+
+    // 1. Optimistically update UI
+    setSelectedDispute(prev => ({
+      ...prev,
+      messages: [...(prev.messages || []), optimisticMsg]
+    }));
+    setNewMessage('');
+    setTimeout(scrollToBottom, 100);
+
     try {
       setSendingMessage(true);
       const response = await disputeAPI.addDisputeMessage(
         selectedDispute.disputeID,
-        newMessage,
-        recipientType, // Send to selected recipient
+        messageText,
+        recipientType,
         isAdminOnly
       );
 
       if (response.success) {
-        setNewMessage('');
-        // Refresh dispute details to get updated messages
-        const detailRes = await disputeAPI.getDisputeDetails(selectedDispute.disputeID);
-        if (detailRes.success) {
-          setSelectedDispute(detailRes.data.dispute);
-        }
+        // 2. Replace optimistic message with real one from server
+        const sentMsg = response.data;
+        setSelectedDispute(prev => ({
+          ...prev,
+          messages: prev.messages.map(msg => msg.messageID === tempId ? sentMsg : msg)
+        }));
+      } else {
+        throw new Error(response.message || 'Failed to send');
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+      // 3. Rollback: remove optimistic message
+      setSelectedDispute(prev => ({
+        ...prev,
+        messages: prev.messages.filter(msg => msg.messageID !== tempId)
+      }));
+      setNewMessage(messageText); // Restore text
       const errorMsg = error.response?.data?.message || error.message;
       alert(`Failed to send message: ${errorMsg}`);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!selectedDispute) return;
+
+    if (!window.confirm("Are you sure you want to clear the entire chat history for this dispute? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setSendingMessage(true);
+      const response = await disputeAPI.clearHistory(selectedDispute.disputeID);
+
+      if (response.success) {
+        setSelectedDispute(prev => ({
+          ...prev,
+          messages: []
+        }));
+      } else {
+        throw new Error(response.message || 'Failed to clear history');
+      }
+    } catch (error) {
+      console.error('Failed to clear history:', error);
+      alert('Failed to clear history: ' + (error.response?.data?.message || error.message));
     } finally {
       setSendingMessage(false);
     }
@@ -363,13 +445,15 @@ const Disputes = () => {
             <Loader2 size={40} className="text-teal-500 animate-spin mb-4" />
             <p className="text-[10px] font-black text-admin-text-muted uppercase tracking-[0.2em] animate-pulse">{t('dispute_fetching')}</p>
           </div>
-        ) : detailError || !selectedDispute ? (
+        ) : ((!detailLoading && !selectedDispute && detailData && detailData.success === false) || detailError) ? (
           <div className="h-[400px] flex flex-col items-center justify-center bg-admin-card rounded-[2.5rem] border border-admin-border border-dashed">
             <AlertCircle size={40} className="text-slate-300 mb-4" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('dispute_not_found')}</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+              {detailError ? "Error connecting to server" : t('dispute_not_found')}
+            </p>
             <button onClick={handleCloseModal} className="mt-6 px-6 py-2 bg-teal-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-transform active:scale-95 shadow-lg shadow-teal-500/20">Back to List</button>
           </div>
-        ) : (
+        ) : (selectedDispute) ? (
           <div className="flex flex-col lg:flex-row h-[calc(100vh-220px)] min-h-[700px] bg-white dark:bg-admin-card rounded-[2.5rem] shadow-2xl border border-admin-border overflow-hidden animate-in zoom-in-95 duration-500">
             {/* --- LEFT: CASE DETAILS --- */}
             <div className="w-full lg:w-80 bg-white dark:bg-slate-900/50 border-r border-admin-border flex flex-col">
@@ -436,22 +520,22 @@ const Disputes = () => {
                   </div>
                 </div>
 
-                </div>
               </div>
+            </div>
 
             {/* --- MIDDLE: THE CHAT HUB --- */}
             <div className="flex-1 flex flex-col bg-white dark:bg-slate-900/20 relative">
               {/* Chat Header/Tabs */}
               <div className="p-4 border-b border-admin-border flex items-center justify-between bg-white dark:bg-transparent">
-                  <div className="flex gap-2 p-1 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-admin-border">
-                    <button
-                      onClick={() => { setActiveChatTab('discussion'); setRecipientType('customer'); }}
-                      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeChatTab === 'discussion' ? 'bg-white dark:bg-slate-800 text-teal-600 shadow-sm' : 'text-admin-text-muted hover:text-admin-text'
-                        }`}
-                    >
-                      <MessageSquareText size={14} /> {t('discussion')}
-                    </button>
-                  </div>
+                <div className="flex gap-2 p-1 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-admin-border">
+                  <button
+                    onClick={() => { setActiveChatTab('discussion'); setRecipientType('customer'); }}
+                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeChatTab === 'discussion' ? 'bg-white dark:bg-slate-800 text-teal-600 shadow-sm' : 'text-admin-text-muted hover:text-admin-text'
+                      }`}
+                  >
+                    <MessageSquareText size={14} /> {t('discussion')}
+                  </button>
+                </div>
 
                 {activeChatTab === 'discussion' && (
                   <div className="flex gap-2">
@@ -462,9 +546,24 @@ const Disputes = () => {
                         className={`px-4 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${recipientType === type ? 'bg-teal-500 text-white border-teal-500 shadow-lg shadow-teal-500/20' : 'bg-white dark:bg-slate-800 text-slate-400 border-admin-border'
                           }`}
                       >
+
                         {t(type)}
                       </button>
                     ))}
+
+                    <div className="w-[1px] h-4 bg-admin-border mx-1 self-center opacity-50" />
+
+                    <button
+                      onClick={handleClearHistory}
+                      disabled={sendingMessage || (selectedDispute.messages || []).length === 0}
+                      className="p-1.5 rounded-xl text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed group relative"
+                      title="Clear History"
+                    >
+                      <Trash2 size={16} />
+                      <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-[8px] font-black uppercase rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                        {t('clear_history', 'Clear History')}
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -503,13 +602,29 @@ const Disputes = () => {
                             {!isAdmin && (
                               <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 mb-1 ml-2 uppercase tracking-wider">{msg.sender?.fullname || 'System'}</p>
                             )}
-                            <div className={`relative p-3 px-4 rounded-[1.2rem] text-[13px] leading-relaxed shadow-sm transition-all duration-300 ${isAdmin 
-                                ? 'bg-[#effdde] dark:bg-teal-900/40 text-slate-800 dark:text-slate-100 rounded-tr-none border border-[#d6f0b8] dark:border-teal-800' 
-                                : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-white dark:border-slate-700'
+                            <div className={`relative p-3 px-4 rounded-[1.2rem] text-[13px] leading-relaxed shadow-sm transition-all duration-300 ${isAdmin
+                              ? 'bg-[#effdde] dark:bg-teal-900/40 text-slate-800 dark:text-slate-100 rounded-tr-none border border-[#d6f0b8] dark:border-teal-800'
+                              : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-white dark:border-slate-700'
                               }`}>
                               {msg.message}
                               <div className={`flex items-center justify-end gap-1 mt-1 -mr-1 opacity-60 text-[9px] font-bold ${isAdmin ? 'text-teal-700 dark:text-teal-300' : 'text-slate-400'}`}>
+                                {msg.status === 'sending' ? (
+                                  <RefreshCcw size={8} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle size={8} className={isAdmin ? 'text-teal-600' : 'text-slate-400'} />
+                                )}
                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+
+                              {/* Hover Actions */}
+                              <div className={`absolute -top-3 ${isAdmin ? '-left-8' : '-right-8'} flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20`}>
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.messageID)}
+                                  className="p-1.5 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-red-100 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 transition-all hover:scale-110"
+                                  title="Delete message"
+                                >
+                                  <Trash size={10} />
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -517,6 +632,21 @@ const Disputes = () => {
                       );
                     })
                 )}
+                <div ref={messagesEndRef} />
+
+                {/* Typing Indicators */}
+                <div className="absolute bottom-4 left-6 z-20">
+                  {typingUsers.filter(u => u.user_id !== 'admin').map((user, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[10px] font-black text-teal-600 dark:text-teal-400 bg-white/80 dark:bg-slate-800/80 px-3 py-1 rounded-full backdrop-blur-sm animate-bounce shadow-sm border border-teal-500/20">
+                      <div className="flex gap-1">
+                        <span className="w-1 h-1 bg-current rounded-full animate-pulse"></span>
+                        <span className="w-1 h-1 bg-current rounded-full animate-pulse delay-75"></span>
+                        <span className="w-1 h-1 bg-current rounded-full animate-pulse delay-150"></span>
+                      </div>
+                      {user.name} is typing...
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Console Input Area (Telegram Style) */}
@@ -608,11 +738,19 @@ const Disputes = () => {
                   </div>
 
                   <div className="space-y-2 pt-4">
-                    <button onClick={() => handleUpdateStatus('resolved')} disabled={!resolutionData.resolution_type} className="w-full py-3 bg-teal-500 text-white font-black uppercase text-xs rounded-xl shadow-lg shadow-teal-500/20 hover:bg-teal-600 disabled:opacity-50">
-                      {t('resolve_case')}
+                    <button 
+                      onClick={() => handleUpdateStatus('resolved')} 
+                      disabled={!resolutionData.resolution_type || updatingStatus} 
+                      className="w-full py-3 bg-teal-500 text-white font-black uppercase text-xs rounded-xl shadow-lg shadow-teal-500/20 hover:bg-teal-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {updatingStatus ? <Loader2 size={16} className="animate-spin" /> : t('resolve_case')}
                     </button>
-                    <button onClick={() => handleUpdateStatus('rejected')} className="w-full py-3 bg-white dark:bg-slate-800 border border-admin-border text-red-500 font-black uppercase text-xs rounded-xl hover:bg-red-50">
-                      {t('reject_case')}
+                    <button 
+                      onClick={() => handleUpdateStatus('rejected')} 
+                      disabled={updatingStatus}
+                      className="w-full py-3 bg-white dark:bg-slate-800 border border-admin-border text-red-500 font-black uppercase text-xs rounded-xl hover:bg-red-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {updatingStatus ? <Loader2 size={16} className="animate-spin" /> : t('reject_case')}
                     </button>
                   </div>
                 </div>
@@ -626,7 +764,7 @@ const Disputes = () => {
               )}
             </div>
           </div>
-        )
+        ) : null
       ) : (
         /* --- LIST VIEW --- */
         <div className="bg-white dark:bg-admin-card rounded-[2rem] shadow-xl dark:shadow-2xl border border-admin-border overflow-hidden min-h-[600px] flex flex-col transition-all duration-300 relative">
@@ -637,181 +775,198 @@ const Disputes = () => {
             </div>
           )}
 
-          {/* Semi-transparent overlay during background fetch */}
-          {isFetching && !loading && (
-            <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 z-40 backdrop-blur-[1px] flex items-center justify-center animate-in fade-in duration-300">
-               <div className="flex flex-col items-center gap-3 bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-2xl border border-admin-border">
-                  <Loader2 size={32} className="text-admin-accent animate-spin" />
-                  <p className="text-[10px] font-black text-admin-accent uppercase tracking-[0.2em]">{t('dispute_fetching')}</p>
-               </div>
+          {/* Only show full-screen loader on initial fetch */}
+          {loading && (
+            <div className="flex-1 flex flex-col items-center justify-center py-20">
+              <Loader2 size={40} className="text-admin-accent animate-spin mb-4" />
+              <p className="text-[10px] font-black text-admin-text-muted uppercase tracking-[0.2em] animate-pulse">{t('dispute_fetching')}</p>
             </div>
           )}
 
           {/* --- TABS --- */}
           <div className="px-8 bg-white dark:bg-admin-sidebar py-4 border-b border-admin-border">
-              <div className="flex gap-10 overflow-x-auto custom-scrollbar-hide pb-2">
-                {['all', 'pending', 'under_review', 'resolved', 'rejected', 'escalated'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setStatusFilter(tab === 'all' ? '' : tab)}
-                    className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all relative whitespace-nowrap ${(statusFilter === tab || (statusFilter === '' && tab === 'all'))
-                      ? 'text-admin-accent dark:text-white'
-                      : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-200'
-                      }`}
-                  >
-                    {t(`status_${tab}`)}
-                    {(statusFilter === tab || (statusFilter === '' && tab === 'all')) && (
-                      <div className="absolute -bottom-4 left-0 w-full h-1 bg-admin-accent rounded-t-full"></div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="overflow-x-auto hidden lg:block">
-                <table className="w-full text-left">
-                  <thead className="text-slate-600 dark:text-slate-400 text-[9px] uppercase font-black tracking-[0.25em] border-b border-admin-border bg-white dark:bg-white/5">
-                  <tr>
-                    <th className="px-6 py-6 w-16">{t('dispute_ref_id') || 'ID'}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_complainant')}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_against')}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_subject')}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_amount')}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_status')}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_priority')}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_date')}</th>
-                    <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_action')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-admin-border">
-                  {disputes.length === 0 ? (
-                    <tr>
-                      <td colSpan="10" className="px-8 py-24 text-center">
-                        <div className="flex flex-col items-center gap-4 opacity-20">
-                          <Search size={48} className="text-admin-text-muted" />
-                          <p className="text-xs font-black text-admin-text-muted uppercase tracking-widest">{t('dispute_no_disputes')}</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    disputes.map((dispute) => (
-                      <tr
-                        key={dispute.disputeID}
-                        onClick={() => handleReviewCase(dispute.disputeID)}
-                        className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer border-l-4 border-transparent hover:border-admin-accent"
-                      >
-                        <td className="px-6 py-6">
-                          <span className="text-[11px] font-black text-admin-accent font-mono">{dispute.disputeID}</span>
-                        </td>
-                        <td className="px-4 py-6">
-                          <span className="text-[11px] font-black truncate block max-w-[150px] text-admin-text">
-                            {dispute.raised_by?.fullname || dispute.raised_by?.business_name || dispute.raised_by?.first_name || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-6">
-                          <span className="text-[11px] font-black truncate block max-w-[150px] text-admin-text">
-                            {dispute.against?.fullname || dispute.against?.business_name || dispute.against?.first_name || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-6">
-                          <span
-                            className="text-[11px] font-bold line-clamp-1 max-w-[200px] text-admin-text"
-                            title={dispute.title}
-                          >
-                            {cleanTitle(dispute.title)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-6">
-                          <span className="text-[11px] font-black font-mono text-admin-text">
-                            {formatCurrency(dispute.booking?.agreed_price || dispute.refund_amount)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-6">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusBadgeStyle(dispute.status)}`}>
-                            {getStatusTranslation(dispute.status)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-6">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getPriorityBadgeStyle(dispute.priority)}`}>
-                            {getPriorityTranslation(dispute.priority)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-6">
-                          <span className="text-[11px] font-bold text-slate-700 dark:text-slate-400">
-                            {new Date(dispute.created_at).toLocaleDateString()}
-                          </span>
-                        </td>
-                        <td className="px-4 py-6 text-center" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => handleReviewCase(dispute.disputeID)}
-                            className="p-2.5 bg-admin-accent/10 text-admin-accent rounded-xl hover:bg-admin-accent hover:text-white transition-all active:scale-95 group"
-                            title={t('dispute_review_case')}
-                          >
-                            <MessageSquare size={18} className="group-hover:scale-110 transition-transform" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+            <div className="flex gap-10 overflow-x-auto custom-scrollbar-hide pb-2">
+              {['all', 'pending', 'under_review', 'resolved', 'rejected', 'escalated'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setStatusFilter(tab === 'all' ? '' : tab)}
+                  className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all relative whitespace-nowrap ${(statusFilter === tab || (statusFilter === '' && tab === 'all'))
+                    ? 'text-admin-accent dark:text-white'
+                    : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-200'
+                    }`}
+                >
+                  {t(`status_${tab}`)}
+                  {(statusFilter === tab || (statusFilter === '' && tab === 'all')) && (
+                    <div className="absolute -bottom-4 left-0 w-full h-1 bg-admin-accent rounded-t-full"></div>
                   )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="lg:hidden flex-1 p-4 space-y-4">
-              {disputes.length > 0 ? (
-                disputes.map((dispute) => (
-                  <div key={dispute.disputeID} className="bg-white dark:bg-admin-card rounded-[2rem] p-6 border border-admin-border shadow-sm space-y-4 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl -mr-12 -mt-12 group-hover:bg-blue-500/10 transition-colors"></div>
-
-                    <div className="flex justify-between items-start relative z-10">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-[10px] font-black text-blue-600">{dispute.disputeID}</span>
-                          <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${getStatusBadgeStyle(dispute.status)}`}>
-                            {getStatusTranslation(dispute.status)}
-                          </span>
-                        </div>
-                        <h4 className="font-black text-admin-text text-sm uppercase italic leading-tight">{cleanTitle(dispute.title)}</h4>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${getPriorityBadgeStyle(dispute.priority)} shadow-md`}>
-                        {getPriorityTranslation(dispute.priority)}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 py-4 border-y border-admin-border border-dashed">
-                      <div className="flex -space-x-3">
-                        <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-[9px] font-black border-2 border-white dark:border-slate-800 shadow-md">
-                          {dispute.raised_by?.fullname?.charAt(0) || 'C'}
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center text-[9px] font-black border-2 border-white dark:border-slate-800 shadow-md">
-                          {dispute.against?.fullname?.charAt(0) || 'P'}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-bold text-admin-text truncate">
-                          {dispute.raised_by?.fullname} vs {dispute.against?.fullname}
-                        </p>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{dispute.category?.name || dispute.category}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleReviewCase(dispute.disputeID)}
-                      className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-blue-600 transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      {t('dispute_review_case')} <ChevronRight size={14} />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="py-20 text-center text-[10px] font-black text-slate-300 uppercase italic">
-                  {t('dispute_no_disputes')}
-                </div>
-              )}
+                </button>
+              ))}
             </div>
           </div>
-        )}
+
+          <div className="overflow-x-auto hidden lg:block">
+            <table className="w-full text-left">
+              <thead className="text-slate-600 dark:text-slate-400 text-[9px] uppercase font-black tracking-[0.25em] border-b border-admin-border bg-white dark:bg-white/5">
+                <tr>
+                  <th className="px-6 py-6 w-16">{t('dispute_ref_id') || 'ID'}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_complainant')}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_against')}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_subject')}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_amount')}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_status')}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_priority')}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_date')}</th>
+                  <th className="px-4 py-6 uppercase tracking-wider">{t('dispute_action')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-admin-border">
+                {loading ? (
+                  <tr>
+                    <td colSpan="10" className="px-8 py-24 text-center">
+                      <div className="flex flex-col items-center gap-4">
+                        <Loader2 size={32} className="text-admin-accent animate-spin opacity-50" />
+                        <p className="text-xs font-black text-admin-text-muted uppercase tracking-widest animate-pulse">{t('dispute_fetching')}</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : disputes.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="px-8 py-24 text-center">
+                      <div className="flex flex-col items-center gap-4 opacity-20">
+                        <Search size={48} className="text-admin-text-muted" />
+                        <p className="text-xs font-black text-admin-text-muted uppercase tracking-widest">{t('dispute_no_disputes')}</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  disputes.map((dispute) => (
+                    <tr
+                      key={dispute.disputeID}
+                      onClick={() => handleReviewCase(dispute.disputeID)}
+                      className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer border-l-4 border-transparent hover:border-admin-accent"
+                    >
+                      <td className="px-6 py-6">
+                        <span className="text-[11px] font-black text-admin-accent font-mono">{dispute.disputeID}</span>
+                      </td>
+                      <td className="px-4 py-6">
+                        <span className="text-[11px] font-black truncate block max-w-[150px] text-admin-text">
+                          {dispute.raised_by?.fullname || dispute.raised_by?.business_name || dispute.raised_by?.first_name || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-6">
+                        <span className="text-[11px] font-black truncate block max-w-[150px] text-admin-text">
+                          {dispute.against?.fullname || dispute.against?.business_name || dispute.against?.first_name || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-6">
+                        <span
+                          className="text-[11px] font-bold line-clamp-1 max-w-[200px] text-admin-text"
+                          title={dispute.title}
+                        >
+                          {cleanTitle(dispute.title)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-6">
+                        <span className="text-[11px] font-black font-mono text-admin-text">
+                          {formatCurrency(dispute.booking?.agreed_price || dispute.refund_amount)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-6">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusBadgeStyle(dispute.status)}`}>
+                          {getStatusTranslation(dispute.status)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-6">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getPriorityBadgeStyle(dispute.priority)}`}>
+                          {getPriorityTranslation(dispute.priority)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-6">
+                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-400">
+                          {new Date(dispute.created_at).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-6 text-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleReviewCase(dispute.disputeID)}
+                          disabled={isFetchingDetail && urlDisputeId === String(dispute.disputeID)}
+                          className="p-2.5 bg-admin-accent/10 text-admin-accent rounded-xl hover:bg-admin-accent hover:text-white transition-all active:scale-95 group flex items-center justify-center min-w-[40px]"
+                          title={t('dispute_review_case')}
+                        >
+                          {isFetchingDetail && urlDisputeId === String(dispute.disputeID) ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <MessageSquare size={18} className="group-hover:scale-110 transition-transform" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden flex-1 p-4 space-y-4">
+            {disputes.length > 0 ? (
+              disputes.map((dispute) => (
+                <div key={dispute.disputeID} className="bg-white dark:bg-admin-card rounded-[2rem] p-6 border border-admin-border shadow-sm space-y-4 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl -mr-12 -mt-12 group-hover:bg-blue-500/10 transition-colors"></div>
+
+                  <div className="flex justify-between items-start relative z-10">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-[10px] font-black text-blue-600">{dispute.disputeID}</span>
+                        <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${getStatusBadgeStyle(dispute.status)}`}>
+                          {getStatusTranslation(dispute.status)}
+                        </span>
+                      </div>
+                      <h4 className="font-black text-admin-text text-sm uppercase italic leading-tight">{cleanTitle(dispute.title)}</h4>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${getPriorityBadgeStyle(dispute.priority)} shadow-md`}>
+                      {getPriorityTranslation(dispute.priority)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 py-4 border-y border-admin-border border-dashed">
+                    <div className="flex -space-x-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-[9px] font-black border-2 border-white dark:border-slate-800 shadow-md">
+                        {dispute.raised_by?.fullname?.charAt(0) || 'C'}
+                      </div>
+                      <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center text-[9px] font-black border-2 border-white dark:border-slate-800 shadow-md">
+                        {dispute.against?.fullname?.charAt(0) || 'P'}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-admin-text truncate">
+                        {dispute.raised_by?.fullname} vs {dispute.against?.fullname}
+                      </p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{dispute.category?.name || dispute.category}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleReviewCase(dispute.disputeID)}
+                    disabled={isFetchingDetail && urlDisputeId === String(dispute.disputeID)}
+                    className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-blue-600 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    {isFetchingDetail && urlDisputeId === String(dispute.disputeID) ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <>{t('dispute_review_case')} <ChevronRight size={14} /></>
+                    )}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="py-20 text-center text-[10px] font-black text-slate-300 uppercase italic">
+                {t('dispute_no_disputes')}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Description Modal */}
       <DescriptionModal
