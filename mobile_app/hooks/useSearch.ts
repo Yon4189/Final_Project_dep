@@ -61,9 +61,9 @@ export const useSearch = ({
         searchParams.verified_only = filters.verifiedOnly;
       }
 
-      // Add availability filter if provided
-      if (filters.availableNow) {
-        searchParams.available_now = filters.availableNow;
+      // Add online now filter if provided
+      if (filters.onlineNow) {
+        searchParams.online_now = filters.onlineNow;
       }
 
       const response = await customerService.searchProviders(searchParams);
