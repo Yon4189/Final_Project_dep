@@ -198,7 +198,7 @@ class CustomerService {
     if (pMin !== undefined && pMin !== null) params.append('price_min', pMin.toString());
     if (pMax !== undefined && pMax !== null) params.append('price_max', pMax.toString());
     if (filters.verifiedOnly) params.append('verified_only', 'true');
-    if (filters.availableNow) params.append('available_now', 'true');
+    if (filters.onlineNow) params.append('online_now', 'true');
     if (filters.sortBy) params.append('sort_by', filters.sortBy);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.perPage) params.append('per_page', filters.perPage.toString());

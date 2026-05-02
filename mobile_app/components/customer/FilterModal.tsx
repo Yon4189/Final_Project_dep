@@ -38,16 +38,14 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     max: initialFilters.priceRange?.max || 10000,
   });
   const [minRating, setMinRating] = useState(initialFilters.minRating || 0);
-  const [availableNow, setAvailableNow] = useState(initialFilters.availableNow || false);
-  const [maxDistance, setMaxDistance] = useState(initialFilters.maxDistance || 1000);
+  const [onlineNow, setOnlineNow] = useState(initialFilters.onlineNow || false);
 
   const handleApply = () => {
     const filters = {
       sortBy,
       priceRange: priceRange.min > 0 || priceRange.max < 10000 ? priceRange : undefined,
       minRating: minRating > 0 ? minRating : undefined,
-      availableNow,
-      maxDistance: maxDistance < 1000 ? maxDistance : undefined,
+      onlineNow: onlineNow ? true : undefined,
     };
     onApply(filters);
     onClose();
@@ -57,16 +55,14 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     setSortBy(null);
     setPriceRange({ min: 0, max: 10000 });
     setMinRating(0);
-    setAvailableNow(false);
-    setMaxDistance(1000);
+    setOnlineNow(false);
     
     // Apply the reset filters immediately
     const resetFilters = {
       sortBy: 'rating',
       priceRange: undefined,
       minRating: undefined,
-      availableNow: false,
-      maxDistance: undefined,
+      onlineNow: false,
     };
     onApply(resetFilters);
     onClose();
@@ -132,9 +128,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               <Text style={styles.sectionTitle}>{t('filter.sortBy.title', 'Sort By')}</Text>
               <SortOption value="rating" label={t('filter.sortBy.rating', 'Highest Rated')} />
               <SortOption value="distance" label={t('filter.sortBy.distance', 'Nearest')} />
-              <SortOption value="price_low" label={t('filter.sortBy.price_low', 'Price: Low to High')} />
-              <SortOption value="price_high" label={t('filter.sortBy.price_high', 'Price: High to Low')} />
-              <SortOption value="reviews" label={t('filter.sortBy.reviews', 'Most Reviewed')} />
             </View>
 
             {/* Price Range Section */}
@@ -176,36 +169,18 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               <RatingOption rating={5} />
             </View>
 
-            {/* Distance Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('filter.distance.title', 'Maximum Distance')}</Text>
-              <View style={styles.sliderContainer}>
-                {[5, 10, 25, 50, 100, 1000].map((distance) => (
-                  <TouchableOpacity
-                    key={distance}
-                    style={[styles.distanceOption, maxDistance === distance && styles.distanceOptionSelected]}
-                    onPress={() => setMaxDistance(distance)}
-                  >
-                    <Text style={[styles.distanceText, maxDistance === distance && styles.distanceTextSelected]}>
-                      {distance === 1000 ? t('filter.distance.any', 'Any') : `${distance}km`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
             {/* Toggle Options */}
             <View style={styles.section}>
               <TouchableOpacity
                 style={styles.toggleOption}
-                onPress={() => setAvailableNow(!availableNow)}
+                onPress={() => setOnlineNow(!onlineNow)}
               >
                 <View style={styles.toggleLeft}>
-                  <Ionicons name="time" size={20} color={Colors.primary} />
-                  <Text style={styles.toggleText}>{t('filter.availableNow', 'Available Now')}</Text>
+                  <Ionicons name="radio-button-on" size={20} color={Colors.success} />
+                  <Text style={styles.toggleText}>{t('filter.onlineNow', 'Online Now')}</Text>
                 </View>
-                <View style={[styles.checkbox, availableNow && styles.checkboxChecked]}>
-                  {availableNow && <Ionicons name="checkmark" size={14} color={Colors.surface} />}
+                <View style={[styles.checkbox, onlineNow && styles.checkboxChecked]}>
+                  {onlineNow && <Ionicons name="checkmark" size={14} color={Colors.surface} />}
                 </View>
               </TouchableOpacity>
             </View>
@@ -365,33 +340,6 @@ const styles = StyleSheet.create({
   ratingTextSelected: {
     color: Colors.primary,
     fontWeight: '500',
-  },
-  sliderContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  distanceOption: {
-    width: '48%',
-    backgroundColor: Colors.background,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  distanceOptionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '10',
-  },
-  distanceText: {
-    fontSize: 14,
-    color: Colors.text.primary,
-  },
-  distanceTextSelected: {
-    color: Colors.primary,
-    fontWeight: '600',
   },
   toggleOption: {
     flexDirection: 'row',
