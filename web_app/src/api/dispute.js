@@ -102,5 +102,11 @@ export const disputeAPI = {
   getMessageThread: async (disputeID, messageID) => {
     const response = await api.get(`/admin/disputes/${disputeID}/messages/${messageID}/thread`);
     return response.data;
+  },
+
+  // Clear chat history
+  clearHistory: async (disputeID) => {
+    const response = await api.delete(`/admin/disputes/${disputeID}/clear-history`);
+    return response.data;
   }
 };

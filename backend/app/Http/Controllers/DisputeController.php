@@ -118,23 +118,22 @@ class DisputeController extends Controller
             $booking->status = 'disputed';
             $booking->save();
 
-            // Notify admins
-            $this->notificationService->toAdmins(
-                'dispute',
-                'New Dispute Raised',
-                "Customer {$customer->first_name} has raised a dispute for booking #{$bookingID}",
-                ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID]
-            );
+            try {
+                // Notify admins
+                $this->notificationService->notifyAdminsNewDispute($dispute, $booking);
 
-            // Notify provider
-            $this->notificationService->toProvider(
-                $booking->providerID,
-                'dispute',
-                'A Dispute has been raised against you',
-                "A customer has raised a dispute regarding booking #{$bookingID}. Please review and respond in the app.",
-                ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID],
-                $bookingID
-            );
+                // Notify provider
+                $this->notificationService->toProvider(
+                    $booking->providerID,
+                    'dispute',
+                    'A Dispute has been raised against you',
+                    "A customer has raised a dispute regarding booking #{$bookingID}. Please review and respond in the app.",
+                    ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID],
+                    $bookingID
+                );
+            } catch (\Exception $ne) {
+                Log::warning('Dispute raise notifications failed: ' . $ne->getMessage());
+            }
 
             DB::commit();
 
@@ -245,12 +244,7 @@ class DisputeController extends Controller
             $booking->save();
 
             // Notify admins
-            $this->notificationService->toAdmins(
-                'dispute',
-                'New Dispute Raised by Provider',
-                "Provider {$provider->business_name} has raised a dispute for booking #{$bookingID}",
-                ['disputeID' => $dispute->disputeID, 'bookingID' => $bookingID]
-            );
+            $this->notificationService->notifyAdminsNewDispute($dispute, $booking);
 
             // Notify customer
             $this->notificationService->toCustomer(
@@ -286,21 +280,22 @@ class DisputeController extends Controller
      */
     public function getCustomerDisputes(Request $request)
     {
-        $customer = auth()->guard('customer')->user();
+        $customer = $request->user();
         
         if (!$customer) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
         
-        $disputes = Dispute::where('raised_by_id', $customer->customerID)
-            ->where('raised_by_type', 'customer')
-            ->orWhere(function($query) use ($customer) {
-                $query->where('against_id', $customer->customerID)
-                      ->where('against_type', 'customer');
-            })
-            ->with(['booking', 'raisedBy', 'against'])
+        $query = Dispute::involvingCustomer($customer->customerID);
+
+        // Add status filter if provided
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+        
+        $disputes = $query->with(['booking', 'raisedBy', 'against'])
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(15);
 
         return response()->json([
             'success' => true,
@@ -313,21 +308,25 @@ class DisputeController extends Controller
      */
     public function getProviderDisputes(Request $request)
     {
-        $provider = auth()->guard('provider')->user();
+        $provider = $request->user();
         
         if (!$provider) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
         
-        $disputes = Dispute::where('raised_by_id', $provider->providerID)
-            ->where('raised_by_type', 'provider')
-            ->orWhere(function($query) use ($provider) {
-                $query->where('against_id', $provider->providerID)
-                      ->where('against_type', 'provider');
-            })
-            ->with(['booking', 'raisedBy', 'against'])
+        // Use the primary key explicitly to avoid any potential null issues
+        $providerID = $provider->providerID ?? $provider->id;
+        
+        $query = Dispute::involvingProvider($providerID);
+
+        // Add status filter if provided
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+        
+        $disputes = $query->with(['booking', 'raisedBy', 'against'])
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(50); // Increased limit for providers
 
         return response()->json([
             'success' => true,
@@ -366,18 +365,30 @@ class DisputeController extends Controller
             ], 403);
         }
 
-        // Filter messages by recipient_type and admin-only flag based on user type
+        // Filter messages based on user type
         if ($userType === 'customer') {
-            $dispute->load(['messages' => function($query) {
-                $query->where('recipient_type', 'customer')
-                      ->where('is_admin_only', false)
-                      ->with('sender');
+            $dispute->load(['messages' => function($query) use ($user) {
+                $query->where(function($q) use ($user) {
+                    $q->where('recipient_type', 'customer')
+                      ->orWhere(function($sq) use ($user) {
+                          $sq->where('sender_type', 'customer')
+                             ->where('sender_id', $user->customerID);
+                      });
+                })
+                ->where('is_admin_only', false)
+                ->with('sender');
             }]);
         } elseif ($userType === 'provider') {
-            $dispute->load(['messages' => function($query) {
-                $query->where('recipient_type', 'provider')
-                      ->where('is_admin_only', false)
-                      ->with('sender');
+            $dispute->load(['messages' => function($query) use ($user) {
+                $query->where(function($q) use ($user) {
+                    $q->where('recipient_type', 'provider')
+                      ->orWhere(function($sq) use ($user) {
+                          $sq->where('sender_type', 'provider')
+                             ->where('sender_id', $user->providerID);
+                      });
+                })
+                ->where('is_admin_only', false)
+                ->with('sender');
             }]);
         } else {
             // Admin sees all messages including private notes
@@ -465,49 +476,53 @@ class DisputeController extends Controller
             $dispute->save();
         }
 
-        // Send notifications to all relevant parties
-        if ($userType === 'customer') {
-            // Notify admins
-            $customer = \App\Models\Customer::find($senderId);
-            $this->notificationService->notifyAdminsDisputeMessage(
-                $dispute,
-                $message,
-                'customer',
-                $customer->fullname ?? 'Customer'
-            );
-            
-            // Notify provider (the other party)
-            $providerId = $dispute->raised_by_type === 'provider' ? $dispute->raised_by_id : $dispute->against_id;
-            $this->notificationService->toUser(
-                'provider',
-                $providerId,
-                'dispute',
-                'New Message in Dispute',
-                "Customer has sent a message in dispute #{$disputeID}",
-                ['disputeID' => $disputeID],
-                $dispute->bookingID
-            );
-        } elseif ($userType === 'provider') {
-            // Notify admins
-            $provider = \App\Models\ServiceProvider::find($senderId);
-            $this->notificationService->notifyAdminsDisputeMessage(
-                $dispute,
-                $message,
-                'provider',
-                $provider->fullname ?? 'Provider'
-            );
-            
-            // Notify customer (the other party)
-            $customerId = $dispute->raised_by_type === 'customer' ? $dispute->raised_by_id : $dispute->against_id;
-            $this->notificationService->toUser(
-                'customer',
-                $customerId,
-                'dispute',
-                'New Message in Dispute',
-                "Provider has sent a message in dispute #{$disputeID}",
-                ['disputeID' => $disputeID],
-                $dispute->bookingID
-            );
+        try {
+            // Send notifications to all relevant parties
+            if ($userType === 'customer') {
+                // Notify admins
+                $customer = \App\Models\Customer::find($senderId);
+                $this->notificationService->notifyAdminsDisputeMessage(
+                    $dispute,
+                    $message,
+                    'customer',
+                    $customer->fullname ?? 'Customer'
+                );
+                
+                // Notify provider (the other party)
+                $providerId = $dispute->raised_by_type === 'provider' ? $dispute->raised_by_id : $dispute->against_id;
+                $this->notificationService->toUser(
+                    'provider',
+                    $providerId,
+                    'dispute',
+                    'New Message in Dispute',
+                    "Customer has sent a message in dispute #{$disputeID}",
+                    ['disputeID' => $disputeID],
+                    $dispute->bookingID
+                );
+            } elseif ($userType === 'provider') {
+                // Notify admins
+                $provider = \App\Models\ServiceProvider::find($senderId);
+                $this->notificationService->notifyAdminsDisputeMessage(
+                    $dispute,
+                    $message,
+                    'provider',
+                    $provider->fullname ?? 'Provider'
+                );
+                
+                // Notify customer (the other party)
+                $customerId = $dispute->raised_by_type === 'customer' ? $dispute->raised_by_id : $dispute->against_id;
+                $this->notificationService->toUser(
+                    'customer',
+                    $customerId,
+                    'dispute',
+                    'New Message in Dispute',
+                    "Provider has sent a message in dispute #{$disputeID}",
+                    ['disputeID' => $disputeID],
+                    $dispute->bookingID
+                );
+            }
+        } catch (\Exception $ne) {
+            Log::warning('Dispute message notifications failed: ' . $ne->getMessage());
         }
 
         return response()->json([
@@ -917,5 +932,82 @@ class DisputeController extends Controller
                 'messages' => $highlightedMessages
             ]
         ]);
+    /**
+     * Clear message history for customer/provider
+     */
+    public function clearHistory($disputeID)
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $userType = $this->getUserType($user);
+        $dispute = Dispute::find($disputeID);
+
+        if (!$dispute) {
+            return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
+        }
+
+        if (!$this->isUserInvolved($dispute, $user, $userType)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            // For customers/providers, we only delete public messages
+            // Private admin notes should remain in the database
+            DisputeMessage::where('disputeID', $disputeID)
+                ->where('is_admin_only', false)
+                ->delete();
+
+            Log::info("Dispute history cleared by {$userType}", [
+                'dispute_id' => $disputeID,
+                'user_id' => $user->id ?? $user->customerID ?? $user->providerID
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Chat history cleared successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to clear dispute history: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to clear history'], 500);
+        }
+    }
+
+    /**
+     * Delete a specific message
+     */
+    public function deleteMessage($disputeID, $messageID)
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        $userType = $this->getUserType($user);
+
+        $message = DisputeMessage::where('disputeID', $disputeID)->find($messageID);
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        // Only sender or admin can delete
+        $isSender = false;
+        if ($userType === 'customer' && $message->sender_type === 'customer' && $message->sender_id == $user->customerID) {
+            $isSender = true;
+        } elseif ($userType === 'provider' && $message->sender_type === 'provider' && $message->sender_id == $user->providerID) {
+            $isSender = true;
+        }
+
+        if (!$isSender && $userType !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $message->delete();
+            return response()->json(['success' => true, 'message' => 'Message deleted successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to delete message'], 500);
+        }
     }
 }

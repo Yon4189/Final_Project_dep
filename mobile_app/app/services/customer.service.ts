@@ -531,14 +531,20 @@ class CustomerService {
     return response;
   }
 
-  async getMyComplaints(): Promise<ApiResponse<Complaint[]>> {
-    const cacheKey = 'user_complaints';
+  async getMyComplaints(status?: string): Promise<ApiResponse<Complaint[]>> {
+    const cacheKey = status ? `user_complaints_${status}` : 'user_complaints';
     
-    const response = await api.get<any[]>(`${this.BASE_PATH}/complaints`);
+    const url = status && status !== 'all' 
+      ? `${this.BASE_PATH}/complaints?status=${status}` 
+      : `${this.BASE_PATH}/complaints`;
+
+    const response = await api.get<any>(url);
     
     if (response.success && response.data) {
+      // Extract the array from either a paginated response or a flat data response
+      const items = Array.isArray(response.data.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
       // Normalize: map disputeID → id for frontend consistency
-      const normalized = (response.data as any[]).map((item: any) => ({
+      const normalized = items.map((item: any) => ({
         ...item,
         id: item.id || item.disputeID?.toString() || item.complaintID?.toString(),
         complaintNumber: item.complaintNumber || item.disputeID?.toString(),
@@ -589,6 +595,16 @@ class CustomerService {
 
   async getComplaintMessages(id: string): Promise<ApiResponse<any[]>> {
     const response = await api.get<any[]>(`${this.BASE_PATH}/complaints/${id}/messages`);
+    return response;
+  }
+
+  async clearComplaintHistory(id: string): Promise<ApiResponse<any>> {
+    const response = await api.delete<any>(`${this.BASE_PATH}/disputes/${id}/clear-history`);
+    return response;
+  }
+
+  async deleteComplaintMessage(disputeId: string, messageId: string): Promise<ApiResponse<any>> {
+    const response = await api.delete<any>(`${this.BASE_PATH}/disputes/${disputeId}/messages/${messageId}`);
     return response;
   }
 

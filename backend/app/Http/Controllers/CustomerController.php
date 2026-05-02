@@ -860,6 +860,13 @@ class CustomerController extends Authenticatable
             'status' => 'pending'
         ]);
 
+        // Notify admins of new complaint
+        try {
+            app(\App\Services\NotificationService::class)->notifyAdminsNewDispute($complaint, $booking);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to notify admins of new complaint: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Dispute raised successfully',
@@ -867,14 +874,19 @@ class CustomerController extends Authenticatable
         ]);
     }
 
-    public function getComplaints()
+    public function getComplaints(Request $request)
     {
         $customer = Auth::guard('customer')->user();
-        $complaints = Dispute::where('raised_by_type', 'customer')
-            ->where('raised_by_id', $customer->customerID)
-            ->with(['booking.provider'])
+        $query = Dispute::where('raised_by_type', 'customer')
+            ->where('raised_by_id', $customer->customerID);
+
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        $complaints = $query->with(['booking.provider'])
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate(15);
 
         return response()->json([
             'success' => true,

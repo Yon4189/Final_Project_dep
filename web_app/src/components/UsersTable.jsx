@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, X, Mail, Phone, MapPin, ShieldAlert, ShieldCheck, UserMinus,
-  Loader2, AlertCircle, Filter, XCircle, ChevronLeft, ChevronRight
+  Loader2, AlertCircle, Filter, XCircle, ChevronLeft, ChevronRight, Wallet
 } from 'lucide-react';
 
 const UserAvatar = ({ user }) => {
@@ -257,6 +257,7 @@ const UsersTable = ({
               <th className="px-6 py-4">{t('user_mgmt_contact')}</th>
               <th className="px-6 py-4">{t('user_mgmt_location')}</th>
               <th className="px-6 py-4">{t('user_mgmt_joined')}</th>
+              <th className="px-6 py-4">{t('wallet') || 'Wallet'}</th>
               <th className="px-6 py-4 text-center">{t('user_mgmt_status')}</th>
               <th className="px-8 py-4 text-right">{t('user_mgmt_actions')}</th>
             </tr>
@@ -300,6 +301,13 @@ const UsersTable = ({
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-xs font-medium text-admin-text-muted bg-white border border-slate-100 px-2 py-1 rounded">{user.joined || '—'}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-emerald-600 font-mono">
+                        {Number(user.walletBalance).toLocaleString()} ETB
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`text-[10px] font-bold uppercase tracking-wider italic ${
@@ -376,6 +384,7 @@ const UsersTable = ({
                 <div className="flex items-center gap-2"><Mail size={12} className="text-slate-400" /> <span className="truncate">{user.email}</span></div>
                 <div className="flex items-center gap-2"><Phone size={12} className="text-slate-400" /> <span>{user.phone || 'N/A'}</span></div>
                 <div className="flex items-center gap-2"><MapPin size={12} className="text-slate-400" /> <span>{user.location}</span></div>
+                <div className="flex items-center gap-2"><Wallet size={12} className="text-emerald-500" /> <span className="font-bold text-emerald-600">{Number(user.walletBalance).toLocaleString()} ETB</span></div>
                 <div className="flex items-center gap-2"><span className="text-slate-400">{t('user_mgmt_joined')}:</span> <span>{user.joined || '—'}</span></div>
               </div>
               <div className="flex gap-2 pt-2">

@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/app/services/customer.service';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useClearComplaintHistory, useDeleteComplaintMessage } from '@/hooks/useCustomerQueries';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: Colors.warning,
@@ -53,17 +54,59 @@ export default function ComplaintDetails() {
       if (!response.success) throw new Error(response.message || 'Failed to load');
       return response.data as any;
     },
-    refetchInterval: 10000, // Poll every 10s for new messages
+    refetchInterval: 10000, // Poll every 10s for updates
   });
 
   const sendMessage = useMutation({
     mutationFn: (msg: string) => customerService.addComplaintResponse(id as string, msg),
-    onSuccess: () => {
+    onMutate: async (newMsgText) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['complaint', id] });
+
+      // Snapshot the previous value
+      const previousComplaint = queryClient.getQueryData(['complaint', id]);
+
+      // Optimistically update to the new value
+      if (previousComplaint) {
+        queryClient.setQueryData(['complaint', id], (old: any) => ({
+          ...old,
+          messages: [
+            ...(old.messages || []),
+            {
+              id: Date.now().toString(), // Temp ID
+              message: newMsgText,
+              sender_type: 'customer',
+              created_at: new Date().toISOString(),
+            }
+          ]
+        }));
+      }
+
+      return { previousComplaint };
+    },
+    onSuccess: (response) => {
       setNewMessage('');
-      queryClient.invalidateQueries({ queryKey: ['complaint', id] });
+      // Update with the real message data from server
+      if (response.success && response.data) {
+        queryClient.setQueryData(['complaint', id], (old: any) => {
+          const messages = [...(old.messages || [])];
+          // Remove the optimistic message (last one) and add the real one
+          messages.pop();
+          return {
+            ...old,
+            messages: [...messages, response.data]
+          };
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['complaint', id] });
+      }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
     },
-    onError: (err: any) => {
+    onError: (err: any, _, context) => {
+      // Rollback on error
+      if (context?.previousComplaint) {
+        queryClient.setQueryData(['complaint', id], context.previousComplaint);
+      }
       Alert.alert('Error', err?.message || 'Failed to send message');
     },
   });
@@ -71,6 +114,40 @@ export default function ComplaintDetails() {
   const handleSend = () => {
     if (!newMessage.trim()) return;
     sendMessage.mutate(newMessage.trim());
+  };
+
+  const clearHistory = useClearComplaintHistory();
+
+  const handleClearChat = () => {
+    Alert.alert(
+      'Clear History',
+      'Are you sure you want to clear the chat history for this dispute? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Clear', 
+          style: 'destructive',
+          onPress: () => clearHistory.mutate(id as string)
+        },
+      ]
+    );
+  };
+
+  const deleteMessage = useDeleteComplaintMessage();
+
+  const handleDeleteMessage = (messageId: string) => {
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => deleteMessage.mutate({ disputeId: id as string, messageId })
+        },
+      ]
+    );
   };
 
   // Scroll to bottom when messages load
@@ -122,7 +199,17 @@ export default function ComplaintDetails() {
             </Text>
           </View>
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity 
+          onPress={handleClearChat} 
+          style={styles.headerAction}
+          disabled={messages.length === 0 || clearHistory.isPending}
+        >
+          {clearHistory.isPending ? (
+            <ActivityIndicator size="small" color={Colors.error} />
+          ) : (
+            <Ionicons name="trash-outline" size={22} color={messages.length === 0 ? Colors.border : Colors.error} />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Dispute Info Card */}
@@ -190,6 +277,14 @@ export default function ComplaintDetails() {
                     <Text style={[styles.bubbleTime, isCustomer && styles.bubbleTimeCustomer]}>
                       {safeFormat(msg.created_at)}
                     </Text>
+                    {isCustomer && !isClosed && (
+                      <TouchableOpacity
+                        onPress={() => handleDeleteMessage(msg.id?.toString() || msg.messageID?.toString())}
+                        style={styles.deleteMsgBtn}
+                      >
+                        <Ionicons name="trash-outline" size={12} color="rgba(255,255,255,0.6)" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               );
@@ -250,6 +345,7 @@ const styles = StyleSheet.create({
   },
   headerBack: { width: 40, height: 40, justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
+  headerAction: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.text.primary, maxWidth: 220 },
   statusPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -309,6 +405,7 @@ const styles = StyleSheet.create({
   bubbleTextCustomer: { fontSize: 14, color: '#FFFFFF', lineHeight: 20 },
   bubbleTime: { fontSize: 10, color: Colors.text.secondary, marginTop: 4, textAlign: 'right' },
   bubbleTimeCustomer: { color: 'rgba(255,255,255,0.7)' },
+  deleteMsgBtn: { position: 'absolute', top: 6, right: 6, padding: 4 },
   closedBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     padding: 12, borderTopWidth: 1, borderTopColor: Colors.border,

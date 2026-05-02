@@ -70,14 +70,23 @@ class EnsureOwnership
             return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
         }
 
-        // Check ownership
-        if ((string) $resource->{$ownerColumn} !== (string) $authUserId) {
+        // Check ownership (supports multiple columns via pipe separator, e.g., 'raised_by_id|against_id')
+        $ownerColumns = explode('|', $ownerColumn);
+        $isOwner = false;
+
+        foreach ($ownerColumns as $col) {
+            $col = trim($col);
+            if ((string) $resource->{$col} === (string) $authUserId) {
+                $isOwner = true;
+                break;
+            }
+        }
+
+        if (!$isOwner) {
             Log::warning('Ownership check failed', [
                 'model'        => $model,
                 'resource_id'  => $resourceId,
                 'owner_column' => $ownerColumn,
-                'expected'     => $resource->{$ownerColumn},
-                'got'          => $authUserId,
                 'ip'           => $request->ip(),
             ]);
             // Return 404 — don't reveal the resource exists but belongs to someone else

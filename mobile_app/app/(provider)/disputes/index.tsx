@@ -47,7 +47,7 @@ export default function DisputesList() {
     rejected: t('disputes.rejected', 'Rejected'),
   };
 
- const { data: disputes, isLoading, refetch } = useProviderDisputes();
+  const { data: disputes, isLoading, refetch } = useProviderDisputes(filterStatus);
 
   const onRefresh = async () => {
     setRefreshing(true);

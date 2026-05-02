@@ -587,11 +587,11 @@ export const useDeleteReview = () => {
 
 // ==================== Complaint Hooks ====================
 
-export const useMyComplaints = () => {
+export const useMyComplaints = (status?: string) => {
   return useQuery({
-    queryKey: customerKeys.complaints(),
+    queryKey: status ? [...customerKeys.complaints(), status] : customerKeys.complaints(),
     queryFn: async () => {
-      const response = await customerService.getMyComplaints();
+      const response = await customerService.getMyComplaints(status);
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch complaints');
       }
@@ -647,6 +647,42 @@ export const useAddComplaintResponse = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: customerKeys.complaint(variables.id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.complaints() });
+    },
+  });
+};
+
+export const useClearComplaintHistory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await customerService.clearComplaintHistory(id);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to clear history');
+      }
+      return response.data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.complaint(id) });
+      queryClient.invalidateQueries({ queryKey: customerKeys.complaints() });
+    },
+  });
+};
+
+export const useDeleteComplaintMessage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ disputeId, messageId }: { disputeId: string; messageId: string }) => {
+      const response = await customerService.deleteComplaintMessage(disputeId, messageId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to delete message');
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: customerKeys.complaint(variables.disputeId) });
       queryClient.invalidateQueries({ queryKey: customerKeys.complaints() });
     },
   });

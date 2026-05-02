@@ -360,11 +360,11 @@ export function useRespondToReview(options?: UseMutationOptions<CustomerReview, 
 
 // ==================== Dispute Hooks ====================
 
-export function useProviderDisputes(options?: Omit<UseQueryOptions<Dispute[], Error>, 'queryKey' | 'queryFn'>) {
+export function useProviderDisputes(status?: string, options?: Omit<UseQueryOptions<Dispute[], Error>, 'queryKey' | 'queryFn'>) {
   return useQuery<Dispute[], Error>({
-    queryKey: providerKeys.disputes(),
+    queryKey: [...providerKeys.disputes(), status],
     queryFn: async () => {
-      const response = await providerService.getDisputes();
+      const response = await providerService.getDisputes(status);
       if (!response.success) throw new Error(response.message);
       return response.data as Dispute[];
     },
@@ -416,6 +416,44 @@ export function useAddDisputeEvidence(options?: UseMutationOptions<Dispute, Erro
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: providerKeys.dispute(variables.id) });
       handleSuccess('Evidence added successfully');
+    },
+    onError: (error, variables, context) => {
+      handleError(error);
+    },
+  });
+}
+
+export function useClearDisputeHistory(options?: UseMutationOptions<any, Error, string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, string>({
+    mutationFn: async (id: string) => {
+      const response = await providerService.clearDisputeHistory(id);
+      if (!response.success) throw new Error(response.message);
+      return response.data;
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: providerKeys.dispute(variables) });
+      handleSuccess('Chat history cleared successfully');
+    },
+    onError: (error, variables, context) => {
+      handleError(error);
+    },
+  });
+}
+
+export function useDeleteDisputeMessage(options?: UseMutationOptions<any, Error, { disputeId: string; messageId: string }>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, { disputeId: string; messageId: string }>({
+    mutationFn: async ({ disputeId, messageId }) => {
+      const response = await providerService.deleteDisputeMessage(disputeId, messageId);
+      if (!response.success) throw new Error(response.message);
+      return response.data;
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: providerKeys.dispute(variables.disputeId) });
+      handleSuccess('Message deleted');
     },
     onError: (error, variables, context) => {
       handleError(error);
