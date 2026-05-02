@@ -932,6 +932,8 @@ class DisputeController extends Controller
                 'messages' => $highlightedMessages
             ]
         ]);
+    }
+
     /**
      * Clear message history for customer/provider
      */
