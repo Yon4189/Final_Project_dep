@@ -19,14 +19,16 @@ interface MapLocationPickerProps {
     latitude: number;
     longitude: number;
   };
-  onLocationSelect: (location: { latitude: number; longitude: number; address: string }) => void;
+  onLocationSelect: (location: { latitude: number; longitude: number; address: string; shouldSave?: boolean; customLabel?: string }) => void;
   onClose: () => void;
+  existingLabels?: string[]; // For duplicate validation
 }
 
 export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   initialLocation,
   onLocationSelect,
   onClose,
+  existingLabels = [],
 }) => {
   const mapRef = useRef<MapView>(null);
   const [selectedLocation, setSelectedLocation] = useState(
@@ -38,6 +40,12 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Save panel state
+  const [showSavePanel, setShowSavePanel] = useState(false);
+  const [saveToggle, setSaveToggle] = useState(true); // Default ON
+  const [customLabel, setCustomLabel] = useState('');
+  const [labelError, setLabelError] = useState('');
 
   useEffect(() => {
     getCurrentLocation();
@@ -121,9 +129,37 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       return;
     }
 
+    // Show save panel instead of immediately closing
+    setShowSavePanel(true);
+  };
+
+  const handleContinue = () => {
+    // Validate if saving
+    if (saveToggle) {
+      const trimmedLabel = customLabel.trim();
+      
+      if (!trimmedLabel) {
+        setLabelError('Please enter a label for this location');
+        return;
+      }
+      
+      // Check for duplicate (case-insensitive)
+      const isDuplicate = existingLabels.some(
+        label => label.toLowerCase() === trimmedLabel.toLowerCase()
+      );
+      
+      if (isDuplicate) {
+        setLabelError('There is a location labeled with this exact name. Please change it.');
+        return;
+      }
+    }
+
+    // Pass data back with save info
     onLocationSelect({
       ...selectedLocation,
       address: address || 'Location pinned on map',
+      shouldSave: saveToggle,
+      customLabel: saveToggle ? customLabel.trim() : undefined,
     });
     onClose();
   };
@@ -225,18 +261,92 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       </View>
 
       {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.confirmButton, !selectedLocation && styles.confirmButtonDisabled]}
-          onPress={handleConfirm}
-          disabled={!selectedLocation}
-        >
-          <Text style={styles.confirmButtonText}>Confirm Location</Text>
-        </TouchableOpacity>
-      </View>
+      {!showSavePanel && (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.confirmButton, !selectedLocation && styles.confirmButtonDisabled]}
+            onPress={handleConfirm}
+            disabled={!selectedLocation}
+          >
+            <Text style={styles.confirmButtonText}>Confirm Location</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Save Panel */}
+      {showSavePanel && (
+        <View style={styles.savePanel}>
+          <View style={styles.savePanelHeader}>
+            <Text style={styles.savePanelTitle}>Save Location</Text>
+            <TouchableOpacity onPress={() => setShowSavePanel(false)}>
+              <Ionicons name="close" size={24} color={Colors.text.secondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Confirmed Address */}
+          <View style={styles.confirmedAddressContainer}>
+            <View style={styles.confirmedAddressHeader}>
+              <Ionicons name="location" size={20} color={Colors.primary} />
+              <Text style={styles.confirmedAddressLabel}>Confirmed Location</Text>
+            </View>
+            <Text style={styles.confirmedAddressText}>{address || 'Location pinned on map'}</Text>
+            <TouchableOpacity 
+              style={styles.changeLocationButton}
+              onPress={() => setShowSavePanel(false)}
+            >
+              <Text style={styles.changeLocationText}>Change Location</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Save Toggle */}
+          <TouchableOpacity 
+            style={styles.saveToggleContainer}
+            onPress={() => {
+              setSaveToggle(!saveToggle);
+              setLabelError('');
+            }}
+          >
+            <Ionicons 
+              name={saveToggle ? 'checkbox' : 'square-outline'} 
+              size={24} 
+              color={Colors.primary} 
+            />
+            <Text style={styles.saveToggleText}>Save this location for future use?</Text>
+          </TouchableOpacity>
+
+          {/* Custom Label Input */}
+          {saveToggle && (
+            <View style={styles.labelInputContainer}>
+              <Text style={styles.labelInputLabel}>Location Label</Text>
+              <TextInput
+                style={[styles.labelInput, labelError ? styles.labelInputError : null]}
+                value={customLabel}
+                onChangeText={(text) => {
+                  setCustomLabel(text);
+                  setLabelError('');
+                }}
+                placeholder="e.g., Mom's house, Gym, Office 2"
+                placeholderTextColor={Colors.text.secondary}
+                maxLength={50}
+              />
+              {labelError ? (
+                <Text style={styles.labelErrorText}>{labelError}</Text>
+              ) : null}
+            </View>
+          )}
+
+          {/* Continue Button */}
+          <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={handleContinue}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -369,6 +479,101 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.surface,
+  },
+  savePanel: {
+    backgroundColor: Colors.surface,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  savePanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  savePanelTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  confirmedAddressContainer: {
+    backgroundColor: Colors.background,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  confirmedAddressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  confirmedAddressLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginLeft: 8,
+  },
+  confirmedAddressText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginBottom: 8,
+  },
+  changeLocationButton: {
+    alignSelf: 'flex-start',
+  },
+  changeLocationText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  saveToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  saveToggleText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    marginLeft: 12,
+    flex: 1,
+  },
+  labelInputContainer: {
+    marginBottom: 16,
+  },
+  labelInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  labelInput: {
+    backgroundColor: Colors.background,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    fontSize: 16,
+    color: Colors.text.primary,
+  },
+  labelInputError: {
+    borderColor: Colors.error,
+  },
+  labelErrorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: 4,
+  },
+  continueButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  continueButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.surface,

@@ -19,12 +19,16 @@ class GoogleAuthController extends Controller
      */
     public function customerGoogleAuth(Request $request)
     {
+        // Accept both 'id_token' and 'token' for backward compatibility
         $request->validate([
-            'id_token' => 'required|string',
+            'id_token' => 'required_without:token|string',
+            'token' => 'required_without:id_token|string',
         ]);
 
+        $idToken = $request->id_token ?? $request->token;
+
         try {
-            $payload = $this->verifyGoogleToken($request->id_token);
+            $payload = $this->verifyGoogleToken($idToken);
 
             if (!$payload) {
                 return response()->json(['success' => false, 'message' => 'Invalid Google token'], 401);
@@ -83,8 +87,10 @@ class GoogleAuthController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Google auth error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Google authentication failed'], 500);
+            Log::error('Google auth error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['success' => false, 'message' => 'Google authentication failed: ' . $e->getMessage()], 500);
         }
     }
 

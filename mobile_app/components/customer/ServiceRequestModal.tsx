@@ -84,22 +84,54 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const [isAuthenticated, setIsAuthenticated] = useState(true); // Default true - user is already on the authenticated dashboard
   const [loading, setLoading] = useState(false);
 
-  // New Address selection state
-  const [addressOption, setAddressOption] = useState<'current' | 'saved' | 'new' | 'map' | null>(null);
+  // Address selection state
+  const [addressOption, setAddressOption] = useState<'current' | 'saved' | 'map' | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<UserLocation[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('');
-  const [isSavingNewAddress, setIsSavingNewAddress] = useState(false);
-  const [addressLabel, setAddressLabel] = useState<'home' | 'office' | 'other'>('home');
-  const [customLabel, setCustomLabel] = useState('');
   const [showSavedAddressPicker, setShowSavedAddressPicker] = useState(false);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [mapLocation, setMapLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number; address?: string } | null>(userLocation || null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  
+  // GPS Save Panel state
+  const [showGPSSavePanel, setShowGPSSavePanel] = useState(false);
+  const [gpsSaveToggle, setGPSSaveToggle] = useState(true);
+  const [gpsCustomLabel, setGPSCustomLabel] = useState('');
+  const [gpsLabelError, setGPSLabelError] = useState('');
 
   // Get provider's services
   const providerServices = provider?.services || [];
+
+  // Helper function to get display label (custom_label if exists, otherwise label)
+  const getDisplayLabel = (loc: UserLocation): string => {
+    if (loc.custom_label) {
+      return loc.custom_label;
+    }
+    return loc.label || 'Location';
+  };
+
+  // Helper function to extract city from full address
+  const extractCity = (fullAddress: string): string => {
+    // Remove "Amhara" and "Ethiopia" from the address
+    // Expected format: "Street, City, Amhara, Ethiopia" or "City, Amhara, Ethiopia"
+    const parts = fullAddress.split(',').map(p => p.trim());
+    
+    // Filter out "Amhara", "Ethiopia", and empty strings
+    const filtered = parts.filter(p => 
+      p && 
+      p.toLowerCase() !== 'amhara' && 
+      p.toLowerCase() !== 'ethiopia'
+    );
+    
+    // Return the last remaining part (usually the city) or the first part if only one remains
+    if (filtered.length === 0) return fullAddress;
+    if (filtered.length === 1) return filtered[0];
+    
+    // If multiple parts remain, return the last one (city)
+    return filtered[filtered.length - 1];
+  };
 
   // Check authentication and load user data on mount
   useEffect(() => {
@@ -225,13 +257,17 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     }
   };
 
-  const handleOptionChange = async (option: 'current' | 'saved' | 'new' | 'map') => {
+  const handleOptionChange = async (option: 'current' | 'saved' | 'map') => {
     console.log('Address option changed to:', option);
     setAddressOption(option);
     
     if (option === 'current') {
       // Request location permission and get current location
-      await requestCurrentLocation();
+      const locationData = await requestCurrentLocation();
+      // Show save panel after getting location
+      if (locationData) {
+        setShowGPSSavePanel(true);
+      }
     } else if (option === 'saved') {
       const saved = savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId);
       setAddress(saved?.addressLine1 || '');
@@ -241,6 +277,78 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     } else {
       setAddress('');
     }
+  };
+  
+  const handleGPSSaveContinue = async () => {
+    // Validate if saving
+    if (gpsSaveToggle) {
+      const trimmedLabel = gpsCustomLabel.trim();
+      
+      if (!trimmedLabel) {
+        setGPSLabelError('Please enter a label for this location');
+        return;
+      }
+      
+      // Check for duplicate (case-insensitive)
+      const isDuplicate = savedAddresses.some(
+        addr => (addr.label === 'other' ? addr.custom_label : addr.label)?.toLowerCase() === trimmedLabel.toLowerCase()
+      );
+      
+      if (isDuplicate) {
+        setGPSLabelError('There is a location labeled with this exact name. Please change it.');
+        return;
+      }
+      
+      // Validate coordinates before saving
+      if (!currentLocation?.latitude || !currentLocation?.longitude || 
+          (currentLocation.latitude === 0 && currentLocation.longitude === 0)) {
+        console.error('Invalid GPS coordinates:', currentLocation);
+        Alert.alert('Error', 'Invalid GPS coordinates. You can still continue with your booking.');
+        setShowGPSSavePanel(false);
+        return;
+      }
+      
+      // Save the address
+      try {
+        console.log('Saving GPS address:', {
+          full_address: currentLocation.address || 'GPS Location',
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          label: 'other',
+          custom_label: trimmedLabel,
+        });
+        
+        const saveResponse = await customerService.addLocation({
+          full_address: currentLocation.address || 'GPS Location',
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          label: 'other',
+          custom_label: trimmedLabel,
+          is_default: false,
+        } as any);
+        
+        console.log('Save response:', saveResponse);
+        
+        if (saveResponse.success) {
+          // Refresh saved addresses
+          await fetchSavedAddresses();
+          console.log('Address saved successfully');
+        } else {
+          console.error('Save failed:', saveResponse);
+          Alert.alert('Error', 'Failed to save address. You can still continue with your booking.');
+        }
+      } catch (error: any) {
+        console.error('Failed to save GPS address:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response,
+          responseData: error.responseData,
+        });
+        Alert.alert('Error', 'Failed to save address. You can still continue with your booking.');
+      }
+    }
+    
+    setShowGPSSavePanel(false);
   };
 
   const handleSavedAddressSelect = (loc: UserLocation) => {
@@ -478,16 +586,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         Alert.alert('Error', 'Please pin your location on the map');
         return false;
       }
-    } else if (addressOption === 'new') {
-      if (!address.trim()) {
-        Alert.alert(t('common.error', 'Error'), t('booking.errors.enterAddress', 'Please enter your complete address details'));
-        return false;
-      }
     } else {
-      if (!address.trim()) {
-        Alert.alert('Error', 'Please provide an address');
-        return false;
-      }
+      Alert.alert('Error', 'Please select an address option');
+      return false;
     }
     
     // Validate selected time is in the future
@@ -525,8 +626,8 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     try {
       const scheduledDate = selectedDate.toISOString().split('T')[0];
 
-      // 1. If saving new address, do it first
-      let locationSource: 'gps' | 'saved' | 'new' | 'map' = addressOption === 'current' ? 'gps' : (addressOption === 'saved' ? 'saved' : (addressOption === 'map' ? 'map' : 'new'));
+      // Determine location source and data
+      let locationSource: 'gps' | 'saved' | 'map' = addressOption === 'current' ? 'gps' : (addressOption === 'saved' ? 'saved' : 'map');
       let savedAddressId = addressOption === 'saved' ? selectedSavedAddressId : undefined;
       let finalAddress = address;
       let finalLatitude = currentLocation?.latitude;
@@ -542,39 +643,11 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         finalLongitude = mapLocation.longitude;
       }
 
-      if (addressOption === 'new' && isSavingNewAddress) {
-        try {
-          const label = addressLabel === 'other' ? customLabel : addressLabel;
-          const saveResponse = await customerService.addLocation({
-            addressLine1: address,
-            city: '', // Backend might derive this or require it
-            state: '',
-            postalCode: '',
-            country: '',
-            latitude: 0, // Should ideally get coordinates for new address
-            longitude: 0,
-            label: label,
-            isPrimary: false,
-            userId: 0, // Placeholder, backend handles this
-            createdAt: '',
-            updatedAt: ''
-          } as any);
-          if (saveResponse.success && saveResponse.data) {
-            savedAddressId = saveResponse.data.id.toString();
-            locationSource = 'saved';
-          }
-        } catch (saveError) {
-          console.error('Failed to save address:', saveError);
-          // Continue with booking even if save fails
-        }
-      }
-
       // Map location source to backend's expected location_type
-      let locationType: 'current' | 'saved' | 'manual' | 'pin_on_map' = 'current';
+      let locationType: 'current' | 'saved' | 'pin_on_map' = 'current';
       if (locationSource === 'gps') locationType = 'current';
       else if (locationSource === 'saved') locationType = 'saved';
       else if (locationSource === 'map') locationType = 'pin_on_map';
-      else if (locationSource === 'new') locationType = 'manual';
 
       console.log('Booking submission debug:', {
         addressOption,
@@ -597,7 +670,6 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         latitude: (locationType === 'current' || locationType === 'pin_on_map') ? finalLatitude : undefined,
         longitude: (locationType === 'current' || locationType === 'pin_on_map') ? finalLongitude : undefined,
         address_id: locationType === 'saved' && savedAddressId ? Number(savedAddressId) : undefined,
-        manual_address: locationType === 'manual' ? finalAddress : undefined,
         formatted_address: locationType === 'pin_on_map' ? finalAddress : undefined,
       });
 
@@ -687,17 +759,20 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
             }
           ]
         );
-      } else if (error.response?.status === 400 && error.response?.data?.existing_booking_id) {
-        // Duplicate booking
+      } else if ((error.response?.status === 422 || error.response?.status === 400) && 
+                 (errorMessage.toLowerCase().includes('pending') || 
+                  errorMessage.toLowerCase().includes('active booking') ||
+                  errorMessage.toLowerCase().includes('duplicate'))) {
+        // Duplicate booking - detected by status code and message content
         Alert.alert(
           'Active Booking Exists',
-          `You already have an active booking for this service with this provider. Please complete or cancel it first.`,
+          errorMessage,
           [
             {
-              text: 'View Booking',
+              text: 'View My Bookings',
               onPress: () => {
                 onClose();
-                router.push(`/(customer)/requests/${error.response.data.existing_booking_id}`);
+                router.push('/(customer)/requests');
               }
             },
             { text: 'OK', style: 'cancel' }
@@ -1049,7 +1124,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                             onPress={() => setShowSavedAddressPicker(!showSavedAddressPicker)}
                           >
                             <Text style={styles.addressSelectorText}>
-                              {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.label?.toUpperCase() || t('booking.address.selectSaved', 'Select address')}: {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)?.addressLine1}
+                              {savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId) 
+                                ? getDisplayLabel(savedAddresses.find(loc => loc.id.toString() === selectedSavedAddressId)!)
+                                : t('booking.address.selectSaved', 'Select address')}
                             </Text>
                             <Ionicons name="chevron-down" size={16} color={Colors.text.secondary} />
                           </TouchableOpacity>
@@ -1064,12 +1141,12 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                               >
                                 <Ionicons 
                                   name={loc.label === 'home' ? 'home' : (loc.label === 'office' ? 'business' : 'location')} 
-                                  size={18} 
+                                  size={20} 
                                   color={Colors.primary} 
                                 />
                                 <View style={styles.savedAddressInfo}>
-                                  <Text style={styles.savedAddressLabel}>{loc.label?.toUpperCase()}</Text>
-                                  <Text style={styles.savedAddressText}>{loc.addressLine1}</Text>
+                                  <Text style={styles.savedAddressLabel}>{getDisplayLabel(loc)}</Text>
+                                  <Text style={styles.savedAddressText}>{extractCity(loc.addressLine1 || '')}</Text>
                                 </View>
                               </TouchableOpacity>
                             ))}
@@ -1082,80 +1159,6 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                   </View>
                 )}
 
-                {/* New Address */}
-                <TouchableOpacity 
-                  style={styles.optionRow} 
-                  onPress={() => handleOptionChange('new')}
-                >
-                  <Ionicons 
-                    name={addressOption === 'new' ? 'radio-button-on' : 'radio-button-off'} 
-                    size={20} 
-                    color={addressOption === 'new' ? Colors.primary : Colors.text.secondary} 
-                  />
-                  <Text style={styles.optionText}>{t('booking.address.new', 'Enter new address')}</Text>
-                </TouchableOpacity>
-
-                {addressOption === 'new' && (
-                  <View style={styles.newAddressContainer}>
-                    <TextInput
-                      style={styles.addressInput}
-                      value={address}
-                      onChangeText={setAddress}
-                      placeholder={t('booking.address.placeholder', 'Start typing - we\'ll suggest')}
-                      placeholderTextColor={Colors.text.secondary}
-                      multiline
-                    />
-                    
-                    {/* Save for later sub-form */}
-                    <View style={styles.saveAddressForm}>
-                      <Text style={styles.saveAddressTitle}>{t('booking.address.saveForFuture', 'Save this address for later?')}</Text>
-                      <View style={styles.saveOptionsRow}>
-                        <TouchableOpacity 
-                          style={styles.saveToggle} 
-                          onPress={() => setIsSavingNewAddress(!isSavingNewAddress)}
-                        >
-                          <Ionicons 
-                            name={isSavingNewAddress ? 'checkbox' : 'square-outline'} 
-                            size={20} 
-                            color={Colors.primary} 
-                          />
-                          <Text style={styles.saveToggleText}>{t('auth.yes', 'Yes, save this address')}</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      {isSavingNewAddress && (
-                        <View style={styles.labelSelection}>
-                          <Text style={styles.labelTitle}>{t('booking.address.label', 'Save as:')}</Text>
-                          <View style={styles.labelOptions}>
-                            {['home', 'office', 'other'].map((label) => (
-                              <TouchableOpacity
-                                key={label}
-                                style={styles.labelOption}
-                                onPress={() => setAddressLabel(label as any)}
-                              >
-                                <Ionicons 
-                                  name={addressLabel === label ? 'radio-button-on' : 'radio-button-off'} 
-                                  size={16} 
-                                  color={addressLabel === label ? Colors.primary : Colors.text.secondary} 
-                                />
-                                <Text style={styles.labelOptionText}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                          {addressLabel === 'other' && (
-                            <TextInput
-                              style={styles.customLabelInput}
-                              value={customLabel}
-                              onChangeText={setCustomLabel}
-                              placeholder={t('booking.address.enterCustomLabel', 'Specify label (e.g., Mom\'s house)')}
-                              placeholderTextColor={Colors.text.secondary}
-                            />
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                )}
               </View>
             </View>
 
@@ -1225,7 +1228,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
               title={t('booking.submit', 'Send Request')}
               onPress={handleSendRequest}
               loading={loading || createBooking.isPending}
-              disabled={loading || createBooking.isPending || !selectedServiceId || !agreedPrice || parseFloat(agreedPrice) <= 0}
+              disabled={loading || createBooking.isPending || !selectedServiceId || !agreedPrice || parseFloat(agreedPrice) <= 0 || !addressOption}
               style={styles.confirmButton}
             />
           </View>
@@ -1241,22 +1244,122 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         >
           <MapLocationPicker
             initialLocation={mapLocation || userLocation}
-            onLocationSelect={(location) => {
+            existingLabels={savedAddresses.map(addr => 
+              addr.label === 'other' ? (addr.custom_label || '') : (addr.label || '')
+            )}
+            onLocationSelect={async (location) => {
               console.log('Map location selected:', location);
               setMapLocation(location);
               setAddress(location.address);
+              
+              // Handle save if requested
+              if (location.shouldSave && location.customLabel) {
+                try {
+                  const saveResponse = await customerService.addLocation({
+                    full_address: location.address,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    label: 'other',
+                    custom_label: location.customLabel,
+                    is_default: false,
+                  } as any);
+                  
+                  if (saveResponse.success) {
+                    // Refresh saved addresses
+                    await fetchSavedAddresses();
+                  }
+                } catch (error) {
+                  console.error('Failed to save map address:', error);
+                  Alert.alert('Error', 'Failed to save address. You can still continue with your booking.');
+                }
+              }
+              
               setShowMapPicker(false);
-              // Show confirmation
-              Alert.alert(
-                'Location Selected',
-                `Lat: ${location.latitude.toFixed(6)}\nLng: ${location.longitude.toFixed(6)}\n${location.address}`,
-                [{ text: 'OK' }]
-              );
             }}
             onClose={() => setShowMapPicker(false)}
           />
         </Modal>
       )}
+      
+      {/* GPS Save Panel Modal */}
+      <Modal
+        visible={showGPSSavePanel}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowGPSSavePanel(false)}
+      >
+        <View style={styles.gpsSavePanelOverlay}>
+          <View style={styles.gpsSavePanelContainer}>
+            <View style={styles.gpsSavePanelHeader}>
+              <Text style={styles.gpsSavePanelTitle}>Save Location</Text>
+              <TouchableOpacity onPress={() => setShowGPSSavePanel(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Confirmed Address */}
+            <View style={styles.gpsConfirmedAddressContainer}>
+              <View style={styles.gpsConfirmedAddressHeader}>
+                <Ionicons name="location" size={20} color={Colors.primary} />
+                <Text style={styles.gpsConfirmedAddressLabel}>Confirmed Location</Text>
+              </View>
+              <Text style={styles.gpsConfirmedAddressText}>
+                {currentLocation?.address || 'GPS Location'}
+              </Text>
+              {currentLocation?.latitude && currentLocation?.longitude && (
+                <Text style={styles.gpsCoordinatesText}>
+                  📍 {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
+                </Text>
+              )}
+            </View>
+
+            {/* Save Toggle */}
+            <TouchableOpacity 
+              style={styles.gpsSaveToggleContainer}
+              onPress={() => {
+                setGPSSaveToggle(!gpsSaveToggle);
+                setGPSLabelError('');
+              }}
+            >
+              <Ionicons 
+                name={gpsSaveToggle ? 'checkbox' : 'square-outline'} 
+                size={24} 
+                color={Colors.primary} 
+              />
+              <Text style={styles.gpsSaveToggleText}>Save this location for future use?</Text>
+            </TouchableOpacity>
+
+            {/* Custom Label Input */}
+            {gpsSaveToggle && (
+              <View style={styles.gpsLabelInputContainer}>
+                <Text style={styles.gpsLabelInputLabel}>Location Label</Text>
+                <TextInput
+                  style={[styles.gpsLabelInput, gpsLabelError ? styles.gpsLabelInputError : null]}
+                  value={gpsCustomLabel}
+                  onChangeText={(text) => {
+                    setGPSCustomLabel(text);
+                    setGPSLabelError('');
+                  }}
+                  placeholder="e.g., Mom's house, Gym, Office 2"
+                  placeholderTextColor={Colors.text.secondary}
+                  maxLength={50}
+                />
+                {gpsLabelError ? (
+                  <Text style={styles.gpsLabelErrorText}>{gpsLabelError}</Text>
+                ) : null}
+              </View>
+            )}
+
+            {/* Continue Button */}
+            <TouchableOpacity 
+              style={styles.gpsContinueButton}
+              onPress={handleGPSSaveContinue}
+            >
+              <Text style={styles.gpsContinueButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };
@@ -1599,13 +1702,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   savedAddressLabel: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.text.secondary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 2,
   },
   savedAddressText: {
-    fontSize: 14,
-    color: Colors.text.primary,
+    fontSize: 12,
+    color: Colors.text.secondary,
   },
   noAddressesText: {
     fontSize: 12,
@@ -1701,5 +1805,103 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '600',
+  },
+  // GPS Save Panel Styles
+  gpsSavePanelOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  gpsSavePanelContainer: {
+    backgroundColor: Colors.surface,
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  gpsSavePanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  gpsSavePanelTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  gpsConfirmedAddressContainer: {
+    backgroundColor: Colors.background,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  gpsConfirmedAddressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  gpsConfirmedAddressLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginLeft: 8,
+  },
+  gpsConfirmedAddressText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  gpsCoordinatesText: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginTop: 4,
+    fontFamily: 'monospace',
+  },
+  gpsSaveToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  gpsSaveToggleText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    marginLeft: 12,
+    flex: 1,
+  },
+  gpsLabelInputContainer: {
+    marginBottom: 16,
+  },
+  gpsLabelInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  gpsLabelInput: {
+    backgroundColor: Colors.background,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    fontSize: 16,
+    color: Colors.text.primary,
+  },
+  gpsLabelInputError: {
+    borderColor: Colors.error,
+  },
+  gpsLabelErrorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: 4,
+  },
+  gpsContinueButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  gpsContinueButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.surface,
   },
 });

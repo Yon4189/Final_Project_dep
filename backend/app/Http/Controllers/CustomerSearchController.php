@@ -67,7 +67,7 @@ class CustomerSearchController extends Controller
             'latitude' => $request->query('latitude'),
             'longitude' => $request->query('longitude'),
             'verifiedOnly' => $request->query('verified_only'),
-            'availableNow' => $request->query('available_now'),
+            'onlineNow' => $request->query('online_now'),
             'city' => $request->query('city'),
             'priceMin' => $request->query('price_min'),
             'priceMax' => $request->query('price_max'),
@@ -100,9 +100,9 @@ class CustomerSearchController extends Controller
         ->when($inputs['minRating'], function ($q, $minRating) {
             $q->where('rating', '>=', $minRating);
         })
-        ->when($inputs['availableNow'], function ($q) {
-            // "Available Now" = app is open (heartbeat active) AND provider set themselves as available
-            $q->where('is_online', true)->where('is_available', true);
+        ->when($inputs['onlineNow'], function ($q) {
+            // "Online Now" = app is open (heartbeat active) - only checks is_online status
+            $q->where('is_online', 1);
         });
 
         // Price Range Filter
@@ -110,31 +110,46 @@ class CustomerSearchController extends Controller
         $priceMax = $inputs['priceMax'];
         if ($priceMin !== null || $priceMax !== null) {
             $query->where(function($q) use ($priceMin, $priceMax) {
+                // Check provider's direct pricing
                 $q->where(function($sq) use ($priceMin, $priceMax) {
-                    if ($priceMin !== null) {
-                        $sq->where(function($ssq) use ($priceMin) {
-                            $ssq->where('estimatedPrice', '>=', (float)$priceMin)
-                                ->orWhere('hourly_rate', '>=', (float)$priceMin);
+                    if ($priceMin !== null && $priceMax !== null) {
+                        // Both min and max specified
+                        $sq->where(function($ssq) use ($priceMin, $priceMax) {
+                            // estimatedPrice in range
+                            $ssq->whereBetween('estimatedPrice', [(float)$priceMin, (float)$priceMax]);
+                        })->orWhere(function($ssq) use ($priceMin, $priceMax) {
+                            // OR hourly_rate in range
+                            $ssq->whereBetween('hourly_rate', [(float)$priceMin, (float)$priceMax]);
                         });
+                    } elseif ($priceMin !== null) {
+                        // Only min specified
+                        $sq->where('estimatedPrice', '>=', (float)$priceMin)
+                            ->orWhere('hourly_rate', '>=', (float)$priceMin);
+                    } else {
+                        // Only max specified
+                        $sq->where('estimatedPrice', '<=', (float)$priceMax)
+                            ->orWhere('hourly_rate', '<=', (float)$priceMax);
                     }
-                    if ($priceMax !== null) {
-                        $sq->where(function($ssq) use ($priceMax) {
-                            $ssq->where('estimatedPrice', '<=', (float)$priceMax)
-                                ->orWhere('hourly_rate', '<=', (float)$priceMax);
+                })
+                // OR check provider's services pricing
+                ->orWhereHas('services', function($sq) use ($priceMin, $priceMax) {
+                    if ($priceMin !== null && $priceMax !== null) {
+                        // Both min and max specified
+                        $sq->where(function($ssq) use ($priceMin, $priceMax) {
+                            // estimatedPrice in range
+                            $ssq->whereBetween('estimatedPrice', [(float)$priceMin, (float)$priceMax]);
+                        })->orWhere(function($ssq) use ($priceMin, $priceMax) {
+                            // OR hourly_rate in range
+                            $ssq->whereBetween('hourly_rate', [(float)$priceMin, (float)$priceMax]);
                         });
-                    }
-                })->orWhereHas('services', function($sq) use ($priceMin, $priceMax) {
-                    if ($priceMin !== null) {
-                        $sq->where(function($ssq) use ($priceMin) {
-                            $ssq->where('estimatedPrice', '>=', (float)$priceMin)
-                                ->orWhere('hourly_rate', '>=', (float)$priceMin);
-                        });
-                    }
-                    if ($priceMax !== null) {
-                        $sq->where(function($ssq) use ($priceMax) {
-                            $ssq->where('estimatedPrice', '<=', (float)$priceMax)
-                                ->orWhere('hourly_rate', '<=', (float)$priceMax);
-                        });
+                    } elseif ($priceMin !== null) {
+                        // Only min specified
+                        $sq->where('estimatedPrice', '>=', (float)$priceMin)
+                            ->orWhere('hourly_rate', '>=', (float)$priceMin);
+                    } else {
+                        // Only max specified
+                        $sq->where('estimatedPrice', '<=', (float)$priceMax)
+                            ->orWhere('hourly_rate', '<=', (float)$priceMax);
                     }
                 });
             });

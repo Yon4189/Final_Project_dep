@@ -77,6 +77,7 @@ export interface Location extends Coordinates {
   country: string;
   placeId?: string;
   label?: string;
+  custom_label?: string; // For 'other' label type
   isPrimary: boolean;
   additionalDetails?: {
     floor?: string;

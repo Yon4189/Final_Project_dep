@@ -131,6 +131,8 @@ export default function DisputeDetails() {
         },
       ]
     );
+  };
+  
   const deleteMessage = useDeleteDisputeMessage();
 
   const handleDeleteMessage = (messageId: string) => {

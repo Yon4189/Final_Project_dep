@@ -25,6 +25,27 @@ class CustomerAddress extends Model
         'is_default' => 'boolean'
     ];
     
+    // Append custom attributes to JSON
+    protected $appends = ['id', 'addressLine1', 'isPrimary'];
+    
+    // Accessor for id (maps addressID to id for frontend compatibility)
+    public function getIdAttribute()
+    {
+        return $this->addressID;
+    }
+    
+    // Accessor for addressLine1 (maps full_address to addressLine1 for frontend compatibility)
+    public function getAddressLine1Attribute()
+    {
+        return $this->full_address;
+    }
+    
+    // Accessor for isPrimary (maps is_default to isPrimary for frontend compatibility)
+    public function getIsPrimaryAttribute()
+    {
+        return $this->is_default;
+    }
+    
     // Relationships
     public function customer()
     {

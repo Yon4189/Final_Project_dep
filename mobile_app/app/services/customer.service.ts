@@ -108,18 +108,11 @@ class CustomerService {
   // ==================== Location Management ====================
 
   async getLocations(): Promise<ApiResponse<UserLocation[]>> {
-    const cached = await storage.getItem<UserLocation[]>('user_locations');
-    
-    if (cached && isValidArray<UserLocation>(cached)) {
-      return { 
-        success: true, 
-        data: cached 
-      };
-    }
-    
-    const response = await api.get<UserLocation[]>(`${this.BASE_PATH}/locations`);
+    // Always fetch fresh data from API (bypass cache for now to ensure we get updated structure)
+    const response = await api.get<UserLocation[]>(`${this.BASE_PATH}/addresses`);
     
     if (response.success && response.data) {
+      console.log('Fresh addresses from API:', response.data);
       await storage.setItem('user_locations', response.data);
     }
     
@@ -127,7 +120,7 @@ class CustomerService {
   }
 
   async addLocation(data: Omit<UserLocation, 'id'>): Promise<ApiResponse<UserLocation>> {
-    const response = await api.post<UserLocation>(`${this.BASE_PATH}/locations`, data);
+    const response = await api.post<UserLocation>(`${this.BASE_PATH}/addresses`, data);
     
     if (response.success) {
       // Invalidate cache
@@ -138,7 +131,7 @@ class CustomerService {
   }
 
   async updateLocation(id: string, data: Partial<UserLocation>): Promise<ApiResponse<UserLocation>> {
-    const response = await api.put<UserLocation>(`${this.BASE_PATH}/locations/${id}`, data);
+    const response = await api.put<UserLocation>(`${this.BASE_PATH}/addresses/${id}`, data);
     
     if (response.success) {
       // Invalidate cache
@@ -149,7 +142,7 @@ class CustomerService {
   }
 
   async deleteLocation(id: string): Promise<ApiResponse<void>> {
-    const response = await api.delete<void>(`${this.BASE_PATH}/locations/${id}`);
+    const response = await api.delete<void>(`${this.BASE_PATH}/addresses/${id}`);
     
     if (response.success) {
       await storage.removeItem('user_locations');
@@ -159,7 +152,7 @@ class CustomerService {
   }
 
   async setPrimaryLocation(id: string): Promise<ApiResponse<UserLocation>> {
-    const response = await api.patch<UserLocation>(`${this.BASE_PATH}/locations/${id}/primary`);
+    const response = await api.patch<UserLocation>(`${this.BASE_PATH}/addresses/${id}/default`);
     
     if (response.success) {
       // Invalidate cache
