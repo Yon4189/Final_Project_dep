@@ -298,8 +298,21 @@ export default function WithdrawScreen() {
           onPress: () => router.back(),
         },
       ]);
-    } catch (error) {
-      Alert.alert(t("success.error", "Error"), t("wallet.withdrawError", "Failed to process withdrawal"));
+    } catch (error: any) {
+      console.error("❌ Withdrawal error:", error);
+      
+      // Extract detailed error message from backend response
+      let errorMessage = t("wallet.withdrawError", "Failed to process withdrawal");
+      
+      if (error?.response?.data?.message) {
+        // Backend sent a detailed message
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        // Generic error message
+        errorMessage = error.message;
+      }
+      
+      Alert.alert(t("success.error", "Error"), errorMessage);
     }
   };
 

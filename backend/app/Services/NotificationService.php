@@ -307,6 +307,7 @@ class NotificationService
                 'provider_name' => $provider->fullname,
                 'amount' => $withdrawal->amount,
                 'status' => $withdrawal->status,
+                'link' => "/admin/withdrawals/{$withdrawal->withdrawalID}"
             ]
         );
     }

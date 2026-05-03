@@ -210,9 +210,8 @@ class WalletController extends Controller
         $withdrawal = null;
         
         DB::transaction(function () use ($wallet, $amount, $provider, $request, &$withdrawal) {
-            // Deduct from available balance
-            $wallet->available_balance -= $amount;
-            $wallet->save();
+            // DO NOT deduct from available balance yet - only deduct after admin approval
+            // The balance will be deducted in AdminWithdrawalController->approveWithdrawal()
             
             // Generate unique withdrawal reference
             $withdrawalRef = 'WDR_' . strtoupper(Str::random(8)) . '_' . time();
@@ -251,15 +250,8 @@ class WalletController extends Controller
                 throw new \Exception('Failed to create withdrawal record');
             }
             
-            // Create transaction record
-            WalletTransaction::create([
-                'walletID' => $wallet->walletID,
-                'type' => 'debit',
-                'amount' => $amount,
-                'description' => 'Withdrawal request #' . $withdrawalRef . ' (' . $request->payment_method . ')',
-                'bookingID' => null,
-                'withdrawalID' => $withdrawal->withdrawalID
-            ]);
+            // DO NOT create debit transaction yet - only create after admin approval
+            // The transaction will be created in AdminWithdrawalController->approveWithdrawal()
         });
         
         if (!$withdrawal) {

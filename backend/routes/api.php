@@ -369,6 +369,7 @@ Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admi
     Route::get('/withdrawals',              [AdminWithdrawalController::class, 'index']);
     Route::get('/withdrawals/stats',        [AdminWithdrawalController::class, 'stats']);
     Route::get('/withdrawals/pending',      [AdminWithdrawalController::class, 'getPendingWithdrawals']);
+    Route::get('/withdrawals/{id}',         [AdminWithdrawalController::class, 'show']);
     Route::post('/withdrawals/{id}/approve',[AdminWithdrawalController::class, 'approveWithdrawal']);
     Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'rejectWithdrawal']);
 

@@ -27,6 +27,8 @@ import Profile from './pages/Profile';
 import ResetPassword from './pages/ResetPassword';
 import Payment from './pages/Payment';
 import Maintenance from './pages/Maintenance';
+import Withdrawals from './pages/Withdrawals';
+import WithdrawalDetail from './pages/WithdrawalDetail';
 
 /**
  *  ProtectedRoute Component
@@ -95,6 +97,8 @@ function App() {
                 <Route path="disputes" element={<Disputes />} />
                 <Route path="disputes/:id" element={<Disputes />} />
                 <Route path="payments" element={<Payments />} />
+                <Route path="withdrawals" element={<Withdrawals />} />
+                <Route path="withdrawals/:id" element={<WithdrawalDetail />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="*" element={<div className="p-10 text-center font-bold text-slate-900 dark:text-admin-text bg-white dark:bg-admin-content h-full">404 - Page Not Found</div>} />
