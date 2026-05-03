@@ -4,12 +4,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import { getWithdrawals } from '../api/withdrawal';
 import {
   LayoutDashboard, UserCheck, Users, Wrench, Scale,
   BarChart3, Settings, LogOut, ClipboardList,
   ChevronDown, ChevronRight, Layers,
   Folder, Clock, CheckCircle, XCircle,
-  User, Check, X, AlertCircle
+  User, Check, X, AlertCircle, Wallet
 } from 'lucide-react';
 import logo from '../assets/logo.jpg';
 
@@ -37,6 +38,18 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
     },
     refetchInterval: 30000, // Update every 30 seconds
   });
+
+  // Fetch pending withdrawals count
+  const { data: withdrawalData } = useQuery({
+    queryKey: ['pendingWithdrawals'],
+    queryFn: async () => {
+      const response = await getWithdrawals({ status: 'pending', per_page: 1 });
+      return response.success ? response.data : null;
+    },
+    refetchInterval: 30000, // Update every 30 seconds
+  });
+
+  const pendingWithdrawalsCount = withdrawalData?.total || 0;
 
   // Fetch admin settings for dynamic branding
   const { data: adminSettings } = useQuery({
@@ -337,6 +350,38 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             </div>
           )}
         </div>
+
+        {/* Withdrawals */}
+        <Link
+          to="/admin/withdrawals"
+          onClick={() => isMobile && onClose()}
+          className={`group flex items-center mx-3 mt-2 px-6 py-4 rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'gap-4' : 'justify-center'} ${location.pathname.startsWith('/admin/withdrawals')
+            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40'
+            : 'hover:bg-white/5 hover:text-white'
+            }`}
+          title={isMini ? "Withdrawals" : ""}
+        >
+          {location.pathname.startsWith('/admin/withdrawals') && (
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
+          )}
+          <Wallet
+            size={20}
+            className={`shrink-0 transition-transform duration-300 group-hover:scale-110 ${location.pathname.startsWith('/admin/withdrawals') ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
+            strokeWidth={location.pathname.startsWith('/admin/withdrawals') ? 2.5 : 2}
+          />
+          {!isMini && (
+            <div className="flex items-center justify-between flex-1">
+              <span className={`text-sm tracking-wide overflow-hidden whitespace-nowrap transition-all duration-300 ${location.pathname.startsWith('/admin/withdrawals') ? 'font-bold' : 'font-medium'}`}>
+                Withdrawals
+              </span>
+              {pendingWithdrawalsCount > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center ${location.pathname.startsWith('/admin/withdrawals') ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>
+                  {pendingWithdrawalsCount}
+                </span>
+              )}
+            </div>
+          )}
+        </Link>
 
         <div className="mt-4 mx-3 flex flex-col gap-1">
           {otherMenuItems.map((item) => {
