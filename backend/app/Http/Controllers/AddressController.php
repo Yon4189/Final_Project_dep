@@ -70,6 +70,12 @@ class AddressController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
         
+        // Log incoming request for debugging
+        Log::info('Address store request', [
+            'customer_id' => $customer->customerID,
+            'request_data' => $request->all()
+        ]);
+        
         // Check address count limit (maximum 5 addresses per customer)
         $addressCount = CustomerAddress::where('customerID', $customer->customerID)->count();
         if ($addressCount >= 5) {
@@ -90,7 +96,29 @@ class AddressController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::error('Address validation failed', [
+                'errors' => $validator->errors()->toArray(),
+                'request_data' => $request->all()
+            ]);
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        // Check for duplicate label (case-insensitive)
+        $labelToCheck = $request->label === 'other' ? $request->custom_label : $request->label;
+        if ($labelToCheck) {
+            $existingAddress = CustomerAddress::where('customerID', $customer->customerID)
+                ->where(function($query) use ($labelToCheck) {
+                    $query->whereRaw('LOWER(label) = ?', [strtolower($labelToCheck)])
+                          ->orWhereRaw('LOWER(custom_label) = ?', [strtolower($labelToCheck)]);
+                })
+                ->first();
+            
+            if ($existingAddress) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'There is a location labeled with this exact name. Please change it.'
+                ], 422);
+            }
         }
 
         // If setting as default, remove default from other addresses

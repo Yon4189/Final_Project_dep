@@ -20,7 +20,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  ActivityIndicator
 } from "react-native";
 import Map from "@/components/Map/index";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -768,9 +769,25 @@ export default function RequestDetails() {
       <View style={styles.actionButtonsContainer}>
         {isPending && (
           <>
-            <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
-              <Text style={styles.acceptButtonText}>{t("providerRequests.accept", "Accept Request")}</Text>
+            <TouchableOpacity 
+              style={[
+                styles.acceptButton,
+                acceptRequest.isPending && styles.acceptButtonDisabled
+              ]} 
+              onPress={handleAccept}
+              disabled={acceptRequest.isPending}
+            >
+              {acceptRequest.isPending ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.surface} />
+                  <Text style={styles.acceptButtonText}>{t("providerRequests.accepting", "Accepting...")}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
+                  <Text style={styles.acceptButtonText}>{t("providerRequests.accept", "Accept Request")}</Text>
+                </>
+              )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.rejectButton} onPress={() => setShowActionModal(true)}>
               <Ionicons name="close-circle" size={20} color={colors.error} />
@@ -1476,6 +1493,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     gap: 8,
+  },
+  acceptButtonDisabled: {
+    opacity: 0.6,
   },
   acceptButtonText: {
     color: colors.surface,

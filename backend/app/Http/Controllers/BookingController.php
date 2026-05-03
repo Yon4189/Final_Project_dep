@@ -463,6 +463,10 @@ class BookingController extends Controller
             ], 404);
         }
 
+        // Check if deposit is paid (for providers)
+        $depositPaid = in_array($booking->payment_status, ['deposit_paid', 'pending_final', 'completed']);
+        $locationHidden = ($userType === 'provider' && !$depositPaid);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -484,9 +488,11 @@ class BookingController extends Controller
                 'address_text' => $booking->address_text ?? $booking->service_address, // Add address_text field
                 'service_latitude' => $booking->service_latitude,
                 'service_longitude' => $booking->service_longitude,
-                'customerAddress' => $booking->address_text ?? $booking->service_address, // Use address_text first
-                'customerLatitude' => $booking->service_latitude, // Add for frontend compatibility
-                'customerLongitude' => $booking->service_longitude, // Add for frontend compatibility
+                // Hide location from provider until deposit is paid
+                'customerAddress' => $locationHidden ? null : ($booking->address_text ?? $booking->service_address),
+                'customerLatitude' => $locationHidden ? null : $booking->service_latitude,
+                'customerLongitude' => $locationHidden ? null : $booking->service_longitude,
+                'locationHidden' => $locationHidden, // Flag to indicate location is hidden
                 'customer' => $userType === 'provider' ? [
                     'id' => $booking->customer->customerID,
                     'customerId' => $booking->customer->customerID, // Add for frontend compatibility

@@ -47,6 +47,7 @@ export default function SavedAddresses() {
     try {
       const response = await customerService.getLocations();
       if (response.success && response.data) {
+        console.log('Fetched addresses:', response.data);
         setAddresses(response.data);
       }
     } catch (error) {
