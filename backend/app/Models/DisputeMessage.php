@@ -36,23 +36,7 @@ class DisputeMessage extends Model
      */
     public function sender()
     {
-        $morphMap = [
-            'customer' => Customer::class,
-            'provider' => ServiceProvider::class,
-            'admin'    => Admin::class,
-        ];
-
-        $modelClass = $morphMap[$this->sender_type] ?? Admin::class;
-
-        $primaryKeyMap = [
-            Customer::class         => 'customerID',
-            ServiceProvider::class  => 'providerID',
-            Admin::class            => 'adminID',
-        ];
-
-        $fk = $primaryKeyMap[$modelClass] ?? 'adminID';
-
-        return $this->belongsTo($modelClass, 'sender_id', $fk);
+        return $this->morphTo(__FUNCTION__, 'sender_type', 'sender_id');
     }
 
     /**

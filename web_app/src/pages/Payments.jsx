@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   TrendingUp, Wallet, CreditCard, History,
   ArrowUpRight, Filter, Download,
-  Loader2, ChevronLeft, ChevronRight
+  Loader2, ChevronLeft, ChevronRight, RefreshCcw
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import api from '../api/axios';
@@ -24,7 +24,9 @@ const Payments = () => {
   const { 
     data: { transactions = [], stats = null, pagination = null } = {}, 
     isLoading: loading, 
+    isFetching,
     error: apiError,
+    refetch
   } = useQuery({
     queryKey: ['paymentsSystem', statusFilter, currentPage],
     queryFn: async () => {
@@ -77,10 +79,11 @@ const Payments = () => {
       }
 
       // CSV Content Generation
-      const headers = ['Transaction ID', 'Status', 'Amount', 'Currency', 'Commission', 'Customer', 'Provider', 'Date'];
+      const headers = ['Transaction ID', 'Status', 'Phase', 'Amount', 'Currency', 'Commission', 'Customer', 'Provider', 'Date'];
       const csvRows = data.map(txn => [
         txn.tx_ref,
         txn.status?.toUpperCase(),
+        txn.payment_type?.toUpperCase() || 'N/A',
         txn.amount,
         txn.currency,
         txn.platform_commission || '0',
@@ -115,22 +118,22 @@ const Payments = () => {
 
   const financialStats = [
     {
-      title: t('pay_total_volume'),
-      value: stats?.total_revenue ? `${stats.total_revenue} ETB` : '0 ETB',
+      title: t('pay_gross_volume'),
+      value: stats?.total_volume ? `${Number(stats.total_volume).toLocaleString()} ETB` : '0 ETB',
       icon: CreditCard,
       color: 'bg-blue-500'
     },
     {
       title: t('pay_total_revenue'),
-      value: stats?.platform_revenue ? `${stats.platform_revenue} ETB` : '0 ETB',
+      value: stats?.platform_revenue ? `${Number(stats.platform_revenue).toLocaleString()} ETB` : '0 ETB',
       icon: TrendingUp,
-      color: 'bg-green-500'
+      color: 'bg-emerald-500'
     },
     {
-      title: t('pay_pending_payments'),
-      value: stats?.pending_payments || '0',
+      title: t('pay_provider_earnings'),
+      value: stats?.provider_revenue ? `${Number(stats.provider_revenue).toLocaleString()} ETB` : '0 ETB',
       icon: Wallet,
-      color: 'bg-amber-500'
+      color: 'bg-indigo-500'
     },
     {
       title: t('pay_success_rate'),
@@ -167,6 +170,15 @@ const Payments = () => {
             )}
             {t('pay_export_report')}
           </button>
+          
+          <button 
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-admin-card border border-admin-border text-admin-text rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCcw size={14} className={isFetching ? "animate-spin" : ""} />
+            {t('common_refresh') || 'Refresh'}
+          </button>
       </div>
 
       {/* Financial Overview Cards */}
@@ -183,7 +195,7 @@ const Payments = () => {
         <div className="p-6 border-b border-admin-border bg-admin-card flex justify-between items-center">
           <h2 className="font-black text-admin-text text-sm uppercase italic tracking-tight">{t('pay_recent_transactions')}</h2>
           <div className="flex items-center gap-3">
-             <div className="flex items-center gap-2 text-slate-400">
+             <div className="flex items-center gap-2 text-admin-text-muted">
                <Filter size={14} />
                <span className="text-[10px] font-black uppercase tracking-widest">{t('serv_filter_by')}</span>
              </div>
@@ -213,10 +225,10 @@ const Payments = () => {
           ) : isLoading && transactions.length === 0 ? (
             <div className="p-20 text-center flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-blue-500" size={40} />
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('pay_syncing')}</p>
+              <p className="text-[10px] font-black text-admin-text-muted uppercase tracking-widest">{t('pay_syncing')}</p>
             </div>
           ) : transactions.length === 0 ? (
-            <div className="p-20 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+            <div className="p-20 text-center text-[10px] font-black text-admin-text-muted uppercase tracking-widest italic">
               {t('pay_no_transactions')}
             </div>
           ) : (
@@ -227,6 +239,7 @@ const Payments = () => {
                   <th className="px-8 py-5">{t('pay_customer')}</th>
                   <th className="px-8 py-5">{t('pay_provider')}</th>
                   <th className="px-8 py-5">{t('pay_date')}</th>
+                  <th className="px-8 py-5">{t('pay_phase')}</th>
                   <th className="px-8 py-5">{t('pay_total_amount')}</th>
                   <th className="px-8 py-5">{t('pay_commission')}</th>
                   <th className="px-8 py-5">{t('pay_provider_net')}</th>
@@ -236,7 +249,7 @@ const Payments = () => {
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {transactions.map((txn) => (
                   <tr key={txn.paymentID} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5 font-mono text-xs font-bold text-slate-400">
+                    <td className="px-8 py-5 font-mono text-xs font-bold text-admin-text-muted">
                       {txn.tx_ref || `#${txn.paymentID}`}
                     </td>
                     <td className="px-8 py-5">
@@ -250,15 +263,20 @@ const Payments = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <div className="text-[10px] text-slate-400 uppercase font-black italic">
+                      <div className="text-[10px] text-admin-text-muted uppercase font-black italic">
                         {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="text-[10px] font-black text-admin-text uppercase tracking-tight">
+                        {txn.payment_type === 'deposit' ? t('pay_deposit') : t('pay_final')}
                       </div>
                     </td>
                     <td className="px-8 py-5 font-black text-admin-text font-mono text-sm">{txn.amount} {txn.currency}</td>
                     <td className="px-8 py-5 text-sm text-emerald-600 font-black flex items-center gap-1 font-mono">
                       <ArrowUpRight size={14} /> {txn.platform_commission || '0.00'}
                     </td>
-                    <td className="px-8 py-5 text-xs text-slate-500 font-bold font-mono">{txn.provider_amount || '0.00'}</td>
+                    <td className="px-8 py-5 text-xs text-admin-text-muted font-bold font-mono">{txn.provider_amount || '0.00'}</td>
                     <td className="px-8 py-5">
                       <span className={`text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap ${
                         txn.status === 'success' || txn.status === 'paid' || txn.status === 'released' 
@@ -289,7 +307,12 @@ const Payments = () => {
               <div key={txn.paymentID} className="bg-admin-card/50 rounded-3xl p-5 border border-admin-border space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="font-mono text-[9px] font-black text-slate-300 capitalize">{txn.tx_ref || `#${txn.paymentID}`}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[9px] font-black text-slate-300 capitalize">{txn.tx_ref || `#${txn.paymentID}`}</span>
+                      <span className="text-[8px] font-black uppercase text-admin-text-muted border-l border-admin-border pl-2">
+                        {txn.payment_type === 'deposit' ? t('pay_deposit') : t('pay_final')}
+                      </span>
+                    </div>
                     <p className="text-[10px] text-slate-400 uppercase font-black mt-0.5 italic">
                       {txn.created_at ? new Date(txn.created_at).toLocaleDateString() : 'N/A'}
                     </p>

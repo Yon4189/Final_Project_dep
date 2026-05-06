@@ -49,7 +49,7 @@ export default function ComplaintsList() {
   const [refreshing, setRefreshing] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ComplaintStatus | 'all'>('all');
   
-  const { data: complaints, isLoading, refetch } = useComplaints();
+  const { data: complaints, isLoading, refetch } = useComplaints(filterStatus);
 
   // Clear stale cache and refetch on mount to get normalized data
   React.useEffect(() => {

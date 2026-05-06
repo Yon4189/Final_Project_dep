@@ -20,7 +20,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  ActivityIndicator
 } from "react-native";
 import Map from "@/components/Map/index";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -210,6 +211,21 @@ export default function RequestDetails() {
   };
 
   const handleOpenMaps = async () => {
+    // Check if location is hidden (deposit not paid)
+    const depositPaid = request?.payment_status === 'deposit_paid' || 
+                        request?.payment_status === 'pending_final' || 
+                        request?.payment_status === 'completed';
+    const locationHidden = request?.locationHidden || !depositPaid;
+    
+    if (locationHidden) {
+      Alert.alert(
+        t("providerRequests.locationLocked", "Location Hidden"),
+        t("providerRequests.locationLockedMessage", 
+          "Customer location will be revealed once they pay the 20% deposit. Navigation is not available until payment is received.")
+      );
+      return;
+    }
+    
     let url = '';
     if (request?.customerLatitude && request?.customerLongitude) {
       const lat = request.customerLatitude;
@@ -319,6 +335,21 @@ export default function RequestDetails() {
   };
 
   const handleArrive = () => {
+    // Check if location is hidden (deposit not paid)
+    const depositPaid = request?.payment_status === 'deposit_paid' || 
+                        request?.payment_status === 'pending_final' || 
+                        request?.payment_status === 'completed';
+    const locationHidden = request?.locationHidden || !depositPaid;
+    
+    if (locationHidden) {
+      Alert.alert(
+        t("providerRequests.locationLocked", "Location Hidden"),
+        t("providerRequests.cannotArriveMessage", 
+          "You cannot mark arrival until the customer pays the 20% deposit and location is revealed.")
+      );
+      return;
+    }
+    
     Alert.alert(t("providerRequests.confirmArrival", "Confirm Arrival"), t("providerRequests.arrivedMsg", "Have you arrived at the customer's location?"), [
       { text: t("common.cancel", "Cancel"), style: "cancel" },
       {
@@ -494,64 +525,94 @@ export default function RequestDetails() {
     // Get the address from multiple possible fields
     const serviceAddress = request?.customerAddress;
     const isPending = request?.status === 'pending';
+    
+    // Check if location is hidden (deposit not paid)
+    const depositPaid = request?.payment_status === 'deposit_paid' || 
+                        request?.payment_status === 'pending_final' || 
+                        request?.payment_status === 'completed';
+    const locationHidden = request?.locationHidden || !depositPaid;
 
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t("providerRequests.serviceLocation", "Service Location")}</Text>
         <View style={styles.locationCard}>
-          <View style={styles.addressContainer}>
-            <Ionicons name="location" size={22} color={colors.error} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.addressLabel}>{t("providerRequests.customerLocation", "Customer's Location")}</Text>
-              <Text style={styles.addressText}>{serviceAddress || t("providerRequests.addressNotProvided", "Address not provided")}</Text>
-            </View>
-          </View>
-          {request?.distance && (
-            <View style={styles.distanceContainer}>
-              <View style={styles.distanceItem}>
-                <Ionicons name="navigate-outline" size={16} color={colors.text.secondary} />
-                <Text style={styles.distanceText}>{request.distance.toFixed(1)} {t("providerRequests.away", "km away")}</Text>
+          
+          {locationHidden ? (
+            // Show payment required message instead of location
+            <View style={styles.locationLockedContainer}>
+              <Ionicons name="lock-closed" size={48} color={colors.warning} />
+              <Text style={styles.locationLockedTitle}>
+                {t("providerRequests.locationLocked", "Location Hidden")}
+              </Text>
+              <Text style={styles.locationLockedMessage}>
+                {t("providerRequests.locationLockedMessage", 
+                  "Customer location will be revealed once they pay the 20% deposit")}
+              </Text>
+              <View style={styles.paymentStatusBadge}>
+                <Ionicons name="time-outline" size={16} color={colors.warning} />
+                <Text style={styles.paymentStatusBadgeText}>
+                  {t("providerRequests.waitingDeposit", "Waiting for deposit payment")}
+                </Text>
               </View>
-              <View style={styles.distanceItem}>
-                <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
-                <Text style={styles.distanceText}>~{request.travelTime} {t("providerRequests.minDrive", "min drive")}</Text>
-              </View>
             </View>
-          )}
+          ) : (
+            // Show actual location (existing code)
+            <>
+              <View style={styles.addressContainer}>
+                <Ionicons name="location" size={22} color={colors.error} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.addressLabel}>{t("providerRequests.customerLocation", "Customer's Location")}</Text>
+                  <Text style={styles.addressText}>{serviceAddress || t("providerRequests.addressNotProvided", "Address not provided")}</Text>
+                </View>
+              </View>
+              {request?.distance && (
+                <View style={styles.distanceContainer}>
+                  <View style={styles.distanceItem}>
+                    <Ionicons name="navigate-outline" size={16} color={colors.text.secondary} />
+                    <Text style={styles.distanceText}>{request.distance.toFixed(1)} {t("providerRequests.away", "km away")}</Text>
+                  </View>
+                  <View style={styles.distanceItem}>
+                    <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
+                    <Text style={styles.distanceText}>~{request.travelTime} {t("providerRequests.minDrive", "min drive")}</Text>
+                  </View>
+                </View>
+              )}
 
-          {mapRegion && (
-            <TouchableOpacity
-              style={styles.mapPreview}
-              onPress={() => setShowDirections(true)}
-            >
-              <Map
-                center={[mapRegion.latitude, mapRegion.longitude]}
-                userLocation={request ? {
-                  latitude: request.customerLatitude,
-                  longitude: request.customerLongitude
-                } : null}
-                providers={[]}
-                onProviderSelect={() => { }}
-                style={{ height: 150, width: '100%' }}
-                markers={[
-                  {
-                    position: [mapRegion.latitude, mapRegion.longitude],
-                    title: request?.customerName || t("providerRequests.serviceLocation", "Customer Location"),
-                    description: serviceAddress,
-                  }
-                ]}
-              />
-              <View style={styles.mapOverlay}>
-                <Ionicons name="expand-outline" size={20} color={colors.surface} />
-                <Text style={styles.mapOverlayText}>{t("providerRequests.viewOnMap", "View on map")}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          {!isPending && (
-            <TouchableOpacity style={styles.directionsButton} onPress={handleOpenMaps}>
-              <Ionicons name="navigate" size={20} color={colors.surface} />
-              <Text style={styles.directionsButtonText}>{t("providerRequests.startNavigation", "Start Navigation")}</Text>
-            </TouchableOpacity>
+              {mapRegion && (
+                <TouchableOpacity
+                  style={styles.mapPreview}
+                  onPress={() => setShowDirections(true)}
+                >
+                  <Map
+                    center={[mapRegion.latitude, mapRegion.longitude]}
+                    userLocation={request ? {
+                      latitude: request.customerLatitude,
+                      longitude: request.customerLongitude
+                    } : null}
+                    providers={[]}
+                    onProviderSelect={() => { }}
+                    style={{ height: 150, width: '100%' }}
+                    markers={[
+                      {
+                        position: [mapRegion.latitude, mapRegion.longitude],
+                        title: request?.customerName || t("providerRequests.serviceLocation", "Customer Location"),
+                        description: serviceAddress,
+                      }
+                    ]}
+                  />
+                  <View style={styles.mapOverlay}>
+                    <Ionicons name="expand-outline" size={20} color={colors.surface} />
+                    <Text style={styles.mapOverlayText}>{t("providerRequests.viewOnMap", "View on map")}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              {!isPending && (
+                <TouchableOpacity style={styles.directionsButton} onPress={handleOpenMaps}>
+                  <Ionicons name="navigate" size={20} color={colors.surface} />
+                  <Text style={styles.directionsButtonText}>{t("providerRequests.startNavigation", "Start Navigation")}</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </View>
@@ -695,6 +756,12 @@ export default function RequestDetails() {
     const isWaitingConfirmation = request.status === "waiting_customer_confirmation";
     const isCompleted = request.status === "completed";
     const isCancelled = request.status === "cancelled";
+    
+    // Check if location is hidden (deposit not paid)
+    const depositPaid = request?.payment_status === 'deposit_paid' || 
+                        request?.payment_status === 'pending_final' || 
+                        request?.payment_status === 'completed';
+    const locationHidden = request?.locationHidden || !depositPaid;
 
     if (isCancelled) return null;
 
@@ -702,9 +769,25 @@ export default function RequestDetails() {
       <View style={styles.actionButtonsContainer}>
         {isPending && (
           <>
-            <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
-              <Text style={styles.acceptButtonText}>{t("providerRequests.accept", "Accept Request")}</Text>
+            <TouchableOpacity 
+              style={[
+                styles.acceptButton,
+                acceptRequest.isPending && styles.acceptButtonDisabled
+              ]} 
+              onPress={handleAccept}
+              disabled={acceptRequest.isPending}
+            >
+              {acceptRequest.isPending ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.surface} />
+                  <Text style={styles.acceptButtonText}>{t("providerRequests.accepting", "Accepting...")}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
+                  <Text style={styles.acceptButtonText}>{t("providerRequests.accept", "Accept Request")}</Text>
+                </>
+              )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.rejectButton} onPress={() => setShowActionModal(true)}>
               <Ionicons name="close-circle" size={20} color={colors.error} />
@@ -718,8 +801,15 @@ export default function RequestDetails() {
               <Ionicons name="calendar" size={20} color={colors.warning} />
               <Text style={styles.rescheduleButtonText}>{t("providerRequests.reschedule", "Reschedule")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.arriveButton} onPress={handleArrive}>
-              <Ionicons name="pin" size={20} color={colors.surface} />
+            <TouchableOpacity 
+              style={[
+                styles.arriveButton,
+                locationHidden && styles.arriveButtonDisabled
+              ]} 
+              onPress={handleArrive}
+              disabled={locationHidden}
+            >
+              <Ionicons name={locationHidden ? "lock-closed" : "pin"} size={20} color={colors.surface} />
               <Text style={styles.arriveButtonText}>{t("providerRequests.markArrived", "Mark Arrived")}</Text>
             </TouchableOpacity>
           </View>
@@ -1160,6 +1250,44 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  locationLockedContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: colors.warning + '10',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
+    borderStyle: 'dashed',
+  },
+  locationLockedTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  locationLockedMessage: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  paymentStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.warning + '20',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  paymentStatusBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.warning,
+  },
   addressContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1366,6 +1494,9 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     marginBottom: 12,
     gap: 8,
   },
+  acceptButtonDisabled: {
+    opacity: 0.6,
+  },
   acceptButtonText: {
     color: colors.surface,
     fontSize: 16,
@@ -1432,6 +1563,10 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
+  },
+  arriveButtonDisabled: {
+    backgroundColor: colors.text.secondary,
+    opacity: 0.5,
   },
   arriveButtonText: {
     color: colors.surface,

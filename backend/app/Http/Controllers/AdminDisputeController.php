@@ -98,35 +98,6 @@ class AdminDisputeController extends Controller
             ], 404);
         }
 
-        // Manually resolve the sender for each message (polymorphic safe)
-        // Note: The sender relationship is already loaded via eager loading
-        // This ensures polymorphic relationships work correctly
-        $messages = $dispute->messages->map(function ($msg) {
-            // Sender is already loaded, just ensure it's properly formatted
-            if (!$msg->sender) {
-                $morphMap = [
-                    'customer' => [\App\Models\Customer::class, 'customerID'],
-                    'provider' => [\App\Models\ServiceProvider::class, 'providerID'],
-                    'admin'    => [\App\Models\Admin::class, 'adminID'],
-                ];
-                
-                $map = $morphMap[$msg->sender_type] ?? null;
-                if ($map) {
-                    [$modelClass, $pk] = $map;
-                    try {
-                        $sender = $modelClass::select([$pk, 'fullname', 'email', 'profilePicture'])
-                            ->find($msg->sender_id);
-                        $msg->setRelation('sender', $sender);
-                    } catch (\Exception $e) {
-                        $msg->setRelation('sender', null);
-                    }
-                }
-            }
-            return $msg;
-        });
-
-        $dispute->setRelation('messages', $messages);
-
         // Get related payment info
         $payment = \App\Models\Payment::where('bookingID', $dispute->bookingID)->first();
         
@@ -226,35 +197,7 @@ class AdminDisputeController extends Controller
             
             $dispute->save();
 
-            // Notify parties involved about status change
-            $statusMessage = "Dispute #{$disputeID} status updated to: " . str_replace('_', ' ', $request->status);
-            if ($request->status === 'resolved') {
-                $statusMessage = "Dispute #{$disputeID} has been resolved. Resolution: " . str_replace('_', ' ', $request->resolution_type);
-            }
-
-            // Notify raised_by
-            $this->notificationService->toUser(
-                $dispute->raised_by_type,
-                $dispute->raised_by_id,
-                'dispute',
-                'Dispute Status Updated',
-                $statusMessage,
-                ['disputeID' => $disputeID],
-                $dispute->bookingID
-            );
-
-            // Notify against
-            $this->notificationService->toUser(
-                $dispute->against_type,
-                $dispute->against_id,
-                'dispute',
-                'Dispute Status Updated',
-                $statusMessage,
-                ['disputeID' => $disputeID],
-                $dispute->bookingID
-            );
-
-            // Add system message about status change
+            // Add system message about status change (inside transaction)
             DisputeMessage::create([
                 'disputeID' => $disputeID,
                 'sender_id' => $admin->adminID,
@@ -277,6 +220,38 @@ class AdminDisputeController extends Controller
             ]);
 
             DB::commit();
+
+            // Notify parties involved about status change - OUTSIDE TRANSACTION
+            $statusMessage = "Dispute #{$disputeID} status updated to: " . str_replace('_', ' ', $request->status);
+            if ($request->status === 'resolved') {
+                $statusMessage = "Dispute #{$disputeID} has been resolved. Resolution: " . str_replace('_', ' ', $request->resolution_type);
+            }
+
+            try {
+                // Notify raised_by
+                $this->notificationService->toUser(
+                    $dispute->raised_by_type,
+                    $dispute->raised_by_id,
+                    'dispute',
+                    'Dispute Status Updated',
+                    $statusMessage,
+                    ['disputeID' => $disputeID],
+                    $dispute->bookingID
+                );
+
+                // Notify against
+                $this->notificationService->toUser(
+                    $dispute->against_type,
+                    $dispute->against_id,
+                    'dispute',
+                    'Dispute Status Updated',
+                    $statusMessage,
+                    ['disputeID' => $disputeID],
+                    $dispute->bookingID
+                );
+            } catch (\Exception $ne) {
+                Log::warning('Notifications failed after dispute update: ' . $ne->getMessage());
+            }
 
             return response()->json([
                 'success' => true,
@@ -401,41 +376,15 @@ class AdminDisputeController extends Controller
             throw new \Exception('Payment not found for this booking');
         }
 
-        // Mark payment as refunded
-        $payment->status = 'refunded';
-        $payment->refunded_at = now();
-        $payment->refund_amount = $amount;
-        $payment->save();
+        // Use the built-in refund method on the Payment model
+        // This handles status updates, provider balance reversal, and customer wallet credit
+        $payment->refund($amount, "Dispute Resolution #{$dispute->disputeID}");
 
-        Log::info('Refund processed for dispute', [
+        Log::info('Refund processed for dispute using Payment model', [
             'dispute_id' => $dispute->disputeID,
             'booking_id' => $dispute->bookingID,
             'amount' => $amount
         ]);
-    }
-
-    /**
-     * Delete a dispute message
-     */
-    public function deleteMessage($messageID)
-    {
-        $admin = auth()->guard('admin')->user();
-        if (!$admin) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $message = DisputeMessage::find($messageID);
-        if (!$message) {
-            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
-        }
-
-        try {
-            $message->delete();
-            return response()->json(['success' => true, 'message' => 'Message deleted successfully']);
-        } catch (\Exception $e) {
-            Log::error('Failed to delete dispute message: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to delete message'], 500);
-        }
     }
 
     /**
@@ -509,30 +458,34 @@ class AdminDisputeController extends Controller
             }
 
             // Send notifications based on recipient_type
-            if ($request->recipient_type === 'customer' || $request->recipient_type === 'both') {
-                $customerId = $dispute->raised_by_type === 'customer' ? $dispute->raised_by_id : $dispute->against_id;
-                $this->notificationService->toUser(
-                    'customer',
-                    $customerId,
-                    'dispute',
-                    'New Message from Admin',
-                    "Admin has sent you a message regarding dispute #{$disputeID}",
-                    ['disputeID' => $disputeID],
-                    $dispute->bookingID
-                );
-            }
+            try {
+                if ($request->recipient_type === 'customer' || $request->recipient_type === 'both') {
+                    $customerId = $dispute->raised_by_type === 'customer' ? $dispute->raised_by_id : $dispute->against_id;
+                    $this->notificationService->toUser(
+                        'customer',
+                        $customerId,
+                        'dispute',
+                        'New Message from Admin',
+                        "Admin has sent you a message regarding dispute #{$disputeID}",
+                        ['disputeID' => $disputeID],
+                        $dispute->bookingID
+                    );
+                }
 
-            if ($request->recipient_type === 'provider' || $request->recipient_type === 'both') {
-                $providerId = $dispute->raised_by_type === 'provider' ? $dispute->raised_by_id : $dispute->against_id;
-                $this->notificationService->toUser(
-                    'provider',
-                    $providerId,
-                    'dispute',
-                    'New Message from Admin',
-                    "Admin has sent you a message regarding dispute #{$disputeID}",
-                    ['disputeID' => $disputeID],
-                    $dispute->bookingID
-                );
+                if ($request->recipient_type === 'provider' || $request->recipient_type === 'both') {
+                    $providerId = $dispute->raised_by_type === 'provider' ? $dispute->raised_by_id : $dispute->against_id;
+                    $this->notificationService->toUser(
+                        'provider',
+                        $providerId,
+                        'dispute',
+                        'New Message from Admin',
+                        "Admin has sent you a message regarding dispute #{$disputeID}",
+                        ['disputeID' => $disputeID],
+                        $dispute->bookingID
+                    );
+                }
+            } catch (\Exception $ne) {
+                Log::warning('Message notifications failed: ' . $ne->getMessage());
             }
 
             return response()->json([
@@ -676,6 +629,38 @@ class AdminDisputeController extends Controller
     }
 
     /**
+     * Delete a message (Admin only)
+     * 
+     * @param int $messageID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteMessage($messageID)
+    {
+        $admin = auth()->guard('admin')->user();
+        
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $message = \App\Models\DisputeMessage::find($messageID);
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+        
+        $message->delete();
+        
+        \Illuminate\Support\Facades\Log::info('Dispute message deleted by admin', [
+            'message_id' => $messageID,
+            'admin_id' => $admin->adminID
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Message deleted successfully'
+        ]);
+    }
+
+    /**
      * Search messages within a dispute (Admin only)
      * 
      * @param int $disputeID
@@ -768,17 +753,36 @@ class AdminDisputeController extends Controller
 
         $isTyping = $request->boolean('is_typing', false);
         
-        // Store typing status in cache (expires in 5 seconds)
-        $cacheKey = "dispute_{$disputeID}_typing_admin_{$admin->id}";
+        // Use a single cache key per dispute to store all typing users
+        // This is more compatible across different cache drivers (file, database, etc.)
+        $cacheKey = "dispute_{$disputeID}_typing_users";
+        $typingUsers = cache()->get($cacheKey, []);
+        
+        $userId = $admin->adminID; // Use adminID as per our project convention
+        
         if ($isTyping) {
-            cache()->put($cacheKey, [
-                'user_id' => $admin->id,
+            // Add or update this user in the list
+            $typingUsers[$userId] = [
+                'user_id' => $userId,
                 'user_type' => 'admin',
-                'name' => $admin->name,
-                'timestamp' => now()
-            ], now()->addSeconds(5));
+                'name' => $admin->fullname ?? $admin->name,
+                'timestamp' => time()
+            ];
         } else {
+            // Remove this user from the list
+            unset($typingUsers[$userId]);
+        }
+
+        // Clean up stale typing statuses (older than 10 seconds)
+        $now = time();
+        $typingUsers = array_filter($typingUsers, function($user) use ($now) {
+            return ($now - $user['timestamp']) < 10;
+        });
+
+        if (empty($typingUsers)) {
             cache()->forget($cacheKey);
+        } else {
+            cache()->put($cacheKey, $typingUsers, now()->addMinutes(1));
         }
 
         return response()->json(['success' => true]);
@@ -803,24 +807,26 @@ class AdminDisputeController extends Controller
             return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
         }
 
-        // Get all typing users for this dispute
-        $typingUsers = [];
+        $cacheKey = "dispute_{$disputeID}_typing_users";
+        $typingUsersMap = cache()->get($cacheKey, []);
         
-        // Check admin typing status
-        $adminCacheKey = "dispute_{$disputeID}_typing_admin_*";
-        $adminKeys = cache()->getStore()->connection()->keys($adminCacheKey);
-        
-        foreach ($adminKeys as $key) {
-            $data = cache()->get($key);
-            if ($data) {
-                $typingUsers[] = $data;
-            }
+        // Filter out stale entries and the current admin
+        $now = time();
+        $filteredUsers = [];
+        foreach ($typingUsersMap as $userId => $data) {
+            // Skip stale entries
+            if (($now - $data['timestamp']) >= 10) continue;
+            
+            // Skip the current admin so they don't see themselves typing
+            if ($data['user_type'] === 'admin' && $userId == $admin->adminID) continue;
+            
+            $filteredUsers[] = $data;
         }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'typing_users' => $typingUsers
+                'typing_users' => $filteredUsers
             ]
         ]);
     }
@@ -937,5 +943,54 @@ class AdminDisputeController extends Controller
                 'replies' => $replies
             ]
         ]);
+    }
+
+    /**
+     * Clear all message history for a dispute (Admin)
+     */
+    public function clearHistory($disputeID)
+    {
+        $admin = auth()->guard('admin')->user();
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $dispute = Dispute::find($disputeID);
+        if (!$dispute) {
+            return response()->json(['success' => false, 'message' => 'Dispute not found'], 404);
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            // Delete all messages associated with this dispute
+            DisputeMessage::where('disputeID', $disputeID)->delete();
+            
+            // Add a system message that history was cleared
+            DisputeMessage::create([
+                'disputeID' => $disputeID,
+                'sender_id' => $admin->adminID,
+                'sender_type' => 'admin',
+                'recipient_type' => 'admin',
+                'message' => "Chat history cleared by admin: " . ($admin->fullname ?? $admin->name),
+                'is_admin_only' => true
+            ]);
+
+            DB::commit();
+
+            Log::info('Dispute chat history cleared by admin', [
+                'dispute_id' => $disputeID,
+                'admin_id' => $admin->adminID
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Chat history cleared successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to clear dispute history: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to clear history'], 500);
+        }
     }
 }

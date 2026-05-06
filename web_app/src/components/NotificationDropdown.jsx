@@ -54,7 +54,7 @@ const TYPE_CONFIG = {
   withdrawal_request: {
     icon: Wallet,
     color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-    route: '/admin/payments',
+    route: '/admin/withdrawals',
     label: 'Withdrawal'
   },
   payment: {
@@ -219,8 +219,14 @@ const NotificationDropdown = ({ isOpen, onUnreadCountUpdate, onClose }) => {
     // Navigate to relevant page
     const config = TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
 
+    // Check if notification has a custom link in data
+    if (notif.data?.link) {
+      navigate(notif.data.link);
+    // Withdrawal → navigate to specific withdrawal if ID available
+    } else if (notif.type === 'withdrawal_request' && notif.data?.withdrawal_id) {
+      navigate(`/admin/withdrawals/${notif.data.withdrawal_id}`);
     // Dispute → navigate to specific dispute if ID available
-    if (['dispute', 'new_dispute', 'dispute_message'].includes(notif.type) && notif.data?.dispute_id) {
+    } else if (['dispute', 'new_dispute', 'dispute_message'].includes(notif.type) && notif.data?.dispute_id) {
       navigate(`/admin/disputes/${notif.data.dispute_id}`);
     } else if (['dispute', 'new_dispute', 'dispute_message'].includes(notif.type) && notif.data?.disputeID) {
       navigate(`/admin/disputes/${notif.data.disputeID}`);

@@ -7,6 +7,8 @@ namespace App\Http\Controllers;
 use App\Models\Withdrawal;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Services\RiskAnalyzer;
+use App\Services\ComplianceChecker;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -192,21 +194,33 @@ class AdminWithdrawalController extends Controller
     }
 
     /**
-     * Get all withdrawals with filtering (optional)
+     * Get all withdrawals with filtering, search, and pagination
      * 
-     * GET /api/admin/withdrawals?status=pending&from=2026-01-01&to=2026-03-05
+     * GET /api/admin/withdrawals?status=pending&search=john&page=1&per_page=20
      */
     public function index(Request $request)
     {
         try {
             $query = Withdrawal::with('provider');
             
-            // Filter by status
-            if ($request->has('status')) {
+            // Filter by status (pending, approved, rejected, processing, completed, failed, cancelled, all)
+            if ($request->has('status') && $request->status !== 'all') {
                 $query->where('status', $request->status);
             }
             
-            // Filter by date range
+            // Search by provider name, ID, or withdrawal reference
+            if ($request->has('search') && !empty($request->search)) {
+                $searchTerm = $request->search;
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('withdrawal_ref', 'like', '%' . $searchTerm . '%')
+                      ->orWhereHas('provider', function($providerQuery) use ($searchTerm) {
+                          $providerQuery->where('fullname', 'like', '%' . $searchTerm . '%')
+                                       ->orWhere('providerID', 'like', '%' . $searchTerm . '%');
+                      });
+                });
+            }
+            
+            // Filter by date range (optional)
             if ($request->has('from')) {
                 $query->where('created_at', '>=', $request->from);
             }
@@ -215,11 +229,23 @@ class AdminWithdrawalController extends Controller
                 $query->where('created_at', '<=', $request->to);
             }
             
-            $withdrawals = $query->orderBy('created_at', 'desc')->get();
+            // Pagination
+            $perPage = $request->get('per_page', 20);
+            $perPage = min($perPage, 50); // Max 50 items per page
+            
+            $withdrawals = $query->orderBy('created_at', 'desc')->paginate($perPage);
             
             return response()->json([
                 'success' => true,
-                'data' => $withdrawals
+                'data' => $withdrawals->items(),
+                'pagination' => [
+                    'total' => $withdrawals->total(),
+                    'current_page' => $withdrawals->currentPage(),
+                    'last_page' => $withdrawals->lastPage(),
+                    'per_page' => $withdrawals->perPage(),
+                    'from' => $withdrawals->firstItem(),
+                    'to' => $withdrawals->lastItem()
+                ]
             ], 200);
             
         } catch (\Exception $e) {
@@ -228,6 +254,149 @@ class AdminWithdrawalController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve withdrawals'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get detailed withdrawal information with risk analysis and compliance checks
+     * 
+     * GET /api/admin/withdrawals/{id}
+     */
+    public function show($id)
+    {
+        try {
+            $withdrawal = Withdrawal::with(['provider.wallet', 'provider.category'])
+                ->where('withdrawalID', $id)
+                ->first();
+            
+            if (!$withdrawal) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Withdrawal not found'
+                ], 404);
+            }
+            
+            $provider = $withdrawal->provider;
+            $wallet = $provider->wallet;
+            
+            if (!$wallet) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Provider wallet not found'
+                ], 404);
+            }
+            
+            // Provider statistics
+            $completedBookings = \App\Models\Booking::where('providerID', $provider->providerID)
+                ->where('status', 'completed')
+                ->count();
+            
+            $totalReviews = \App\Models\Review::whereHas('booking', function($query) use ($provider) {
+                $query->where('providerID', $provider->providerID);
+            })->count();
+            
+            // Withdrawal history
+            $withdrawalHistory = Withdrawal::where('providerID', $provider->providerID)
+                ->where('withdrawalID', '!=', $id)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+            
+            $totalWithdrawals = Withdrawal::where('providerID', $provider->providerID)
+                ->whereIn('status', ['approved', 'completed'])
+                ->count();
+            
+            $totalWithdrawn = Withdrawal::where('providerID', $provider->providerID)
+                ->whereIn('status', ['approved', 'completed'])
+                ->sum('amount');
+            
+            $avgWithdrawal = $totalWithdrawals > 0 ? $totalWithdrawn / $totalWithdrawals : 0;
+            
+            // Recent activity (last 30 days)
+            $thirtyDaysAgo = \Carbon\Carbon::now()->subDays(30);
+            $recentBookings = \App\Models\Booking::where('providerID', $provider->providerID)
+                ->where('created_at', '>=', $thirtyDaysAgo)
+                ->where('status', 'completed')
+                ->get();
+            
+            $recentEarnings = $recentBookings->sum('provider_earnings');
+            $avgBookingValue = $recentBookings->count() > 0 ? $recentEarnings / $recentBookings->count() : 0;
+            
+            $recentReviews = \App\Models\Review::whereHas('booking', function($query) use ($provider, $thirtyDaysAgo) {
+                $query->where('providerID', $provider->providerID)
+                      ->where('created_at', '>=', $thirtyDaysAgo);
+            })->get();
+            
+            $recentAvgRating = $recentReviews->count() > 0 ? $recentReviews->avg('rating') : 0;
+            
+            // Last activity
+            $lastBooking = \App\Models\Booking::where('providerID', $provider->providerID)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            
+            // Risk analysis
+            $riskAnalyzer = new RiskAnalyzer();
+            $riskAnalysis = $riskAnalyzer->analyze($withdrawal, $provider);
+            
+            // Compliance checks
+            $complianceChecker = new ComplianceChecker();
+            $complianceChecks = $complianceChecker->check($withdrawal, $wallet);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'withdrawal' => $withdrawal,
+                    'provider_identity' => [
+                        'fullname' => $provider->fullname,
+                        'providerID' => $provider->providerID,
+                        'phone' => $provider->phone,
+                        'email' => $provider->email,
+                        'created_at' => $provider->created_at,
+                        'verification_status' => $provider->verification_status ?? 'unverified',
+                        'account_status' => $provider->status
+                    ],
+                    'financial_info' => [
+                        'available_balance' => (float) $wallet->available_balance,
+                        'pending_balance' => (float) $wallet->pending_balance,
+                        'total_balance' => (float) ($wallet->available_balance + $wallet->pending_balance),
+                        'requested_amount' => (float) $withdrawal->amount,
+                        'total_earnings' => (float) $riskAnalysis['indicators']['total_earnings'],
+                        'previous_withdrawals_count' => $totalWithdrawals,
+                        'total_withdrawn' => (float) $totalWithdrawn,
+                        'average_withdrawal' => (float) $avgWithdrawal
+                    ],
+                    'business_metrics' => [
+                        'completed_bookings' => $completedBookings,
+                        'average_rating' => (float) ($provider->rating ?? 0),
+                        'total_reviews' => $totalReviews,
+                        'account_status' => $provider->status,
+                        'service_category' => $provider->category->name ?? 'N/A',
+                        'service_city' => $provider->service_city ?? 'N/A'
+                    ],
+                    'withdrawal_history' => $withdrawalHistory,
+                    'recent_activity' => [
+                        'bookings_last_30_days' => $recentBookings->count(),
+                        'earnings_last_30_days' => (float) $recentEarnings,
+                        'average_booking_value' => (float) $avgBookingValue,
+                        'last_activity' => $lastBooking ? $lastBooking->created_at : null,
+                        'recent_reviews_count' => $recentReviews->count(),
+                        'recent_average_rating' => (float) $recentAvgRating
+                    ],
+                    'risk_analysis' => $riskAnalysis,
+                    'compliance_checks' => $complianceChecks
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            Log::error('Get withdrawal details failed: ' . $e->getMessage(), [
+                'withdrawal_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve withdrawal details'
             ], 500);
         }
     }
@@ -277,20 +446,38 @@ public function approveWithdrawal($id)
             'chapa_transfer_id' => $withdrawal->chapa_transfer_id
         ]);
         
-        // Get provider's wallet (optional)
+        // Get provider's wallet
         $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
         
-        if ($wallet) {
-            // Create wallet transaction record
-            WalletTransaction::create([
-                'walletID' => $wallet->walletID,
-                'type' => 'withdrawal',
-                'amount' => $withdrawal->amount,
-                'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' approved',
-                'bookingID' => null,
-                'withdrawalID' => $withdrawal->withdrawalID
-            ]);
+        if (!$wallet) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Provider wallet not found'
+            ], 404);
         }
+        
+        // Deduct from available balance NOW (on approval)
+        if ($wallet->available_balance < $withdrawal->amount) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient balance in wallet'
+            ], 422);
+        }
+        
+        $wallet->available_balance -= $withdrawal->amount;
+        $wallet->save();
+        
+        // Create wallet transaction record for the deduction
+        WalletTransaction::create([
+            'walletID' => $wallet->walletID,
+            'type' => 'debit',
+            'amount' => $withdrawal->amount,
+            'description' => 'Withdrawal #' . $withdrawal->withdrawalID . ' approved and processed',
+            'bookingID' => null,
+            'withdrawalID' => $withdrawal->withdrawalID
+        ]);
         
         DB::commit();
         

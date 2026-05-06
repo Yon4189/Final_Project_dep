@@ -17,17 +17,22 @@ export const useTypingIndicator = (disputeID, enabled = true) => {
       return;
     }
 
-    // Poll for typing status every 1 second
+    let isFetchingStatus = false;
+    // Poll for typing status every 3 seconds to reduce network load
     pollingIntervalRef.current = setInterval(async () => {
+      if (isFetchingStatus) return; // Prevent overlapping requests
       try {
+        isFetchingStatus = true;
         const response = await disputeAPI.getTypingStatus(disputeID);
         if (response.success && response.data.typing_users) {
           setTypingUsers(response.data.typing_users);
         }
       } catch (error) {
         console.error('Failed to fetch typing status:', error);
+      } finally {
+        isFetchingStatus = false;
       }
-    }, 1000);
+    }, 3000);
 
     return () => {
       if (pollingIntervalRef.current) {

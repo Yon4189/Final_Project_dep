@@ -186,14 +186,23 @@ class WalletController extends Controller
         }
         
         // Check if there's already a pending withdrawal
-        $pendingExists = Withdrawal::where('providerID', $provider->providerID)
+        $pendingWithdrawal = Withdrawal::where('providerID', $provider->providerID)
             ->where('status', 'pending')
-            ->exists();
+            ->first();
             
-        if ($pendingExists) {
+        if ($pendingWithdrawal) {
+            $requestedDate = $pendingWithdrawal->created_at->format('M d, Y \a\t h:i A');
+            $pendingAmount = number_format($pendingWithdrawal->amount, 2);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'You already have a pending withdrawal request. Please wait for it to be processed.'
+                'message' => "You have a pending withdrawal of {$pendingAmount} ETB requested on {$requestedDate}. Please wait for it to be processed before requesting another withdrawal.",
+                'pending_withdrawal' => [
+                    'withdrawal_ref' => $pendingWithdrawal->withdrawal_ref,
+                    'amount' => (float) $pendingWithdrawal->amount,
+                    'requested_at' => $pendingWithdrawal->created_at->toISOString(),
+                    'payment_method' => $pendingWithdrawal->payment_method
+                ]
             ], 422);
         }
         
@@ -201,9 +210,8 @@ class WalletController extends Controller
         $withdrawal = null;
         
         DB::transaction(function () use ($wallet, $amount, $provider, $request, &$withdrawal) {
-            // Deduct from available balance
-            $wallet->available_balance -= $amount;
-            $wallet->save();
+            // DO NOT deduct from available balance yet - only deduct after admin approval
+            // The balance will be deducted in AdminWithdrawalController->approveWithdrawal()
             
             // Generate unique withdrawal reference
             $withdrawalRef = 'WDR_' . strtoupper(Str::random(8)) . '_' . time();
@@ -242,15 +250,8 @@ class WalletController extends Controller
                 throw new \Exception('Failed to create withdrawal record');
             }
             
-            // Create transaction record
-            WalletTransaction::create([
-                'walletID' => $wallet->walletID,
-                'type' => 'debit',
-                'amount' => $amount,
-                'description' => 'Withdrawal request #' . $withdrawalRef . ' (' . $request->payment_method . ')',
-                'bookingID' => null,
-                'withdrawalID' => $withdrawal->withdrawalID
-            ]);
+            // DO NOT create debit transaction yet - only create after admin approval
+            // The transaction will be created in AdminWithdrawalController->approveWithdrawal()
         });
         
         if (!$withdrawal) {

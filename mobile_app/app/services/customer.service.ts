@@ -108,18 +108,11 @@ class CustomerService {
   // ==================== Location Management ====================
 
   async getLocations(): Promise<ApiResponse<UserLocation[]>> {
-    const cached = await storage.getItem<UserLocation[]>('user_locations');
-    
-    if (cached && isValidArray<UserLocation>(cached)) {
-      return { 
-        success: true, 
-        data: cached 
-      };
-    }
-    
-    const response = await api.get<UserLocation[]>(`${this.BASE_PATH}/locations`);
+    // Always fetch fresh data from API (bypass cache for now to ensure we get updated structure)
+    const response = await api.get<UserLocation[]>(`${this.BASE_PATH}/addresses`);
     
     if (response.success && response.data) {
+      console.log('Fresh addresses from API:', response.data);
       await storage.setItem('user_locations', response.data);
     }
     
@@ -127,7 +120,7 @@ class CustomerService {
   }
 
   async addLocation(data: Omit<UserLocation, 'id'>): Promise<ApiResponse<UserLocation>> {
-    const response = await api.post<UserLocation>(`${this.BASE_PATH}/locations`, data);
+    const response = await api.post<UserLocation>(`${this.BASE_PATH}/addresses`, data);
     
     if (response.success) {
       // Invalidate cache
@@ -138,7 +131,7 @@ class CustomerService {
   }
 
   async updateLocation(id: string, data: Partial<UserLocation>): Promise<ApiResponse<UserLocation>> {
-    const response = await api.put<UserLocation>(`${this.BASE_PATH}/locations/${id}`, data);
+    const response = await api.put<UserLocation>(`${this.BASE_PATH}/addresses/${id}`, data);
     
     if (response.success) {
       // Invalidate cache
@@ -149,7 +142,7 @@ class CustomerService {
   }
 
   async deleteLocation(id: string): Promise<ApiResponse<void>> {
-    const response = await api.delete<void>(`${this.BASE_PATH}/locations/${id}`);
+    const response = await api.delete<void>(`${this.BASE_PATH}/addresses/${id}`);
     
     if (response.success) {
       await storage.removeItem('user_locations');
@@ -159,7 +152,7 @@ class CustomerService {
   }
 
   async setPrimaryLocation(id: string): Promise<ApiResponse<UserLocation>> {
-    const response = await api.patch<UserLocation>(`${this.BASE_PATH}/locations/${id}/primary`);
+    const response = await api.patch<UserLocation>(`${this.BASE_PATH}/addresses/${id}/default`);
     
     if (response.success) {
       // Invalidate cache
@@ -198,7 +191,7 @@ class CustomerService {
     if (pMin !== undefined && pMin !== null) params.append('price_min', pMin.toString());
     if (pMax !== undefined && pMax !== null) params.append('price_max', pMax.toString());
     if (filters.verifiedOnly) params.append('verified_only', 'true');
-    if (filters.availableNow) params.append('available_now', 'true');
+    if (filters.onlineNow) params.append('online_now', 'true');
     if (filters.sortBy) params.append('sort_by', filters.sortBy);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.perPage) params.append('per_page', filters.perPage.toString());
@@ -531,14 +524,20 @@ class CustomerService {
     return response;
   }
 
-  async getMyComplaints(): Promise<ApiResponse<Complaint[]>> {
-    const cacheKey = 'user_complaints';
+  async getMyComplaints(status?: string): Promise<ApiResponse<Complaint[]>> {
+    const cacheKey = status ? `user_complaints_${status}` : 'user_complaints';
     
-    const response = await api.get<any[]>(`${this.BASE_PATH}/complaints`);
+    const url = status && status !== 'all' 
+      ? `${this.BASE_PATH}/complaints?status=${status}` 
+      : `${this.BASE_PATH}/complaints`;
+
+    const response = await api.get<any>(url);
     
     if (response.success && response.data) {
+      // Extract the array from either a paginated response or a flat data response
+      const items = Array.isArray(response.data.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
       // Normalize: map disputeID → id for frontend consistency
-      const normalized = (response.data as any[]).map((item: any) => ({
+      const normalized = items.map((item: any) => ({
         ...item,
         id: item.id || item.disputeID?.toString() || item.complaintID?.toString(),
         complaintNumber: item.complaintNumber || item.disputeID?.toString(),
@@ -589,6 +588,16 @@ class CustomerService {
 
   async getComplaintMessages(id: string): Promise<ApiResponse<any[]>> {
     const response = await api.get<any[]>(`${this.BASE_PATH}/complaints/${id}/messages`);
+    return response;
+  }
+
+  async clearComplaintHistory(id: string): Promise<ApiResponse<any>> {
+    const response = await api.delete<any>(`${this.BASE_PATH}/disputes/${id}/clear-history`);
+    return response;
+  }
+
+  async deleteComplaintMessage(disputeId: string, messageId: string): Promise<ApiResponse<any>> {
+    const response = await api.delete<any>(`${this.BASE_PATH}/disputes/${disputeId}/messages/${messageId}`);
     return response;
   }
 
