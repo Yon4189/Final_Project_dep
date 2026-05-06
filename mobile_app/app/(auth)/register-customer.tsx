@@ -24,6 +24,11 @@ import { ThemeColors } from "../constants/Colors";
 
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from "../context/ThemeContext";
+import SocialLoginButton from "../../components/SocialLoginButton";
+import { useGoogleAuth } from "../services/googleAuth.service";
+import { useCustomerStore } from "../store/customerStore";
+import { useProviderStore } from "../store/providerStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Define City interface
 interface City {
@@ -37,6 +42,8 @@ export default function RegisterCustomerScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const queryClient = useQueryClient();
+  const { handleGoogleSignIn, getGoogleUserInfo } = useGoogleAuth();
 
   const [formData, setFormData] = useState({
     fullname: "",
@@ -222,6 +229,34 @@ export default function RegisterCustomerScreen() {
     }
   };
 
+  const handleGoogleRegister = async () => {
+    setLoading(true);
+    try {
+      const response = await getGoogleUserInfo();
+      
+      if (response && response.success === true) {
+        const userInfo = response.data;
+        setFormData(prev => ({
+          ...prev,
+          fullname: userInfo.name || prev.fullname,
+          email: userInfo.email || prev.email,
+        }));
+        
+        Alert.alert(
+          t('auth.success', 'Success'),
+          t('auth.googleInfoFetched', 'Email and name have been filled from your Google account. Please complete the rest of the form.')
+        );
+      } else if (response?.message !== 'Google sign-in cancelled') {
+        Alert.alert(t('common.error'), response?.message || 'Failed to fetch Google info');
+      }
+    } catch (error: any) {
+      console.error('Google Info Error:', error);
+      Alert.alert(t('common.error'), error.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderModalItem = (item: string | any, onSelect: () => void) => (
     <TouchableOpacity style={styles.modalItem} onPress={onSelect}>
       <Text style={styles.modalItemText}>
@@ -241,6 +276,16 @@ export default function RegisterCustomerScreen() {
         <View style={styles.formContainer}>
           <AppInput label={t("auth.fullName", "Full Name")} value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder={t("auth.enterFullName", "Enter your full name")} required error={validationErrors.fullname} />
           <AppInput label={t("auth.email", "Email")} value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder={t("auth.enterEmail", "Enter your email")} keyboardType="email-address" autoCapitalize="none" required error={validationErrors.email} />
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} /><Text style={styles.dividerText}>{t("auth.or", "OR")}</Text><View style={styles.dividerLine} />
+          </View>
+
+          <SocialLoginButton
+            onPress={handleGoogleRegister}
+            loading={loading}
+            title={t('auth.continueWithGoogle', 'Continue with Google')}
+          />
 
           <AppInput label={t("auth.phoneNumber", "Phone Number")} value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required error={validationErrors.phone} />
           
@@ -316,9 +361,7 @@ export default function RegisterCustomerScreen() {
 
           <AppButton title={t("auth.createAccount", "Create Account")} onPress={handleRegister} loading={loading} fullWidth style={styles.registerButton} />
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} /><Text style={styles.dividerText}>{t("auth.or", "OR")}</Text><View style={styles.dividerLine} />
-          </View>
+
 
           <TouchableOpacity style={styles.linkButton} onPress={() => router.push("/register-provider")}>
             <Text style={styles.linkText}>{t("auth.wantToOfferServices", "Want to offer services?")} <Text style={styles.linkHighlight}>{t("auth.registerAsProvider", "Register as Provider")}</Text></Text>

@@ -20,9 +20,11 @@ import AppInput from "../../components/AppInput";
 import { ThemeColors } from "../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import SocialLoginButton from "../../components/SocialLoginButton";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProviderStore } from "../store/providerStore";
 import { useCustomerStore } from "../store/customerStore";
+import { useGoogleAuth } from "../services/googleAuth.service";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<"customer" | "provider">("customer");
   const queryClient = useQueryClient();
+  const { handleGoogleSignIn } = useGoogleAuth();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -221,6 +224,55 @@ export default function LoginScreen() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const response = await handleGoogleSignIn(userType);
+      
+      if (response && response.success === true) {
+        const responseData = response.data || {};
+        const token = responseData.token;
+
+        if (token) {
+          if (userType === 'provider') {
+            await api.setProviderToken(token, responseData.refresh_token);
+          } else {
+            await api.setCustomerToken(token, responseData.refresh_token);
+          }
+
+          const userData = {
+            id: responseData.customerID || responseData.providerID,
+            fullname: responseData.fullname,
+            email: responseData.email,
+            phone: responseData.phone,
+            profilePicture: responseData.profilePicture,
+            service_city: responseData.service_city,
+            location: responseData.location,
+            user_type: userType,
+          };
+
+          await api.setUserData(userData);
+          queryClient.clear();
+          useCustomerStore.getState().reset();
+          useProviderStore.getState().reset();
+
+          if (userType === "provider") {
+            router.replace("/provider_dashboard");
+          } else {
+            router.replace("/customer_dashboard");
+          }
+        }
+      } else if (response?.message !== 'Google sign-in cancelled or failed') {
+        Alert.alert(t('common.error'), response?.message || 'Google login failed');
+      }
+    } catch (error: any) {
+      console.error('Google Login Error:', error);
+      Alert.alert(t('common.error'), error.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -370,6 +422,18 @@ export default function LoginScreen() {
             style={styles.registerButton}
             disabled={loading}
           />
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t('auth.or', 'OR')}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <SocialLoginButton
+            onPress={handleGoogleLogin}
+            loading={loading}
+            title={t('auth.continueWithGoogle', 'Continue with Google')}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -505,7 +569,6 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
     zIndex: 1000,
   },
   loadingText: {
-    marginTop: 10,
     color: colors.primary,
     fontSize: 16,
     fontWeight: '600',

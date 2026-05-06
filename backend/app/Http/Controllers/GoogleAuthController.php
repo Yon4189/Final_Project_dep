@@ -19,6 +19,22 @@ class GoogleAuthController extends Controller
      */
     public function customerGoogleAuth(Request $request)
     {
+        return $this->processGoogleAuth($request, 'customer');
+    }
+
+    /**
+     * Authenticate a provider via Google ID token.
+     */
+    public function providerGoogleAuth(Request $request)
+    {
+        return $this->processGoogleAuth($request, 'provider');
+    }
+
+    /**
+     * Internal helper to handle Google Auth for both roles.
+     */
+    private function processGoogleAuth(Request $request, string $role)
+    {
         $request->validate([
             'id_token' => 'required|string',
         ]);
@@ -35,55 +51,69 @@ class GoogleAuthController extends Controller
             $picture = $payload['picture'] ?? null;
             $googleId = $payload['sub'];
 
-            // Find or create customer
-            $customer = Customer::where('email', $email)->first();
-
-            if (!$customer) {
-                // Auto-register
-                $customer = Customer::create([
-                    'fullname'   => $name,
-                    'email'      => $email,
-                    'phone'      => '0900000000', // placeholder — prompt user to update
-                    'password'   => bcrypt(Str::random(32)),
-                    'google_id'  => $googleId,
-                    'profilePicture' => $picture,
-                    'status'     => 'active',
-                ]);
-            } else {
-                // Update google_id if not set
-                if (!$customer->google_id) {
-                    $customer->update(['google_id' => $googleId]);
+            if ($role === 'customer') {
+                $user = Customer::where('email', $email)->first();
+                if (!$user) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'No account found with this Google email. Please register first.'
+                    ], 404);
                 }
+                
+                if (!$user->google_id) {
+                    $user->update(['google_id' => $googleId]);
+                }
+                $primaryKey = 'customerID';
+            } else {
+                $user = ServiceProvider::where('email', $email)->first();
+                if (!$user) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'No provider account found with this Google email. Please register first.'
+                    ], 404);
+                }
+                
+                if (!$user->google_id) {
+                    $user->update(['google_id' => $googleId]);
+                }
+                $primaryKey = 'providerID';
             }
 
-            if (isset($customer->status) && strtolower($customer->status) === 'suspended') {
+            if (isset($user->status) && strtolower($user->status) === 'suspended') {
                 return response()->json(['success' => false, 'message' => 'Your account has been suspended.'], 403);
             }
 
-            Cache::put("customer_online_{$customer->customerID}", true, now()->addMinutes(2));
-            $customer->update(['is_online' => true, 'last_seen_at' => now()]);
+            Cache::put("{$role}_online_{$user->$primaryKey}", true, now()->addMinutes(2));
+            $user->update(['is_online' => true, 'last_seen_at' => now()]);
 
-            $token = $customer->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
+            $token = $user->createToken('auth_token', ['*'], now()->addMinutes(1440))->plainTextToken;
+
+            $data = [
+                $primaryKey      => $user->$primaryKey,
+                'user_type'      => $role,
+                'token'          => $token,
+                'profilePicture' => $user->profilePicture,
+                'fullname'       => $user->fullname,
+                'email'          => $user->email,
+                'phone'          => $user->phone,
+                'service_city'   => $user->service_city,
+                'location'       => $user->location ?? null,
+                'is_online'      => true,
+            ];
+
+            if ($role === 'customer') {
+                $data['needs_phone_update'] = ($user->phone === '0900000000');
+            } else {
+                $data['status'] = $user->status;
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Google login successful',
-                'data' => [
-                    'customerID'     => $customer->customerID,
-                    'user_type'      => 'customer',
-                    'token'          => $token,
-                    'profilePicture' => $customer->profilePicture,
-                    'fullname'       => $customer->fullname,
-                    'email'          => $customer->email,
-                    'phone'          => $customer->phone,
-                    'service_city'   => $customer->service_city,
-                    'location'       => $customer->location,
-                    'is_online'      => true,
-                    'needs_phone_update' => ($customer->phone === '0900000000'),
-                ]
+                'data' => $data
             ]);
         } catch (\Exception $e) {
-            Log::error('Google auth error: ' . $e->getMessage());
+            Log::error("Google auth error ({$role}): " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Google authentication failed'], 500);
         }
     }
@@ -104,12 +134,19 @@ class GoogleAuthController extends Controller
 
         $payload = $response->json();
 
-        // Verify the audience matches our client ID
-        $clientId = config('services.google.client_id');
-        if ($clientId && isset($payload['aud']) && $payload['aud'] !== $clientId) {
+        // Verify the audience matches one of our allowed client IDs
+        $allowedClients = [
+            config('services.google.client_id'),
+            config('services.google.android_client_id'),
+            config('services.google.ios_client_id'),
+        ];
+        
+        $allowedClients = array_filter($allowedClients); // Remove null/empty values
+
+        if (!empty($allowedClients) && isset($payload['aud']) && !in_array($payload['aud'], $allowedClients)) {
             Log::warning('Google token audience mismatch', [
-                'expected' => $clientId,
-                'got'      => $payload['aud'],
+                'expected_one_of' => $allowedClients,
+                'got'             => $payload['aud'],
             ]);
             return null;
         }

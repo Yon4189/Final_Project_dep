@@ -68,6 +68,7 @@ class ServiceProvider extends Authenticatable
         'is_available',
         'is_online',
         'last_seen_at',
+        'google_id',
     ];
 
     protected $hidden = [

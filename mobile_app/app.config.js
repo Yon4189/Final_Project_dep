@@ -10,7 +10,6 @@ function isPrivateIpv4(address) {
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(address)
   );
 }
-
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
   const candidates = [];

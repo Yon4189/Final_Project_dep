@@ -23,6 +23,11 @@ import AppInput from '../../components/AppInput';
 import { ThemeColors } from '../constants/Colors';
 import { api } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import SocialLoginButton from '../../components/SocialLoginButton';
+import { useGoogleAuth } from '../services/googleAuth.service';
+import { useProviderStore } from '../store/providerStore';
+import { useCustomerStore } from '../store/customerStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ID_PHOTO_TYPES = ['Passport', 'Driver License', 'National ID', 'Kebele ID'];
 
@@ -48,6 +53,8 @@ export default function RegisterProviderScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const queryClient = useQueryClient();
+  const { handleGoogleSignIn, getGoogleUserInfo } = useGoogleAuth();
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
@@ -329,6 +336,34 @@ export default function RegisterProviderScreen() {
     }
   };
 
+  const handleGoogleRegister = async () => {
+    setLoading(true);
+    try {
+      const response = await getGoogleUserInfo();
+      
+      if (response && response.success === true) {
+        const userInfo = response.data;
+        setFormData(prev => ({
+          ...prev,
+          fullname: userInfo.name || prev.fullname,
+          email: userInfo.email || prev.email,
+        }));
+        
+        Alert.alert(
+          t('auth.success', 'Success'),
+          t('auth.googleInfoFetched', 'Email and name have been filled from your Google account. Please complete the rest of the form.')
+        );
+      } else if (response?.message !== 'Google sign-in cancelled') {
+        Alert.alert(t('common.error'), response?.message || 'Failed to fetch Google info');
+      }
+    } catch (error: any) {
+      console.error('Google Info Error:', error);
+      Alert.alert(t('common.error'), error.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (registrationSuccess) {
     return (
       <View style={styles.successContainer}>
@@ -417,6 +452,18 @@ export default function RegisterProviderScreen() {
 
           <AppInput label={t("auth.fullName", "Full Name")} value={formData.fullname} onChangeText={(t) => setFormData({ ...formData, fullname: t })} placeholder={t("auth.fullNamePlaceholder", "John Doe")} required />
           <AppInput label={t("auth.email", "Email")} value={formData.email} onChangeText={(t) => setFormData({ ...formData, email: t })} placeholder={t("login.emailPlaceholder", "email@example.com")} autoCapitalize="none" keyboardType="email-address" required />
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t('auth.or', 'OR')}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <SocialLoginButton
+            onPress={handleGoogleRegister}
+            loading={loading}
+            title={t('auth.continueWithGoogle', 'Continue with Google')}
+          />
 
           <AppInput label={t("auth.phoneNumber", "Phone Number")} value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t.replace(/[^0-9]/g, '') })} placeholder="0912345678" keyboardType="phone-pad" maxLength={10} required />
 
@@ -544,6 +591,8 @@ export default function RegisterProviderScreen() {
           <TouchableOpacity style={styles.loginLink} onPress={() => router.push('/login')}>
             <Text style={styles.loginText}>{t("auth.alreadyHaveAccount", "Already have an account?")} <Text style={styles.loginLinkText}>{t("auth.signIn", "Sign In")}</Text></Text>
           </TouchableOpacity>
+
+
         </View>
 
         <Modal visible={showIdTypeModal} animationType="slide" transparent>
@@ -572,7 +621,11 @@ export default function RegisterProviderScreen() {
           </View>
         </Modal>
 
-        {serviceOfferings.map((_, index) => renderServiceCategoryModal(index))}
+        {serviceOfferings.map((_, index) => (
+          <React.Fragment key={`category-modal-${index}`}>
+            {renderServiceCategoryModal(index)}
+          </React.Fragment>
+        ))}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -676,4 +729,19 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   errorText: { marginTop: 12, color: colors.error, fontSize: 14, textAlign: 'center' },
   retryButton: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 8 },
   retryText: { color: '#FFFFFF', fontWeight: '600' },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: colors.text.secondary,
+    fontSize: 14,
+  },
 });
