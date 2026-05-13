@@ -571,6 +571,36 @@ export interface SearchSuggestion {
   category?: string;
 }
 
+// ==================== Chat & Conversation Types ====================
+
+export interface Conversation {
+  conversationID: number;
+  customerID: number;
+  providerID: number;
+  bookingID: number | null;
+  last_message: string | null;
+  last_message_at: string | null;
+  customer_unread_count: number;
+  provider_unread_count: number;
+  status: string;
+  
+  // Relations
+  provider?: ServiceProvider;
+  customer?: User;
+  other_party?: ServiceProvider;
+  unread_count?: number;
+  latestMessage?: any;
+  booking?: any;
+}
+
+export interface ConversationListResponse {
+  data: Conversation[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
 // ==================== Notification Types ====================
 
 export type NotificationType =

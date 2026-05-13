@@ -711,6 +711,12 @@ class CustomerService {
   async getServicesByCategory(categoryId: string): Promise<ApiResponse<any[]>> {
     return api.get<any[]>(`/categories/${categoryId}/services`);
   }
+
+  // ==================== Chat & Conversations ====================
+
+  async getConversations(): Promise<ApiResponse<any>> {
+    return api.get<any>('/chat/conversations');
+  }
 }
 
 export const customerService = new CustomerService();
