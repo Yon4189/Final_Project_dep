@@ -300,7 +300,8 @@ export type BookingStatus =
   | 'completed'
   | 'cancelled'
   | 'disputed'
-  | 'refunded';
+  | 'refunded'
+  | 'service_confirmed';
 
 export type PaymentStatus =
   | 'pending'
