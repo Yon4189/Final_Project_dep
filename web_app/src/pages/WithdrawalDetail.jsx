@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, AlertTriangle, CheckCircle, XCircle, Wallet, User, DollarSign, TrendingUp, Clock, AlertCircle } from 'lucide-react';
 import { getWithdrawalDetails, approveWithdrawal, rejectWithdrawal } from '../api/withdrawal';
 
 const WithdrawalDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,7 +27,7 @@ const WithdrawalDetail = () => {
       setData(response.data);
     } catch (err) {
       console.error('Failed to fetch withdrawal details:', err);
-      setError('Failed to load withdrawal details');
+      setError(t('withdrawals_not_found'));
     } finally {
       setLoading(false);
     }
@@ -35,10 +37,10 @@ const WithdrawalDetail = () => {
     setProcessing(true);
     try {
       await approveWithdrawal(id);
-      alert('Withdrawal approved successfully!');
+      alert(t('withdrawals_success_approved'));
       navigate('/admin/withdrawals');
     } catch (err) {
-      alert('Failed to approve withdrawal: ' + (err.response?.data?.message || err.message));
+      alert(t('alert_action_failed') + ': ' + (err.response?.data?.message || err.message));
     } finally {
       setProcessing(false);
       setShowApprovalDialog(false);
@@ -49,10 +51,10 @@ const WithdrawalDetail = () => {
     setProcessing(true);
     try {
       await rejectWithdrawal(id, reason);
-      alert('Withdrawal rejected successfully!');
+      alert(t('withdrawals_success_rejected'));
       navigate('/admin/withdrawals');
     } catch (err) {
-      alert('Failed to reject withdrawal: ' + (err.response?.data?.message || err.message));
+      alert(t('alert_action_failed') + ': ' + (err.response?.data?.message || err.message));
     } finally {
       setProcessing(false);
       setShowRejectionDialog(false);
@@ -64,7 +66,7 @@ const WithdrawalDetail = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-admin-text-muted">Loading withdrawal details...</p>
+          <p className="text-admin-text-muted">{t('withdrawals_fetching_details')}</p>
         </div>
       </div>
     );
@@ -74,22 +76,22 @@ const WithdrawalDetail = () => {
     return (
       <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
         <AlertCircle size={24} className="text-red-500 mb-2" />
-        <p className="text-red-700">{error || 'Withdrawal not found'}</p>
+        <p className="text-red-700">{error || t('withdrawals_not_found')}</p>
         <button onClick={() => navigate('/admin/withdrawals')} className="mt-4 text-blue-500 hover:underline">
-          Back to Withdrawals
+          {t('withdrawals_back')}
         </button>
       </div>
     );
   }
 
-  const { withdrawal, provider_identity, financial_info, business_metrics, withdrawal_history, recent_activity, risk_analysis, compliance_checks } = data;
+  const { withdrawal, provider_identity, financial_info, business_metrics, risk_analysis, compliance_checks, recent_activity } = data;
   const isPending = withdrawal.status === 'pending';
 
   const getStatusBadge = (status) => {
     const config = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
-      approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Approved' },
-      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejected' },
+      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: t('status_pending') },
+      approved: { bg: 'bg-green-100', text: 'text-green-800', label: t('status_approved') },
+      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: t('status_rejected') },
     };
     const c = config[status] || config.pending;
     return <span className={`px-4 py-2 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>{c.label}</span>;
@@ -97,13 +99,13 @@ const WithdrawalDetail = () => {
 
   const getRiskBadge = (level) => {
     const config = {
-      low: { bg: 'bg-green-100', text: 'text-green-800' },
-      medium: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-      high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-      critical: { bg: 'bg-red-100', text: 'text-red-800' },
+      low: { bg: 'bg-green-100', text: 'text-green-800', label: t('priority_low') },
+      medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: t('priority_medium') },
+      high: { bg: 'bg-orange-100', text: 'text-orange-800', label: t('priority_high') },
+      critical: { bg: 'bg-red-100', text: 'text-red-800', label: t('priority_urgent') },
     };
     const c = config[level] || config.low;
-    return <span className={`px-3 py-1 rounded-full text-xs font-bold ${c.bg} ${c.text} uppercase`}>{level}</span>;
+    return <span className={`px-3 py-1 rounded-full text-xs font-bold ${c.bg} ${c.text} uppercase`}>{c.label}</span>;
   };
 
   return (
@@ -115,7 +117,7 @@ const WithdrawalDetail = () => {
             <ArrowLeft size={24} />
           </button>
           <div>
-            <h1 className="text-2xl font-black text-admin-text">Withdrawal Details</h1>
+            <h1 className="text-2xl font-black text-admin-text">{t('withdrawals_details_title')}</h1>
             <p className="text-sm text-admin-text-muted font-mono">{withdrawal.withdrawal_ref}</p>
           </div>
           {getStatusBadge(withdrawal.status)}
@@ -127,14 +129,14 @@ const WithdrawalDetail = () => {
               className="px-6 py-2.5 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
             >
               <CheckCircle size={18} />
-              Approve
+              {t('withdrawals_approve')}
             </button>
             <button
               onClick={() => setShowRejectionDialog(true)}
               className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
             >
               <XCircle size={18} />
-              Reject
+              {t('withdrawals_reject')}
             </button>
           </div>
         )}
@@ -144,59 +146,59 @@ const WithdrawalDetail = () => {
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Provider Identity */}
-          <Section title="Provider Identity" icon={<User size={20} />}>
-            <InfoRow label="Full Name" value={provider_identity.fullname} />
-            <InfoRow label="Provider ID" value={provider_identity.providerID} />
-            <InfoRow label="Phone" value={provider_identity.phone} />
-            <InfoRow label="Email" value={provider_identity.email} />
-            <InfoRow label="Account Created" value={new Date(provider_identity.created_at).toLocaleDateString()} />
-            <InfoRow label="Status" value={provider_identity.account_status} />
+          <Section title={t('withdrawals_provider_identity')} icon={<User size={20} />}>
+            <InfoRow label={t('vqueue_name')} value={provider_identity.fullname} />
+            <InfoRow label={t('vqueue_id')} value={provider_identity.providerID} />
+            <InfoRow label={t('profile_phone')} value={provider_identity.phone} />
+            <InfoRow label={t('profile_email')} value={provider_identity.email} />
+            <InfoRow label={t('user_mgmt_joined')} value={new Date(provider_identity.created_at).toLocaleDateString()} />
+            <InfoRow label={t('vqueue_status')} value={t(`status_${provider_identity.account_status}`) || provider_identity.account_status} />
           </Section>
 
           {/* Financial Information */}
-          <Section title="Financial Information" icon={<DollarSign size={20} />}>
-            <InfoRow label="Available Balance" value={`${financial_info.available_balance} ETB`} highlight />
-            <InfoRow label="Pending Balance" value={`${financial_info.pending_balance} ETB`} />
-            <InfoRow label="Requested Amount" value={`${financial_info.requested_amount} ETB`} highlight />
-            <InfoRow label="Total Earnings" value={`${financial_info.total_earnings} ETB`} />
-            <InfoRow label="Previous Withdrawals" value={financial_info.previous_withdrawals_count} />
-            <InfoRow label="Total Withdrawn" value={`${financial_info.total_withdrawn} ETB`} />
+          <Section title={t('withdrawals_financial_info')} icon={<DollarSign size={20} />}>
+            <InfoRow label={t('withdrawals_available_balance')} value={`${financial_info.available_balance} ETB`} highlight />
+            <InfoRow label={t('withdrawals_pending_balance')} value={`${financial_info.pending_balance} ETB`} />
+            <InfoRow label={t('withdrawals_requested_amount')} value={`${financial_info.requested_amount} ETB`} highlight />
+            <InfoRow label={t('withdrawals_total_earnings')} value={`${financial_info.total_earnings} ETB`} />
+            <InfoRow label={t('withdrawals_prev_withdrawals')} value={financial_info.previous_withdrawals_count} />
+            <InfoRow label={t('withdrawals_total_withdrawn')} value={`${financial_info.total_withdrawn} ETB`} />
           </Section>
 
-          {/* Bank Details */}
-          <Section title="Payment Details" icon={<Wallet size={20} />}>
-            <InfoRow label="Payment Method" value={withdrawal.payment_method} />
+          {/* Payment Details */}
+          <Section title={t('withdrawals_payment_details')} icon={<Wallet size={20} />}>
+            <InfoRow label={t('withdrawals_col_method')} value={t(`pay_method_${withdrawal.payment_method}`) || withdrawal.payment_method} />
             {withdrawal.payment_method === 'bank' && (
               <>
-                <InfoRow label="Bank Name" value={withdrawal.provider_bank_name} />
-                <InfoRow label="Account Number" value={withdrawal.provider_account_number} />
-                <InfoRow label="Account Holder" value={withdrawal.provider_account_holder_name} />
+                <InfoRow label={t('withdrawals_bank_name')} value={withdrawal.provider_bank_name} />
+                <InfoRow label={t('withdrawals_account_number')} value={withdrawal.provider_account_number} />
+                <InfoRow label={t('withdrawals_account_holder')} value={withdrawal.provider_account_holder_name} />
               </>
             )}
             {withdrawal.payment_method === 'telebir' && (
               <>
-                <InfoRow label="TeleBirr Number" value={withdrawal.telebir_number} />
-                <InfoRow label="Holder Name" value={withdrawal.telebir_holder_name} />
+                <InfoRow label={t('withdrawals_telebirr_number')} value={withdrawal.telebir_number} />
+                <InfoRow label={t('withdrawals_holder_name')} value={withdrawal.telebir_holder_name} />
               </>
             )}
           </Section>
 
           {/* Business Metrics */}
-          <Section title="Business Metrics" icon={<TrendingUp size={20} />}>
-            <InfoRow label="Completed Bookings" value={business_metrics.completed_bookings} />
-            <InfoRow label="Average Rating" value={`${business_metrics.average_rating.toFixed(1)} / 5.0`} />
-            <InfoRow label="Total Reviews" value={business_metrics.total_reviews} />
-            <InfoRow label="Service Category" value={business_metrics.service_category} />
+          <Section title={t('withdrawals_business_metrics')} icon={<TrendingUp size={20} />}>
+            <InfoRow label={t('withdrawals_completed_bookings')} value={business_metrics.completed_bookings} />
+            <InfoRow label={t('withdrawals_avg_rating')} value={`${business_metrics.average_rating.toFixed(1)} / 5.0`} />
+            <InfoRow label={t('withdrawals_total_reviews')} value={business_metrics.total_reviews} />
+            <InfoRow label={t('withdrawals_service_category')} value={business_metrics.service_category} />
           </Section>
         </div>
 
         {/* Right Column */}
         <div className="space-y-6">
           {/* Risk Analysis */}
-          <Section title="Risk Analysis" icon={<AlertTriangle size={20} />}>
+          <Section title={t('withdrawals_risk_analysis')} icon={<AlertTriangle size={20} />}>
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-admin-text-muted">Risk Level</span>
+                <span className="text-sm font-semibold text-admin-text-muted">{t('withdrawals_risk_level')}</span>
                 {getRiskBadge(risk_analysis.risk_level)}
               </div>
             </div>
@@ -223,12 +225,12 @@ const WithdrawalDetail = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-green-600 dark:text-green-400">No risk warnings</p>
+              <p className="text-sm text-green-600 dark:text-green-400">{t('withdrawals_no_risks')}</p>
             )}
           </Section>
 
           {/* Compliance Checks */}
-          <Section title="Compliance Checks" icon={<CheckCircle size={20} />}>
+          <Section title={t('withdrawals_compliance_checks')} icon={<CheckCircle size={20} />}>
             {compliance_checks.violations.length > 0 ? (
               <div className="space-y-2">
                 {compliance_checks.violations.map((violation, idx) => (
@@ -242,16 +244,16 @@ const WithdrawalDetail = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-green-600">All compliance checks passed</p>
+              <p className="text-sm text-green-600">{t('withdrawals_compliance_passed')}</p>
             )}
           </Section>
 
           {/* Recent Activity */}
-          <Section title="Recent Activity (30 days)" icon={<Clock size={20} />}>
-            <InfoRow label="Bookings" value={recent_activity.bookings_last_30_days} />
-            <InfoRow label="Earnings" value={`${recent_activity.earnings_last_30_days} ETB`} />
-            <InfoRow label="Avg Booking Value" value={`${recent_activity.average_booking_value.toFixed(2)} ETB`} />
-            <InfoRow label="Recent Reviews" value={recent_activity.recent_reviews_count} />
+          <Section title={t('withdrawals_recent_activity')} icon={<Clock size={20} />}>
+            <InfoRow label={t('sidebar_bookings')} value={recent_activity.bookings_last_30_days} />
+            <InfoRow label={t('dashboard_revenue')} value={`${recent_activity.earnings_last_30_days} ETB`} />
+            <InfoRow label={t('withdrawals_avg_booking_val')} value={`${recent_activity.average_booking_value.toFixed(2)} ETB`} />
+            <InfoRow label={t('withdrawals_recent_reviews')} value={recent_activity.recent_reviews_count} />
           </Section>
         </div>
       </div>
@@ -259,22 +261,23 @@ const WithdrawalDetail = () => {
       {/* Approval Dialog */}
       {showApprovalDialog && (
         <Dialog
-          title="Approve Withdrawal"
+          title={t('withdrawals_approve')}
           onClose={() => setShowApprovalDialog(false)}
           onConfirm={handleApprove}
-          confirmText="Confirm Approval"
+          confirmText={t('withdrawals_confirm_approval')}
           confirmColor="green"
           processing={processing}
+          t={t}
         >
           <div className="space-y-4">
-            <p className="text-admin-text">Are you sure you want to approve this withdrawal?</p>
+            <p className="text-admin-text">{t('withdrawals_approve_confirm')}</p>
             <div className="bg-admin-bg p-4 rounded-xl space-y-2">
-              <InfoRow label="Provider" value={provider_identity.fullname} />
-              <InfoRow label="Amount" value={`${withdrawal.amount} ${withdrawal.currency}`} />
-              <InfoRow label="Payment Method" value={withdrawal.payment_method} />
+              <InfoRow label={t('vqueue_provider')} value={provider_identity.fullname} />
+              <InfoRow label={t('withdrawals_col_amount')} value={`${withdrawal.amount} ${withdrawal.currency}`} />
+              <InfoRow label={t('withdrawals_col_method')} value={withdrawal.payment_method} />
             </div>
             <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-              <p className="text-xs text-yellow-800">⚠️ This action cannot be undone. Funds will be transferred to the provider.</p>
+              <p className="text-xs text-yellow-800">⚠️ {t('withdrawals_undo_warning')}</p>
             </div>
           </div>
         </Dialog>
@@ -288,6 +291,7 @@ const WithdrawalDetail = () => {
           processing={processing}
           withdrawal={withdrawal}
           provider={provider_identity}
+          t={t}
         />
       )}
     </div>
@@ -312,9 +316,9 @@ const InfoRow = ({ label, value, highlight }) => (
   </div>
 );
 
-const Dialog = ({ title, children, onClose, onConfirm, confirmText, confirmColor, processing }) => (
+const Dialog = ({ title, children, onClose, onConfirm, confirmText, confirmColor, processing, t }) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+    <div className="bg-white dark:bg-admin-card rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-admin-border">
       <h3 className="text-xl font-bold text-admin-text mb-4">{title}</h3>
       {children}
       <div className="flex gap-3 mt-6">
@@ -323,38 +327,38 @@ const Dialog = ({ title, children, onClose, onConfirm, confirmText, confirmColor
           disabled={processing}
           className="flex-1 px-4 py-2 bg-admin-bg text-admin-text rounded-xl font-semibold hover:bg-admin-border transition-colors disabled:opacity-50"
         >
-          Cancel
+          {t('modal_cancel')}
         </button>
         <button
           onClick={onConfirm}
           disabled={processing}
-          className={`flex-1 px-4 py-2 bg-${confirmColor}-500 text-white rounded-xl font-semibold hover:bg-${confirmColor}-600 transition-colors disabled:opacity-50`}
+          className={`flex-1 px-4 py-2 bg-${confirmColor}-500 text-white rounded-xl font-semibold hover:bg-${confirmColor}-600 transition-colors disabled:opacity-50 shadow-lg shadow-${confirmColor}-500/30`}
         >
-          {processing ? 'Processing...' : confirmText}
+          {processing ? t('processing') : confirmText}
         </button>
       </div>
     </div>
   </div>
 );
 
-const RejectionDialog = ({ onClose, onConfirm, processing, withdrawal, provider }) => {
+const RejectionDialog = ({ onClose, onConfirm, processing, withdrawal, provider, t }) => {
   const [reason, setReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [error, setError] = useState('');
 
   const suggestedReasons = [
-    'Insufficient verification documents',
-    'Account holder name mismatch',
-    'Suspicious activity detected',
-    'Active disputes pending resolution',
-    'Compliance violation',
-    'Other'
+    { key: 'withdrawals_reason_insufficient', value: 'Insufficient verification documents' },
+    { key: 'withdrawals_reason_mismatch', value: 'Account holder name mismatch' },
+    { key: 'withdrawals_reason_suspicious', value: 'Suspicious activity detected' },
+    { key: 'withdrawals_reason_disputes', value: 'Active disputes pending resolution' },
+    { key: 'withdrawals_reason_compliance', value: 'Compliance violation' },
+    { key: 'withdrawals_reason_other', value: 'Other' }
   ];
 
   const handleConfirm = () => {
     const finalReason = reason === 'Other' ? customReason : reason;
     if (!finalReason || finalReason.length < 5) {
-      setError('Please provide a reason (minimum 5 characters)');
+      setError(t('withdrawals_reason_error'));
       return;
     }
     setError('');
@@ -363,36 +367,36 @@ const RejectionDialog = ({ onClose, onConfirm, processing, withdrawal, provider 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-        <h3 className="text-xl font-bold text-admin-text mb-4">Reject Withdrawal</h3>
+      <div className="bg-white dark:bg-admin-card rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-admin-border">
+        <h3 className="text-xl font-bold text-admin-text mb-4">{t('withdrawals_reject')}</h3>
         <div className="space-y-4">
           <div className="bg-admin-bg p-4 rounded-xl space-y-2">
-            <InfoRow label="Provider" value={provider.fullname} />
-            <InfoRow label="Amount" value={`${withdrawal.amount} ${withdrawal.currency}`} />
+            <InfoRow label={t('vqueue_provider')} value={provider.fullname} />
+            <InfoRow label={t('withdrawals_col_amount')} value={`${withdrawal.amount} ${withdrawal.currency}`} />
           </div>
           
           <div>
-            <label className="block text-sm font-semibold text-admin-text mb-2">Rejection Reason</label>
+            <label className="block text-sm font-semibold text-admin-text mb-2">{t('withdrawals_reject_reason')}</label>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full px-4 py-2 bg-admin-bg border border-admin-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-admin-bg border border-admin-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-admin-text"
             >
-              <option value="">Select a reason...</option>
+              <option value="">{t('withdrawals_select_reason')}</option>
               {suggestedReasons.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r.key} value={r.value}>{t(r.key)}</option>
               ))}
             </select>
           </div>
 
           {reason === 'Other' && (
             <div>
-              <label className="block text-sm font-semibold text-admin-text mb-2">Custom Reason</label>
+              <label className="block text-sm font-semibold text-admin-text mb-2">{t('withdrawals_custom_reason')}</label>
               <textarea
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
-                placeholder="Enter custom reason (minimum 5 characters)"
-                className="w-full px-4 py-2 bg-admin-bg border border-admin-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none"
+                placeholder={t('withdrawals_reason_placeholder')}
+                className="w-full px-4 py-2 bg-admin-bg border border-admin-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none text-admin-text"
               />
             </div>
           )}
@@ -406,14 +410,14 @@ const RejectionDialog = ({ onClose, onConfirm, processing, withdrawal, provider 
             disabled={processing}
             className="flex-1 px-4 py-2 bg-admin-bg text-admin-text rounded-xl font-semibold hover:bg-admin-border transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t('modal_cancel')}
           </button>
           <button
             onClick={handleConfirm}
             disabled={processing}
-            className="flex-1 px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 shadow-lg shadow-red-500/30"
           >
-            {processing ? 'Processing...' : 'Confirm Rejection'}
+            {processing ? t('processing') : t('withdrawals_confirm_rejection')}
           </button>
         </div>
       </div>

@@ -198,7 +198,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             onClick={() => !isMini && setIsVerificationOpen(!isVerificationOpen)}
             className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isVerificationActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
               }`}
-            title={isMini ? "Verification" : ""}
+            title={isMini ? t('sidebar_verification') : ""}
           >
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <UserCheck
@@ -261,7 +261,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             onClick={() => !isMini && setIsUsersOpen(!isUsersOpen)}
             className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isUsersActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
               }`}
-            title={isMini ? "Users" : ""}
+            title={isMini ? t('sidebar_system_users') : ""}
           >
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <Users
@@ -308,7 +308,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             onClick={() => !isMini && setIsBookingsOpen(!isBookingsOpen)}
             className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isBookingsActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
               }`}
-            title={isMini ? "Bookings" : ""}
+            title={isMini ? t('sidebar_bookings') : ""}
           >
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <ClipboardList
@@ -359,7 +359,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40'
             : 'hover:bg-white/5 hover:text-white'
             }`}
-          title={isMini ? "Withdrawals" : ""}
+          title={isMini ? t('sidebar_withdrawals') : ""}
         >
           {location.pathname.startsWith('/admin/withdrawals') && (
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
@@ -372,7 +372,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
           {!isMini && (
             <div className="flex items-center justify-between flex-1">
               <span className={`text-sm tracking-wide overflow-hidden whitespace-nowrap transition-all duration-300 ${location.pathname.startsWith('/admin/withdrawals') ? 'font-bold' : 'font-medium'}`}>
-                Withdrawals
+                {t('sidebar_withdrawals')}
               </span>
               {pendingWithdrawalsCount > 0 && (
                 <span className={`text-xs px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center ${location.pathname.startsWith('/admin/withdrawals') ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>
@@ -412,7 +412,7 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
         <button
           onClick={handleLogout}
           className={`group flex items-center rounded-2xl transition-all duration-300 w-full font-black text-xs uppercase tracking-widest shadow-lg shadow-red-500/0 hover:shadow-red-500/20 active:scale-95 ${!isMini ? 'gap-4 bg-transparent text-red-400 hover:text-white hover:bg-red-500 p-4' : 'justify-center py-6 text-red-500 hover:bg-red-500 hover:text-white'} `}
-          title={isMini ? "Logout" : ""}
+          title={isMini ? t('logout') : ""}
         >
           <LogOut size={18} className="group-hover:rotate-12 transition-transform shrink-0" />
           {!isMini && <span>{t('sidebar_logout')}</span>}

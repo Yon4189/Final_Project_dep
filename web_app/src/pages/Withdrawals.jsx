@@ -56,13 +56,13 @@ const Withdrawals = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
-      approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Approved' },
-      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejected' },
-      processing: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Processing' },
-      completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Completed' },
-      failed: { bg: 'bg-rose-100', text: 'text-rose-800', label: 'Failed' },
-      cancelled: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Cancelled' }
+      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: t('status_pending') },
+      approved: { bg: 'bg-green-100', text: 'text-green-800', label: t('status_approved') },
+      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: t('status_rejected') },
+      processing: { bg: 'bg-blue-100', text: 'text-blue-800', label: t('status_processing') },
+      completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: t('status_completed') },
+      failed: { bg: 'bg-rose-100', text: 'text-rose-800', label: t('status_failed') },
+      cancelled: { bg: 'bg-gray-100', text: 'text-gray-800', label: t('status_cancelled') }
     };
     const config = statusConfig[status] || statusConfig.pending;
     return (
@@ -82,23 +82,23 @@ const Withdrawals = () => {
           <div className="flex items-center gap-3">
             <Wallet size={28} className="text-blue-500" />
             <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
-              Withdrawal Requests
+              {t('withdrawals_title')}
             </h1>
             {pendingCount > 0 && (
               <span className="bg-yellow-500 text-white text-[10px] px-3 py-1 rounded-full font-black shadow-sm animate-pulse">
-                {pendingCount} Pending
+                {t('withdrawals_pending_count', { count: pendingCount })}
               </span>
             )}
           </div>
           <p className="text-admin-text-muted text-xs font-black uppercase tracking-widest italic mt-1">
-            Manage provider withdrawal requests
+            {t('withdrawals_subtitle')}
           </p>
         </div>
 
         <button
           onClick={() => fetchWithdrawals(pagination.current_page)}
           className="p-2.5 bg-admin-card border border-admin-border rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="Refresh data"
+          aria-label={t('common_refresh') || "Refresh data"}
         >
           <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
         </button>
@@ -119,7 +119,7 @@ const Withdrawals = () => {
                     : 'bg-admin-bg text-admin-text-muted hover:bg-admin-border'
                 }`}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {t(`status_${status}`)}
               </button>
             ))}
           </div>
@@ -129,7 +129,7 @@ const Withdrawals = () => {
             <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-admin-text-muted" />
             <input
               type="text"
-              placeholder="Search by provider name, ID, or reference..."
+              placeholder={t('withdrawals_search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-admin-bg border border-admin-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -151,12 +151,12 @@ const Withdrawals = () => {
         {loading ? (
           <div className="p-8 text-center">
             <RefreshCw size={32} className="animate-spin mx-auto text-blue-500 mb-2" />
-            <p className="text-admin-text-muted">Loading withdrawals...</p>
+            <p className="text-admin-text-muted">{t('withdrawals_loading')}</p>
           </div>
         ) : withdrawals.length === 0 ? (
           <div className="p-8 text-center">
             <Wallet size={48} className="mx-auto text-admin-text-muted mb-2" />
-            <p className="text-admin-text-muted">No withdrawal requests found</p>
+            <p className="text-admin-text-muted">{t('withdrawals_no_data')}</p>
           </div>
         ) : (
           <>
@@ -165,25 +165,25 @@ const Withdrawals = () => {
                 <thead className="bg-admin-bg border-b border-admin-border">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-bold text-admin-text-muted uppercase tracking-wider">
-                      Reference
+                      {t('withdrawals_col_ref')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-admin-text-muted uppercase tracking-wider">
-                      Provider
+                      {t('withdrawals_col_provider')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-admin-text-muted uppercase tracking-wider">
-                      Amount
+                      {t('withdrawals_col_amount')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-admin-text-muted uppercase tracking-wider">
-                      Payment Method
+                      {t('withdrawals_col_method')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-admin-text-muted uppercase tracking-wider">
-                      Date
+                      {t('withdrawals_col_date')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-admin-text-muted uppercase tracking-wider">
-                      Status
+                      {t('withdrawals_col_status')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-admin-text-muted uppercase tracking-wider">
-                      Actions
+                      {t('withdrawals_col_actions')}
                     </th>
                   </tr>
                 </thead>
@@ -225,7 +225,7 @@ const Withdrawals = () => {
                           }}
                           className="text-blue-500 hover:text-blue-700 font-semibold"
                         >
-                          View Details
+                          {t('withdrawals_view_details')}
                         </button>
                       </td>
                     </tr>
@@ -238,7 +238,11 @@ const Withdrawals = () => {
             {pagination.last_page > 1 && (
               <div className="px-6 py-4 bg-admin-bg border-t border-admin-border flex items-center justify-between">
                 <div className="text-sm text-admin-text-muted">
-                  Showing {pagination.from} to {pagination.to} of {pagination.total} results
+                  {t('serv_showing_x_of_y', { 
+                    start: pagination.from, 
+                    end: pagination.to, 
+                    total: pagination.total 
+                  })}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -246,17 +250,17 @@ const Withdrawals = () => {
                     disabled={pagination.current_page === 1}
                     className="px-4 py-2 bg-admin-card border border-admin-border rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-admin-bg transition-colors"
                   >
-                    Previous
+                    {t('common_previous') || 'Previous'}
                   </button>
                   <span className="px-4 py-2 text-sm font-semibold text-admin-text">
-                    Page {pagination.current_page} of {pagination.last_page}
+                    {t('common_page_of', { current: pagination.current_page, total: pagination.last_page }) || `Page ${pagination.current_page} of ${pagination.last_page}`}
                   </span>
                   <button
                     onClick={() => fetchWithdrawals(pagination.current_page + 1)}
                     disabled={pagination.current_page === pagination.last_page}
                     className="px-4 py-2 bg-admin-card border border-admin-border rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-admin-bg transition-colors"
                   >
-                    Next
+                    {t('common_next') || 'Next'}
                   </button>
                 </div>
               </div>
