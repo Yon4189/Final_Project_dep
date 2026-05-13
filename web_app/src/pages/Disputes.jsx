@@ -415,9 +415,6 @@ const Disputes = () => {
             <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Disputes</h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-[#40E0D0] hover:bg-[#36c9ba] text-white rounded-xl text-xs font-extrabold shadow-lg shadow-teal-500/20 transition-all">
-              <ExternalLink size={16} /> Export
-            </button>
           </div>
         </div>
       )}

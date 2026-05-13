@@ -144,36 +144,39 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
             }`}
           title={isMini ? t('sidebar_dashboard') : ""}
         >
-          {location.pathname === '/' && (
+          {location.pathname === '/admin' && (
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
           )}
           <LayoutDashboard
             size={20}
-            className={`shrink-0 transition-transform duration-300 group-hover:scale-110 ${location.pathname === '/' ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
-            strokeWidth={location.pathname === '/' ? 2.5 : 2}
+            className={`shrink-0 transition-transform duration-300 group-hover:scale-110 ${location.pathname === '/admin' ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
+            strokeWidth={location.pathname === '/admin' ? 2.5 : 2}
           />
-          {!isMini && <span className={`text-sm tracking-wide overflow-hidden whitespace-nowrap transition-all duration-300 ${location.pathname === '/' ? 'font-bold' : 'font-medium'}`}>{t('sidebar_dashboard')}</span>}
+          {!isMini && <span className={`text-sm tracking-wide overflow-hidden whitespace-nowrap transition-all duration-300 ${location.pathname === '/admin' ? 'font-bold' : 'font-medium'}`}>{t('sidebar_dashboard')}</span>}
         </Link>
 
         {/* Manage Services */}
         <div className="mt-4 px-3">
           <button
             onClick={() => !isMini && setIsServicesOpen(!isServicesOpen)}
-            className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isServicesActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
+            className={`group w-full flex items-center rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isServicesActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
               }`}
             title={isMini ? t('sidebar_services') : ""}
           >
+            {isServicesActive && (
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
+            )}
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <Folder
                 size={20}
-                className={`shrink-0 transition-colors duration-300 ${isServicesActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
+                className={`shrink-0 transition-colors duration-300 ${isServicesActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isServicesActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide overflow-hidden whitespace-nowrap">{t('sidebar_services')}</span>}
+              {!isMini && <span className={`text-sm tracking-wide overflow-hidden whitespace-nowrap ${isServicesActive ? 'font-bold' : 'font-medium'}`}>{t('sidebar_services')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isServicesOpen ? 'rotate-180' : ''}`}>
-                <ChevronDown size={18} className={isServicesActive ? 'text-blue-400' : 'text-slate-600'} />
+                <ChevronDown size={18} className={isServicesActive ? 'text-white/70' : 'text-slate-600'} />
               </div>
             )}
           </button>
@@ -196,21 +199,24 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
         <div className="mt-2 px-3">
           <button
             onClick={() => !isMini && setIsVerificationOpen(!isVerificationOpen)}
-            className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isVerificationActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
+            className={`group w-full flex items-center rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isVerificationActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
               }`}
             title={isMini ? "Verification" : ""}
           >
+            {isVerificationActive && (
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
+            )}
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <UserCheck
                 size={20}
-                className={`shrink-0 transition-colors duration-300 ${isVerificationActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
+                className={`shrink-0 transition-colors duration-300 ${isVerificationActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isVerificationActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide">{t('sidebar_verification')}</span>}
+              {!isMini && <span className={`text-sm tracking-wide ${isVerificationActive ? 'font-bold' : 'font-medium'}`}>{t('sidebar_verification')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isVerificationOpen ? 'rotate-180' : ''}`}>
-                <ChevronDown size={18} className={isVerificationActive ? 'text-blue-400' : 'text-slate-600'} />
+                <ChevronDown size={18} className={isVerificationActive ? 'text-white/70' : 'text-slate-600'} />
               </div>
             )}
           </button>
@@ -259,21 +265,24 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
         <div className="mt-2 px-3">
           <button
             onClick={() => !isMini && setIsUsersOpen(!isUsersOpen)}
-            className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isUsersActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
+            className={`group w-full flex items-center rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isUsersActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
               }`}
             title={isMini ? "Users" : ""}
           >
+            {isUsersActive && (
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
+            )}
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <Users
                 size={20}
-                className={`shrink-0 transition-colors duration-300 ${isUsersActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
+                className={`shrink-0 transition-colors duration-300 ${isUsersActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isUsersActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide">{t('sidebar_system_users')}</span>}
+              {!isMini && <span className={`text-sm tracking-wide ${isUsersActive ? 'font-bold' : 'font-medium'}`}>{t('sidebar_system_users')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isUsersOpen ? 'rotate-180' : ''}`}>
-                <ChevronDown size={18} className={isUsersActive ? 'text-blue-400' : 'text-slate-600'} />
+                <ChevronDown size={18} className={isUsersActive ? 'text-white/70' : 'text-slate-600'} />
               </div>
             )}
           </button>
@@ -306,21 +315,24 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
         <div className="mt-2 px-3">
           <button
             onClick={() => !isMini && setIsBookingsOpen(!isBookingsOpen)}
-            className={`group w-full flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isBookingsActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
+            className={`group w-full flex items-center rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'justify-between px-6 py-4' : 'justify-center py-4'} ${isBookingsActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
               }`}
             title={isMini ? "Bookings" : ""}
           >
+            {isBookingsActive && (
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
+            )}
             <div className={`flex items-center ${!isMini ? 'gap-4' : 'justify-center'}`}>
               <ClipboardList
                 size={20}
-                className={`shrink-0 transition-colors duration-300 ${isBookingsActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
+                className={`shrink-0 transition-colors duration-300 ${isBookingsActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
                 strokeWidth={isBookingsActive ? 2.5 : 2}
               />
-              {!isMini && <span className="text-sm font-medium tracking-wide">{t('sidebar_bookings')}</span>}
+              {!isMini && <span className={`text-sm tracking-wide ${isBookingsActive ? 'font-bold' : 'font-medium'}`}>{t('sidebar_bookings')}</span>}
             </div>
             {!isMini && (
               <div className={`transition-transform duration-300 ${isBookingsOpen ? 'rotate-180' : ''}`}>
-                <ChevronDown size={18} className={isBookingsActive ? 'text-blue-400' : 'text-slate-600'} />
+                <ChevronDown size={18} className={isBookingsActive ? 'text-white/70' : 'text-slate-600'} />
               </div>
             )}
           </button>
@@ -392,13 +404,16 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
                 key={item.path}
                 to={item.path}
                 onClick={() => isMobile && onClose()}
-                className={`group flex items-center rounded-2xl transition-all duration-300 ${!isMini ? 'gap-4 px-6 py-3' : 'justify-center py-4'} ${isActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
+                className={`group flex items-center rounded-2xl transition-all duration-300 relative overflow-hidden ${!isMini ? 'gap-4 px-6 py-3' : 'justify-center py-4'} ${isActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-900/40' : 'hover:bg-white/5 hover:text-white'
                   }`}
                 title={isMini ? item.name : ""}
               >
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-full" />
+                )}
                 <Icon
                   size={20}
-                  className={`shrink-0 transition-colors duration-300 ${isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'}`}
+                  className={`shrink-0 transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 {!isMini && <span className={`text-sm tracking-wide ${isActive ? 'font-bold' : 'font-medium'}`}>{item.name}</span>}

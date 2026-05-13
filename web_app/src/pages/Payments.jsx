@@ -157,7 +157,7 @@ const Payments = () => {
           <h1 className="text-2xl font-black text-admin-text tracking-tight italic">{t('pay_title')}</h1>
           <p className="text-admin-text-muted text-xs font-black uppercase tracking-widest italic mt-1">{t('pay_subtitle')}</p>
         </div>
-
+        <div className="flex items-center gap-3">
           <button 
             disabled={isExporting}
             onClick={handleExport}
@@ -179,6 +179,7 @@ const Payments = () => {
             <RefreshCcw size={14} className={isFetching ? "animate-spin" : ""} />
             {t('common_refresh') || 'Refresh'}
           </button>
+        </div>
       </div>
 
       {/* Financial Overview Cards */}

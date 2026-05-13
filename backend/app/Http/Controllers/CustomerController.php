@@ -525,6 +525,8 @@ class CustomerController extends Authenticatable
 
         $booking->update([
             'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancellation_reason' => $validated['reason']
         ]);
 
         return response()->json([
