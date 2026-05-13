@@ -267,9 +267,11 @@ const VerificationQueueTable = ({
                 {filteredAndSortedQueue.map((item) => {
                   const profilePhotoUrl = getBackendUrl(item.profilePicture);
                   const idPhotoUrl = getBackendUrl(item.idPhoto);
-                  const credentialUrl = getBackendUrl(item.credentialPhoto);
+                  const idPhotoBackUrl = getBackendUrl(item.idPhotoBack);
+                  const credentialUrl = getBackendUrl(item.credentialPhoto || item.business_license || item.insurance_certificate || (Array.isArray(item.certifications) ? item.certifications[0] : item.certifications));
                   const hasProfilePhoto = !!profilePhotoUrl;
                   const hasIdPhoto = !!idPhotoUrl;
+                  const hasIdPhotoBack = !!idPhotoBackUrl;
                   const hasCredential = !!credentialUrl;
 
                   return (
@@ -346,16 +348,26 @@ const VerificationQueueTable = ({
                           <button
                             onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')}
                             disabled={!hasIdPhoto}
-                            className={`w-28 py-1.5 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasIdPhoto
+                            className={`w-28 py-1.5 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasIdPhoto
                                 ? 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500'
                                 : 'bg-slate-200 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                               }`}
-                            aria-label={hasIdPhoto ? `${t('vqueue_id_doc')} for ${item.name}` : `No ID document available for ${item.name}`}
+                            aria-label={hasIdPhoto ? `${t('vqueue_id_front')} for ${item.name}` : `No front ID available for ${item.name}`}
                             aria-disabled={!hasIdPhoto}
                           >
-                            <ImageIcon size={12} aria-hidden="true" />
-                            {item.idPhotoType ? translateDBString(item.idPhotoType.split(' ')[0]) : t('vqueue_id_doc')}
+                            <ImageIcon size={10} aria-hidden="true" />
+                            {t('vqueue_id_front')}
                           </button>
+                          {hasIdPhotoBack && (
+                            <button
+                              onClick={() => window.open(idPhotoBackUrl, '_blank')}
+                              className="w-28 py-1.5 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500"
+                              aria-label={`${t('vqueue_id_back')} for ${item.name}`}
+                            >
+                              <ImageIcon size={10} aria-hidden="true" />
+                              {t('vqueue_id_back')}
+                            </button>
+                          )}
                           <button
                             onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
                             disabled={!hasCredential}
@@ -363,7 +375,7 @@ const VerificationQueueTable = ({
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                                 : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                               }`}
-                            aria-label={hasCredential ? `${t('vqueue_licence')} for ${item.name}` : `No licence available for ${item.name}`}
+                            aria-label={hasCredential ? `${t('vqueue_licence')} for ${item.name}` : `No additional document available for ${item.name}`}
                             aria-disabled={!hasCredential}
                           >
                             <FileCheck size={10} aria-hidden="true" /> {t('vqueue_licence')}
@@ -416,9 +428,11 @@ const VerificationQueueTable = ({
             {filteredAndSortedQueue.map((item) => {
               const profilePhotoUrl = getBackendUrl(item.profilePicture);
               const idPhotoUrl = getBackendUrl(item.idPhoto);
-              const credentialUrl = getBackendUrl(item.credentialPhoto);
+              const idPhotoBackUrl = getBackendUrl(item.idPhotoBack);
+              const credentialUrl = getBackendUrl(item.credentialPhoto || item.business_license || item.insurance_certificate || (Array.isArray(item.certifications) ? item.certifications[0] : item.certifications));
               const hasProfilePhoto = !!profilePhotoUrl;
               const hasIdPhoto = !!idPhotoUrl;
+              const hasIdPhotoBack = !!idPhotoBackUrl;
               const hasCredential = !!credentialUrl;
 
               return (
@@ -473,11 +487,20 @@ const VerificationQueueTable = ({
                             ? 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500'
                             : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                           }`}
-                        aria-label={hasIdPhoto ? `${t('vqueue_id_doc')} for ${item.name}` : `No ID document available for ${item.name}`}
+                        aria-label={hasIdPhoto ? `${t('vqueue_id_front')} for ${item.name}` : `No front ID available for ${item.name}`}
                         aria-disabled={!hasIdPhoto}
                       >
-                        {item.idPhotoType ? translateDBString(item.idPhotoType.split(' ')[0]) : t('vqueue_id_doc')}
+                        {t('vqueue_id_front')}
                       </button>
+                      {hasIdPhotoBack && (
+                        <button
+                          onClick={() => window.open(idPhotoBackUrl, '_blank')}
+                          className="flex-1 py-2 rounded-xl text-[9px] font-black uppercase text-center focus:outline-none focus:ring-2 focus:ring-offset-2 bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500"
+                          aria-label={`${t('vqueue_id_back')} for ${item.name}`}
+                        >
+                          {t('vqueue_id_back')}
+                        </button>
+                      )}
                       <button
                         onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
                         disabled={!hasCredential}
@@ -485,7 +508,7 @@ const VerificationQueueTable = ({
                             ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                             : 'bg-slate-200 bg-admin-card text-slate-400 dark:text-slate-600 cursor-not-allowed'
                           }`}
-                        aria-label={hasCredential ? `${t('vqueue_licence')} for ${item.name}` : `No licence available for ${item.name}`}
+                        aria-label={hasCredential ? `${t('vqueue_licence')} for ${item.name}` : `No additional document available for ${item.name}`}
                         aria-disabled={!hasCredential}
                       >
                         {t('vqueue_licence')}
@@ -553,4 +576,4 @@ const VerificationQueueTable = ({
   );
 };
 
-export default VerificationQueueTable;
+export default VerificationQueueTable;

@@ -522,6 +522,9 @@ class AdminAuthController extends Authenticatable
             'idPhotoBack'         => $provider->idPhotoBack,
             'idPhotoType'         => $provider->idPhotoType,
             'credentialPhoto'     => $provider->credentialPhoto,
+            'business_license'    => $provider->business_license,
+            'insurance_certificate'=> $provider->insurance_certificate,
+            'certifications'      => $provider->certifications,
             'status'              => $provider->status,
             'email'               => $provider->email,
         ];

@@ -1,0 +1,136 @@
+services:
+  # ─────────────────────────────────────────────
+  # 1. Laravel Backend (Web Service)
+  # ─────────────────────────────────────────────
+  - type: web
+    name: final-project-backend
+    runtime: php
+    plan: free
+    buildCommand: ./render-build.sh
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    envVars:
+      - key: APP_NAME
+        value: Final_Project
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        sync: false          # Set manually after deploy
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false          # Set from Render MySQL dashboard
+      - key: DB_PORT
+        value: 3306
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: SESSION_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: BROADCAST_CONNECTION
+        value: reverb
+      - key: FILESYSTEM_DISK
+        value: local
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+      - key: CHAPA_SECRET_KEY
+        sync: false
+      - key: CHAPA_PUBLIC_KEY
+        sync: false
+      - key: CHAPA_WEBHOOK_SECRET
+        sync: false
+      - key: CHAPA_ENVIRONMENT
+        value: live
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: REVERB_APP_ID
+        sync: false
+      - key: REVERB_APP_KEY
+        sync: false
+      - key: REVERB_APP_SECRET
+        sync: false
+      - key: REVERB_HOST
+        sync: false
+      - key: REVERB_PORT
+        value: 443
+      - key: REVERB_SCHEME
+        value: https
+      - key: FRONTEND_URL
+        sync: false          # Your Vercel/Render frontend URL
+
+  # ─────────────────────────────────────────────
+  # 2. Queue Worker (Background Worker)
+  # ─────────────────────────────────────────────
+  - type: worker
+    name: final-project-queue
+    runtime: php
+    plan: free
+    buildCommand: composer install --no-dev --optimize-autoloader --no-interaction
+    startCommand: php artisan queue:listen --tries=3 --timeout=90
+    envVars:
+      - fromService:
+          name: final-project-backend
+          type: web
+          envVarKey: APP_KEY
+      - fromService:
+          name: final-project-backend
+          type: web
+          envVarKey: DB_HOST
+      - fromService:
+          name: final-project-backend
+          type: web
+          envVarKey: DB_PORT
+      - fromService:
+          name: final-project-backend
+          type: web
+          envVarKey: DB_DATABASE
+      - fromService:
+          name: final-project-backend
+          type: web
+          envVarKey: DB_USERNAME
+      - fromService:
+          name: final-project-backend
+          type: web
+          envVarKey: DB_PASSWORD
+      - key: DB_CONNECTION
+        value: mysql
+      - key: APP_ENV
+        value: production
+      - key: QUEUE_CONNECTION
+        value: database
+
+  # ─────────────────────────────────────────────
+  # 3. React Frontend (Static Site)
+  # ─────────────────────────────────────────────
+  - type: web
+    name: final-project-frontend
+    runtime: static
+    plan: free
+    rootDir: web_app
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false          # Set to your backend URL e.g. https://final-project-backend.onrender.com
