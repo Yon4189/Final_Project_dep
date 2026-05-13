@@ -417,35 +417,6 @@ public function approveWithdrawal($id)
             ], 404);
         }
 
-        // Initialize Chapa transfer
-        $paymentController = app(PaymentController::class);
-        $transferResult = $paymentController->initiateTransfer($withdrawal);
-        
-        if (!$transferResult) {
-            DB::rollBack();
-            Log::error('Chapa transfer initiation failed', ['withdrawal_id' => $id]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to initiate transfer with Chapa'
-            ], 500);
-        }
-
-        // Update withdrawal with Chapa details
-        $withdrawal->status = 'approved';
-        $withdrawal->processed_at = now();
-        
-        // Handle the response format from Chapa
-        // The transfer ID is directly in 'data' as a string
-        $withdrawal->chapa_transfer_id = $transferResult['data'] ?? null;
-        $withdrawal->chapa_transfer_status = 'pending';
-        $withdrawal->save();
-        
-        // Log the saved transfer ID for debugging
-        Log::info('Chapa transfer ID saved', [
-            'withdrawal_id' => $withdrawal->withdrawalID,
-            'chapa_transfer_id' => $withdrawal->chapa_transfer_id
-        ]);
-        
         // Get provider's wallet
         $wallet = Wallet::where('providerID', $withdrawal->providerID)->first();
         
@@ -468,6 +439,51 @@ public function approveWithdrawal($id)
         
         $wallet->available_balance -= $withdrawal->amount;
         $wallet->save();
+
+        // Initialize Chapa transfer (skip in local/testing environment)
+        $chapaTransferId = null;
+        $chapaTransferStatus = 'pending';
+        
+        if (app()->environment('production')) {
+            // Only attempt real transfer in production
+            $paymentController = app(PaymentController::class);
+            $transferResult = $paymentController->initiateTransfer($withdrawal);
+            
+            if (!$transferResult) {
+                // Rollback wallet deduction
+                DB::rollBack();
+                Log::error('Chapa transfer initiation failed', ['withdrawal_id' => $id]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to initiate transfer with Chapa'
+                ], 500);
+            }
+            
+            $chapaTransferId = $transferResult['data'] ?? null;
+        } else {
+            // In development/testing, simulate successful transfer
+            $chapaTransferId = 'TEST_TRANSFER_' . time();
+            $chapaTransferStatus = 'simulated';
+            Log::info('Simulated Chapa transfer (non-production)', [
+                'withdrawal_id' => $withdrawal->withdrawalID,
+                'amount' => $withdrawal->amount,
+                'environment' => app()->environment()
+            ]);
+        }
+
+        // Update withdrawal with Chapa details
+        $withdrawal->status = 'approved';
+        $withdrawal->processed_at = now();
+        $withdrawal->chapa_transfer_id = $chapaTransferId;
+        $withdrawal->chapa_transfer_status = $chapaTransferStatus;
+        $withdrawal->save();
+        
+        // Log the saved transfer ID for debugging
+        Log::info('Withdrawal approved', [
+            'withdrawal_id' => $withdrawal->withdrawalID,
+            'chapa_transfer_id' => $withdrawal->chapa_transfer_id,
+            'environment' => app()->environment()
+        ]);
         
         // Create wallet transaction record for the deduction
         WalletTransaction::create([
