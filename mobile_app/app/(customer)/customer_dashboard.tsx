@@ -276,15 +276,10 @@ export default function CustomerDashboard() {
     console.log("Dashboard - Category selected:", categoryId);
     setSelectedCategory(categoryId);
 
-    // Navigate to search results with category filter
-    router.push({
-      pathname: "/search/results",
-      params: {
-        categoryId,
-        sortBy: "rating",
-        minRating: "0",
-        maxDistance: "50",
-      },
+    // Apply category filter locally
+    updateFilters({
+      categoryId,
+      sortBy: "rating",
     });
   };
 
@@ -751,13 +746,10 @@ export default function CustomerDashboard() {
     }
 
     const handleViewAllTopRated = () => {
-      // Navigate to search results with top rated filters
-      router.push({
-        pathname: "/(customer)/search/results",
-        params: {
-          sortBy: "rating",
-          minRating: "4",
-        },
+      // Apply top rated filters locally
+      updateFilters({
+        sortBy: "rating",
+        minRating: 4,
       });
     };
 

@@ -66,6 +66,17 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   system:            Colors.info,
 };
 
+const parseJsonSafely = (data: any) => {
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  }
+  return data || {};
+};
+
 const normalizeNotification = (n: any): CustomerNotification => ({
   id: n.notificationID?.toString() ?? String(n.id ?? Math.random()),
   type: n.type ?? n.notification_type ?? 'system',
@@ -73,7 +84,7 @@ const normalizeNotification = (n: any): CustomerNotification => ({
   message: n.message,
   timestamp: n.created_at,
   read: Boolean(n.is_seen ?? n.read),
-  data: n.data ?? {},
+  data: parseJsonSafely(n.data),
   relatedBookingId: n.related_booking_id?.toString(),
 });
 
@@ -94,7 +105,16 @@ export default function CustomerNotifications() {
       if (response.success && response.data) {
         // Backend returns: { notifications: { data: [...], ... }, unread_count: N }
         const payload = response.data.notifications;
-        const raw = payload?.data ?? [];
+        let raw = [];
+        if (Array.isArray(payload)) {
+          raw = payload;
+        } else if (payload && Array.isArray(payload.data)) {
+          raw = payload.data;
+        } else if (Array.isArray(response.data)) {
+          // Just in case response.data is the array directly
+          raw = response.data;
+        }
+        
         setNotifications(raw.map(normalizeNotification));
         setUnreadCount(response.data.unread_count ?? 0);
         // NOTE: Do NOT auto-mark-all-as-read here.
