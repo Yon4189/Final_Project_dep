@@ -183,7 +183,11 @@
     "orContinueWith": "ወይም በዚህ ይቀጥሉ",
     "continueWithGoogle": "በጉግል (Google) ይቀጥሉ",
     "permissionNeeded": "ፈቃድ ያስፈልጋል",
-    "cameraRollPermission": "እባክዎ የፎቶ ማዕከለ-ስዕላት ፈቃድ ይስጡ"
+    "cameraRollPermission": "እባክዎ የፎቶ ማዕከለ-ስዕላት ፈቃድ ይስጡ",
+    "selectPhotoSource": "የፎቶ ምንጭ ይምረጡ",
+    "chooseIdPhotoSource": "የመታወቂያ ፎቶዎን ከየት እንደሚያመጡ ይምረጡ።",
+    "camera": "ካሜራ",
+    "gallery": "ጋለሪ"
   },
   "validation": {
     "fullNameRequired": "ሙሉ ስም ያስፈልጋል",

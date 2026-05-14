@@ -185,7 +185,11 @@
     "orContinueWith": "or continue with",
     "continueWithGoogle": "Continue with Google",
     "permissionNeeded": "Permission Needed",
-    "cameraRollPermission": "Please grant camera roll permissions"
+    "cameraRollPermission": "Please grant camera roll permissions",
+    "selectPhotoSource": "Select Photo Source",
+    "chooseIdPhotoSource": "Choose where to get your ID photo from.",
+    "camera": "Camera",
+    "gallery": "Gallery"
   },
   "validation": {
     "fullNameRequired": "Full name is required",
