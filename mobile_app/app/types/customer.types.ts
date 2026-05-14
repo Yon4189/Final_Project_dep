@@ -212,6 +212,7 @@ export interface ServiceProvider {
   id: ID;
   userId?: ID;
   name?: string;
+  fullname?: string; // Backend returns this field
   businessName?: string;
   firstName?: string;
   lastName?: string;

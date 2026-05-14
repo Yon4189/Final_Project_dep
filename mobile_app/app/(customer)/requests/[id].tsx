@@ -34,7 +34,7 @@ import type { Conversation } from '@/app/types/customer.types';
 const STATUS_COLORS = {
   pending: Colors.warning,
   accepted: Colors.info,
-  confirmed: Colors.info,
+  arrived: Colors.primary,
   in_progress: Colors.primary,
   waiting_customer_confirmation: Colors.info,
   completed: Colors.success,
@@ -45,7 +45,7 @@ const STATUS_COLORS = {
 const STATUS_ICONS = {
   pending: 'time-outline',
   accepted: 'checkmark-circle-outline',
-  confirmed: 'checkmark-circle-outline',
+  arrived: 'pin-outline',
   in_progress: 'construct-outline',
   waiting_customer_confirmation: 'shield-checkmark-outline',
   completed: 'checkmark-done-outline',
@@ -56,7 +56,7 @@ const STATUS_ICONS = {
 const STATUS_STEPS = [
   { key: 'pending', label: 'Request Sent', icon: 'send-outline' },
   { key: 'accepted', label: 'Accepted', icon: 'checkmark-circle-outline' },
-  { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle-outline' },
+  { key: 'arrived', label: 'Arrived', icon: 'pin-outline' },
   { key: 'in_progress', label: 'In Progress', icon: 'construct-outline' },
   { key: 'waiting_customer_confirmation', label: 'Job Done', icon: 'shield-checkmark-outline' },
   { key: 'completed', label: 'Finalized', icon: 'checkmark-done-outline' },
@@ -75,7 +75,7 @@ export default function RequestDetails() {
   const STATUS_STEPS = [
     { key: 'pending', label: t('requests.steps.pending', 'Request Sent'), icon: 'send-outline' },
     { key: 'accepted', label: t('requests.steps.accepted', 'Accepted'), icon: 'checkmark-circle-outline' },
-    { key: 'confirmed', label: t('requests.steps.confirmed', 'Confirmed'), icon: 'checkmark-circle-outline' },
+    { key: 'arrived', label: t('requests.steps.arrived', 'Arrived'), icon: 'pin-outline' },
     { key: 'in_progress', label: t('requests.steps.in_progress', 'In Progress'), icon: 'construct-outline' },
     { key: 'waiting_customer_confirmation', label: t('requests.steps.waiting_customer_confirmation', 'Job Done'), icon: 'shield-checkmark-outline' },
     { key: 'completed', label: t('requests.steps.completed', 'Finalized'), icon: 'checkmark-done-outline' },
@@ -383,7 +383,7 @@ export default function RequestDetails() {
   );
 
   const renderLiveTracking = () => {
-    const showTrack = ['accepted', 'confirmed', 'arrived', 'in_progress'].includes(request.status);
+    const showTrack = ['accepted', 'arrived', 'in_progress'].includes(request.status);
     if (!showTrack) return null;
 
     // Use live location if available, fallback to latest fetched tracking data, then fallback to request start
@@ -512,7 +512,7 @@ export default function RequestDetails() {
               </Text>
             </TouchableOpacity>
           </View>
-        ) : (['accepted', 'confirmed'].includes(request.status as string)) ? (
+        ) : (['accepted', 'arrived'].includes(request.status as string)) ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
             <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
             <Text style={styles.payButtonText}>{t('requests.payNow', 'Pay Now')} — ETB {request.estimatedPrice?.toFixed(2)}</Text>
@@ -614,7 +614,7 @@ export default function RequestDetails() {
           </TouchableOpacity>
         )}
 
-        {['pending', 'confirmed'].includes(request.status) && (
+        {['pending', 'accepted'].includes(request.status) && (
           <TouchableOpacity
             style={styles.cancelButton}
             onPress={() => setShowCancelModal(true)}
@@ -629,7 +629,7 @@ export default function RequestDetails() {
           <Text style={styles.helpButtonText}>{t('requests.reportIssue', 'Report an Issue')}</Text>
         </TouchableOpacity>
 
-        {request.status === 'completed' && !request.review && (
+        {request.status === 'completed' && !request.review && selectedTab !== 'messages' && (
           <TouchableOpacity 
             style={styles.reviewButton} 
             onPress={() => setShowReviewModal(true)}
@@ -754,7 +754,8 @@ export default function RequestDetails() {
                       <View style={styles.conversationContent}>
                         <View style={styles.conversationHeader}>
                           <Text style={styles.conversationName} numberOfLines={1}>
-                            {conversation.other_party?.name || 
+                            {(conversation.other_party as any)?.fullname || 
+                             conversation.other_party?.name || 
                              (conversation.other_party?.firstName && conversation.other_party?.lastName 
                                ? `${conversation.other_party.firstName} ${conversation.other_party.lastName}` 
                                : 'Provider')}
