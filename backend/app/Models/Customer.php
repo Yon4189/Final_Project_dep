@@ -93,20 +93,21 @@ class Customer extends Authenticatable
     // 'name' is the column in service_cities table
     }
 
-/**
- * Get all saved locations for this customer
- */
-// public function locations()
-// {
-//     return $this->hasMany(UserLocation::class, 'customer_id', 'customerID');
-// }
+    /**
+     * Get absolute URL for profile picture
+     */
+    public function getProfilePictureAttribute($value)
+    {
+        if (!$value) return 'https://via.placeholder.com/150';
+        if (str_starts_with($value, 'http')) return $value;
+        return asset('storage/' . $value);
+    }
 
-
-/**
- * Get notification settings for this customer
- */
-// public function notificationSettings()
-// {
-//     return $this->hasOne(NotificationSetting::class, 'customer_id', 'customerID');
-// }
+    /**
+     * Alias for profilePicture accessor (handles profile_image column)
+     */
+    public function getProfileImageAttribute($value)
+    {
+        return $this->getProfilePictureAttribute($value);
+    }
 }

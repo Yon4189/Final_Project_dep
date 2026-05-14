@@ -27,395 +27,381 @@ use App\Http\Controllers\ProviderTrackingController;
 use App\Http\Controllers\OnlineStatusController;
 use App\Http\Controllers\LocationAutocompleteController;
 
-// ==================== BROADCASTING ====================
-Broadcast::routes(['middleware' => ['auth:sanctum']]);
+// ==================== API V1 ====================
+Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
-// ==================== PUBLIC ROUTES (no auth) ====================
-Route::get('/health', fn() => response()->json(['status' => 'ok']));
-Route::get('/test',   fn() => response()->json(['success' => true, 'server_time' => now()]));
-Route::get('/cities',        [ServiceCityController::class, 'index']);
-Route::get('/categories',    [CategoryController::class, 'getCategories']);
-Route::get('/services',      [ServiceController::class, 'index']);
-Route::get('/public/stats',  [AdminAuthController::class, 'getStats']);
+    // ==================== BROADCASTING ====================
+    Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
-// ── Google OAuth ──────────────────────────────────────────────────────────────
-Route::post('/auth/google/customer', [\App\Http\Controllers\GoogleAuthController::class, 'customerGoogleAuth']);
-Route::post('/auth/google/provider', [\App\Http\Controllers\GoogleAuthController::class, 'providerGoogleAuth']);
+    // ==================== PUBLIC ROUTES (no auth) ====================
+    Route::get('/health', fn() => response()->json(['status' => 'ok']));
+    Route::get('/test',   fn() => response()->json(['success' => true, 'server_time' => now()]));
+    Route::get('/cities',        [ServiceCityController::class, 'index']);
+    Route::get('/categories',    [CategoryController::class, 'getCategories']);
+    Route::get('/services',      [ServiceController::class, 'index']);
+    Route::get('/public/stats',  [AdminAuthController::class, 'getStats']);
 
-// Location autocomplete — rate limited to prevent abuse
-Route::middleware('throttle:30,1')->group(function () {
-    Route::get('/location/autocomplete', [LocationAutocompleteController::class, 'autocomplete']);
-});
+    // ── Google OAuth ──────────────────────────────────────────────────────────────
+    Route::post('/auth/google/customer', [\App\Http\Controllers\GoogleAuthController::class, 'customerGoogleAuth']);
+    Route::post('/auth/google/provider', [\App\Http\Controllers\GoogleAuthController::class, 'providerGoogleAuth']);
 
-// ==================== AUTH ROUTES — rate limited to prevent brute force ====================
-Route::middleware('throttle:5,1')->group(function () {
-    Route::post('/customer/login',  [CustomerAuthController::class, 'login']);
-    Route::post('/provider/login',  [ServiceProviderAuthController::class, 'login']);
-    Route::post('/admin/login',     [AdminAuthController::class, 'login']);
-    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
-    Route::post('/reset-password',  [ForgotPasswordController::class, 'resetPassword']);
-});
-
-// Registration — slightly more lenient (10/min) but still throttled
-Route::middleware('throttle:10,1')->group(function () {
-    Route::post('/customer/register',  [CustomerAuthController::class, 'register']);
-    Route::post('/provider/register',  [ServiceProviderAuthController::class, 'register']);
-});
-
-// ==================== WEBHOOKS & CALLBACKS (PUBLIC — Chapa calls these) ====================
-// These must stay public — Chapa's servers call them, not our users
-Route::match(['get', 'post'], '/webhook/chapa',          [WebhookController::class, 'handleChapaWebhook']);
-Route::post('/webhook/chapa/transfer',                   [WebhookController::class, 'handleTransferWebhook']);
-Route::get('/payment/callback/{tx_ref}',                 [PaymentController::class, 'callback'])->name('payment.callback');
-Route::get('/payment/return',                            [PaymentController::class, 'handleReturn'])->name('payment.return');
-Route::get('/payment/return/{encoded_redirect}',         [PaymentController::class, 'handleReturn'])->name('payment.return.fixed');
-Route::post('/payments/verify-callback',                 [PaymentController::class, 'verifyCallback']);
-
-// ==================== PUBLIC PROVIDER SEARCH — rate limited ====================
-// These are public so unauthenticated users can browse providers
-// Rate limited to prevent competitor scraping
-Route::middleware('throttle:20,1')->prefix('customer')->group(function () {
-    Route::get('/providers/search',              [CustomerSearchController::class, 'searchProviders']);
-    Route::get('/providers/top-rated',           [CustomerSearchController::class, 'getTopRated']);
-    Route::get('/providers/{id}',                [CustomerSearchController::class, 'getProviderDetails']);
-    Route::get('/providers/{id}/availability',   [CustomerSearchController::class, 'getProviderAvailability']);
-    Route::get('/providers/{id}/reviews',        [CustomerSearchController::class, 'getProviderReviews']);
-    Route::get('/providers/nearby',              [CustomerSearchController::class, 'getNearbyProviders']);
-});
-
-// Public provider reviews
-Route::middleware('throttle:20,1')->get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);
-
-// customer.active — account must not be suspended
-
-// ── Customer Notifications (Accessible even if suspended) ────────────────────
-Route::middleware(['auth:customer'])->prefix('customer/notifications')->group(function () {
-    Route::get('/',                 [NotificationController::class, 'getCustomerNotifications']);
-    Route::get('/unread-count',     [NotificationController::class, 'unreadCount']);
-    Route::patch('/{id}/read',      [NotificationController::class, 'markAsRead']);
-    Route::patch('/read-all',       [NotificationController::class, 'markAllAsRead']);
-    Route::get('/settings',         [CustomerController::class, 'getNotificationSettings']);
-    Route::put('/settings',         [CustomerController::class, 'updateNotificationSettings']);
-});
-
-Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->group(function () {
-
-    // ── Profile ──────────────────────────────────────────────────────────────
-    Route::get('/profile',          [CustomerController::class, 'getProfile']);
-    Route::put('/profile',          [CustomerController::class, 'updateProfile']);
-    Route::post('/profile/image',   [CustomerController::class, 'uploadProfileImage']);
-    Route::post('/profile/password',[CustomerController::class, 'changePassword']);
-    Route::post('/push-token',      [CustomerController::class, 'updatePushToken']);
-    Route::post('/logout',          [OnlineStatusController::class, 'customerLogout']);
-    Route::post('/logout-all',      [CustomerAuthController::class, 'logoutAllDevices']);
-    Route::post('/heartbeat',       [OnlineStatusController::class, 'customerHeartbeat']);
-
-    // ── Bookings ─────────────────────────────────────────────────────────────
-    Route::get('/bookings',         [CustomerController::class, 'getRequests']);
-    Route::get('/requests',         [CustomerController::class, 'getRequests']);        // mobile alias
-    Route::post('/bookings',        [CustomerController::class, 'createBooking']);
-    Route::post('/requests',        [CustomerController::class, 'createBooking']);      // mobile alias
-
-    // Booking detail/actions — ownership enforced: booking must belong to this customer
-    Route::middleware('ownership:booking,id,customerID')->group(function () {
-        Route::get('/bookings/{id}',            [CustomerController::class, 'getRequestDetails']);
-        Route::get('/requests/{id}',            [CustomerController::class, 'getRequestDetails']);
-        Route::post('/bookings/{id}/cancel',    [CustomerController::class, 'cancelRequest']);
-        Route::post('/requests/{id}/cancel',    [CustomerController::class, 'cancelRequest']);
-        Route::post('/bookings/{id}/reschedule',[CustomerController::class, 'rescheduleRequest']);
-        Route::get('/bookings/{id}/status',     [CustomerController::class, 'getRequestStatus']);
-        Route::get('/bookings/{id}/track',      [CustomerController::class, 'trackProvider']);
+    // Location autocomplete — rate limited to prevent abuse
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::get('/location/autocomplete', [LocationAutocompleteController::class, 'autocomplete']);
     });
 
-    // ── Reviews ──────────────────────────────────────────────────────────────
-    Route::post('/reviews',                         [CustomerController::class, 'createReview']);
-    Route::get('/reviews/my',                       [CustomerController::class, 'getMyReviews']);
-    Route::get('/reviews/booking/{bookingId}',      [CustomerController::class, 'getReviewForBooking']);
-    Route::middleware('ownership:review,id,customerID')->group(function () {
-        Route::put('/reviews/{id}',     [CustomerController::class, 'updateReview']);
-        Route::delete('/reviews/{id}',  [CustomerController::class, 'deleteReview']);
+    // ==================== AUTH ROUTES — rate limited to prevent brute force ====================
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/customer/login',  [CustomerAuthController::class, 'login']);
+        Route::post('/provider/login',  [ServiceProviderAuthController::class, 'login']);
+        Route::post('/admin/login',     [AdminAuthController::class, 'login']);
+        Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
+        Route::post('/reset-password',  [ForgotPasswordController::class, 'resetPassword']);
     });
 
-    // ── Complaints / Disputes ─────────────────────────────────────────────────
-    Route::post('/complaints',          [CustomerController::class, 'createComplaint']);
-    Route::get('/complaints',           [CustomerController::class, 'getComplaints']);
-    Route::get('/complaints/{id}',      [CustomerController::class, 'getComplaintDetails']);
-    Route::post('/complaints/{id}/messages', [CustomerController::class, 'addComplaintMessage']);
-    Route::get('/complaints/{id}/messages',  [CustomerController::class, 'getComplaintMessages']);
-
-    Route::post('/bookings/{bookingID}/dispute',    [DisputeController::class, 'customerRaiseDispute']);
-    Route::get('/disputes',                         [DisputeController::class, 'getCustomerDisputes']);
-    Route::middleware('ownership:dispute,disputeID,raised_by_id|against_id')->group(function () {
-        Route::get('/disputes/{disputeID}',                     [DisputeController::class, 'show']);
-        Route::post('/disputes/{disputeID}/messages',           [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
-        Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
-        Route::get('/disputes/{disputeID}/messages/search',     [DisputeController::class, 'searchMessages']);
-        Route::put('/disputes/messages/{messageID}',            [DisputeController::class, 'editMessage']);
-        Route::delete('/disputes/{disputeID}/messages/{messageID}', [DisputeController::class, 'deleteMessage']);
-        Route::delete('/disputes/{disputeID}/clear-history',    [DisputeController::class, 'clearHistory']);
+    // Registration — slightly more lenient (10/min) but still throttled
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/customer/register',  [CustomerAuthController::class, 'register']);
+        Route::post('/provider/register',  [ServiceProviderAuthController::class, 'register']);
     });
 
-    // ── Locations ────────────────────────────────────────────────────────────
-    Route::get('/locations',                    [CustomerController::class, 'getLocations']);
-    Route::post('/locations',                   [CustomerController::class, 'addLocation']);
-    Route::middleware('ownership:address,id,customerID')->group(function () {
-        Route::put('/locations/{id}',           [CustomerController::class, 'updateLocation']);
-        Route::delete('/locations/{id}',        [CustomerController::class, 'deleteLocation']);
-        Route::patch('/locations/{id}/primary', [CustomerController::class, 'setPrimaryLocation']);
+    // ==================== WEBHOOKS & CALLBACKS (PUBLIC — Chapa calls these) ====================
+    // These must stay public — Chapa's servers call them, not our users
+    Route::match(['get', 'post'], '/webhook/chapa',          [WebhookController::class, 'handleChapaWebhook']);
+    Route::post('/webhook/chapa/transfer',                   [WebhookController::class, 'handleTransferWebhook']);
+    Route::get('/payment/callback/{tx_ref}',                 [PaymentController::class, 'callback'])->name('payment.callback');
+    Route::get('/payment/return',                            [PaymentController::class, 'handleReturn'])->name('payment.return');
+    Route::get('/payment/return/{encoded_redirect}',         [PaymentController::class, 'handleReturn'])->name('payment.return.fixed');
+    Route::post('/payments/verify-callback',                 [PaymentController::class, 'verifyCallback']);
+
+    // ==================== PUBLIC PROVIDER SEARCH — rate limited ====================
+    Route::middleware('throttle:20,1')->prefix('customer')->group(function () {
+        Route::get('/providers/search',              [CustomerSearchController::class, 'searchProviders']);
+        Route::get('/providers/top-rated',           [CustomerSearchController::class, 'getTopRated']);
+        Route::get('/providers/{id}',                [CustomerSearchController::class, 'getProviderDetails']);
+        Route::get('/providers/{id}/availability',   [CustomerSearchController::class, 'getProviderAvailability']);
+        Route::get('/providers/{id}/reviews',        [CustomerSearchController::class, 'getProviderReviews']);
+        Route::get('/providers/nearby',              [CustomerSearchController::class, 'getNearbyProviders']);
     });
 
-    // ── Address Book ─────────────────────────────────────────────────────────
-    Route::prefix('addresses')->group(function () {
-        Route::get('/',                     [AddressController::class, 'index']);
-        Route::post('/',                    [AddressController::class, 'store']);
-        Route::middleware('ownership:address,addressID,customerID')->group(function () {
-            Route::get('/{addressID}',      [AddressController::class, 'show']);
-            Route::put('/{addressID}',      [AddressController::class, 'update']);
-            Route::delete('/{addressID}',   [AddressController::class, 'destroy']);
-            Route::patch('/{addressID}/default', [AddressController::class, 'setDefault']);
+    // Public provider reviews
+    Route::middleware('throttle:20,1')->get('/providers/{providerID}/reviews', [ReviewController::class, 'providerReviews']);
+
+    // ── Customer Notifications (Accessible even if suspended) ────────────────────
+    Route::middleware(['auth:customer'])->prefix('customer/notifications')->group(function () {
+        Route::get('/',                 [NotificationController::class, 'getCustomerNotifications']);
+        Route::get('/unread-count',     [NotificationController::class, 'unreadCount']);
+        Route::patch('/{id}/read',      [NotificationController::class, 'markAsRead']);
+        Route::patch('/read-all',       [NotificationController::class, 'markAllAsRead']);
+        Route::get('/settings',         [CustomerController::class, 'getNotificationSettings']);
+        Route::put('/settings',         [CustomerController::class, 'updateNotificationSettings']);
+    });
+
+    Route::middleware(['auth:customer', 'customer.active'])->prefix('customer')->group(function () {
+
+        // ── Profile ──────────────────────────────────────────────────────────────
+        Route::get('/profile',          [CustomerController::class, 'getProfile']);
+        Route::put('/profile',          [CustomerController::class, 'updateProfile']);
+        Route::post('/profile/image',   [CustomerController::class, 'uploadProfileImage']);
+        Route::post('/profile/password',[CustomerController::class, 'changePassword']);
+        Route::post('/push-token',      [CustomerController::class, 'updatePushToken']);
+        Route::post('/logout',          [OnlineStatusController::class, 'customerLogout']);
+        Route::post('/logout-all',      [CustomerAuthController::class, 'logoutAllDevices']);
+        Route::post('/heartbeat',       [OnlineStatusController::class, 'customerHeartbeat']);
+
+        // ── Bookings ─────────────────────────────────────────────────────────────
+        Route::get('/bookings',         [CustomerController::class, 'getRequests']);
+        Route::get('/requests',         [CustomerController::class, 'getRequests']);
+        Route::post('/bookings',        [CustomerController::class, 'createBooking']);
+        Route::post('/requests',        [CustomerController::class, 'createBooking']);
+
+        // Booking detail/actions
+        Route::middleware('ownership:booking,id,customerID')->group(function () {
+            Route::get('/bookings/{id}',            [CustomerController::class, 'getRequestDetails']);
+            Route::get('/requests/{id}',            [CustomerController::class, 'getRequestDetails']);
+            Route::post('/bookings/{id}/cancel',    [CustomerController::class, 'cancelRequest']);
+            Route::post('/requests/{id}/cancel',    [CustomerController::class, 'cancelRequest']);
+            Route::post('/bookings/{id}/reschedule',[CustomerController::class, 'rescheduleRequest']);
+            Route::get('/bookings/{id}/status',     [CustomerController::class, 'getRequestStatus']);
+            Route::get('/bookings/{id}/track',      [CustomerController::class, 'trackProvider']);
         });
+
+        // ── Reviews ──────────────────────────────────────────────────────────────
+        Route::post('/reviews',                         [CustomerController::class, 'createReview']);
+        Route::get('/reviews/my',                       [CustomerController::class, 'getMyReviews']);
+        Route::get('/reviews/booking/{bookingId}',      [CustomerController::class, 'getReviewForBooking']);
+        Route::middleware('ownership:review,id,customerID')->group(function () {
+            Route::put('/reviews/{id}',     [CustomerController::class, 'updateReview']);
+            Route::delete('/reviews/{id}',  [CustomerController::class, 'deleteReview']);
+        });
+
+        // ── Complaints / Disputes ─────────────────────────────────────────────────
+        Route::post('/complaints',          [CustomerController::class, 'createComplaint']);
+        Route::get('/complaints',           [CustomerController::class, 'getComplaints']);
+        Route::get('/complaints/{id}',      [CustomerController::class, 'getComplaintDetails']);
+        Route::post('/complaints/{id}/messages', [CustomerController::class, 'addComplaintMessage']);
+        Route::get('/complaints/{id}/messages',  [CustomerController::class, 'getComplaintMessages']);
+
+        Route::post('/bookings/{bookingID}/dispute',    [DisputeController::class, 'customerRaiseDispute']);
+        Route::get('/disputes',                         [DisputeController::class, 'getCustomerDisputes']);
+        Route::middleware('ownership:dispute,disputeID,raised_by_id|against_id')->group(function () {
+            Route::get('/disputes/{disputeID}',                     [DisputeController::class, 'show']);
+            Route::post('/disputes/{disputeID}/messages',           [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
+            Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
+            Route::get('/disputes/{disputeID}/messages/search',     [DisputeController::class, 'searchMessages']);
+            Route::put('/disputes/messages/{messageID}',            [DisputeController::class, 'editMessage']);
+            Route::delete('/disputes/{disputeID}/messages/{messageID}', [DisputeController::class, 'deleteMessage']);
+            Route::delete('/disputes/{disputeID}/clear-history',    [DisputeController::class, 'clearHistory']);
+        });
+
+        // ── Locations ────────────────────────────────────────────────────────────
+        Route::get('/locations',                    [CustomerController::class, 'getLocations']);
+        Route::post('/locations',                   [CustomerController::class, 'addLocation']);
+        Route::middleware('ownership:address,id,customerID')->group(function () {
+            Route::put('/locations/{id}',           [CustomerController::class, 'updateLocation']);
+            Route::delete('/locations/{id}',        [CustomerController::class, 'deleteLocation']);
+            Route::patch('/locations/{id}/primary', [CustomerController::class, 'setPrimaryLocation']);
+        });
+
+        // ── Address Book ─────────────────────────────────────────────────────────
+        Route::prefix('addresses')->group(function () {
+            Route::get('/',                     [AddressController::class, 'index']);
+            Route::post('/',                    [AddressController::class, 'store']);
+            Route::middleware('ownership:address,addressID,customerID')->group(function () {
+                Route::get('/{addressID}',      [AddressController::class, 'show']);
+                Route::put('/{addressID}',      [AddressController::class, 'update']);
+                Route::delete('/{addressID}',   [AddressController::class, 'destroy']);
+                Route::patch('/{addressID}/default', [AddressController::class, 'setDefault']);
+            });
+        });
+
+        // ── Search ────────────────────────────────────────────────────────────────
+        Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
+
+        // ── Payments ─────────────────────────────────────────────────────────────
+        Route::get('/payment/methods',                              [PaymentController::class, 'methods']);
+        Route::get('/payment/verify',                               [PaymentController::class, 'verify']);
+        Route::get('/payment/history',                              [PaymentController::class, 'history']);
+        Route::middleware('log.sensitive')->group(function () {
+            Route::post('/payment/booking/{bookingId}/initialize',  [PaymentController::class, 'initialize']);
+            Route::post('/bookings/{bookingId}/confirm',            [PaymentController::class, 'confirmCompletion']);
+        });
+        Route::get('/payment/{tx_ref}', [PaymentController::class, 'show']);
+
+        // ── Reviews (booking-scoped) ──────────────────────────────────────────────
+        Route::post('/bookings/{bookingID}/review',         [ReviewController::class, 'store']);
+
+        // ── Provider tracking ─────────────────────────────────────────────────────
+        Route::get('/bookings/{bookingID}/track',           [ProviderTrackingController::class, 'getProviderLocation']);
     });
 
-    // ── Search ────────────────────────────────────────────────────────────────
-    Route::get('/search/suggestions', [CustomerSearchController::class, 'getSearchSuggestions']);
-
-    // ── Payments ─────────────────────────────────────────────────────────────
-    Route::get('/payment/methods',                              [PaymentController::class, 'methods']);
-    Route::get('/payment/verify',                               [PaymentController::class, 'verify']);
-    Route::get('/payment/history',                              [PaymentController::class, 'history']);
-    Route::middleware('log.sensitive')->group(function () {
-        Route::post('/payment/booking/{bookingId}/initialize',  [PaymentController::class, 'initialize']);
-        Route::post('/bookings/{bookingId}/confirm',            [PaymentController::class, 'confirmCompletion']);
-    });
-    // Ownership check: customer can only view their own payment
-    Route::get('/payment/{tx_ref}', [PaymentController::class, 'show']);
-
-    // ── Reviews (booking-scoped) ──────────────────────────────────────────────
-    Route::post('/bookings/{bookingID}/review',         [ReviewController::class, 'store']);
-
-    // ── Provider tracking ─────────────────────────────────────────────────────
-    Route::get('/bookings/{bookingID}/track',           [ProviderTrackingController::class, 'getProviderLocation']);
-});
-
-// ── Split payment routes (customer, separate prefix) ─────────────────────────
-Route::middleware(['auth:customer', 'customer.active', 'log.sensitive'])->prefix('payments')->group(function () {
-    Route::post('/calculate-deposit',   [PaymentController::class, 'calculateDeposit']);
-    Route::post('/process-deposit',     [PaymentController::class, 'processDeposit']);
-    Route::post('/process-final',       [PaymentController::class, 'processFinal']);
-    Route::get('/status/{bookingId}',   [PaymentController::class, 'getPaymentStatus']);
-});
-
-// ==================== PROTECTED PROVIDER ROUTES ====================
-// auth:provider      — must have valid provider token
-// provider.approved  — account must be approved (not pending/suspended/rejected)
-// ── Provider routes that don't require approval ──────────────────────────
-Route::middleware(['auth:provider'])->prefix('provider')->group(function () {
-    Route::post('/logout',              [OnlineStatusController::class, 'providerLogout']);
-    Route::post('/logout-all',          [ServiceProviderAuthController::class, 'logoutAllDevices']);
-    Route::post('/heartbeat',           [OnlineStatusController::class, 'providerHeartbeat']);
-    Route::post('/heartbeat/offline',   [OnlineStatusController::class, 'providerMarkOffline']);
-    Route::get('/profile',              [ServiceProviderAuthController::class, 'profile']);
-    Route::post('/profile/update',      [ServiceProviderAuthController::class, 'updateProfile']);
-    Route::post('/profile/password',    [ServiceProviderAuthController::class, 'changePassword']);
-    Route::post('/location/update',     [ServiceProviderAuthController::class, 'updateLocation']);
-    Route::post('/push-token',          [ServiceProviderAuthController::class, 'updatePushToken']);
-    Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
-});
-
-// ── Provider routes that REQUIRE approval ───────────────────────────────
-
-// ── Provider Notifications (Accessible even if pending) ─────────────────────
-Route::middleware(['auth:provider'])->prefix('provider/notifications')->group(function () {
-    Route::get('/',                 [NotificationController::class, 'getProviderNotifications']);
-    Route::get('/unread-count',     [NotificationController::class, 'unreadCount']);
-    Route::post('/read-all',        [NotificationController::class, 'markAllAsRead']);
-    Route::post('/{id}/read',       [NotificationController::class, 'markAsRead']);
-    Route::delete('/{id}',          [NotificationController::class, 'destroy']);
-});
-
-Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->group(function () {
-    Route::get('/bank-details',         [ServiceProviderAuthController::class, 'getBankDetails']);
-    Route::put('/bank-details',         [ServiceProviderAuthController::class, 'updateBankDetails']);
-    Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
-
-    // ── Dashboard ─────────────────────────────────────────────────────────────
-    Route::get('/dashboard/stats',      [ProviderDashboardController::class, 'getStats']);
-    Route::get('/schedule',             [ProviderDashboardController::class, 'getSchedule']);
-    Route::post('/schedule',            [ProviderDashboardController::class, 'updateSchedule']);
-    Route::get('/schedule/today',       [ProviderDashboardController::class, 'getTodaySchedule']);
-    Route::get('/earnings/summary',     [ProviderDashboardController::class, 'getEarningsSummary']);
-    Route::get('/reviews',              [ProviderDashboardController::class, 'getReviews']);
-    Route::get('/requests',             [ProviderDashboardController::class, 'getRequests']);
-
-    // ── Bookings — provider can only act on their own bookings ────────────────
-    Route::get('/bookings',             [BookingController::class, 'providerBookings']);
-    Route::get('/bookings/pending',     [BookingController::class, 'pendingBookings']);
-    Route::get('/bookings/active',      [BookingController::class, 'activeBookings']);
-    Route::get('/bookings/completed',   [BookingController::class, 'completedBookings']);
-
-    // Ownership enforced inside each controller method via providerID check
-    Route::middleware('ownership:booking,id,providerID')->group(function () {
-        Route::get('/bookings/{id}',            [BookingController::class, 'show']);
-        Route::get('/requests/{id}',            [BookingController::class, 'show']);
-        Route::post('/bookings/{id}/accept',    [BookingController::class, 'accept']);
-        Route::post('/bookings/{id}/reject',    [BookingController::class, 'reject']);
-        Route::post('/bookings/{id}/start',     [BookingController::class, 'start']);
-        Route::post('/bookings/{id}/arrive',    [BookingController::class, 'arrive']);
-        Route::post('/bookings/{id}/complete',  [BookingController::class, 'complete']);
-        Route::post('/requests/{id}/arrive',    [BookingController::class, 'arrive']);
-        Route::post('/requests/{id}/start',     [BookingController::class, 'start']);
-        Route::post('/requests/{id}/complete',  [BookingController::class, 'complete']);
+    // ── Split payment routes ─────────────────────────
+    Route::middleware(['auth:customer', 'customer.active', 'log.sensitive'])->prefix('payments')->group(function () {
+        Route::post('/calculate-deposit',   [PaymentController::class, 'calculateDeposit']);
+        Route::post('/process-deposit',     [PaymentController::class, 'processDeposit']);
+        Route::post('/process-final',       [PaymentController::class, 'processFinal']);
+        Route::get('/status/{bookingId}',   [PaymentController::class, 'getPaymentStatus']);
     });
 
-    // ── Disputes ──────────────────────────────────────────────────────────────
-    Route::post('/bookings/{bookingID}/dispute',    [DisputeController::class, 'providerRaiseDispute']);
-    Route::get('/disputes',                         [DisputeController::class, 'getProviderDisputes']);
-    Route::middleware('ownership:dispute,disputeID,raised_by_id|against_id')->group(function () {
-        Route::get('/disputes/{disputeID}',                 [DisputeController::class, 'show']);
-        Route::post('/disputes/{disputeID}/messages',       [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
-        Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
-        Route::get('/disputes/{disputeID}/messages/search', [DisputeController::class, 'searchMessages']);
-        Route::put('/disputes/messages/{messageID}',        [DisputeController::class, 'editMessage']);
-        Route::delete('/disputes/{disputeID}/messages/{messageID}', [DisputeController::class, 'deleteMessage']);
-        Route::delete('/disputes/{disputeID}/clear-history',    [DisputeController::class, 'clearHistory']);
+    // ==================== PROTECTED PROVIDER ROUTES ====================
+    Route::middleware(['auth:provider'])->prefix('provider')->group(function () {
+        Route::post('/logout',              [OnlineStatusController::class, 'providerLogout']);
+        Route::post('/logout-all',          [ServiceProviderAuthController::class, 'logoutAllDevices']);
+        Route::post('/heartbeat',           [OnlineStatusController::class, 'providerHeartbeat']);
+        Route::post('/heartbeat/offline',   [OnlineStatusController::class, 'providerMarkOffline']);
+        Route::get('/profile',              [ServiceProviderAuthController::class, 'profile']);
+        Route::post('/profile/update',      [ServiceProviderAuthController::class, 'updateProfile']);
+        Route::post('/profile/password',    [ServiceProviderAuthController::class, 'changePassword']);
+        Route::post('/location/update',     [ServiceProviderAuthController::class, 'updateLocation']);
+        Route::post('/push-token',          [ServiceProviderAuthController::class, 'updatePushToken']);
+        Route::patch('/availability',       [ServiceProviderAuthController::class, 'updateAvailability']);
     });
 
-    // ── Wallet & Withdrawals ──────────────────────────────────────────────────
-    Route::get('/wallet',               [WalletController::class, 'dashboard']);
-    Route::get('/wallet/transactions',  [WalletController::class, 'transactions']);
-    Route::get('/wallet/summary',       [WalletController::class, 'summary']);
-    Route::get('/withdrawals',          [WalletController::class, 'withdrawals']);
-    Route::get('/withdrawals/{id}',     [WalletController::class, 'showWithdrawal']);
-    Route::middleware('log.sensitive')->group(function () {
-        Route::post('/wallet/withdraw',         [WalletController::class, 'requestWithdrawal']);
-        Route::post('/withdrawals',             [WalletController::class, 'requestWithdrawal']);
-        Route::post('/withdrawals/{id}/cancel', [WalletController::class, 'cancelWithdrawal']);
+    // ── Provider Notifications ─────────────────────
+    Route::middleware(['auth:provider'])->prefix('provider/notifications')->group(function () {
+        Route::get('/',                 [NotificationController::class, 'getProviderNotifications']);
+        Route::get('/unread-count',     [NotificationController::class, 'unreadCount']);
+        Route::post('/read-all',        [NotificationController::class, 'markAllAsRead']);
+        Route::post('/{id}/read',       [NotificationController::class, 'markAsRead']);
+        Route::delete('/{id}',          [NotificationController::class, 'destroy']);
     });
-    Route::get('/transactions',         [WalletController::class, 'transactions']);
 
-    // ── Bank Accounts ─────────────────────────────────────────────────────────
-    Route::get('/bank-accounts',            [WalletController::class, 'getBankAccounts']);
-    Route::post('/bank-accounts',           [WalletController::class, 'saveBankAccount']);
-    Route::put('/bank-accounts/{id}',       [WalletController::class, 'updateBankAccount']);
-    Route::delete('/bank-accounts/{id}',    [WalletController::class, 'deleteBankAccount']);
+    Route::middleware(['auth:provider', 'provider.approved'])->prefix('provider')->group(function () {
+        Route::get('/bank-details',         [ServiceProviderAuthController::class, 'getBankDetails']);
+        Route::put('/bank-details',         [ServiceProviderAuthController::class, 'updateBankDetails']);
 
-    // ── Tracking ──────────────────────────────────────────────────────────────
-    Route::post('/tracking/update',                     [ProviderTrackingController::class, 'updateLocation']);
-    Route::get('/tracking/booking/{bookingID}',         [ProviderTrackingController::class, 'getBookingRoute']);
+        // ── Dashboard ─────────────────────────────────────────────────────────────
+        Route::get('/dashboard/stats',      [ProviderDashboardController::class, 'getStats']);
+        Route::get('/schedule',             [ProviderDashboardController::class, 'getSchedule']);
+        Route::post('/schedule',            [ProviderDashboardController::class, 'updateSchedule']);
+        Route::get('/schedule/today',       [ProviderDashboardController::class, 'getTodaySchedule']);
+        Route::get('/earnings/summary',     [ProviderDashboardController::class, 'getEarningsSummary']);
+        Route::get('/reviews',              [ProviderDashboardController::class, 'getReviews']);
+        Route::get('/requests',             [ProviderDashboardController::class, 'getRequests']);
 
-    // ── Services ──────────────────────────────────────────────────────────────
-    Route::get('/services',         [ServiceController::class, 'index']);
-    Route::post('/services',        [ServiceController::class, 'store']);
-    Route::put('/services/{id}',    [ServiceController::class, 'update']);
-    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
-});
+        // ── Bookings ────────────────
+        Route::get('/bookings',             [BookingController::class, 'providerBookings']);
+        Route::get('/bookings/pending',     [BookingController::class, 'pendingBookings']);
+        Route::get('/bookings/active',      [BookingController::class, 'activeBookings']);
+        Route::get('/bookings/completed',   [BookingController::class, 'completedBookings']);
 
-// Provider wallet (separate prefix group)
-Route::middleware(['auth:provider', 'provider.approved'])->prefix('wallet')->group(function () {
-    Route::get('/transactions', [WalletController::class, 'getTransactions']);
-});
+        Route::middleware('ownership:booking,id,providerID')->group(function () {
+            Route::get('/bookings/{id}',            [BookingController::class, 'show']);
+            Route::get('/requests/{id}',            [BookingController::class, 'show']);
+            Route::post('/bookings/{id}/accept',    [BookingController::class, 'accept']);
+            Route::post('/bookings/{id}/reject',    [BookingController::class, 'reject']);
+            Route::post('/bookings/{id}/start',     [BookingController::class, 'start']);
+            Route::post('/bookings/{id}/arrive',    [BookingController::class, 'arrive']);
+            Route::post('/bookings/{id}/complete',  [BookingController::class, 'complete']);
+            Route::post('/requests/{id}/arrive',    [BookingController::class, 'arrive']);
+            Route::post('/requests/{id}/start',     [BookingController::class, 'start']);
+            Route::post('/requests/{id}/complete',  [BookingController::class, 'complete']);
+        });
 
-// ==================== ADMIN ROUTES ====================
-// auth:admin     — must have valid admin token
-// ip.whitelist   — only allowed IPs can reach admin routes
-// log.sensitive  — every admin action is logged
-Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admin')->group(function () {
+        // ── Disputes ──────────────────────────────────────────────────────────────
+        Route::post('/bookings/{bookingID}/dispute',    [DisputeController::class, 'providerRaiseDispute']);
+        Route::get('/disputes',                         [DisputeController::class, 'getProviderDisputes']);
+        Route::middleware('ownership:dispute,disputeID,raised_by_id|against_id')->group(function () {
+            Route::get('/disputes/{disputeID}',                 [DisputeController::class, 'show']);
+            Route::post('/disputes/{disputeID}/messages',       [DisputeController::class, 'addMessage'])->middleware('throttle:10,1');
+            Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [DisputeController::class, 'downloadAttachment']);
+            Route::get('/disputes/{disputeID}/messages/search', [DisputeController::class, 'searchMessages']);
+            Route::put('/disputes/messages/{messageID}',        [DisputeController::class, 'editMessage']);
+            Route::delete('/disputes/{disputeID}/messages/{messageID}', [DisputeController::class, 'deleteMessage']);
+            Route::delete('/disputes/{disputeID}/clear-history',    [DisputeController::class, 'clearHistory']);
+        });
 
-    // ── Dashboard ─────────────────────────────────────────────────────────────
-    Route::get('/stats',    [AdminAuthController::class, 'getStats']);
-    Route::get('/search',   [AdminAuthController::class, 'globalSearch']);
-    Route::post('/backup',  [AdminAuthController::class, 'generateBackup']);
+        // ── Wallet & Withdrawals ──────────────────────────────────────────────────
+        Route::get('/wallet',               [WalletController::class, 'dashboard']);
+        Route::get('/wallet/transactions',  [WalletController::class, 'transactions']);
+        Route::get('/wallet/summary',       [WalletController::class, 'summary']);
+        Route::get('/withdrawals',          [WalletController::class, 'withdrawals']);
+        Route::get('/withdrawals/{id}',     [WalletController::class, 'showWithdrawal']);
+        Route::middleware('log.sensitive')->group(function () {
+            Route::post('/wallet/withdraw',         [WalletController::class, 'requestWithdrawal']);
+            Route::post('/withdrawals',             [WalletController::class, 'requestWithdrawal']);
+            Route::post('/withdrawals/{id}/cancel', [WalletController::class, 'cancelWithdrawal']);
+        });
+        Route::get('/transactions',         [WalletController::class, 'transactions']);
 
-    // ── Settings ──────────────────────────────────────────────────────────────
-    Route::get('/settings',         [AdminAuthController::class, 'getSettings']);
-    Route::post('/settings',        [AdminAuthController::class, 'updateSettings']);
-    Route::post('/settings/logo',   [AdminAuthController::class, 'uploadLogo']);
-    Route::post('/profile/update',  [AdminAuthController::class, 'updateProfile']);
-    Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
+        // ── Bank Accounts ─────────────────────────────────────────────────────────
+        Route::get('/bank-accounts',            [WalletController::class, 'getBankAccounts']);
+        Route::post('/bank-accounts',           [WalletController::class, 'saveBankAccount']);
+        Route::put('/bank-accounts/{id}',       [WalletController::class, 'updateBankAccount']);
+        Route::delete('/bank-accounts/{id}',    [WalletController::class, 'deleteBankAccount']);
 
-    // ── Bookings ──────────────────────────────────────────────────────────────
-    Route::get('/bookings', [AdminAuthController::class, 'getAllBookings']);
-    Route::post('/bookings/{id}/cancel', [AdminAuthController::class, 'cancelBooking']);
+        // ── Tracking ──────────────────────────────────────────────────────────────
+        Route::post('/tracking/update',                     [ProviderTrackingController::class, 'updateLocation']);
+        Route::get('/tracking/booking/{bookingID}',         [ProviderTrackingController::class, 'getBookingRoute']);
 
-    // ── Provider Management ───────────────────────────────────────────────────
-    Route::get('/providers',            [AdminAuthController::class, 'getAllProviders']);
-    Route::get('/providers/pending',    [AdminAuthController::class, 'pendingProviders']);
-    Route::get('/providers/approved',   [AdminAuthController::class, 'approvedProviders']);
-    Route::get('/providers/rejected',   [AdminAuthController::class, 'rejectedProviders']);
-    Route::get('/providers/suspended',  [AdminAuthController::class, 'suspendedProviders']);
-    Route::post('/providers/{id}/verify',   [AdminAuthController::class, 'verifyProvider']);
-    Route::patch('/providers/{id}/status',  [AdminAuthController::class, 'toggleProviderStatus']);
-    Route::delete('/providers/{id}',        [AdminAuthController::class, 'deleteProvider']);
+        // ── Services ──────────────────────────────────────────────────────────────
+        Route::get('/services',         [ServiceController::class, 'index']);
+        Route::post('/services',        [ServiceController::class, 'store']);
+        Route::put('/services/{id}',    [ServiceController::class, 'update']);
+        Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+    });
 
-    // ── Customer Management ───────────────────────────────────────────────────
-    Route::get('/customers',                [AdminAuthController::class, 'getCustomers']);
-    Route::patch('/customers/{id}/status',  [AdminAuthController::class, 'toggleCustomerStatus']);
-    Route::delete('/customers/{id}',        [AdminAuthController::class, 'deleteCustomer']);
-    Route::post('/users/force-logout',      [AdminAuthController::class, 'forceLogoutUser']);
+    // Provider wallet
+    Route::middleware(['auth:provider', 'provider.approved'])->prefix('wallet')->group(function () {
+        Route::get('/transactions', [WalletController::class, 'getTransactions']);
+    });
 
-    // ── Category Management ───────────────────────────────────────────────────
-    Route::get('/categories',           [CategoryController::class, 'getCategories']);
-    Route::post('/categories',          [CategoryController::class, 'addCategory']);
-    Route::put('/categories/{id}',      [CategoryController::class, 'editCategory']);
-    Route::delete('/categories/{id}',   [CategoryController::class, 'deleteCategory']);
+    // ==================== ADMIN ROUTES ====================
+    Route::middleware(['auth:admin', 'ip.whitelist', 'log.sensitive'])->prefix('admin')->group(function () {
 
-    // ── Services ──────────────────────────────────────────────────────────────
-    Route::get('/services', [AdminAuthController::class, 'getAllServices']);
+        // ── Dashboard ─────────────────────────────────────────────────────────────
+        Route::get('/stats',    [AdminAuthController::class, 'getStats']);
+        Route::get('/search',   [AdminAuthController::class, 'globalSearch']);
+        Route::post('/backup',  [AdminAuthController::class, 'generateBackup']);
 
-    // ── Payments & Withdrawals ────────────────────────────────────────────────
-    Route::get('/payments',         [PaymentController::class, 'index']);
-    Route::get('/payments/stats',   [PaymentController::class, 'getPaymentStats']);
-    Route::get('/banks',            [PaymentController::class, 'getBanks']);
+        // ── Settings ──────────────────────────────────────────────────────────────
+        Route::get('/settings',         [AdminAuthController::class, 'getSettings']);
+        Route::post('/settings',        [AdminAuthController::class, 'updateSettings']);
+        Route::post('/settings/logo',   [AdminAuthController::class, 'uploadLogo']);
+        Route::post('/profile/update',  [AdminAuthController::class, 'updateProfile']);
+        Route::post('/profile/picture', [AdminAuthController::class, 'updateProfilePicture']);
 
-    Route::get('/withdrawals',              [AdminWithdrawalController::class, 'index']);
-    Route::get('/withdrawals/stats',        [AdminWithdrawalController::class, 'stats']);
-    Route::get('/withdrawals/pending',      [AdminWithdrawalController::class, 'getPendingWithdrawals']);
-    Route::get('/withdrawals/{id}',         [AdminWithdrawalController::class, 'show']);
-    Route::post('/withdrawals/{id}/approve',[AdminWithdrawalController::class, 'approveWithdrawal']);
-    Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'rejectWithdrawal']);
+        // ── Bookings ──────────────────────────────────────────────────────────────
+        Route::get('/bookings', [AdminAuthController::class, 'getAllBookings']);
+        Route::post('/bookings/{id}/cancel', [AdminAuthController::class, 'cancelBooking']);
 
-    // ── Notifications ─────────────────────────────────────────────────────────
-    Route::get('/notifications',        [NotificationController::class, 'index']);
-    Route::post('/notifications/read',  [NotificationController::class, 'markAllAsRead']);
+        // ── Provider Management ───────────────────────────────────────────────────
+        Route::get('/providers',            [AdminAuthController::class, 'getAllProviders']);
+        Route::get('/providers/pending',    [AdminAuthController::class, 'pendingProviders']);
+        Route::get('/providers/approved',   [AdminAuthController::class, 'approvedProviders']);
+        Route::get('/providers/rejected',   [AdminAuthController::class, 'rejectedProviders']);
+        Route::get('/providers/suspended',  [AdminAuthController::class, 'suspendedProviders']);
+        Route::post('/providers/{id}/verify',   [AdminAuthController::class, 'verifyProvider']);
+        Route::patch('/providers/{id}/status',  [AdminAuthController::class, 'toggleProviderStatus']);
+        Route::delete('/providers/{id}',        [AdminAuthController::class, 'deleteProvider']);
 
-    // ── Disputes ──────────────────────────────────────────────────────────────
-    Route::get('/disputes',                         [AdminDisputeController::class, 'index']);
-    Route::get('/disputes/stats',                   [AdminDisputeController::class, 'stats']);
-    Route::get('/disputes/{disputeID}',             [AdminDisputeController::class, 'show']);
-    Route::put('/disputes/{disputeID}/status',      [AdminDisputeController::class, 'updateStatus']);
-    Route::post('/disputes/{disputeID}/notes',      [AdminDisputeController::class, 'addPrivateNote']);
-    Route::post('/disputes/{disputeID}/messages',   [AdminDisputeController::class, 'addMessage'])->middleware('throttle:10,1');
-    Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
-    Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [AdminDisputeController::class, 'downloadAttachment']);
-    Route::get('/disputes/{disputeID}/messages/search', [AdminDisputeController::class, 'searchMessages']);
-    Route::put('/disputes/messages/{messageID}',    [AdminDisputeController::class, 'editMessage']);
-    Route::post('/disputes/{disputeID}/typing',     [AdminDisputeController::class, 'setTypingStatus']);
-    Route::get('/disputes/{disputeID}/typing',      [AdminDisputeController::class, 'getTypingStatus']);
-    Route::post('/disputes/{disputeID}/messages/reply', [AdminDisputeController::class, 'replyToMessage'])->middleware('throttle:10,1');
-    Route::get('/disputes/{disputeID}/messages/{messageID}/thread', [AdminDisputeController::class, 'getMessageThread']);
-    Route::delete('/disputes/{disputeID}/clear-history', [AdminDisputeController::class, 'clearHistory']);
+        // ── Customer Management ───────────────────────────────────────────────────
+        Route::get('/customers',                [AdminAuthController::class, 'getCustomers']);
+        Route::patch('/customers/{id}/status',  [AdminAuthController::class, 'toggleCustomerStatus']);
+        Route::delete('/customers/{id}',        [AdminAuthController::class, 'deleteCustomer']);
+        Route::post('/users/force-logout',      [AdminAuthController::class, 'forceLogoutUser']);
 
-    // ── Admin Settings (split payment) ────────────────────────────────────────
-    Route::get('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'getDepositPercentage']);
-    Route::put('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'updateDepositPercentage']);
+        // ── Category Management ───────────────────────────────────────────────────
+        Route::get('/categories',           [CategoryController::class, 'getCategories']);
+        Route::post('/categories',          [CategoryController::class, 'addCategory']);
+        Route::put('/categories/{id}',      [CategoryController::class, 'editCategory']);
+        Route::delete('/categories/{id}',   [CategoryController::class, 'deleteCategory']);
 
-    // ── Service Cities Management ─────────────────────────────────────────────
-    Route::get('/cities',       [ServiceCityController::class, 'index']);
-    Route::post('/cities',      [ServiceCityController::class, 'store']);
-    Route::put('/cities/{id}',  [ServiceCityController::class, 'update']);
-    Route::delete('/cities/{id}', [ServiceCityController::class, 'destroy']);
-});
+        // ── Services ──────────────────────────────────────────────────────────────
+        Route::get('/services', [AdminAuthController::class, 'getAllServices']);
 
-// ==================== CHAT ROUTES ====================
-// Both customers and providers can chat
-Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {
-    Route::get('/conversations',            [ChatController::class, 'getConversations']);
-    Route::post('/conversations',           [ChatController::class, 'getOrCreateConversation']);
-    Route::get('/conversations/{id}',       [ChatController::class, 'getMessages']);
-    Route::post('/conversations/{id}/read', [ChatController::class, 'markAsRead']);
-    Route::post('/messages',                [ChatController::class, 'sendMessage']);
-    Route::get('/unread',                   [ChatController::class, 'getUnreadCount']);
-});
+        // ── Payments & Withdrawals ────────────────────────────────────────────────
+        Route::get('/payments',         [PaymentController::class, 'index']);
+        Route::get('/payments/stats',   [PaymentController::class, 'getPaymentStats']);
+        Route::get('/banks',            [PaymentController::class, 'getBanks']);
 
-// ==================== DEBUG (remove in production) ====================
-Route::get('/getcodes', [PaymentController::class, 'debugBankCodes']);
+        Route::get('/withdrawals',              [AdminWithdrawalController::class, 'index']);
+        Route::get('/withdrawals/stats',        [AdminWithdrawalController::class, 'stats']);
+        Route::get('/withdrawals/pending',      [AdminWithdrawalController::class, 'getPendingWithdrawals']);
+        Route::get('/withdrawals/{id}',         [AdminWithdrawalController::class, 'show']);
+        Route::post('/withdrawals/{id}/approve',[AdminWithdrawalController::class, 'approveWithdrawal']);
+        Route::post('/withdrawals/{id}/reject', [AdminWithdrawalController::class, 'rejectWithdrawal']);
+
+        // ── Notifications ─────────────────────────────────────────────────────────
+        Route::get('/notifications',        [NotificationController::class, 'index']);
+        Route::post('/notifications/read',  [NotificationController::class, 'markAllAsRead']);
+
+        // ── Disputes ──────────────────────────────────────────────────────────────
+        Route::get('/disputes',                         [AdminDisputeController::class, 'index']);
+        Route::get('/disputes/stats',                   [AdminDisputeController::class, 'stats']);
+        Route::get('/disputes/{disputeID}',             [AdminDisputeController::class, 'show']);
+        Route::put('/disputes/{disputeID}/status',      [AdminDisputeController::class, 'updateStatus']);
+        Route::post('/disputes/{disputeID}/notes',      [AdminDisputeController::class, 'addPrivateNote']);
+        Route::post('/disputes/{disputeID}/messages',   [AdminDisputeController::class, 'addMessage'])->middleware('throttle:10,1');
+        Route::delete('/disputes/messages/{messageID}', [AdminDisputeController::class, 'deleteMessage']);
+        Route::get('/disputes/{disputeID}/messages/{messageID}/attachment/{filename}', [AdminDisputeController::class, 'downloadAttachment']);
+        Route::get('/disputes/{disputeID}/messages/search', [AdminDisputeController::class, 'searchMessages']);
+        Route::put('/disputes/messages/{messageID}',    [AdminDisputeController::class, 'editMessage']);
+        Route::post('/disputes/{disputeID}/typing',     [AdminDisputeController::class, 'setTypingStatus']);
+        Route::get('/disputes/{disputeID}/typing',      [AdminDisputeController::class, 'getTypingStatus']);
+        Route::post('/disputes/{disputeID}/messages/reply', [AdminDisputeController::class, 'replyToMessage'])->middleware('throttle:10,1');
+        Route::get('/disputes/{disputeID}/messages/{messageID}/thread', [AdminDisputeController::class, 'getMessageThread']);
+        Route::delete('/disputes/{disputeID}/clear-history', [AdminDisputeController::class, 'clearHistory']);
+
+        // ── Admin Settings ────────────────────────────────────────
+        Route::get('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'getDepositPercentage']);
+        Route::put('/settings/deposit-percentage',  [\App\Http\Controllers\AdminSettingsController::class, 'updateDepositPercentage']);
+
+        // ── Service Cities Management ─────────────────────────────────────────────
+        Route::get('/cities',       [ServiceCityController::class, 'index']);
+        Route::post('/cities',      [ServiceCityController::class, 'store']);
+        Route::put('/cities/{id}',  [ServiceCityController::class, 'update']);
+        Route::delete('/cities/{id}', [ServiceCityController::class, 'destroy']);
+    });
+
+    // ==================== CHAT ROUTES ====================
+    Route::middleware('auth:customer,provider')->prefix('chat')->group(function () {
+        Route::get('/conversations',            [ChatController::class, 'getConversations']);
+        Route::post('/conversations',           [ChatController::class, 'getOrCreateConversation']);
+        Route::get('/conversations/{id}',       [ChatController::class, 'getMessages']);
+        Route::post('/conversations/{id}/read', [ChatController::class, 'markAsRead']);
+        Route::post('/messages',                [ChatController::class, 'sendMessage']);
+        Route::get('/unread',                   [ChatController::class, 'getUnreadCount']);
+    });
+
+}); // End of API V1
