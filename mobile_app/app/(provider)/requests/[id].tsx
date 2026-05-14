@@ -23,6 +23,7 @@ import {
   View,
   ActivityIndicator
 } from "react-native";
+import * as Location from 'expo-location';
 import Map from "@/components/Map/index";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useProviderQueries, useProviderRequest } from "@/hooks/useProviderQueries";
@@ -334,7 +335,7 @@ export default function RequestDetails() {
     }
   };
 
-  const handleArrive = () => {
+  const handleArrive = async () => {
     // Check if location is hidden (deposit not paid)
     const depositPaid = request?.payment_status === 'deposit_paid' || 
                         request?.payment_status === 'pending_final' || 
@@ -350,20 +351,53 @@ export default function RequestDetails() {
       return;
     }
     
-    Alert.alert(t("providerRequests.confirmArrival", "Confirm Arrival"), t("providerRequests.arrivedMsg", "Have you arrived at the customer's location?"), [
-      { text: t("common.cancel", "Cancel"), style: "cancel" },
-      {
-        text: t("providerRequests.arrivedBtn", "Arrived"),
-        onPress: async () => {
-          try {
-            await arriveRequest.mutateAsync(id as string);
-            Alert.alert(t("common.success", "Success"), t("providerRequests.arrivalConfirmed", "Arrival confirmed"));
-          } catch (error) {
-            Alert.alert(t("common.error", "Error"), t("providerRequests.failedArrive", "Failed to confirm arrival"));
-          }
-        },
-      },
-    ]);
+    // Get current location first
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t("common.error", "Error"),
+          "Location permission is required to confirm arrival"
+        );
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High
+      });
+
+      const currentLat = location.coords.latitude;
+      const currentLng = location.coords.longitude;
+
+      Alert.alert(
+        t("providerRequests.confirmArrival", "Confirm Arrival"), 
+        t("providerRequests.arrivedMsg", "Have you arrived at the customer's location?"), 
+        [
+          { text: t("common.cancel", "Cancel"), style: "cancel" },
+          {
+            text: t("providerRequests.arrivedBtn", "Arrived"),
+            onPress: async () => {
+              try {
+                await arriveRequest.mutateAsync({ 
+                  id: id as string, 
+                  latitude: currentLat, 
+                  longitude: currentLng 
+                });
+                Alert.alert(t("common.success", "Success"), t("providerRequests.arrivalConfirmed", "Arrival confirmed"));
+              } catch (error: any) {
+                const errorMessage = error?.message || t("providerRequests.failedArrive", "Failed to confirm arrival");
+                Alert.alert(t("common.error", "Error"), errorMessage);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert(
+        t("common.error", "Error"),
+        "Failed to get your current location. Please try again."
+      );
+    }
   };
 
   const handleStart = () => {

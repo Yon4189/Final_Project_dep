@@ -234,18 +234,18 @@ export function useStartService(options?: UseMutationOptions<ServiceRequest, Err
   });
 }
 
-export function useArriveRequest(options?: UseMutationOptions<ServiceRequest, Error, string>) {
+export function useArriveRequest(options?: UseMutationOptions<ServiceRequest, Error, { id: string; latitude: number; longitude: number }>) {
   const queryClient = useQueryClient();
 
-  return useMutation<ServiceRequest, Error, string>({
-    mutationFn: async (id: string) => {
-      const response = await providerService.arriveService(id);
+  return useMutation<ServiceRequest, Error, { id: string; latitude: number; longitude: number }>({
+    mutationFn: async ({ id, latitude, longitude }) => {
+      const response = await providerService.arriveService(id, latitude, longitude);
       if (!response.success) throw new Error(response.message);
       return response.data as ServiceRequest;
     },
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: providerKeys.requests() });
-      queryClient.invalidateQueries({ queryKey: providerKeys.request(variables) });
+      queryClient.invalidateQueries({ queryKey: providerKeys.request(variables.id) });
       handleSuccess('Arrival confirmed');
     },
     onError: (error, variables, context) => {
