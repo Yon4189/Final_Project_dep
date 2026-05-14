@@ -230,8 +230,8 @@ export default function LoginScreen() {
       const response = await handleGoogleSignIn(userType);
       
       if (response && response.success === true) {
-        const responseData = response.data || {};
-        const token = responseData.token;
+        const responseData = 'data' in response ? (response as any).data : {};
+        const token = responseData?.token;
 
         if (token) {
           if (userType === 'provider') {

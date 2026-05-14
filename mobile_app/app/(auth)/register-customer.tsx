@@ -238,8 +238,8 @@ export default function RegisterCustomerScreen() {
         const userInfo = response.data;
         setFormData(prev => ({
           ...prev,
-          fullname: userInfo.name || prev.fullname,
-          email: userInfo.email || prev.email,
+          fullname: userInfo?.name || prev.fullname,
+          email: userInfo?.email || prev.email,
         }));
         
         Alert.alert(
