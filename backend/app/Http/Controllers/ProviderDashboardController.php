@@ -181,6 +181,11 @@ class ProviderDashboardController extends Controller
                 ->whereNotIn('status', ['cancelled', 'rejected'])
                 ->sum('amount');
 
+            // Pending withdrawals = withdrawals awaiting admin approval
+            $pendingWithdrawals = (float) Withdrawal::where('providerID', $providerID)
+                ->where('status', 'pending')
+                ->sum('amount');
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -191,6 +196,7 @@ class ProviderDashboardController extends Controller
                     'lastMonth'              => $lastMonthEarnings,
                     'availableForWithdrawal' => $availableBalance,
                     'pendingClearance'       => $pendingBalance,
+                    'pendingWithdrawals'     => $pendingWithdrawals,
                     'withdrawnTotal'         => $withdrawnTotal,
                     'completedJobs'          => $completedJobsCount,
                     'currency'               => 'ETB',

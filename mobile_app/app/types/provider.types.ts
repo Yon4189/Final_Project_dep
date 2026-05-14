@@ -193,6 +193,7 @@ export interface EarningsSummary {
   totalEarnings: number;
   pendingEarnings: number;
   availableForWithdrawal: number;
+  pendingWithdrawals?: number;
   withdrawnTotal: number;
   today: number;
   thisWeek: number;
