@@ -20,6 +20,9 @@ class ChapaService
             'base_uri' => $this->baseUrl,
             'timeout' => 30,
             'verify' => false, // For development only
+            'curl' => [
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+            ],
         ]);
     }
 
