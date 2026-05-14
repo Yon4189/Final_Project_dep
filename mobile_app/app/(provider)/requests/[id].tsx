@@ -284,6 +284,10 @@ export default function RequestDetails() {
           onPress: async () => {
             try {
               await acceptRequest.mutateAsync(id as string);
+              Alert.alert(
+                t("common.success", "Success"),
+                t("providerRequests.acceptSuccess", "Request accepted successfully")
+              );
             } catch (error) {
               // Error handled by hook
             }
@@ -1096,6 +1100,21 @@ export default function RequestDetails() {
       {renderActionModal()}
       {renderScheduleModal()}
       {renderDirectionsModal()}
+      
+      {/* Loading Overlay */}
+      {acceptRequest.isPending && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>
+              {t("providerRequests.acceptingRequest", "Accepting request...")}
+            </Text>
+            <Text style={styles.loadingSubtext}>
+              {t("providerRequests.pleaseWait", "Please wait")}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -1802,5 +1821,41 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
 });
