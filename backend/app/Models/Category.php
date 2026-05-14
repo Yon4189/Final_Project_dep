@@ -29,4 +29,14 @@ class Category extends Model
     public function providers() {
         return $this->hasMany(ServiceProvider::class, 'catagoryID', 'catagoryID');
     }
+
+    /**
+     * Get absolute URL for category icon
+     */
+    public function getIconAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        return asset('storage/' . $value);
+    }
 }
