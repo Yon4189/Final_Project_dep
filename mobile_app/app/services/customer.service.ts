@@ -346,19 +346,8 @@ class CustomerService {
   }
 
   async getRequestDetails(id: string): Promise<ApiResponse<ServiceRequest>> {
-    const cacheKey = `request_${id}`;
-    const cached = await storage.getItem<ServiceRequest>(cacheKey);
-    
-    if (cached) {
-      return { success: true, data: cached };
-    }
-    
+    // Don't cache request details - we need real-time status updates
     const response = await api.get<ServiceRequest>(`${this.BASE_PATH}/requests/${id}`);
-    
-    if (response.success && response.data) {
-      await storage.setItem(cacheKey, response.data);
-    }
-    
     return response;
   }
 
@@ -710,6 +699,12 @@ class CustomerService {
 
   async getServicesByCategory(categoryId: string): Promise<ApiResponse<any[]>> {
     return api.get<any[]>(`/categories/${categoryId}/services`);
+  }
+
+  // ==================== Chat & Conversations ====================
+
+  async getConversations(): Promise<ApiResponse<any>> {
+    return api.get<any>('/chat/conversations');
   }
 }
 
