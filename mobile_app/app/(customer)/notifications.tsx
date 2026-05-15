@@ -126,12 +126,14 @@ export default function CustomerNotifications() {
         const payload = response.data.notifications;
         let raw: any[] = [];
         
-        if (Array.isArray(payload)) {
-          raw = payload;
-        } else if (payload && Array.isArray(payload.data)) {
+        if (payload && Array.isArray(payload.data)) {
           raw = payload.data;
+        } else if (Array.isArray(payload)) {
+          raw = payload;
+        } else if (response.data && Array.isArray((response.data as any).data)) {
+          raw = (response.data as any).data;
         } else if (Array.isArray(response.data)) {
-          raw = response.data;
+          raw = response.data as any[];
         }
         
         console.log(`📦 Received ${raw.length} raw notifications`);
