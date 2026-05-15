@@ -240,6 +240,11 @@ class NotificationController extends Controller
             ->where('notifiable_id', $customer->customerID)
             ->where('is_seen', false)
             ->count();
+            
+        Log::info('Fetched customer notifications', [
+            'total' => $notifications->total(),
+            'unread' => $unreadCount
+        ]);
         
         return response()->json([
             'success' => true,

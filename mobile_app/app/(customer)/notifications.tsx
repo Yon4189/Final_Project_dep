@@ -48,6 +48,11 @@ const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   reminder:          'time-outline',
   system:            'information-circle-outline',
   new_request:       'send-outline',
+  payment_success:   'cash-outline',
+  provider_arriving: 'car-outline',
+  new_message:       'chatbubble-outline',
+  provider_started:  'play-outline',
+  provider_arrived:  'pin-outline',
 };
 
 const NOTIFICATION_COLORS: Record<string, string> = {
@@ -64,6 +69,10 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   booking_request:   Colors.primary,
   reminder:          Colors.warning,
   system:            Colors.info,
+  provider_arriving: Colors.info,
+  new_message:       Colors.primary,
+  provider_started:  Colors.success,
+  provider_arrived:  Colors.success,
 };
 
 const parseJsonSafely = (data: any) => {
@@ -98,29 +107,62 @@ export default function CustomerNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const insets = useSafeAreaInsets();
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (options: { showSpinner?: boolean } = { showSpinner: true }) => {
     try {
-      setLoading(true);
+      if (options.showSpinner) {
+        setLoading(true);
+      }
+      
+      console.log('📡 Fetching customer notifications...');
       const response = await customerService.getNotifications();
+      console.log('✅ Notifications response:', {
+        success: response.success,
+        hasData: !!response.data,
+        notificationsCount: (response.data as any)?.notifications?.total || (response.data as any)?.notifications?.data?.length || 0,
+        unreadCount: response.data?.unread_count
+      });
+
       if (response.success && response.data) {
-        // Backend returns: { notifications: { data: [...], ... }, unread_count: N }
         const payload = response.data.notifications;
-        let raw = [];
-        if (Array.isArray(payload)) {
-          raw = payload;
-        } else if (payload && Array.isArray(payload.data)) {
+        let raw: any[] = [];
+        
+        if (payload && Array.isArray(payload.data)) {
           raw = payload.data;
+        } else if (Array.isArray(payload)) {
+          raw = payload;
+        } else if (response.data && Array.isArray((response.data as any).data)) {
+          raw = (response.data as any).data;
         } else if (Array.isArray(response.data)) {
-          // Just in case response.data is the array directly
-          raw = response.data;
+          raw = response.data as any[];
         }
         
-        setNotifications(raw.map(normalizeNotification));
+        console.log(`📦 Received ${raw.length} raw notifications`);
+        if (raw.length > 0) {
+          console.log('🔍 Sample notification structure:', JSON.stringify(raw[0], null, 2));
+        }
+        
+        const normalized = raw.map(n => {
+          try {
+            return normalizeNotification(n);
+          } catch (e) {
+            console.error('❌ Normalization failed for:', n, e);
+            return null;
+          }
+        }).filter(n => n !== null) as CustomerNotification[];
+        
+        console.log(`✅ Successfully normalized ${normalized.length} notifications`);
+        setNotifications(normalized);
         setUnreadCount(response.data.unread_count ?? 0);
-        // NOTE: Do NOT auto-mark-all-as-read here.
+        
+        // Use a timeout to log the state after it has hopefully updated
+        setTimeout(() => {
+          console.log('📊 Current notifications in state:', normalized.length);
+        }, 100);
+      } else {
+        console.warn('⚠️ Response unsuccessful or missing data:', response);
       }
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.error('❌ Failed to load notifications:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -128,14 +170,19 @@ export default function CustomerNotifications() {
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    fetchNotifications({ showSpinner: true });
+    
+    // Background polling every 30s without showing the full screen spinner
+    const interval = setInterval(() => {
+      fetchNotifications({ showSpinner: false });
+    }, 30000);
+    
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchNotifications();
+    fetchNotifications({ showSpinner: false });
   }, [fetchNotifications]);
 
   const markAsRead = async (notificationId: string) => {
