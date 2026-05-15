@@ -160,7 +160,7 @@ export default function ProviderProfile() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.businessName}>{profile?.category?.name || profile?.services?.[0]?.name || t('providerProfile.service', 'Service')}</Text>
+        <Text style={styles.businessName}>{profile?.businessName || profile?.category?.name || profile?.services?.[0]?.serviceName || t('providerProfile.service', 'Service')}</Text>
         <Text style={styles.profession}>{profile?.fullname || t('providerProfile.serviceProvider', 'Service Provider')}</Text>
 
         <View style={styles.ratingContainer}>

@@ -31,6 +31,10 @@ export interface ProviderProfile {
   certifications: Certification[];
   languages: string[];
   badges: Badge[];
+  category?: {
+    id: string;
+    name: string;
+  };
   bankDetails?: BankDetails;
   business_license?: string;
   insurance_certificate?: string;
