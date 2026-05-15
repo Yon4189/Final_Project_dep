@@ -17,7 +17,10 @@ import { Colors } from '@/app/constants/Colors';
 import { API_BASE_URL } from '@/app/config/api';
 import { useProviderStore } from '@/app/store/providerStore';
 import { useUpdateProfile } from '@/hooks/useProviderQueries';
+import { Certification } from '@/app/types/provider.types';
 import AppButton from '@/components/AppButton';
+import AppInput from '@/components/AppInput';
+import { Modal, TextInput } from 'react-native';
 
 export default function DocumentsScreen() {
   const router = useRouter();
@@ -26,6 +29,15 @@ export default function DocumentsScreen() {
   const updateProfileMutation = useUpdateProfile();
   
   const [uploading, setUploading] = useState<string | null>(null);
+  
+  // Certification management state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingCert, setEditingCert] = useState<Certification | null>(null);
+  const [certName, setCertName] = useState('');
+  const [certImage, setCertImage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const certifications: Certification[] = profile?.certifications || [];
 
   const handlePickDocument = async (type: 'business_license' | 'insurance_certificate') => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -69,6 +81,81 @@ export default function DocumentsScreen() {
     } finally {
       setUploading(null);
     }
+  };
+
+  // Certification handlers
+  const handleAddCert = () => {
+    setEditingCert(null);
+    setCertName('');
+    setCertImage(null);
+    setModalVisible(true);
+  };
+
+  const handleEditCert = (cert: Certification) => {
+    setEditingCert(cert);
+    setCertName(cert.name);
+    setCertImage(cert.image ?? null);
+    setModalVisible(true);
+  };
+
+  const handlePickCertImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert(t('profile.permissionRequired', 'Permission Required'), t('profile.photoLibraryPermission', 'Please allow access to your photo library.'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      setCertImage(result.assets[0].uri);
+    }
+  };
+
+  const handleSaveCert = async () => {
+    if (!certName.trim()) {
+      Alert.alert(t('common.error', 'Error'), t('profile.fillRequired', 'Please enter certification name.'));
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      let updatedCerts: Certification[] = [...certifications];
+      if (editingCert) {
+        updatedCerts = updatedCerts.map(c => c.id === editingCert.id ? { ...c, name: certName, image: certImage } : c);
+      } else {
+        updatedCerts.push({ id: Date.now().toString(), name: certName, image: certImage });
+      }
+      const formData = new FormData();
+      formData.append('certifications', JSON.stringify(updatedCerts));
+      await updateProfileMutation.mutateAsync(formData);
+      setModalVisible(false);
+    } catch (error) {
+      Alert.alert(t('common.error', 'Error'), t('profile.updateError', 'Failed to save certification.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCert = (id: string) => {
+    Alert.alert(
+      t('profile.certificationsTitle', 'Delete Certification'),
+      t('profile.deleteCertConfirm', 'Are you sure you want to remove this certification?'),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        { text: t('profile.delete', 'Delete'), style: 'destructive', onPress: async () => {
+          try {
+            const updatedCerts = certifications.filter(c => c.id !== id);
+            const formData = new FormData();
+            formData.append('certifications', JSON.stringify(updatedCerts));
+            await updateProfileMutation.mutateAsync(formData);
+          } catch (error) {
+            Alert.alert(t('common.error', 'Error'), t('profile.updateError', 'Failed to delete certification.'));
+          }
+        }}
+      ]
+    );
   };
 
   const renderDocCard = (
@@ -139,36 +226,157 @@ export default function DocumentsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>{t('profile.verificationDocsTitle', 'Verification Documents')}</Text>
+        <Text style={styles.title}>{t('profile.docsAndCertsTitle', 'Documents & Certifications')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('auth.certificates', 'Certificates & Work Documents')}</Text>
+        </View>
+
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
           <Text style={styles.infoText}>
-            {t('profile.uploadInstructions', 'Please upload clear copies of your legal documents to maintain your verified status and visibility to customers.')}
+            {t('auth.certificatesHint', 'Upload any relevant certifications, licenses, or work documents')}
           </Text>
         </View>
 
-        {renderDocCard(
-          t('profile.businessLicense', 'Business License'),
-          'business_license',
-          t('profile.licenseDesc', 'A valid municipal or trade license allowing you to operate your business.'),
-          'business'
+        {/* Display specific documents if they exist, but as part of the list */}
+        {profile?.business_license && (
+          <View style={styles.certCard}>
+            <View style={styles.certIconContainer}>
+              <Image 
+                source={{ uri: `${API_BASE_URL.replace('/api', '')}/${profile.business_license}` }} 
+                style={styles.certImage} 
+              />
+            </View>
+            <View style={styles.certInfo}>
+              <Text style={styles.certName}>{t('profile.businessLicense', 'Business License')}</Text>
+              <View style={styles.certActions}>
+                <TouchableOpacity onPress={() => handlePickDocument('business_license')}>
+                  <Text style={styles.certActionText}>{t('profile.update', 'Update')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         )}
 
-        {renderDocCard(
-          t('profile.insuranceCertificate', 'Insurance Certificate'),
-          'insurance_certificate',
-          t('profile.insuranceDesc', 'Proof of professional liability or general business insurance.'),
-          'shield-checkmark'
+        {profile?.insurance_certificate && (
+          <View style={styles.certCard}>
+            <View style={styles.certIconContainer}>
+              <Image 
+                source={{ uri: `${API_BASE_URL.replace('/api', '')}/${profile.insurance_certificate}` }} 
+                style={styles.certImage} 
+              />
+            </View>
+            <View style={styles.certInfo}>
+              <Text style={styles.certName}>{t('profile.insuranceCertificate', 'Insurance Certificate')}</Text>
+              <View style={styles.certActions}>
+                <TouchableOpacity onPress={() => handlePickDocument('insurance_certificate')}>
+                  <Text style={styles.certActionText}>{t('profile.update', 'Update')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         )}
+
+        {certifications.map((cert) => (
+          <View key={cert.id} style={styles.certCard}>
+            <View style={styles.certIconContainer}>
+              {cert.image ? (
+                <Image 
+                  source={{ uri: cert.image.startsWith('http') ? cert.image : `${API_BASE_URL.replace('/api', '')}/${cert.image}` }} 
+                  style={styles.certImage} 
+                />
+              ) : (
+                <Ionicons name="ribbon-outline" size={24} color={Colors.primary} />
+              )}
+            </View>
+            <View style={styles.certInfo}>
+              <Text style={styles.certName}>{cert.name}</Text>
+              <View style={styles.certActions}>
+                <TouchableOpacity onPress={() => handleEditCert(cert)}>
+                  <Text style={styles.certActionText}>{t('profile.edit', 'Edit')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDeleteCert(cert.id)}>
+                  <Text style={[styles.certActionText, { color: Colors.error }]}>{t('profile.delete', 'Delete')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ))}
+
+        <TouchableOpacity style={styles.addCertButton} onPress={handleAddCert}>
+          <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
+          <Text style={styles.addCertText}>
+            {certifications.length === 0
+              ? t('auth.addCertificate', 'Add Certificate or Document')
+              : t('auth.addAnother', 'Add Another')}
+          </Text>
+        </TouchableOpacity>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             {t('profile.complianceNotice', 'Our compliance team will review your documents within 24-48 hours of upload.')}
           </Text>
         </View>
+
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {editingCert ? t('profile.editDocument', 'Edit Document') : t('profile.addDocument', 'Add Document')}
+                </Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Ionicons name="close" size={24} color={Colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalBody}>
+                <AppInput
+                  label={t('profile.docNameLabel', 'Document Name')}
+                  value={certName}
+                  onChangeText={setCertName}
+                  placeholder={t('profile.docNamePlaceholder', 'e.g. Business License, Insurance, or Certification')}
+                  required
+                />
+
+                <Text style={styles.label}>{t('profile.docImageLabel', 'Document Image (Optional)')}</Text>
+                <TouchableOpacity style={styles.imageSelector} onPress={handlePickCertImage}>
+                  {certImage ? (
+                    <Image source={{ uri: certImage }} style={styles.selectedImage} />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="camera-outline" size={32} color={Colors.text.secondary} />
+                      <Text style={styles.imagePlaceholderText}>{t('profile.clickToUpload', 'Click to upload photo')}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <AppButton 
+                  title={t('common.cancel', 'Cancel')} 
+                  onPress={() => setModalVisible(false)} 
+                  variant="outline"
+                  style={styles.footerButton}
+                />
+                <AppButton 
+                  title={t('profile.saveChanges', 'Save Changes')} 
+                  onPress={handleSaveCert} 
+                  loading={isSubmitting}
+                  style={styles.footerButton}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </View>
   );
@@ -293,8 +501,26 @@ const styles = StyleSheet.create({
   uploadButtonTextSecondary: {
     color: Colors.primary,
   },
+  addCertButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    marginTop: 8,
+    backgroundColor: Colors.surface,
+  },
+  addCertText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   footer: {
-    marginTop: 10,
+    marginTop: 24,
     paddingBottom: 40,
     alignItems: 'center',
   },
@@ -303,5 +529,150 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  addButtonText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  emptyCerts: {
+    padding: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+  },
+  emptyCertsText: {
+    color: Colors.text.secondary,
+    fontSize: 14,
+  },
+  certCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  certIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  certImage: {
+    width: '100%',
+    height: '100%',
+  },
+  certInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  certName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  certActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  certActionText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8,
+    marginTop: 10,
+  },
+  imageSelector: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginTop: 8,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  footerButton: {
+    flex: 1,
   },
 });

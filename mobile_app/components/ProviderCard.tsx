@@ -56,7 +56,6 @@ export default function ProviderCard({
         )}
         {showBadges && (
           <View style={styles.badges}>
-            {rating >= 4.5 && <View style={styles.badge}><Text style={styles.badgeText}>Top Rated</Text></View>}
             <View style={styles.badge}><Text style={styles.badgeText}>Verified</Text></View>
           </View>
         )}
