@@ -118,7 +118,7 @@ export default function CustomerNotifications() {
       console.log('✅ Notifications response:', {
         success: response.success,
         hasData: !!response.data,
-        notificationsCount: response.data?.notifications?.data?.length || response.data?.notifications?.length || 0,
+        notificationsCount: (response.data as any)?.notifications?.total || (response.data as any)?.notifications?.data?.length || 0,
         unreadCount: response.data?.unread_count
       });
 
