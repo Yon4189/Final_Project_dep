@@ -284,7 +284,6 @@ export default function CustomerProfile() {
           <View style={styles.card}>
             {renderNavItem('lock-closed-outline', t('profile.changePassword', 'Change Password'), () => router.push('/(customer)/change-password'))}
             {renderNavItem('location-outline', t('profile.manageAddresses', 'Manage Addresses'), () => router.push('/(customer)/saved-addresses'))}
-            {renderNavItem('card-outline', t('profile.paymentMethods', 'Payment Methods'), () => Alert.alert('Coming Soon', 'Payment methods coming soon.'))}
           </View>
         </View>
 
@@ -300,13 +299,10 @@ export default function CustomerProfile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('profile.notifications', 'Notifications')}</Text>
           <View style={styles.card}>
-            {renderToggle('mail-outline', t('profile.emailNotifications', 'Email Notifications'), notifications.email, (v) => handleNotificationToggle('email', v), updateNotifications.isPending)}
             {renderToggle('notifications-outline', t('profile.pushNotifications', 'Push Notifications'), notifications.push, (v) => handleNotificationToggle('push', v), updateNotifications.isPending)}
-            {renderToggle('chatbubble-outline', t('profile.smsNotifications', 'SMS Notifications'), notifications.sms, (v) => handleNotificationToggle('sms', v), updateNotifications.isPending)}
+            {renderToggle('mail-outline', t('profile.emailNotifications', 'Email Notifications'), notifications.email, (v) => handleNotificationToggle('email', v), updateNotifications.isPending)}
             {renderToggle('calendar-outline', t('profile.bookingUpdates', 'Booking Updates'), notifications.booking_updates, (v) => handleNotificationToggle('booking_updates', v), updateNotifications.isPending)}
             {renderToggle('card-outline', t('profile.paymentUpdates', 'Payment Updates'), notifications.payment_updates, (v) => handleNotificationToggle('payment_updates', v), updateNotifications.isPending)}
-            {renderToggle('megaphone-outline', t('profile.promotionalOffers', 'Promotional Offers'), notifications.promotional_offers, (v) => handleNotificationToggle('promotional_offers', v), updateNotifications.isPending)}
-            {renderToggle('pricetag-outline', t('profile.marketing', 'Marketing'), notifications.marketing, (v) => handleNotificationToggle('marketing', v), updateNotifications.isPending)}
           </View>
         </View>
 
