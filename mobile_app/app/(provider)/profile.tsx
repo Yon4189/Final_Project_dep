@@ -34,13 +34,7 @@ export default function ProviderProfile() {
   
   const styles = React.useMemo(() => getStyles(colors), [colors]);
 
-  const BADGES = React.useMemo(() => [
-    { type: 'verified', label: t('providerProfile.verified', 'Verified Professional'), icon: 'checkmark-circle', color: colors.primary },
-    { type: 'top_rated', label: t('providerProfile.topRated', 'Top Rated'), icon: 'star', color: colors.warning },
-    { type: 'expert', label: t('providerProfile.expert', 'Expert'), icon: 'trophy', color: colors.warning },
-    { type: 'emergency', label: t('providerProfile.emergency', 'Emergency Service'), icon: 'flash', color: colors.error },
-    { type: 'insured', label: t('providerProfile.insured', 'Fully Insured'), icon: 'shield', color: colors.success },
-  ], [colors]);
+
 
   const { profile, isLoading, loadProfile,stats, toggleAvailability } = useProviderStore();
   
@@ -207,19 +201,7 @@ export default function ProviderProfile() {
     );
   };
 
-  const renderBadges = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{t('profile.badgesVerifications', 'Badges & Verifications')}</Text>
-      <View style={styles.badgesContainer}>
-        {BADGES.map((badge) => (
-          <View key={badge.type} style={[styles.badge, { backgroundColor: badge.color + '20' }]}>
-            <Ionicons name={badge.icon as keyof typeof Ionicons.glyphMap} size={20} color={badge.color} />
-            <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
+
 
   const renderContactInfo = () => (
     <View style={styles.section}>
@@ -306,51 +288,16 @@ export default function ProviderProfile() {
         onPress={() => router.push('/(provider)/profile/documents')}
       >
         <View style={styles.docLeft}>
-          <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-          <Text style={styles.docLabel}>{t('profile.businessLicense', 'Business License')}</Text>
+          <Ionicons name="document-attach-outline" size={20} color={colors.primary} />
+          <Text style={styles.docLabel}>{t('profile.manageDocs', 'Manage Documents & Certificates')}</Text>
         </View>
         <View style={styles.docRight}>
-          {(profile?.status === 'approved' || profile?.verificationStatus === 'verified') ? (
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-          ) : (
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingText}>{t('profile.pending', 'Pending')}</Text>
-            </View>
-          )}
-          <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={styles.docRow}
-        onPress={() => router.push('/(provider)/profile/documents')}
-      >
-        <View style={styles.docLeft}>
-          <Ionicons name="shield-outline" size={20} color={colors.primary} />
-          <Text style={styles.docLabel}>{t('profile.insuranceCertificate', 'Insurance Certificate')}</Text>
-        </View>
-        <View style={styles.docRight}>
-          {(profile?.status === 'approved' || profile?.verificationStatus === 'verified') ? (
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-          ) : (
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingText}>{t('profile.pending', 'Pending')}</Text>
-            </View>
-          )}
-          <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={styles.docRow}
-        onPress={() => router.push('/(provider)/profile/certifications')}
-      >
-        <View style={styles.docLeft}>
-          <Ionicons name="ribbon-outline" size={20} color={colors.primary} />
-          <Text style={styles.docLabel}>{t('profile.certifications', 'Certifications')}</Text>
-        </View>
-        <View style={styles.docRight}>
-          <Text style={styles.docCount}>{profile?.certifications?.length || 0}</Text>
+          <View style={styles.docStats}>
+            <Text style={styles.docCount}>
+              {(profile?.business_license ? 1 : 0) + (profile?.insurance_certificate ? 1 : 0) + (profile?.certifications?.length || 0)}
+            </Text>
+            <Text style={styles.docStatsLabel}>{t('profile.items', 'items')}</Text>
+          </View>
           <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} />
         </View>
       </TouchableOpacity>
@@ -463,7 +410,7 @@ export default function ProviderProfile() {
       >
         {renderHeader()}
         {renderProfileCard()}
-        {renderBadges()}
+
         {renderContactInfo()}
         {renderBusinessInfo()}
         {renderDocuments()}
@@ -646,23 +593,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.primary,
     fontWeight: '500',
   },
-  badgesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
+
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -798,6 +729,17 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   docCount: {
     fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  docStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginRight: 8,
+  },
+  docStatsLabel: {
+    fontSize: 12,
     color: colors.text.secondary,
   },
   bankCard: {
