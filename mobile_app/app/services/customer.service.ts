@@ -627,9 +627,7 @@ class CustomerService {
     };
     unread_count: number;
   }>> {
-    console.log(`[CustomerService] Fetching notifications (page: ${page})`);
     const response = await api.get<any>(`${this.BASE_PATH}/notifications?page=${page}`);
-    console.log(`[CustomerService] Notifications response:`, response.success ? 'Success' : 'Failed');
     return response;
   }
 

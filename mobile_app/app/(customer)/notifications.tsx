@@ -115,54 +115,47 @@ export default function CustomerNotifications() {
       
       console.log('📡 Fetching customer notifications...');
       const response = await customerService.getNotifications();
-      console.log('✅ Notifications response:', {
-        success: response.success,
-        hasData: !!response.data,
-        notificationsCount: (response.data as any)?.notifications?.total || (response.data as any)?.notifications?.data?.length || 0,
-        unreadCount: response.data?.unread_count
-      });
+      
+      // Robust data extraction
+      let raw: any[] = [];
+      let serverUnreadCount = 0;
 
       if (response.success && response.data) {
+        serverUnreadCount = response.data.unread_count ?? 0;
         const payload = response.data.notifications;
-        let raw: any[] = [];
         
         if (payload && Array.isArray(payload.data)) {
           raw = payload.data;
         } else if (Array.isArray(payload)) {
           raw = payload;
+        } else if (Array.isArray(response.data)) {
+          raw = response.data;
         } else if (response.data && Array.isArray((response.data as any).data)) {
           raw = (response.data as any).data;
-        } else if (Array.isArray(response.data)) {
-          raw = response.data as any[];
         }
-        
-        console.log(`📦 Received ${raw.length} raw notifications`);
-        if (raw.length > 0) {
-          console.log('🔍 Sample notification structure:', JSON.stringify(raw[0], null, 2));
-        }
-        
-        const normalized = raw.map(n => {
-          try {
-            return normalizeNotification(n);
-          } catch (e) {
-            console.error('❌ Normalization failed for:', n, e);
-            return null;
-          }
-        }).filter(n => n !== null) as CustomerNotification[];
-        
-        console.log(`✅ Successfully normalized ${normalized.length} notifications`);
-        setNotifications(normalized);
-        setUnreadCount(response.data.unread_count ?? 0);
-        
-        // Use a timeout to log the state after it has hopefully updated
-        setTimeout(() => {
-          console.log('📊 Current notifications in state:', normalized.length);
-        }, 100);
-      } else {
-        console.warn('⚠️ Response unsuccessful or missing data:', response);
       }
-    } catch (error) {
+
+      console.log(`📦 Received ${raw.length} raw notifications. Unread from server: ${serverUnreadCount}`);
+      
+      const normalized = raw.map(n => {
+        try {
+          return normalizeNotification(n);
+        } catch (e) {
+          console.error('❌ Normalization failed for:', n, e);
+          return null;
+        }
+      }).filter(n => n !== null) as CustomerNotification[];
+      
+      setNotifications(normalized);
+      setUnreadCount(serverUnreadCount);
+      
+    } catch (error: any) {
       console.error('❌ Failed to load notifications:', error);
+      if (error.response) {
+        console.error('❌ Server error data:', error.response.data);
+        console.error('❌ Server error status:', error.response.status);
+      }
+      Alert.alert('Error', 'Failed to fetch notifications. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -172,7 +165,7 @@ export default function CustomerNotifications() {
   useEffect(() => {
     fetchNotifications({ showSpinner: true });
     
-    // Background polling every 30s without showing the full screen spinner
+    // Background polling every 30s
     const interval = setInterval(() => {
       fetchNotifications({ showSpinner: false });
     }, 30000);
@@ -181,7 +174,6 @@ export default function CustomerNotifications() {
   }, [fetchNotifications]);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
     fetchNotifications({ showSpinner: false });
   }, [fetchNotifications]);
 

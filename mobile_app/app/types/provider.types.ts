@@ -38,6 +38,10 @@ export interface ProviderProfile {
   bankDetails?: BankDetails;
   business_license?: string;
   insurance_certificate?: string;
+  idPhoto?: string;
+  idPhotoBack?: string;
+  idPhotoType?: string;
+  service_city?: string;
   createdAt: string;
   updatedAt: string;
 }
