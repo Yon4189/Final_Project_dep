@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-// Detect the current IP from the browser's address bar
-const host = window.location.hostname;
+// Use production API if available, otherwise fallback to local IP detection
+const isProduction = import.meta.env.PROD;
+const apiUrl = import.meta.env.VITE_API_BASE_URL 
+  || (isProduction ? 'https://final-project-dsnl.onrender.com/api/v1' : `http://${window.location.hostname}:8000/api/v1`);
 
 const api = axios.create({
-  // This automatically switches between localhost (for him) 
-  // and the Network IP (for your phone/testing)
-  baseURL: `http://${host}:8000/api/v1`,
+  baseURL: apiUrl,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'

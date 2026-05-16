@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const DEFAULT_API_PORT = process.env.EXPO_PUBLIC_API_PORT?.trim() || '8000';
-const DEFAULT_PRODUCTION_API_URL = 'https://your-production-server.com/api/v1';
+const DEFAULT_PRODUCTION_API_URL = 'https://final-project-dsnl.onrender.com/api/v1';
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
 
