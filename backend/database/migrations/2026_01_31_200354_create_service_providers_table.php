@@ -8,13 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('serviceProviders', function (Blueprint $table) {
+        Schema::create('service_providers', function (Blueprint $table) {
             $table->id('providerID');                   
             $table->string('fullname');                 
             $table->string('phone')->unique();                    
             $table->string('email')->unique();          
             $table->string('password');                 
-            $table->unsignedBigInteger('catagoryID'); // FK to catagories
+            $table->unsignedBigInteger('catagoryID')->nullable(); // FK to catagories
             $table->string('profilePicture')->nullable();  // nullable cuz its optional
             $table->string('idPhoto');                  
             $table->boolean('isVerified')->default(false); 
@@ -29,6 +29,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('serviceProviders');
+        Schema::dropIfExists('service_providers');
     }
 };

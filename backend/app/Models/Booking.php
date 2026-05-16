@@ -8,30 +8,255 @@ use Illuminate\Database\Eloquent\Model;
 class Booking extends Model
 {
     use HasFactory;
-
-    protected $primaryKey = 'bookingID'; // primary key
+    
+    protected $table = 'bookings';
+    protected $primaryKey = 'bookingID';
 
     protected $fillable = [
-        'customerID', 'serviceID', 'status', 'scheduledDate'
+        'customerID',
+        'serviceID',
+        'providerID',
+        'status',
+        'scheduledDate',
+        'agreed_price',
+        'service_latitude',
+        'service_longitude',
+        'notes',
+        'eta_minutes',
+        'estimated_arrival_time',
+        'accepted_at',
+        'provider_started_at',
+        'provider_arrived_at',
+        'completed_at',
+        'expires_at',
+        'payment_due_at',
+        'paid_at',
+        'platform_commission',
+        'provider_payout',
+        'refund_amount',
+        'cancelled_at',
+        'cancellation_reason',
+        'cancelled_by',
+        'rejected_at',
+        'rejected_by',
+        'rejection_reason',
+        // New payment status fields (add these via migration if not exist)
+        'payment_status',
+        'customer_confirmed_at',
+        'auto_release_at',
+        'released_at',
+        'address_text'
     ];
 
-    // a booking belongs to a customer
-    public function customer() {
-        return $this->belongsTo(Customer::class, 'customerID', 'customerID'); // fk, owner key
+    protected $casts = [
+        'scheduledDate' => 'datetime',
+        'estimated_arrival_time' => 'datetime',
+        'accepted_at' => 'datetime',
+        'provider_started_at' => 'datetime',
+        'provider_arrived_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'payment_due_at' => 'datetime',
+        'paid_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'customer_confirmed_at' => 'datetime',
+        'auto_release_at' => 'datetime',
+        'released_at' => 'datetime',
+        'agreed_price' => 'decimal:2',
+        'platform_commission' => 'decimal:2',
+        'provider_payout' => 'decimal:2',
+        'refund_amount' => 'decimal:2'
+    ];
+
+    /**
+     * Relationships
+     */
+    
+    // A booking belongs to a customer
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customerID', 'customerID');
     }
 
-    // a booking belongs to a service
-    public function service() {
-        return $this->belongsTo(Service::class, 'serviceID', 'serviceID'); // fk, owner key
+    // A booking belongs to a service
+    public function service()
+    {
+        return $this->belongsTo(Service::class, 'serviceID', 'serviceID');
     }
 
-    // a booking can have one transaction
-    public function transaction() {
-        return $this->hasOne(Transaction::class, 'bookingID', 'bookingID'); // fk, local key
+    // A booking belongs to a provider
+    public function provider()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'providerID', 'providerID');
     }
 
-    // a booking can have one review
-    public function review() {
-        return $this->hasOne(Review::class, 'bookingID', 'bookingID'); // fk, local key
+    // A booking has one payment
+    public function payment()
+    {
+        return $this->hasOne(Payment::class, 'bookingID', 'bookingID');
+    }
+
+    // A booking has one deposit payment
+    public function depositPayment()
+    {
+        return $this->hasOne(Payment::class, 'bookingID', 'bookingID')
+                    ->where('payment_type', 'deposit');
+    }
+
+    // A booking has one final payment
+    public function finalPayment()
+    {
+        return $this->hasOne(Payment::class, 'bookingID', 'bookingID')
+                    ->where('payment_type', 'final');
+    }
+
+    // A booking has one review
+    public function review()
+    {
+        return $this->hasOne(Review::class, 'bookingID', 'bookingID');
+    }
+
+    // A booking has one wallet transaction
+    public function walletTransaction()
+    {
+        return $this->hasOne(WalletTransaction::class, 'bookingID', 'bookingID');
+    }
+
+    /**
+     * Helper Methods
+     */
+
+    /**
+     * Check if booking is paid
+     */
+    public function isPaid(): bool
+    {
+        return $this->paid_at !== null;
+    }
+
+    /**
+     * Check if payment is due (accepted but not paid within 24hrs)
+     */
+    public function isPaymentDue(): bool
+    {
+        return $this->status === 'accepted' && 
+               $this->payment_due_at && 
+               $this->payment_due_at < now() && 
+               !$this->paid_at;
+    }
+
+    /**
+     * Calculate platform commission (10%)
+     */
+    public function calculateCommission(): float
+    {
+        return $this->agreed_price * 0.10;
+    }
+
+    /**
+     * Calculate provider payout (after commission)
+     */
+    public function calculateProviderPayout(): float
+    {
+        return $this->agreed_price - $this->calculateCommission();
+    }
+
+    /**
+     * Check if booking is releasable (for auto-release)
+     */
+    public function isReleasable(): bool
+    {
+        return $this->status === 'completed' &&
+            $this->payment_status === 'releasable' &&
+            $this->auto_release_at &&
+            $this->auto_release_at <= now() &&
+            is_null($this->customer_confirmed_at);
+    }
+
+    /**
+     * Check if booking is waiting for customer confirmation
+     */
+    public function isWaitingConfirmation(): bool
+    {
+        return $this->status === 'waiting_customer_confirmation';
+    }
+
+    /**
+     * Check if booking can be confirmed by customer
+     */
+    public function canBeConfirmed(): bool
+    {
+        return $this->status === 'waiting_customer_confirmation' && 
+               is_null($this->customer_confirmed_at);
+    }
+
+    /**
+     * Scope for releasable bookings
+     */
+    public function scopeReleasable($query)
+    {
+        return $query->where('status', 'completed')
+            ->where('payment_status', 'releasable')
+            ->whereNotNull('auto_release_at')
+            ->where('auto_release_at', '<=', now())
+            ->whereNull('customer_confirmed_at');
+    }
+
+    /**
+     * Scope for paid bookings
+     */
+    public function scopePaid($query)
+    {
+        return $query->whereNotNull('paid_at');
+    }
+
+    /**
+     * Scope for pending payment
+     */
+    public function scopePendingPayment($query)
+    {
+        return $query->whereNull('paid_at')
+            ->where('status', 'accepted');
+    }
+
+    /**
+     * Scope for bookings pending final payment
+     */
+    public function scopePendingFinalPayment($query)
+    {
+        return $query->where('payment_status', 'pending_final');
+    }
+
+    /**
+     * Scope for overdue payments
+     */
+    public function scopeOverduePayments($query)
+    {
+        return $query->where('payment_status', 'overdue');
+    }
+
+    /**
+     * Check if payment is overdue
+     */
+    public function isPaymentOverdue(): bool
+    {
+        return $this->payment_deadline && 
+               $this->payment_deadline < now() && 
+               $this->payment_status === 'pending_final';
+    }
+
+    /**
+     * Get remaining amount to be paid (for final payment)
+     */
+    public function getRemainingAmount(): float
+    {
+        $depositPayment = $this->depositPayment;
+        
+        if (!$depositPayment) {
+            return $this->agreed_price;
+        }
+        
+        return round($this->agreed_price - $depositPayment->amount, 2);
     }
 }

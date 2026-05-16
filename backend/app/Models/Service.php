@@ -12,7 +12,7 @@ class Service extends Model
     protected $primaryKey = 'serviceID'; // primary key
 
     protected $fillable = [
-        'providerID', 'categoryID', 'title', 'description', 'estimatedCost'
+        'providerID', 'catagoryID', 'title', 'description', 'estimatedPrice', 'hourly_rate'
     ];
 
     // a service belongs to a provider
@@ -22,11 +22,17 @@ class Service extends Model
 
     // a service belongs to a category
     public function category() {
-        return $this->belongsTo(Category::class, 'categoryID', 'categoryID'); // fk, owner key
+        return $this->belongsTo(Category::class, 'catagoryID', 'catagoryID'); // fk, owner key
     }
 
     // a service can have many bookings
     public function bookings() {
         return $this->hasMany(Booking::class, 'serviceID', 'serviceID'); // fk, local key
+    }
+
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'serviceID', 'serviceID');
     }
 }

@@ -1,0 +1,196 @@
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Plus, RefreshCw, Database, AlertCircle, CheckCircle } from 'lucide-react';
+import api from '../api/axios';
+import { useServicesData } from '../hooks/useServicesData';
+import ServicesTable from '../components/ServicesTable';
+import CategoryModal from '../components/CategoryModal';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
+
+const Services = () => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const location = useLocation();
+  const { categories, services, providers, isLoading, isError, error, refresh } = useServicesData();
+
+  // Determine active tab from URL
+  const activeTab = location.pathname.includes('/services/services') ? 'services' : 'categories';
+
+  // Filter state for services
+  const [filterCategory, setFilterCategory] = useState('');
+  const [costMin, setCostMin] = useState('');
+  const [costMax, setCostMax] = useState('');
+
+  // UI state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
+
+  const categoryIsInUse = (catagoryID) => {
+    const usedByServices = services.some(s => s.catagoryID === catagoryID);
+    const usedByProviders = providers.some(p => p.catagoryID === catagoryID);
+    return usedByServices || usedByProviders;
+  };
+
+  const handleCategorySubmit = async (formData) => {
+    setIsSubmitting(true);
+    try {
+      if (editingCategory) {
+        await api.put(`/admin/categories/${editingCategory.catagoryID}`, formData);
+        showToast(t('serv_msg_cat_updated'));
+      } else {
+        await api.post('/admin/categories', formData);
+        showToast(t('serv_msg_cat_added'));
+      }
+      setIsModalOpen(false);
+      setEditingCategory(null);
+      queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+    } catch (err) {
+      const msg = err.response?.data?.message || t('serv_msg_error_saving');
+      showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCategory = (item) => {
+    if (categoryIsInUse(item.catagoryID)) {
+      showToast(t('serv_msg_error_in_use'), 'error');
+      return;
+    }
+    setDeleteConfirm({ show: true, id: item.catagoryID, name: item.name });
+  };
+
+  const confirmDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/admin/categories/${deleteConfirm.id}`);
+      showToast(t('serv_msg_cat_deleted'));
+      setDeleteConfirm({ show: false, id: null, name: '' });
+      queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+    } catch (err) {
+      const msg = err.response?.data?.message || t('serv_error_delete_constraint');
+      showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openModal = (category = null) => {
+    setEditingCategory(category);
+    setIsModalOpen(true);
+  };
+
+  const resetFilters = () => {
+    setFilterCategory('');
+    setCostMin('');
+    setCostMax('');
+  };
+
+  const dbStatus = isError ? 'disconnected' : (isLoading ? 'checking' : 'connected');
+
+  return (
+    <div className="relative space-y-6 animate-in fade-in duration-500 pb-10">
+      {/* Toast */}
+      {toast.show && (
+        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl animate-in slide-in-from-right-10 border ${toast.type === 'success' ? 'bg-slate-800 text-green-400 border-green-500/30' : 'bg-red-600 text-white border-red-400/30'}`}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
+            {activeTab === 'categories' ? t('serv_cat_title') : t('serv_all_title')}
+          </h1>
+          <p className="text-admin-text-muted text-[10px] font-black uppercase tracking-widest italic mt-1">
+            {activeTab === 'categories' ? t('serv_cat_subtitle') : t('serv_all_subtitle')}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
+            <Database size={14} className={
+              dbStatus === 'connected' ? 'text-green-500' :
+                dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
+            } />
+            <span className="text-[10px] font-black uppercase tracking-widest text-admin-text-muted">
+              {dbStatus === 'connected' && t('db_connected')}
+              {dbStatus === 'disconnected' && t('db_disconnected')}
+              {dbStatus === 'checking' && t('db_checking')}
+            </span>
+          </div>
+          <button
+            onClick={refresh}
+            className="p-2.5 bg-admin-card border border-admin-border rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Refresh data"
+          >
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+          {activeTab === 'categories' && dbStatus === 'connected' && (
+            <button
+              onClick={() => openModal()}
+              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <Plus size={18} /> {t('serv_add_category')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <ServicesTable
+        activeTab={activeTab}
+        categories={categories}
+        services={services}
+        providers={providers}
+        isLoading={isLoading}
+        dbStatus={dbStatus}
+        error={error}
+        onRefresh={refresh}
+        onEditCategory={openModal}
+        onDeleteCategory={handleDeleteCategory}
+        categoryIsInUse={categoryIsInUse}
+        filterCategory={filterCategory}
+        setFilterCategory={setFilterCategory}
+        costMin={costMin}
+        setCostMin={setCostMin}
+        costMax={costMax}
+        setCostMax={setCostMax}
+        resetFilters={resetFilters}
+      />
+
+      <CategoryModal
+        isOpen={isModalOpen}
+        category={editingCategory}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingCategory(null);
+        }}
+        onSubmit={handleCategorySubmit}
+        isSubmitting={isSubmitting}
+      />
+
+      <DeleteConfirmModal
+        show={deleteConfirm.show}
+        name={deleteConfirm.name}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({ show: false, id: null, name: '' })}
+      />
+    </div>
+  );
+};
+
+export default Services;
