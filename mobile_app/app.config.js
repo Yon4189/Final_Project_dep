@@ -114,11 +114,16 @@ module.exports = ({ config }) => {
           "locationAlwaysAndWhenInUsePermission": "Allow this app to use your location in the background to provide live tracking.",
           "isAndroidBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "expo-font",
+      "expo-linking"
     ],
     extra: {
       ...config.extra,
       apiIp: localIp,
+      eas: {
+        projectId: "f3cb18db-a5a1-41c7-84e2-bb11049fce55"
+      }
     },
   };
 };
