@@ -131,7 +131,7 @@ export default function AboutScreen() {
     {
       name: t('about.team.name', 'HomeLink Team'),
       role: t('about.team.role', 'Connecting You with Trusted Service Providers'),
-      image: require('@/assets/images/about_team.png'),
+      image: require('@/assets/images/about_team.jpg'),
     },
   ];
 
@@ -187,7 +187,7 @@ export default function AboutScreen() {
       <Text style={styles.sectionTitle}>{t('about.missionTitle', 'Our Mission')}</Text>
       <View style={styles.missionCard}>
         <Image 
-          source={require('@/assets/images/about_mission.png')} 
+          source={require('@/assets/images/about_mission.jpg')} 
           style={styles.missionImage}
           resizeMode="contain"
         />
@@ -209,7 +209,7 @@ export default function AboutScreen() {
       <Text style={styles.sectionTitle}>{t('about.featuresTitle', 'Why Choose HomeLink')}</Text>
       <View style={styles.qualityImageContainer}>
         <Image 
-          source={require('@/assets/images/about_quality.png')} 
+          source={require('@/assets/images/about_quality.jpg')} 
           style={styles.qualityImage}
           resizeMode="contain"
         />
@@ -360,7 +360,7 @@ export default function AboutScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {renderHeader()}
         <Image 
-          source={require('@/assets/images/about_hero.png')} 
+          source={require('@/assets/images/about_hero.jpg')} 
           style={styles.heroImage}
           resizeMode="cover"
         />
