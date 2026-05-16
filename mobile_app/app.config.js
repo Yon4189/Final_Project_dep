@@ -115,8 +115,7 @@ module.exports = ({ config }) => {
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
-      "expo-font",
-      "expo-linking"
+      "expo-font"
     ],
     extra: {
       ...config.extra,
