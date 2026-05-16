@@ -26,6 +26,7 @@ export interface ProviderProfile {
   status: string;
   verificationStatus: "pending" | "verified" | "rejected";
   isAvailable: boolean;
+  is_online?: boolean;
   workingHours: WorkingHours;
   services: ProviderService[];
   certifications: Certification[];
