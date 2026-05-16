@@ -60,4 +60,4 @@ USER www-data
 
 # Expose port 80 and start Apache server
 EXPOSE 80
-CMD ["apache2-foreground"]
+CMD php artisan migrate --force && apache2-foreground
