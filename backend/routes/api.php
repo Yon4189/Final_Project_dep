@@ -28,7 +28,7 @@ use App\Http\Controllers\OnlineStatusController;
 use App\Http\Controllers\LocationAutocompleteController;
 
 // ==================== API V1 ====================
-Route::prefix('v1')->middleware('throttle:api')->group(function () {
+Route::prefix('v1')->group(function () {
 
     // ==================== BROADCASTING ====================
     Broadcast::routes(['middleware' => ['auth:sanctum']]);
@@ -36,6 +36,14 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // ==================== PUBLIC ROUTES (no auth) ====================
     Route::get('/health', fn() => response()->json(['status' => 'ok']));
     Route::get('/test',   fn() => response()->json(['success' => true, 'server_time' => now()]));
+    Route::get('/db-debug', function() {
+        try {
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            return response()->json(['status' => 'connected', 'database' => \Illuminate\Support\Facades\DB::getDatabaseName()]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'failed', 'error' => $e->getMessage()], 500);
+        }
+    });
     Route::get('/cities',        [ServiceCityController::class, 'index']);
     Route::get('/categories',    [CategoryController::class, 'getCategories']);
     Route::get('/services',      [ServiceController::class, 'index']);

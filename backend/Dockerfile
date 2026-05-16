@@ -43,6 +43,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set Composer environment variables to prevent memory limits
 ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV COMPOSER_MEMORY_LIMIT=-1
+ENV APP_DEBUG=true
 
 # Copy existing application directory contents
 COPY . /var/www/html
