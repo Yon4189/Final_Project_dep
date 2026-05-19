@@ -369,4 +369,35 @@ class ServiceProvider extends Authenticatable
     {
         return $this->belongsTo(ServiceCity::class, 'service_city', 'name');
     }
+
+    /**
+     * Absolute URL accessors for images
+     */
+    public function getProfilePictureAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        return asset($value); // ServiceProvider stores in public/profilepics
+    }
+
+    public function getIdPhotoAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        return asset($value); // Stores in public/idphoto
+    }
+
+    public function getIdPhotoBackAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        return asset($value);
+    }
+
+    public function getCredentialPhotoAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        return asset($value);
+    }
 }

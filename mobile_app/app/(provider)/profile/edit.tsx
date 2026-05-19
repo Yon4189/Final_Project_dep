@@ -49,6 +49,8 @@ export default function EditProfileScreen() {
   const [cities, setCities] = useState<any[]>([]);
   const [showCityModal, setShowCityModal] = useState(false);
   const [showIdTypeModal, setShowIdTypeModal] = useState(false);
+  const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
+  const [pendingPhotoType, setPendingPhotoType] = useState<'idFront' | 'idBack' | null>(null);
 
   const [idPhotoFront, setIdPhotoFront] = useState<any>(null);
   const [idPhotoFrontUri, setIdPhotoFrontUri] = useState<string | null>(null);
@@ -92,26 +94,59 @@ export default function EditProfileScreen() {
     }
   }, [profile]);
 
-  const pickImage = async (type: 'idFront' | 'idBack') => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(t('auth.permissionNeeded', 'Permission needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [3, 2],
-      quality: 0.7,
-    });
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const filename = asset.uri.split('/').pop() || 'id.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
-      const file = { uri: asset.uri, name: filename, type: mimeType };
-      if (type === 'idFront') { setIdPhotoFrontUri(asset.uri); setIdPhotoFront(file); }
-      else if (type === 'idBack') { setIdPhotoBackUri(asset.uri); setIdPhotoBack(file); }
+  const openPhotoPicker = (type: 'idFront' | 'idBack') => {
+    setPendingPhotoType(type);
+    setShowPhotoSourceModal(true);
+  };
+
+  const pickImage = async (type: 'idFront' | 'idBack', source: 'camera' | 'gallery') => {
+    setShowPhotoSourceModal(false);
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('auth.cameraPermissionTitle', 'Camera Permission Required'),
+          t('auth.cameraPermissionMsg', 'Camera access is required to photograph your ID card for verification.')
+        );
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 2],
+        quality: 0.8,
+      });
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const filename = asset.uri.split('/').pop() || 'id.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+        const file = { uri: asset.uri, name: filename, type: mimeType };
+        if (type === 'idFront') { setIdPhotoFrontUri(asset.uri); setIdPhotoFront(file); }
+        else { setIdPhotoBackUri(asset.uri); setIdPhotoBack(file); }
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('auth.permissionNeeded', 'Permission Needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 2],
+        quality: 0.7,
+      });
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const filename = asset.uri.split('/').pop() || 'id.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+        const file = { uri: asset.uri, name: filename, type: mimeType };
+        if (type === 'idFront') { setIdPhotoFrontUri(asset.uri); setIdPhotoFront(file); }
+        else { setIdPhotoBackUri(asset.uri); setIdPhotoBack(file); }
+      }
     }
   };
 
@@ -273,25 +308,27 @@ export default function EditProfileScreen() {
 
             <View style={styles.idPhotoRow}>
               {/* Front */}
-              <TouchableOpacity style={styles.idHalfPicker} onPress={() => pickImage('idFront')}>
+              <TouchableOpacity style={styles.idHalfPicker} onPress={() => openPhotoPicker('idFront')}>
                 {idPhotoFrontUri ? (
                   <Image source={{ uri: idPhotoFrontUri }} style={styles.idHalfImage} />
                 ) : (
                   <View style={styles.imagePlaceholder}>
                     <Ionicons name="camera" size={32} color={colors.primary} />
                     <Text style={styles.imagePlaceholderText}>{t('auth.frontSide', 'Front Side')}</Text>
+                    <Text style={styles.imagePlaceholderHint}>{t('auth.tapToCapture', 'Tap to capture')}</Text>
                   </View>
                 )}
               </TouchableOpacity>
 
               {/* Back */}
-              <TouchableOpacity style={styles.idHalfPicker} onPress={() => pickImage('idBack')}>
+              <TouchableOpacity style={styles.idHalfPicker} onPress={() => openPhotoPicker('idBack')}>
                 {idPhotoBackUri ? (
                   <Image source={{ uri: idPhotoBackUri }} style={styles.idHalfImage} />
                 ) : (
                   <View style={styles.imagePlaceholder}>
                     <Ionicons name="camera" size={32} color={colors.primary} />
                     <Text style={styles.imagePlaceholderText}>{t('auth.backSide', 'Back Side')}</Text>
+                    <Text style={styles.imagePlaceholderHint}>{t('auth.tapToCapture', 'Tap to capture')}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -343,6 +380,53 @@ export default function EditProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Photo Source Picker */}
+      <Modal visible={showPhotoSourceModal} animationType="fade" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('auth.selectPhotoSource', 'Select Photo Source')}</Text>
+              <TouchableOpacity onPress={() => setShowPhotoSourceModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.photoSourceHint}>{t('auth.chooseIdPhotoSource', 'Choose how to get your ID photo.')}</Text>
+
+            <TouchableOpacity
+              style={styles.photoSourceOption}
+              onPress={() => pendingPhotoType && pickImage(pendingPhotoType, 'camera')}
+            >
+              <View style={styles.photoSourceIcon}>
+                <Ionicons name="camera" size={28} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.photoSourceLabel}>{t('auth.camera', 'Camera')}</Text>
+                <Text style={styles.photoSourceSub}>Take a photo now</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.photoSourceOption}
+              onPress={() => pendingPhotoType && pickImage(pendingPhotoType, 'gallery')}
+            >
+              <View style={styles.photoSourceIcon}>
+                <Ionicons name="images-outline" size={28} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.photoSourceLabel}>{t('auth.gallery', 'Gallery')}</Text>
+                <Text style={styles.photoSourceSub}>Choose from photo library</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.text.secondary} style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowPhotoSourceModal(false)}>
+              <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -382,4 +466,21 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   modalItemText: { fontSize: 16, color: colors.text.primary },
   modalCancelButton: { marginTop: 20, paddingVertical: 14, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
   modalCancelText: { fontSize: 16, color: colors.text.primary },
+  imagePlaceholderHint: { fontSize: 11, color: colors.text.secondary, marginTop: 2 },
+  photoSourceHint: { fontSize: 13, color: colors.text.secondary, marginBottom: 16 },
+  photoSourceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  photoSourceIcon: {
+    width: 48, height: 48, borderRadius: 12,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  photoSourceLabel: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
+  photoSourceSub: { fontSize: 13, color: colors.text.secondary, marginTop: 2 },
 });

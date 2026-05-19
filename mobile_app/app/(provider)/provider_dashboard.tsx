@@ -223,9 +223,9 @@ export default function ProviderDashboard() {
             <Image
               source={{ 
                 uri: (() => {
-                  const pic = (profile as any)?.profilePicture || 
-                               (profile as any)?.profile_picture || 
-                               (profile as any)?.profileImage;
+                  const pic = profile?.profilePicture || 
+                               profile?.profile_picture || 
+                               profile?.profileImage;
                   if (!pic) return 'https://via.placeholder.com/40';
                   return pic.startsWith('http') ? pic : `${API_BASE_URL.replace('/api', '')}/${pic}`;
                 })()
@@ -239,13 +239,13 @@ export default function ProviderDashboard() {
       <View style={styles.availabilityCard}>
         <View style={styles.availabilityInfo}>
           {/* Dot reflects real liveness: green = heartbeat active, grey = offline/backgrounded */}
-          <View style={[styles.dot, { backgroundColor: (profile as any)?.is_online ? colors.success : '#9ca3af' }]} />
+          <View style={[styles.dot, { backgroundColor: profile?.is_online ? colors.success : '#9ca3af' }]} />
           <View>
             <Text style={styles.availabilityLabel}>
               {profile?.isAvailable ? t("providerDashboard.availableForWork", "Available for work") : t("providerDashboard.notAvailable", "Not available")}
             </Text>
-            <Text style={[styles.availabilitySubLabel, { color: (profile as any)?.is_online ? colors.success : '#9ca3af' }]}>
-              {(profile as any)?.is_online ? t("providerDashboard.online", "● Online") : t("providerDashboard.offline", "○ Offline")}
+            <Text style={[styles.availabilitySubLabel, { color: profile?.is_online ? colors.success : '#9ca3af' }]}>
+              {profile?.is_online ? t("providerDashboard.online", "● Online") : t("providerDashboard.offline", "○ Offline")}
             </Text>
           </View>
         </View>
@@ -463,9 +463,9 @@ export default function ProviderDashboard() {
                 <Image
                   source={{ 
                     uri: (() => {
-                      const pic = (profile as any)?.profilePicture || 
-                                   (profile as any)?.profile_picture || 
-                                   (profile as any)?.profileImage;
+                      const pic = profile?.profilePicture || 
+                                   profile?.profile_picture || 
+                                   profile?.profileImage;
                       if (!pic) return 'https://via.placeholder.com/80';
                       return pic.startsWith('http') ? pic : `${API_BASE_URL.replace('/api', '')}/${pic}`;
                     })()

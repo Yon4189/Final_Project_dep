@@ -42,11 +42,19 @@ export default function CustomerChatList() {
     const fetchConversations = async () => {
         try {
             const response = await api.get<any>('/chat/conversations');
-            if (response.success) {
-                setConversations(response.data.data || []);
+            if (response.success && response.data) {
+                // Handle paginated response: { data: [...], current_page, ... }
+                const raw = response.data.data ?? response.data;
+                setConversations(Array.isArray(raw) ? raw : []);
+            } else {
+                // Non-success response — just show empty state, don't crash
+                console.warn('Chat conversations response not successful:', response.message);
+                setConversations([]);
             }
         } catch (error) {
             console.error('Error fetching conversations:', error);
+            // On network error show empty state, not a crash
+            setConversations([]);
         } finally {
             setLoading(false);
             setRefreshing(false);

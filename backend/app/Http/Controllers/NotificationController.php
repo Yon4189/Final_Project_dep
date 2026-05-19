@@ -226,20 +226,42 @@ class NotificationController extends Controller
     {
         $customer = $request->user();
         
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+
+        $customerID = $customer->customerID ?? $customer->id ?? $customer->getKey();
+        
+        if (!$customerID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid customer ID'
+            ], 400);
+        }
+        
         Log::info('Fetching customer notifications', [
-            'customer_id' => $customer->customerID,
+            'customer_id' => $customerID,
             'user_type' => 'customer'
         ]);
         
         $notifications = Notification::where('notifiable_type', 'customer')
-            ->where('notifiable_id', $customer->customerID)
+            ->where('notifiable_id', $customerID)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
         
         $unreadCount = Notification::where('notifiable_type', 'customer')
-            ->where('notifiable_id', $customer->customerID)
+            ->where('notifiable_id', $customerID)
             ->where('is_seen', false)
             ->count();
+            
+        Log::info('Fetched customer notifications result', [
+            'customer_id' => $customerID,
+            'total_found' => $notifications->total(),
+            'unread' => $unreadCount
+        ]);
         
         return response()->json([
             'success' => true,

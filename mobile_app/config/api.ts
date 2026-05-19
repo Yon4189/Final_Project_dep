@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const DEFAULT_API_PORT = process.env.EXPO_PUBLIC_API_PORT?.trim() || '8000';
-const DEFAULT_PRODUCTION_API_URL = 'https://your-production-server.com/api';
+const DEFAULT_PRODUCTION_API_URL = 'https://final-project-dsnl.onrender.com/api/v1';
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
 
@@ -82,7 +82,7 @@ const getConfiguredApiBaseUrl = (): string | null => {
 
   const configuredIp = normalizeHost(process.env.EXPO_PUBLIC_API_IP);
   if (configuredIp) {
-    return `http://${configuredIp}:${DEFAULT_API_PORT}/api`;
+    return `http://${configuredIp}:${DEFAULT_API_PORT}/api/v1`;
   }
 
   return null;
@@ -94,7 +94,7 @@ export const getApiBaseUrl = (): string => {
   if (__DEV__) {
     const detectedHost = getPcIpAddress();
     if (detectedHost) {
-      return `http://${detectedHost}:${DEFAULT_API_PORT}/api`;
+      return `http://${detectedHost}:${DEFAULT_API_PORT}/api/v1`;
     }
 
     const configuredUrl = getConfiguredApiBaseUrl();
@@ -103,10 +103,10 @@ export const getApiBaseUrl = (): string => {
     }
 
     if (Platform.OS === 'android') {
-      return `http://10.0.2.2:${DEFAULT_API_PORT}/api`;
+      return `http://10.0.2.2:${DEFAULT_API_PORT}/api/v1`;
     }
 
-    return `http://localhost:${DEFAULT_API_PORT}/api`;
+    return `http://localhost:${DEFAULT_API_PORT}/api/v1`;
   }
 
   return getConfiguredApiBaseUrl() || DEFAULT_PRODUCTION_API_URL;

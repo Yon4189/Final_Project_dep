@@ -81,11 +81,7 @@ class CustomerService {
   }
 
   async getNotificationSettings(): Promise<ApiResponse<any>> {
-    const cached = await storage.getItem<any>('notification_settings');
-    if (cached) {
-      return { success: true, data: cached };
-    }
-    
+    // Always fetch from API to ensure fresh state
     const response = await api.get<any>(`${this.BASE_PATH}/notifications/settings`);
     
     if (response.success && response.data) {
@@ -98,8 +94,9 @@ class CustomerService {
   async updateNotificationSettings(data: any): Promise<ApiResponse<any>> {
     const response = await api.put<any>(`${this.BASE_PATH}/notifications/settings`, data);
     
-    if (response.success && response.data) {
-      await storage.setItem('notification_settings', response.data);
+    if (response.success) {
+      // Clear stale cache so next read is fresh
+      await storage.removeItem('notification_settings');
     }
     
     return response;
@@ -627,7 +624,8 @@ class CustomerService {
     };
     unread_count: number;
   }>> {
-    return api.get(`${this.BASE_PATH}/notifications?page=${page}`);
+    const response = await api.get<any>(`${this.BASE_PATH}/notifications?page=${page}`);
+    return response;
   }
 
   async markNotificationRead(id: string): Promise<ApiResponse<void>> {

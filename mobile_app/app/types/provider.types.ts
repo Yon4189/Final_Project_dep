@@ -26,14 +26,23 @@ export interface ProviderProfile {
   status: string;
   verificationStatus: "pending" | "verified" | "rejected";
   isAvailable: boolean;
+  is_online?: boolean;
   workingHours: WorkingHours;
   services: ProviderService[];
   certifications: Certification[];
   languages: string[];
   badges: Badge[];
+  category?: {
+    id: string;
+    name: string;
+  };
   bankDetails?: BankDetails;
   business_license?: string;
   insurance_certificate?: string;
+  idPhoto?: string;
+  idPhotoBack?: string;
+  idPhotoType?: string;
+  service_city?: string;
   createdAt: string;
   updatedAt: string;
 }
