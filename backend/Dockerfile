@@ -4,7 +4,7 @@ FROM php:8.4-apache
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies
+# Install system dependencies (All your original packages preserved)
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpng-dev \
@@ -25,12 +25,15 @@ RUN apt-get update && apt-get install -y \
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
+# Install PHP extensions (Including both MySQL and PostgreSQL)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip
 
 # Enable Apache mod_rewrite for Laravel routing
 RUN a2enmod rewrite
+
+# FIX: Disable conflicting Apache MPM event module to stop the MPM crash loop
+RUN a2dismod mpm_event || true && a2enmod mpm_prefork || true
 
 # Update the default apache site with the config we create
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
@@ -55,9 +58,8 @@ RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-d
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Change current user to www
-USER www-data
-
-# Expose port 80 and start Apache server
+# Expose port 80
 EXPOSE 80
-CMD php artisan migrate --force && apache2-foreground
+
+# FIX: Run server as root to clear background conflicts, then drop down permissions safely 
+CMD apache2-foreground
