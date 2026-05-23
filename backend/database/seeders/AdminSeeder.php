@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Admin;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AdminSeeder extends Seeder
 {
@@ -13,22 +13,19 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        Admin::updateOrCreate(
-            ['email' => 'yositilahun21@gmail.com'],
-            [
-                'fullname' => 'Yoseph Tilahun',
-                'phone' => '251911000000',
-                'password' => 'Abe1' // The model accessor will hash this
-            ]
-        );
+        DB::table('admins')->insert([
+            'name' => 'Admin',
+            'email' => 'admin@gmail.com',
+            'password' => Hash::make('admin12345'),
+            'phone' => '+251912345678',
+            'role' => 'super_admin',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        Admin::updateOrCreate(
-            ['email' => 'admin@hbservicefinder.app'],
-            [
-                'fullname' => 'System Admin',
-                'phone' => '251900000000',
-                'password' => 'HBAdmin2026!' 
-            ]
-        );
+        echo "Admin user created successfully!\n";
+        echo "Email: admin@gmail.com\n";
+        echo "Password: admin12345\n";
+        echo "⚠️  IMPORTANT: Change this password after first login!\n";
     }
 }
