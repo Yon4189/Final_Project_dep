@@ -10,6 +10,7 @@ function isPrivateIpv4(address) {
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(address)
   );
 }
+
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
   const candidates = [];
@@ -119,10 +120,10 @@ module.exports = ({ config }) => {
     ],
     extra: {
       ...config.extra,
-      apiIp: localIp,
+      apiIp: "https://final-project-production-3f09.up.railway.app",
       eas: {
-        projectId: "f3cb18db-a5a1-41c7-84e2-bb11049fce55"
+        projectId: "4de687ab-28f0-43b3-bba9-8964a02bc7c2"
       }
-    },
+    }
   };
 };
