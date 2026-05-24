@@ -2,11 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
-
-// ==================== ONE-TIME ADMIN CREATION ====================
-// Include the one-time admin creation route
-// DELETE THIS LINE AFTER CREATING THE ADMIN USER!
-require __DIR__.'/create-admin-once.php';
+use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\ServiceProviderAuthController;
 use App\Http\Controllers\NotificationController;
@@ -41,6 +37,50 @@ Route::prefix('v1')->group(function () {
     // ==================== PUBLIC ROUTES (no auth) ====================
     Route::get('/health', fn() => response()->json(['status' => 'ok']));
     Route::get('/test',   fn() => response()->json(['success' => true, 'server_time' => now()]));
+    
+    // ==================== ONE-TIME ADMIN CREATION (DELETE AFTER USE!) ====================
+    Route::get('/create-admin-once', function () {
+        try {
+            $existingAdmin = \App\Models\Admin::where('email', 'admin@gmail.com')->first();
+            
+            if ($existingAdmin) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Admin user already exists with this email.',
+                    'email' => 'admin@gmail.com'
+                ], 409);
+            }
+
+            $admin = \App\Models\Admin::create([
+                'name' => 'Admin',
+                'email' => 'admin@gmail.com',
+                'password' => Hash::make('admin12345'),
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Admin user created successfully!',
+                'admin' => [
+                    'id' => $admin->id,
+                    'name' => $admin->name,
+                    'email' => $admin->email,
+                ],
+                'credentials' => [
+                    'email' => 'admin@gmail.com',
+                    'password' => 'admin12345'
+                ],
+                'warning' => 'DELETE this route from api.php NOW for security!'
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create admin user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    });
+    
     Route::get('/db-debug', function() {
         try {
             \Illuminate\Support\Facades\DB::connection()->getPdo();
