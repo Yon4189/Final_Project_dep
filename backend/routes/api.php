@@ -37,6 +37,32 @@ Route::prefix('v1')->group(function () {
     // ==================== PUBLIC ROUTES (no auth) ====================
     Route::get('/health', fn() => response()->json(['status' => 'ok']));
     Route::get('/test',   fn() => response()->json(['success' => true, 'server_time' => now()]));
+    
+    // TEMPORARY - Create admin user (DELETE AFTER USE!)
+    Route::get('/create-admin-temp', function () {
+        try {
+            $existing = \App\Models\Admin::where('email', 'admin@gmail.com')->first();
+            if ($existing) {
+                return response()->json(['status' => 'exists', 'message' => 'Admin already exists']);
+            }
+            
+            \App\Models\Admin::create([
+                'name' => 'Admin',
+                'email' => 'admin@gmail.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('admin12345'),
+            ]);
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Admin created!',
+                'email' => 'admin@gmail.com',
+                'password' => 'admin12345'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    });
+    
     Route::get('/cities',        [ServiceCityController::class, 'index']);
     Route::get('/categories',    [CategoryController::class, 'getCategories']);
     Route::get('/services',      [ServiceController::class, 'index']);
