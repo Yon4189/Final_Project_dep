@@ -34,9 +34,11 @@ const Sidebar = ({ width, onResizeStart, isOpen, isMobile, onClose }) => {
     queryKey: ['adminStats'],
     queryFn: async () => {
       const response = await api.get('/admin/stats');
-      return response.data.success ? response.data.data : null;
+      // Must return {} instead of null on failure — TanStack Query v5 default values
+      // only apply when data is undefined, not null. Returning null would crash stats.pending.
+      return response.data.success ? (response.data.data ?? {}) : {};
     },
-    refetchInterval: 30000, // Update every 30 seconds
+    refetchInterval: 30000,
   });
 
   // Fetch pending withdrawals count

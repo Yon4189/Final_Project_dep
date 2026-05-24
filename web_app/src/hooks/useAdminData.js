@@ -6,7 +6,7 @@ export const useAdminData = () => {
     queryKey: ['adminStats'],
     queryFn: async () => {
       const response = await api.get('/admin/stats');
-      return response.data.success ? response.data.data : null;
+      return response.data.success ? (response.data.data ?? {}) : {};
     },
     refetchInterval: 30000,
   });
