@@ -3,7 +3,7 @@ import axios from 'axios';
 // Use production API if available, otherwise fallback to local IP detection
 const isProduction = import.meta.env.PROD;
 const apiUrl = import.meta.env.VITE_API_BASE_URL 
-  || (isProduction ? 'https://final-project-production-3f09.up.railway.app/api/v1' : `http://${window.location.hostname}:8000/api/v1`);
+  || (isProduction ? 'https://pushchair-improve-valium.ngrok-free.dev/api/v1' : `http://${window.location.hostname}:8000/api/v1`);
 
 const api = axios.create({
   baseURL: apiUrl,

@@ -120,7 +120,7 @@ module.exports = ({ config }) => {
     ],
     extra: {
       ...config.extra,
-      apiIp: "https://final-project-production-3f09.up.railway.app",
+      apiIp: "https://pushchair-improve-valium.ngrok-free.dev",
       eas: {
         projectId: "4de687ab-28f0-43b3-bba9-8964a02bc7c2"
       }
