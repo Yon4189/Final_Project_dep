@@ -9,7 +9,8 @@ const api = axios.create({
   baseURL: apiUrl,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'ngrok-skip-browser-warning': '69420'
   }
 });
 

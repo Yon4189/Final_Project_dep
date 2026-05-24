@@ -4,10 +4,11 @@ import {
   Search, X, Mail, Phone, MapPin, ShieldAlert, ShieldCheck, UserMinus,
   Loader2, AlertCircle, Filter, XCircle, ChevronLeft, ChevronRight, Wallet
 } from 'lucide-react';
+import api from '../api/axios';
 
 const UserAvatar = ({ user }) => {
   const [imgError, setImgError] = useState(false);
-  const baseUrl = `http://${window.location.hostname}:8000`;
+  const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api(\/v1)?$/, '') : `http://${window.location.hostname}:8000`;
 
   if (user.profilePicture && !imgError) {
     const isFullUrl = user.profilePicture.startsWith('http');
