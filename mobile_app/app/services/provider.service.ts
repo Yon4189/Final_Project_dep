@@ -171,8 +171,11 @@ class ProviderService {
     return response;
   }
 
-  async arriveService(id: string): Promise<ApiResponse<ServiceRequest>> {
-    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/bookings/${id}/arrive`);
+  async arriveService(id: string, latitude: number, longitude: number): Promise<ApiResponse<ServiceRequest>> {
+    const response = await api.post<ServiceRequest>(`${this.BASE_PATH}/bookings/${id}/arrive`, {
+      latitude,
+      longitude
+    });
     if (response.success && response.data) {
       response.data = normalizeServiceRequest(response.data);
     }

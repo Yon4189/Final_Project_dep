@@ -147,9 +147,12 @@ export const useBookingStatus = (id: string) => {
 
 // ==================== Track Provider Hook ====================
 
-export const useTrackProvider = (id: string, bookingStatus?: string) => {
+export const useTrackProvider = (id: string, bookingStatus?: string, enabledOverride?: boolean) => {
   const activeStatuses = ['accepted', 'in_progress', 'started', 'arrived', 'confirmed'];
   const isActive = !bookingStatus || activeStatuses.includes(bookingStatus?.toLowerCase());
+  
+  // Allow external control via enabledOverride parameter
+  const shouldEnable = enabledOverride !== undefined ? enabledOverride : true;
 
   return useQuery({
     queryKey: bookingKeys.track(id),
@@ -162,8 +165,8 @@ export const useTrackProvider = (id: string, bookingStatus?: string) => {
       
       return response.data;
     },
-    enabled: !!id && isActive,
-    refetchInterval: isActive ? 10000 : false, // Only poll for active bookings
+    enabled: !!id && isActive && shouldEnable,
+    refetchInterval: (isActive && shouldEnable) ? 10000 : false, // Only poll for active bookings
     retry: false, // Don't retry on 404
   });
 };

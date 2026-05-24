@@ -155,10 +155,10 @@ export default function EarningsScreen() {
         <View style={styles.balanceDetailDivider} />
 
         <View style={styles.balanceDetailItem}>
-          <Text style={styles.balanceDetailLabel}>Pending (Held)</Text>
-          <Text style={[styles.balanceDetailValue, { color: 'rgba(255,255,255,0.7)' }]}>
+          <Text style={styles.balanceDetailLabel}>Pending Withdrawals</Text>
+          <Text style={[styles.balanceDetailValue, { color: colors.warning }]}>
             {safeFormatCurrency(
-              safeSummary.pendingEarnings,
+              safeSummary.pendingWithdrawals || 0,
               safeSummary.currency,
             )}
           </Text>

@@ -8,14 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
-  FlatList,
-  Keyboard,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
-import { api } from '@/app/services/api';
 
 interface MapLocationPickerProps {
   initialLocation?: {
@@ -42,11 +39,6 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   );
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Save panel state
   const [showSavePanel, setShowSavePanel] = useState(false);
@@ -57,28 +49,6 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   useEffect(() => {
     getCurrentLocation();
   }, []);
-
-  // Debounced search
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (searchQuery.trim().length >= 2) {
-      searchTimeoutRef.current = setTimeout(() => {
-        searchLocation(searchQuery);
-      }, 500); // 500ms debounce
-    } else {
-      setSearchResults([]);
-      setShowResults(false);
-    }
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
 
   const getCurrentLocation = async () => {
     try {
@@ -146,56 +116,6 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     }
   };
 
-  const searchLocation = async (query: string) => {
-    if (!query || query.trim().length < 2) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    try {
-      setIsSearching(true);
-      const response = await api.get(`/location/autocomplete?query=${encodeURIComponent(query)}`);
-      
-      if (response.success && response.data?.suggestions) {
-        setSearchResults(response.data.suggestions);
-        setShowResults(true);
-      } else {
-        setSearchResults([]);
-        setShowResults(false);
-      }
-    } catch (error) {
-      console.error('Location search error:', error);
-      setSearchResults([]);
-      setShowResults(false);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleSelectSearchResult = async (result: any) => {
-    const newLocation = {
-      latitude: result.latitude,
-      longitude: result.longitude,
-    };
-
-    setSelectedLocation(newLocation);
-    setAddress(result.display_name || result.address);
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowResults(false);
-    Keyboard.dismiss();
-
-    // Animate map to selected location
-    if (mapRef.current) {
-      mapRef.current.animateToRegion({
-        ...newLocation,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 1000);
-    }
-  };
-
   const handleMapPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
     setSelectedLocation({ latitude, longitude });
@@ -243,16 +163,6 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     onClose();
   };
 
-  const centerOnLocation = () => {
-    if (mapRef.current && selectedLocation) {
-      mapRef.current.animateToRegion({
-        ...selectedLocation,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 1000);
-    }
-  };
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -263,63 +173,6 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         <Text style={styles.headerTitle}>Pin Your Location</Text>
         <View style={{ width: 24 }} />
       </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={Colors.text.secondary} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for a location..."
-          placeholderTextColor={Colors.text.secondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onFocus={() => {
-            if (searchResults.length > 0) {
-              setShowResults(true);
-            }
-          }}
-        />
-        {isSearching && (
-          <ActivityIndicator size="small" color={Colors.primary} />
-        )}
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            onPress={() => {
-              setSearchQuery('');
-              setSearchResults([]);
-              setShowResults(false);
-            }}
-            style={styles.clearButton}
-          >
-            <Ionicons name="close-circle" size={20} color={Colors.text.secondary} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Search Results Dropdown */}
-      {showResults && searchResults.length > 0 && (
-        <View style={styles.searchResultsContainer}>
-          <FlatList
-            data={searchResults}
-            keyExtractor={(item, index) => item.place_id || index.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.searchResultItem}
-                onPress={() => handleSelectSearchResult(item)}
-              >
-                <Ionicons name="location-outline" size={20} color={Colors.primary} />
-                <View style={styles.searchResultTextContainer}>
-                  <Text style={styles.searchResultText} numberOfLines={2}>
-                    {item.display_name || item.address}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            style={styles.searchResultsList}
-            keyboardShouldPersistTaps="handled"
-          />
-        </View>
-      )}
 
       {/* Map */}
       <View style={styles.mapContainer}>
@@ -497,65 +350,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text.primary,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    zIndex: 10,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    color: Colors.text.primary,
-  },
-  clearButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
-  searchResultsContainer: {
-    position: 'absolute',
-    top: 140, // Below header + search bar
-    left: 16,
-    right: 16,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    maxHeight: 250,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 20,
-  },
-  searchResultsList: {
-    maxHeight: 250,
-  },
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  searchResultTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  searchResultText: {
-    fontSize: 14,
-    color: Colors.text.primary,
-    lineHeight: 20,
   },
   mapContainer: {
     flex: 1,

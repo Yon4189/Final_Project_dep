@@ -103,12 +103,6 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
           <Ionicons name="options-outline" size={22} color={Colors.primary} />
         </TouchableOpacity>
-
-        {onVoicePress && (
-          <TouchableOpacity style={styles.voiceButton} onPress={onVoicePress}>
-            <Ionicons name="mic-outline" size={22} color={Colors.primary} />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Categories Scroll */}
@@ -213,16 +207,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: Colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  voiceButton: {
     width: 48,
     height: 48,
     borderRadius: 12,

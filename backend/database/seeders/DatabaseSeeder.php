@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ServiceCitySeeder::class,
             CategorySeeder::class,
+            AdminSeeder::class,
+            SystemSettingSeeder::class,
             CustomerApiSeeder::class,
             // CustomerSeeder::class, // Missing for some reason
         ]);

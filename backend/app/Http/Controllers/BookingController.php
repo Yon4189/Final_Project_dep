@@ -1025,12 +1025,26 @@ class BookingController extends Controller
         }
     }
 
-    public function arrive($id)
+    public function arrive(Request $request, $id)
     {
         $provider = auth()->guard('provider')->user();
 
         if (!$provider) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // Validate that provider sends their current location
+        $validator = Validator::make($request->all(), [
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Location is required to confirm arrival',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $booking = Booking::where('bookingID', $id)
@@ -1043,6 +1057,51 @@ class BookingController extends Controller
                 'success' => false,
                 'message' => 'Booking not found or not active'
             ], 404);
+        }
+
+        // Get customer's service location
+        $customerLat = $booking->service_latitude;
+        $customerLng = $booking->service_longitude;
+
+        if (!$customerLat || !$customerLng) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer location not available'
+            ], 400);
+        }
+
+        // Get provider's current location
+        $providerLat = $request->latitude;
+        $providerLng = $request->longitude;
+
+        // Calculate distance using Haversine formula
+        $earthRadius = 6371000; // Earth's radius in meters
+        $latDiff = deg2rad($customerLat - $providerLat);
+        $lngDiff = deg2rad($customerLng - $providerLng);
+        
+        $a = sin($latDiff / 2) * sin($latDiff / 2) +
+             cos(deg2rad($providerLat)) * cos(deg2rad($customerLat)) *
+             sin($lngDiff / 2) * sin($lngDiff / 2);
+        
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        $distance = $earthRadius * $c; // Distance in meters
+
+        // Check if provider is within 10 meters of customer location
+        $requiredRadius = 10; // meters
+        
+        if ($distance > $requiredRadius) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You must be within 10 meters of the customer location to confirm arrival',
+                'data' => [
+                    'distance' => round($distance, 2),
+                    'required_distance' => $requiredRadius,
+                    'customer_location' => [
+                        'latitude' => $customerLat,
+                        'longitude' => $customerLng
+                    ]
+                ]
+            ], 403);
         }
 
         $booking->status = 'arrived';
@@ -1065,7 +1124,10 @@ class BookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Arrival confirmed'
+            'message' => 'Arrival confirmed',
+            'data' => [
+                'distance' => round($distance, 2)
+            ]
         ]);
     }
 

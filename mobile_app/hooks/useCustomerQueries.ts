@@ -432,6 +432,9 @@ export const useServiceRequestDetails = (id: string) => {
       return response.data;
     },
     enabled: !!id,
+    staleTime: 0, // Always consider data stale
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 };
 

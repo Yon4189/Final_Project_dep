@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -27,11 +28,13 @@ import Map from '../../../components/Map/index';
 import { useTrackProvider, bookingKeys } from '@/hooks/useCustomerBookings';
 import * as pusherClient from '@/app/services/pusherClient';
 import { useEffect } from 'react';
+import { useConversations } from '@/hooks/useConversations';
+import type { Conversation } from '@/app/types/customer.types';
 
 const STATUS_COLORS = {
   pending: Colors.warning,
   accepted: Colors.info,
-  confirmed: Colors.info,
+  arrived: Colors.primary,
   in_progress: Colors.primary,
   waiting_customer_confirmation: Colors.info,
   completed: Colors.success,
@@ -42,7 +45,7 @@ const STATUS_COLORS = {
 const STATUS_ICONS = {
   pending: 'time-outline',
   accepted: 'checkmark-circle-outline',
-  confirmed: 'checkmark-circle-outline',
+  arrived: 'pin-outline',
   in_progress: 'construct-outline',
   waiting_customer_confirmation: 'shield-checkmark-outline',
   completed: 'checkmark-done-outline',
@@ -53,7 +56,7 @@ const STATUS_ICONS = {
 const STATUS_STEPS = [
   { key: 'pending', label: 'Request Sent', icon: 'send-outline' },
   { key: 'accepted', label: 'Accepted', icon: 'checkmark-circle-outline' },
-  { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle-outline' },
+  { key: 'arrived', label: 'Arrived', icon: 'pin-outline' },
   { key: 'in_progress', label: 'In Progress', icon: 'construct-outline' },
   { key: 'waiting_customer_confirmation', label: 'Job Done', icon: 'shield-checkmark-outline' },
   { key: 'completed', label: 'Finalized', icon: 'checkmark-done-outline' },
@@ -72,7 +75,7 @@ export default function RequestDetails() {
   const STATUS_STEPS = [
     { key: 'pending', label: t('requests.steps.pending', 'Request Sent'), icon: 'send-outline' },
     { key: 'accepted', label: t('requests.steps.accepted', 'Accepted'), icon: 'checkmark-circle-outline' },
-    { key: 'confirmed', label: t('requests.steps.confirmed', 'Confirmed'), icon: 'checkmark-circle-outline' },
+    { key: 'arrived', label: t('requests.steps.arrived', 'Arrived'), icon: 'pin-outline' },
     { key: 'in_progress', label: t('requests.steps.in_progress', 'In Progress'), icon: 'construct-outline' },
     { key: 'waiting_customer_confirmation', label: t('requests.steps.waiting_customer_confirmation', 'Job Done'), icon: 'shield-checkmark-outline' },
     { key: 'completed', label: t('requests.steps.completed', 'Finalized'), icon: 'checkmark-done-outline' },
@@ -82,8 +85,12 @@ export default function RequestDetails() {
   const cancelRequest = useCancelRequest();
   const confirmCompletion = useConfirmCompletion();
   const queryClient = useQueryClient();
-  const { data: trackingResponse } = useTrackProvider(id as string, request?.status);
+  
+  // Only track provider when on Details tab
+  const shouldTrack = selectedTab === 'details';
+  const { data: trackingResponse } = useTrackProvider(id as string, request?.status, shouldTrack);
   const trackingData = trackingResponse?.data || trackingResponse; // Handle both nested and direct data
+  const { data: conversationsData, isLoading: conversationsLoading } = useConversations();
 
   const [liveLocation, setLiveLocation] = useState<{
     latitude: number;
@@ -268,9 +275,7 @@ export default function RequestDetails() {
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('requests.requestDetails', 'Request Details')}</Text>
-        <TouchableOpacity style={styles.menuButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.statusContainer}>
@@ -376,20 +381,29 @@ export default function RequestDetails() {
   );
 
   const renderLiveTracking = () => {
-    const showTrack = ['accepted', 'confirmed', 'arrived', 'in_progress'].includes(request.status);
+    const showTrack = ['accepted', 'arrived', 'in_progress'].includes(request.status);
     if (!showTrack) return null;
 
     // Use live location if available, fallback to latest fetched tracking data, then fallback to request start
-    const providerPos = liveLocation || (trackingData?.provider ? {
+    const providerPos = liveLocation || (trackingData?.provider && 
+      trackingData.provider.latitude && 
+      trackingData.provider.longitude ? {
       latitude: parseFloat(trackingData.provider.latitude),
       longitude: parseFloat(trackingData.provider.longitude),
     } : null);
 
-    // Customer location
-    const destinationPos = {
-      latitude: request.latitude || 0,
-      longitude: request.longitude || 0,
-    };
+    // Customer location - only use if valid coordinates exist
+    const destinationPos = (request.latitude && request.longitude) ? {
+      latitude: request.latitude,
+      longitude: request.longitude,
+    } : null;
+
+    // Determine center for map
+    const mapCenter = providerPos 
+      ? [providerPos.latitude, providerPos.longitude] as [number, number]
+      : destinationPos 
+        ? [destinationPos.latitude, destinationPos.longitude] as [number, number]
+        : undefined;
 
     return (
       <View style={styles.section}>
@@ -402,20 +416,26 @@ export default function RequestDetails() {
         </View>
         
         <View style={styles.mapContainer}>
-          <Map
-            center={providerPos ? [providerPos.latitude, providerPos.longitude] : undefined}
-            userLocation={destinationPos}
-            markers={providerPos ? [
-              {
-                position: [providerPos.latitude, providerPos.longitude],
-                title: request.providerName || 'Provider',
-                description: 'Current Location'
-              }
-            ] : []}
-            style={{ height: 250, width: '100%' }}
-          />
+          {(providerPos || destinationPos) ? (
+            <Map
+              center={mapCenter}
+              userLocation={destinationPos || undefined}
+              markers={providerPos ? [
+                {
+                  position: [providerPos.latitude, providerPos.longitude],
+                  title: request.providerName || 'Provider',
+                  description: 'Current Location'
+                }
+              ] : []}
+              style={{ height: 250, width: '100%' }}
+            />
+          ) : (
+            <View style={styles.mapOverlay}>
+              <Text style={styles.mapOverlayText}>{t('requests.waitingForLocation', 'Waiting for location data...')}</Text>
+            </View>
+          )}
           
-          {!providerPos && (
+          {(providerPos || destinationPos) && !providerPos && (
             <View style={styles.mapOverlay}>
               <Text style={styles.mapOverlayText}>{t('requests.waitingForLocation', 'Waiting for provider location...')}</Text>
             </View>
@@ -490,7 +510,7 @@ export default function RequestDetails() {
               </Text>
             </TouchableOpacity>
           </View>
-        ) : (['accepted', 'confirmed'].includes(request.status as string)) ? (
+        ) : (['accepted', 'arrived'].includes(request.status as string)) ? (
           <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
             <Ionicons name="card-outline" size={18} color={Colors.surface} style={{ marginRight: 8 }} />
             <Text style={styles.payButtonText}>{t('requests.payNow', 'Pay Now')} — ETB {request.estimatedPrice?.toFixed(2)}</Text>
@@ -592,7 +612,7 @@ export default function RequestDetails() {
           </TouchableOpacity>
         )}
 
-        {['pending', 'confirmed'].includes(request.status) && (
+        {['pending', 'accepted'].includes(request.status) && (
           <TouchableOpacity
             style={styles.cancelButton}
             onPress={() => setShowCancelModal(true)}
@@ -607,7 +627,7 @@ export default function RequestDetails() {
           <Text style={styles.helpButtonText}>{t('requests.reportIssue', 'Report an Issue')}</Text>
         </TouchableOpacity>
 
-        {request.status === 'completed' && !request.review && (
+        {request.status === 'completed' && !request.review && selectedTab !== 'messages' && (
           <TouchableOpacity 
             style={styles.reviewButton} 
             onPress={() => setShowReviewModal(true)}
@@ -693,16 +713,85 @@ export default function RequestDetails() {
         {selectedTab === 'timeline' && renderTimeline()}
 
         {selectedTab === 'messages' && (
-          <View style={styles.messagesPlaceholder}>
-            <Ionicons name="chatbubbles-outline" size={48} color={Colors.text.secondary} />
-            <Text style={styles.messagesTitle}>{t('requests.noMessages', 'No messages yet')}</Text>
-            <Text style={styles.messagesSubtitle}>
-              {t('requests.startConversation', { name: request.providerName, defaultValue: `Start a conversation with ${request.providerName}` })}
-            </Text>
-            <TouchableOpacity style={styles.startChatButton} onPress={handleMessageProvider}>
-              <Text style={styles.startChatButtonText}>{t('requests.sendMessage', 'Send Message')}</Text>
-            </TouchableOpacity>
-          </View>
+          <>
+            {conversationsLoading ? (
+              <View style={styles.messagesPlaceholder}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.messagesTitle}>{t('requests.loadingConversations', 'Loading conversations...')}</Text>
+              </View>
+            ) : conversationsData?.data && conversationsData.data.length > 0 ? (
+              <View style={styles.conversationList}>
+                {(() => {
+                  // Deduplicate conversations by providerID - keep only the most recent one per provider
+                  const uniqueConversations = conversationsData.data.reduce((acc: Conversation[], conversation: Conversation) => {
+                    const existingIndex = acc.findIndex(c => c.providerID === conversation.providerID);
+                    if (existingIndex === -1) {
+                      // Provider not seen yet, add this conversation
+                      acc.push(conversation);
+                    } else {
+                      // Provider already exists, keep the one with more recent last_message_at
+                      const existing = acc[existingIndex];
+                      if (!existing.last_message_at || 
+                          (conversation.last_message_at && conversation.last_message_at > existing.last_message_at)) {
+                        acc[existingIndex] = conversation;
+                      }
+                    }
+                    return acc;
+                  }, []);
+
+                  return uniqueConversations.map((conversation: Conversation) => (
+                    <TouchableOpacity
+                      key={conversation.conversationID}
+                      style={styles.conversationItem}
+                      onPress={() => router.push(`/(customer)/chat/${conversation.providerID}`)}
+                    >
+                      <Image
+                        source={{ uri: conversation.other_party?.profilePicture || 'https://via.placeholder.com/50' }}
+                        style={styles.conversationAvatar}
+                      />
+                      <View style={styles.conversationContent}>
+                        <View style={styles.conversationHeader}>
+                          <Text style={styles.conversationName} numberOfLines={1}>
+                            {(conversation.other_party as any)?.fullname || 
+                             conversation.other_party?.name || 
+                             (conversation.other_party?.firstName && conversation.other_party?.lastName 
+                               ? `${conversation.other_party.firstName} ${conversation.other_party.lastName}` 
+                               : 'Provider')}
+                          </Text>
+                          {conversation.last_message_at && (
+                            <Text style={styles.conversationTime}>
+                              {formatDate(conversation.last_message_at)}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={styles.conversationFooter}>
+                        <Text style={styles.conversationMessage} numberOfLines={1}>
+                          {conversation.last_message || 'No messages yet'}
+                        </Text>
+                        {conversation.unread_count && conversation.unread_count > 0 && (
+                          <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadCount}>{conversation.unread_count}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                  ));
+                })()}
+              </View>
+            ) : (
+              <View style={styles.messagesPlaceholder}>
+                <Ionicons name="chatbubbles-outline" size={48} color={Colors.text.secondary} />
+                <Text style={styles.messagesTitle}>{t('requests.noMessages', 'No messages yet')}</Text>
+                <Text style={styles.messagesSubtitle}>
+                  {t('requests.startConversation', { name: request.providerName, defaultValue: `Start a conversation with ${request.providerName}` })}
+                </Text>
+                <TouchableOpacity style={styles.startChatButton} onPress={handleMessageProvider}>
+                  <Text style={styles.startChatButtonText}>{t('requests.sendMessage', 'Send Message')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
         )}
 
         {renderReview()}
@@ -1392,5 +1481,70 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: Colors.border,
     marginHorizontal: 16,
+  },
+  conversationList: {
+    padding: 16,
+    backgroundColor: Colors.background,
+  },
+  conversationItem: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  conversationAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  conversationContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  conversationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  conversationFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  conversationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    flex: 1,
+  },
+  conversationMessage: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    flex: 1,
+  },
+  conversationTime: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginLeft: 8,
+  },
+  unreadBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  unreadCount: {
+    color: Colors.surface,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

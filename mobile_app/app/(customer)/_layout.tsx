@@ -164,11 +164,6 @@ export default function CustomerLayout() {
       />
 
       <Stack.Screen
-        name="search/results"
-        options={{
-          title: 'Search Results',
-          headerShown: false,
-        }}
       />
 
       <Stack.Screen

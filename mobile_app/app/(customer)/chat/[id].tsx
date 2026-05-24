@@ -195,28 +195,18 @@ export default function ChatScreen() {
         const initialMessages = (response.data.messages || []).map(normalizeMessage);
         if (isMounted.current) {
           setConversation(conversationData);
-          setMessages(initialMessages.reverse()); // backend returns newest first
+          setMessages(initialMessages.reverse());
           if (!initialMessages.length && conversationData.conversationID) {
             await fetchMessages(conversationData.conversationID);
           }
         }
       } else {
-        if (isMounted.current) {
-          setConversationError(true);
-          Alert.alert(t('common.error', 'Error'), response.message || t('chat.failStart', 'Failed to start conversation'));
-        }
+        console.warn('Failed to get/create conversation:', response.message);
+        if (isMounted.current) setConversationError(true);
       }
     } catch (error: any) {
       console.error('Error creating conversation:', error);
-      if (!isMounted.current) return;
-      setConversationError(true);
-      if (error.response?.status === 403) {
-        Alert.alert(t('common.accessDenied', 'Access Denied'), t('chat.noPermission', 'You do not have permission to chat with this provider'));
-      } else if (error.response?.status === 422) {
-        Alert.alert(t('common.error', 'Validation Error'), t('chat.invalidInfo', 'Invalid provider information'));
-      } else {
-        Alert.alert(t('common.error', 'Error'), t('chat.failStart', 'Failed to start conversation. Please try again.'));
-      }
+      if (isMounted.current) setConversationError(true);
     }
   };
 
@@ -856,4 +846,23 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   sendButtonDisabled: { backgroundColor: Colors.border },
+  attachmentImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  fileAttachment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    marginBottom: 4,
+  },
+  fileName: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+  },
 });

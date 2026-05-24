@@ -193,20 +193,50 @@ export default function RegisterProviderScreen() {
         setProfilePicture({ uri: asset.uri, name: filename, type: mimeType });
       }
     } else {
-      // ID card front/back: camera only for security
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
+      // ID card front/back: allow user to choose camera or gallery
+      const source = await new Promise<'camera' | 'gallery' | null>((resolve) => {
         Alert.alert(
-          t('auth.cameraPermissionTitle', 'Camera Permission Required'),
-          t('auth.cameraPermissionMsg', 'Camera access is required to photograph your ID card for verification.')
+          t('auth.selectPhotoSource', 'Select Photo Source'),
+          t('auth.chooseIdPhotoSource', 'Choose where to get your ID photo from.'),
+          [
+            { text: t('auth.camera', 'Camera'), onPress: () => resolve('camera') },
+            { text: t('auth.gallery', 'Gallery'), onPress: () => resolve('gallery') },
+            { text: t('common.cancel', 'Cancel'), style: 'cancel', onPress: () => resolve(null) },
+          ]
         );
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [3, 2],
-        quality: 0.7,
       });
+
+      if (!source) return;
+
+      let result;
+      if (source === 'gallery') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(t('auth.permissionNeeded', 'Permission needed'), t('auth.cameraRollPermission', 'Please grant camera roll permissions'));
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [3, 2],
+          quality: 0.7,
+        });
+      } else {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            t('auth.cameraPermissionTitle', 'Camera Permission Required'),
+            t('auth.cameraPermissionMsg', 'Camera access is required to photograph your ID card for verification.')
+          );
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [3, 2],
+          quality: 0.7,
+        });
+      }
+
       if (!result.canceled) {
         const asset = result.assets[0];
         const filename = asset.uri.split('/').pop() || 'id.jpg';
@@ -345,8 +375,8 @@ export default function RegisterProviderScreen() {
         const userInfo = response.data;
         setFormData(prev => ({
           ...prev,
-          fullname: userInfo.name || prev.fullname,
-          email: userInfo.email || prev.email,
+          fullname: userInfo?.name || prev.fullname,
+          email: userInfo?.email || prev.email,
         }));
         
         Alert.alert(

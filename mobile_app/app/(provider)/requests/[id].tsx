@@ -23,6 +23,7 @@ import {
   View,
   ActivityIndicator
 } from "react-native";
+import * as Location from 'expo-location';
 import Map from "@/components/Map/index";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useProviderQueries, useProviderRequest } from "@/hooks/useProviderQueries";
@@ -283,6 +284,10 @@ export default function RequestDetails() {
           onPress: async () => {
             try {
               await acceptRequest.mutateAsync(id as string);
+              Alert.alert(
+                t("common.success", "Success"),
+                t("providerRequests.acceptSuccess", "Request accepted successfully")
+              );
             } catch (error) {
               // Error handled by hook
             }
@@ -334,7 +339,7 @@ export default function RequestDetails() {
     }
   };
 
-  const handleArrive = () => {
+  const handleArrive = async () => {
     // Check if location is hidden (deposit not paid)
     const depositPaid = request?.payment_status === 'deposit_paid' || 
                         request?.payment_status === 'pending_final' || 
@@ -350,20 +355,53 @@ export default function RequestDetails() {
       return;
     }
     
-    Alert.alert(t("providerRequests.confirmArrival", "Confirm Arrival"), t("providerRequests.arrivedMsg", "Have you arrived at the customer's location?"), [
-      { text: t("common.cancel", "Cancel"), style: "cancel" },
-      {
-        text: t("providerRequests.arrivedBtn", "Arrived"),
-        onPress: async () => {
-          try {
-            await arriveRequest.mutateAsync(id as string);
-            Alert.alert(t("common.success", "Success"), t("providerRequests.arrivalConfirmed", "Arrival confirmed"));
-          } catch (error) {
-            Alert.alert(t("common.error", "Error"), t("providerRequests.failedArrive", "Failed to confirm arrival"));
-          }
-        },
-      },
-    ]);
+    // Get current location first
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t("common.error", "Error"),
+          "Location permission is required to confirm arrival"
+        );
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High
+      });
+
+      const currentLat = location.coords.latitude;
+      const currentLng = location.coords.longitude;
+
+      Alert.alert(
+        t("providerRequests.confirmArrival", "Confirm Arrival"), 
+        t("providerRequests.arrivedMsg", "Have you arrived at the customer's location?"), 
+        [
+          { text: t("common.cancel", "Cancel"), style: "cancel" },
+          {
+            text: t("providerRequests.arrivedBtn", "Arrived"),
+            onPress: async () => {
+              try {
+                await arriveRequest.mutateAsync({ 
+                  id: id as string, 
+                  latitude: currentLat, 
+                  longitude: currentLng 
+                });
+                Alert.alert(t("common.success", "Success"), t("providerRequests.arrivalConfirmed", "Arrival confirmed"));
+              } catch (error: any) {
+                const errorMessage = error?.message || t("providerRequests.failedArrive", "Failed to confirm arrival");
+                Alert.alert(t("common.error", "Error"), errorMessage);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert(
+        t("common.error", "Error"),
+        "Failed to get your current location. Please try again."
+      );
+    }
   };
 
   const handleStart = () => {
@@ -1062,6 +1100,21 @@ export default function RequestDetails() {
       {renderActionModal()}
       {renderScheduleModal()}
       {renderDirectionsModal()}
+      
+      {/* Loading Overlay */}
+      {acceptRequest.isPending && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>
+              {t("providerRequests.acceptingRequest", "Accepting request...")}
+            </Text>
+            <Text style={styles.loadingSubtext}>
+              {t("providerRequests.pleaseWait", "Please wait")}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -1768,5 +1821,41 @@ const getStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
 });

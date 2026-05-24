@@ -321,7 +321,7 @@ export default function BookingsScreen() {
       <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
         <Text style={styles.headerTitle}>{t('bookings.myBookings', 'My Bookings')}</Text>
-        <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
+        <TouchableOpacity onPress={() => router.push('/(customer)/customer_dashboard')}>
           <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
       </View>
@@ -335,7 +335,7 @@ export default function BookingsScreen() {
       <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
         <Text style={styles.headerTitle}>{t('bookings.myBookings', 'My Bookings')}</Text>
-        <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
+        <TouchableOpacity onPress={() => router.push('/(customer)/customer_dashboard')}>
           <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
       </View>
@@ -357,7 +357,7 @@ export default function BookingsScreen() {
     <View style={styles.container}>
     <View style={[styles.header, { paddingTop: insets.top + (insets.top > 0 ? 10 : 40) }]}>
       <Text style={styles.headerTitle}>{t('bookings.myBookings', 'My Bookings')}</Text>
-      <TouchableOpacity onPress={() => router.push('/(customer)/search/results')}>
+      <TouchableOpacity onPress={() => router.push('/(customer)/customer_dashboard')}>
         <Ionicons name="search-outline" size={24} color={Colors.text.primary} />
       </TouchableOpacity>
     </View>

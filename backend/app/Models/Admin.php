@@ -35,4 +35,14 @@ class Admin extends Authenticatable
     {
         $this->attributes['password'] = Hash::make($password);
     }
+
+    /**
+     * Get absolute URL for profile picture
+     */
+    public function getProfilePictureAttribute($value)
+    {
+        if (!$value) return 'https://via.placeholder.com/150';
+        if (str_starts_with($value, 'http')) return $value;
+        return asset('storage/' . $value);
+    }
 }

@@ -1,34 +1,43 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import queryClient from './api/queryClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
-// Layout & Auth
+// Layout
 import Layout from './layout/Layout';
-import Login from './pages/Login';
 
-// Pages
-import Home from './pages/Home';
-import About from './pages/About';
-import Workflow from './pages/Workflow';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import Dashboard from './pages/Dashboard';
-import Verification from './pages/Verification';
-import Users from './pages/Users';
-import Services from './pages/Services';
-import Bookings from './pages/Bookings';
-import Disputes from './pages/Disputes';
-import Payments from './pages/Payments';
-import Settings from './pages/Settings';
-import Profile from './pages/Profile';
-import ResetPassword from './pages/ResetPassword';
-import Payment from './pages/Payment';
-import Maintenance from './pages/Maintenance';
-import Withdrawals from './pages/Withdrawals';
-import WithdrawalDetail from './pages/WithdrawalDetail';
+// Lazy loaded Pages
+const Login = React.lazy(() => import('./pages/Login'));
+const Home = React.lazy(() => import('./pages/Home'));
+const About = React.lazy(() => import('./pages/About'));
+const Workflow = React.lazy(() => import('./pages/Workflow'));
+const Privacy = React.lazy(() => import('./pages/Privacy'));
+const Terms = React.lazy(() => import('./pages/Terms'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Verification = React.lazy(() => import('./pages/Verification'));
+const Users = React.lazy(() => import('./pages/Users'));
+const Services = React.lazy(() => import('./pages/Services'));
+const Bookings = React.lazy(() => import('./pages/Bookings'));
+const Disputes = React.lazy(() => import('./pages/Disputes'));
+const Payments = React.lazy(() => import('./pages/Payments'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
+const Payment = React.lazy(() => import('./pages/Payment'));
+const Maintenance = React.lazy(() => import('./pages/Maintenance'));
+const Withdrawals = React.lazy(() => import('./pages/Withdrawals'));
+const WithdrawalDetail = React.lazy(() => import('./pages/WithdrawalDetail'));
+
+const PageLoader = () => (
+  <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-admin-content text-slate-800 dark:text-admin-text">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <p className="font-medium animate-pulse text-indigo-600">Loading...</p>
+    </div>
+  </div>
+);
 
 /**
  *  ProtectedRoute Component
@@ -55,8 +64,9 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Home />} />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
               <Route path="/workflow" element={<Workflow />} />
               <Route path="/privacy" element={<Privacy />} />
@@ -104,6 +114,7 @@ function App() {
                 <Route path="*" element={<div className="p-10 text-center font-bold text-slate-900 dark:text-admin-text bg-white dark:bg-admin-content h-full">404 - Page Not Found</div>} />
               </Route>
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>

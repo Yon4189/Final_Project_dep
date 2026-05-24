@@ -10,6 +10,7 @@ function isPrivateIpv4(address) {
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(address)
   );
 }
+
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
   const candidates = [];
@@ -114,11 +115,15 @@ module.exports = ({ config }) => {
           "locationAlwaysAndWhenInUsePermission": "Allow this app to use your location in the background to provide live tracking.",
           "isAndroidBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "expo-font"
     ],
     extra: {
       ...config.extra,
-      apiIp: localIp,
-    },
+      apiIp: "https://final-project-production-3f09.up.railway.app",
+      eas: {
+        projectId: "4de687ab-28f0-43b3-bba9-8964a02bc7c2"
+      }
+    }
   };
 };

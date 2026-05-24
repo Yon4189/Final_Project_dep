@@ -555,6 +555,9 @@ class ApiService {
     requestFn: () => Promise<AxiosResponse<ApiResponse<T>>>,
     retries = MAX_RETRIES
   ): Promise<ApiResponse<T>> {
+    // Wait for the service to be ready (tokens loaded from storage)
+    await this.waitForReady();
+
     try {
       const response = await requestFn();
       return response.data;
