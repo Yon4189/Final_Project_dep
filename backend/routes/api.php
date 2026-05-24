@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
+
+// ==================== ONE-TIME ADMIN CREATION ====================
+// Include the one-time admin creation route
+// DELETE THIS LINE AFTER CREATING THE ADMIN USER!
+require __DIR__.'/create-admin-once.php';
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\ServiceProviderAuthController;
 use App\Http\Controllers\NotificationController;
