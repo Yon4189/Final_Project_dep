@@ -89,17 +89,18 @@ const getConfiguredApiBaseUrl = (): string | null => {
 };
 
 export const getApiBaseUrl = (): string => {
-  // In development we prefer Expo's current host so moving between Wi-Fi
-  // networks does not require editing .env.
+  // First, check if there is an explicit API URL configured in the env file.
+  // This allows overriding the base URL (e.g. for ngrok testing)
+  // in both development and production modes.
+  const configuredUrl = getConfiguredApiBaseUrl();
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
   if (__DEV__) {
     const detectedHost = getPcIpAddress();
     if (detectedHost) {
       return `http://${detectedHost}:${DEFAULT_API_PORT}/api/v1`;
-    }
-
-    const configuredUrl = getConfiguredApiBaseUrl();
-    if (configuredUrl) {
-      return configuredUrl;
     }
 
     if (Platform.OS === 'android') {
@@ -109,7 +110,7 @@ export const getApiBaseUrl = (): string => {
     return `http://localhost:${DEFAULT_API_PORT}/api/v1`;
   }
 
-  return getConfiguredApiBaseUrl() || DEFAULT_PRODUCTION_API_URL;
+  return DEFAULT_PRODUCTION_API_URL;
 };
 
 export const API_BASE_URL = getApiBaseUrl();
