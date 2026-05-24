@@ -37,58 +37,6 @@ Route::prefix('v1')->group(function () {
     // ==================== PUBLIC ROUTES (no auth) ====================
     Route::get('/health', fn() => response()->json(['status' => 'ok']));
     Route::get('/test',   fn() => response()->json(['success' => true, 'server_time' => now()]));
-    
-    // ==================== ONE-TIME ADMIN CREATION (DELETE AFTER USE!) ====================
-    Route::get('/create-admin-once', function () {
-        try {
-            $existingAdmin = \App\Models\Admin::where('email', 'admin@gmail.com')->first();
-            
-            if ($existingAdmin) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Admin user already exists with this email.',
-                    'email' => 'admin@gmail.com'
-                ], 409);
-            }
-
-            $admin = \App\Models\Admin::create([
-                'name' => 'Admin',
-                'email' => 'admin@gmail.com',
-                'password' => Hash::make('admin12345'),
-            ]);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Admin user created successfully!',
-                'admin' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'email' => $admin->email,
-                ],
-                'credentials' => [
-                    'email' => 'admin@gmail.com',
-                    'password' => 'admin12345'
-                ],
-                'warning' => 'DELETE this route from api.php NOW for security!'
-            ], 201);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to create admin user',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    });
-    
-    Route::get('/db-debug', function() {
-        try {
-            \Illuminate\Support\Facades\DB::connection()->getPdo();
-            return response()->json(['status' => 'connected', 'database' => \Illuminate\Support\Facades\DB::getDatabaseName()]);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'failed', 'error' => $e->getMessage()], 500);
-        }
-    });
     Route::get('/cities',        [ServiceCityController::class, 'index']);
     Route::get('/categories',    [CategoryController::class, 'getCategories']);
     Route::get('/services',      [ServiceController::class, 'index']);
