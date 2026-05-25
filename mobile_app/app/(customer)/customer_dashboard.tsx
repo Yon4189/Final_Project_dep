@@ -60,8 +60,7 @@ export default function CustomerDashboard() {
   const insets = useSafeAreaInsets();
   const { location, loading: locationLoading } = useLocation();
 
-  console.log("Dashboard - Location:", location);
-  console.log("Dashboard - Location Loading:", locationLoading);
+
 
   const {
     query,
@@ -74,15 +73,12 @@ export default function CustomerDashboard() {
     refresh: refreshSearch,
   } = useSearch();
 
-  console.log("Dashboard - Search Hook - Query:", query);
-  console.log("Dashboard - Search Hook - Loading:", searchLoading);
-  console.log("Dashboard - Search Hook - Providers:", providers.length);
+
 
   const { data: topRatedProviders, isLoading: topRatedLoading } =
     useTopRatedProviders(5);
 
-  console.log("Dashboard - Top Rated Hook - Loading:", topRatedLoading);
-  console.log("Dashboard - Top Rated Hook - Data:", topRatedProviders);
+
 
   const [showMapView, setShowMapView] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -242,9 +238,6 @@ export default function CustomerDashboard() {
 
   // Generate search suggestions based on query
   useEffect(() => {
-    console.log("Dashboard - Query changed:", query);
-    console.log("Dashboard - Location available:", !!location);
-    console.log("Dashboard - Providers count:", providers.length);
 
     if (query.length > 1) {
       // Get suggestions from API
@@ -273,7 +266,6 @@ export default function CustomerDashboard() {
   }, [query, location, providers.length]);
 
   const handleCategorySelect = (categoryId: string) => {
-    console.log("Dashboard - Category selected:", categoryId);
     setSelectedCategory(categoryId);
 
     // Apply category filter locally
@@ -732,16 +724,14 @@ export default function CustomerDashboard() {
   };
 
   const renderTopRated = () => {
-    console.log("Dashboard - renderTopRated called");
-    console.log("Dashboard - topRatedLoading:", topRatedLoading);
-    console.log("Dashboard - topRatedProviders:", topRatedProviders);
+
     
     if (topRatedLoading) {
       return <LoadingSpinner />;
     }
 
     if (!topRatedProviders?.length) {
-      console.log("Dashboard - No top rated providers to display");
+
       return null;
     }
 

@@ -27,7 +27,9 @@ export default function ForgotPassword() {
     
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/forgot-password`, { email });
+      const response = await axios.post(`${API_BASE_URL}/forgot-password`, { email }, {
+        headers: { 'ngrok-skip-browser-warning': '69420' }
+      });
       
       if (response.data.success) {
         Alert.alert(
@@ -64,6 +66,8 @@ export default function ForgotPassword() {
         token: token,
         password: password,
         password_confirmation: passwordConfirmation,
+      }, {
+        headers: { 'ngrok-skip-browser-warning': '69420' }
       });
 
       if (response.data.success) {

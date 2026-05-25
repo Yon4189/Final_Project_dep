@@ -13,9 +13,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import './i18n';
 import LanguageToggleButton from '../components/LanguageToggleButton';
 
-// Silence specific warnings globally
-LogBox.ignoreLogs(['same key', 'Push notifications']);
-LogBox.ignoreAllLogs(true); // Forcefully hide all warning notifications
+// Silence specific known noisy warnings globally
+LogBox.ignoreLogs([
+  'same key',
+  'Push notifications',
+  'Non-serializable values were found in the navigation state',
+  'ViewPropTypes will be removed',
+  'AsyncStorage has been extracted',
+  'expo-notifications',
+  'Warning: Each child in a list',
+  'Warning: Cannot update a component',
+]);
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

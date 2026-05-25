@@ -13,6 +13,9 @@ const API_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
+// Bypass ngrok browser warning for all raw axios requests
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = '69420';
+
 // Token storage keys - Separate for different user types
 const PROVIDER_TOKEN_KEY = 'provider_token';
 const CUSTOMER_TOKEN_KEY = 'customer_token';
@@ -92,6 +95,7 @@ class ApiService {
         'X-Platform': Platform.OS,
         'X-App-Version': Constants.expoConfig?.version || '1.0.0',
         'X-App-Build': Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode || '1',
+        'ngrok-skip-browser-warning': '69420',
       },
       withCredentials: false,
     });
@@ -126,7 +130,6 @@ class ApiService {
   // Token management
   private async loadStoredToken(): Promise<void> {
     try {
-      console.log('[ApiService] Loading stored tokens...');
       const [providerToken, customerToken, refreshToken, userTypeStr] = await Promise.all([
         storage.getItem(PROVIDER_TOKEN_KEY),
         storage.getItem(CUSTOMER_TOKEN_KEY),
@@ -139,13 +142,7 @@ class ApiService {
       this.refreshToken = refreshToken;
       this.userType = userTypeStr as 'provider' | 'customer' | null;
 
-      console.log('[ApiService] Tokens loaded result:', {
-        hasProviderToken: !!this.providerToken,
-        hasCustomerToken: !!this.customerToken,
-        hasRefreshToken: !!this.refreshToken,
-        userType: this.userType,
-        isAuthenticated: this.isAuthenticated()
-      });
+
     } catch (error) {
       console.error('[ApiService] Failed to load stored token:', error);
     }
@@ -169,14 +166,14 @@ class ApiService {
       if (refreshToken) {
         await storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       }
-      console.log('Provider token stored successfully');
+
     } catch (error) {
       console.warn('Failed to store provider token:', error);
     }
   }
 
   public async setCustomerToken(token: string, refreshToken?: string): Promise<void> {
-    console.log('[ApiService] Setting customer token...', { hasToken: !!token });
+
     this.customerToken = token;
     this.providerToken = null;
     this.userType = 'customer';
@@ -231,7 +228,6 @@ class ApiService {
   public async setUserData(userData: any): Promise<void> {
     try {
       await storage.setItem(USER_KEY, JSON.stringify(userData));
-      console.log('User data stored successfully');
     } catch (error) {
       console.warn('Failed to store user data:', error);
     }
@@ -268,7 +264,6 @@ class ApiService {
   // Token refresh
   private async refreshAccessToken(): Promise<string | null> {
     if (!this.refreshToken) {
-      console.log('No refresh token available');
       return null;
     }
 
@@ -277,13 +272,11 @@ class ApiService {
         ? '/auth/provider/refresh'
         : '/auth/customer/refresh';
 
-      console.log('Attempting to refresh token at:', endpoint);
-
       const response = await axios.post(`${API_BASE_URL}${endpoint}`, {
         refresh_token: this.refreshToken,
+      }, {
+        headers: { 'ngrok-skip-browser-warning': '69420' }
       });
-
-      console.log('Refresh response:', response.data);
 
       if (response.data?.success && response.data?.data?.token) {
         const { token, refresh_token } = response.data.data;
@@ -328,19 +321,13 @@ class ApiService {
         const token = this.getToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
-          console.log(` Token attached to request: ${config.url}`, {
-            hasToken: true,
-            tokenPreview: `${token.substring(0, 15)}...`
-          });
-        } else {
-          console.log(` No token for request: ${config.url}`);
         }
 
         // Fix for FormData: Set Content-Type to null to allow Axios to set boundary
         const isFormData = config.data && typeof config.data.append === 'function';
         if (isFormData && config.headers) {
           config.headers['Content-Type'] = null;
-          console.log('Detected FormData, set Content-Type to null for Axios boundary');
+
         }
 
         config.headers['X-Request-ID'] = this.generateRequestId();

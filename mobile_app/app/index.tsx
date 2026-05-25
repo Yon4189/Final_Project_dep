@@ -91,23 +91,12 @@ export default function LandingScreen() {
   ]);
   const [categories, setCategories] = useState<any[]>([]);
 
-  // NEW: state to display API message
-  const [apiMessage, setApiMessage] = useState<string>('Loading...');
+
   // fetch from Laravel
   useEffect(() => {
-    // Fetch test message
-    api.get('/test')
-      .then(response => {
-        if (response.success && (response as any).message) {
-          setApiMessage((response as any).message);
-        }
-      })
-      .catch(err => {
-        console.log('API ERROR:', err);
-        setApiMessage('API connection failed');
-      });
+    // Fetch dynamic stats (fire and forget, no need to display test message)
+    api.get('/test').catch(() => {});
 
-    // Fetch dynamic stats
     api.get<any>('/public/stats')
       .then(response => {
         if (response.success && response.data) {
