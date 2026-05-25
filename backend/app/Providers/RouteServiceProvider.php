@@ -21,29 +21,20 @@ class RouteServiceProvider extends ServiceProvider
     {
         $this->routes(function () {
             // api routes
-            Route::prefix('api')
-                 ->middleware('api')
-                 ->namespace($this->namespace)
-                 ->group(base_path('routes/api.php'));
+            Route::group([
+                'prefix' => 'api',
+                'middleware' => 'api',
+                'namespace' => $this->namespace,
+            ], base_path('routes/api.php'));
 
             // web routes
-            Route::middleware('web')
-                 ->namespace($this->namespace)
-                 ->group(base_path('routes/web.php'));
+            Route::group([
+                'middleware' => 'web',
+                'namespace' => $this->namespace,
+            ], base_path('routes/web.php'));
         });
     }
 
-    public function map(): void
-{
-    $this->mapApiRoutes();
-    $this->mapWebRoutes();
-}
 
-protected function mapApiRoutes(): void
-{
-    Route::prefix('api')
-         ->middleware('api')
-         ->group(base_path('routes/api.php'));
-}
 
 }

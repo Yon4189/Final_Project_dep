@@ -54,6 +54,21 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin IP Whitelist
+    |--------------------------------------------------------------------------
+    | Comma-separated list of IPs allowed to access admin routes.
+    | Leave empty to allow all IPs (development only).
+    | Example .env: ADMIN_ALLOWED_IPS=123.456.789.0,98.76.54.32
+    |
+    */
+    'admin_allowed_ips' => env('ADMIN_ALLOWED_IPS')
+        ? array_map('trim', explode(',', env('ADMIN_ALLOWED_IPS')))
+        : [],
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

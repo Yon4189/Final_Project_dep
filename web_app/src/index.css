@@ -1,9 +1,203 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
-/* custom colors from the prototype */
 @theme {
-  --color-admin-sidebar: #1e293b; /* Dark Navy for Sidebar */
-  --color-admin-content: #f1f5f9; /* Light Gray/Blue for Body */
-  --color-admin-accent: #3b82f6;  /* Primary Blue */
-  --color-admin-card: #ffffff;    /* White Cards */
+  /* Dynamic colors that respond to .dark class on <html> */
+  --color-admin-sidebar: var(--admin-sidebar);
+  --color-admin-content: var(--admin-content);
+  --color-admin-accent: var(--admin-accent);
+  --color-admin-card: var(--admin-card);
+  --color-admin-text: var(--admin-text);
+  --color-admin-text-muted: var(--admin-text-muted);
+  --color-admin-border: var(--admin-border);
+}
+
+/* ============================================================
+   LIGHT MODE VARIABLES (default)
+   ============================================================ */
+:root {
+  --admin-sidebar: #0f172a;   /* Always dark navy sidebar */
+  --admin-content: #ffffff;   /* Pure white page background */
+  --admin-card: #ffffff;      /* Pure white cards */
+  --admin-accent: #3b82f6;
+  --admin-text: #0f172a;      /* Near-black text */
+  --admin-text-muted: #64748b;
+  --admin-border: #e2e8f0;    /* Light border */
+}
+
+/* ============================================================
+   DARK MODE VARIABLES
+   ============================================================ */
+.dark {
+  --admin-sidebar: #0f172a;   /* Keep dark navy sidebar in dark mode for contrast */
+  --admin-content: #000000;   /* Pure black background */
+  --admin-card: #0d0d0d;      /* Very dark card */
+  --admin-accent: #3b82f6;
+  --admin-text: #f1f5f9;      /* Near-white text */
+  --admin-text-muted: #94a3b8;
+  --admin-border: #1e293b;    /* Dark subtle border */
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+html, body {
+  background-color: var(--admin-content);
+  color: var(--admin-text);
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Ethiopic", "Nyala", "Abyssinica SIL";
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px; /* Optimal base size for dashboards */
+  line-height: 1.5;
+}
+
+/* Smooth transitions for all theme changes */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease;
+}
+
+/* ============================================================
+   GLOBAL DARK MODE OVERRIDES FOR MAIN CONTENT AREA
+   Scoped to `main` so the sidebar/topbar (always dark) are 
+   NOT affected. This automatically fixes ALL pages.
+   ============================================================ */
+
+/* --- Card / Panel Backgrounds --- */
+.dark main .bg-white,
+.dark main .bg-slate-50,
+.dark main .bg-gray-50 {
+  background-color: var(--admin-card) !important;
+}
+
+.dark main .bg-slate-100,
+.dark main .bg-gray-100 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark main .bg-slate-200,
+.dark main .bg-gray-200 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* --- Primary Text Colors --- */
+.dark main .text-slate-900,
+.dark main .text-slate-800,
+.dark main .text-slate-700,
+.dark main .text-gray-900,
+.dark main .text-gray-800,
+.dark main .text-gray-700,
+.dark main .text-black {
+  color: var(--admin-text) !important;
+}
+
+/* --- Muted Text Colors --- */
+.dark main .text-slate-600,
+.dark main .text-slate-500,
+.dark main .text-slate-400,
+.dark main .text-gray-600,
+.dark main .text-gray-500,
+.dark main .text-gray-400 {
+  color: var(--admin-text-muted) !important;
+}
+
+/* --- Borders --- */
+.dark main .border-slate-300,
+.dark main .border-slate-200,
+.dark main .border-slate-100,
+.dark main .border-gray-300,
+.dark main .border-gray-200,
+.dark main .border-gray-100 {
+  border-color: var(--admin-border) !important;
+}
+
+/* --- Table Headers (scoped to main, no longer global) --- */
+main thead,
+main thead tr {
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.dark main thead,
+.dark main thead tr {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: var(--admin-text-muted) !important;
+  border-bottom-color: var(--admin-border) !important;
+}
+
+/* --- Table Row Dividers --- */
+.dark main .divide-slate-100 > * + *,
+.dark main .divide-slate-200 > * + *,
+.dark main .divide-gray-100 > * + *,
+.dark main .divide-gray-200 > * + *,
+.dark main .divide-y > * + *,
+.dark main .divide-admin-border > * + * {
+  border-color: var(--admin-border) !important;
+}
+
+/* --- Table Row Hover --- */
+.dark main tr:hover td,
+.dark main tr:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* --- Form Inputs placeholder color --- */
+.dark main input::placeholder,
+.dark main textarea::placeholder {
+  color: var(--admin-text-muted) !important;
+  opacity: 0.7;
+}
+
+/* --- Dropdown / select option --- */
+main select option {
+  background-color: var(--admin-card) !important;
+  color: var(--admin-text) !important;
+}
+
+.dark main option {
+  background-color: #111 !important;
+  color: #fff !important;
+}
+
+/* --- Typography Improvements --- */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--admin-text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.text-xs {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1rem;
+}
+
+.text-sm {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+}
+
+/* Ensure no text is smaller than 11px for accessibility */
+.text-\[9px\], .text-\[10px\], .text-\[8px\] {
+  font-size: 11px !important;
+}
+
+/* Progress bar animation */
+@keyframes progress-fast {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-progress-fast {
+  animation: progress-fast 1s infinite linear;
+  width: 100%;
+}
+
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.custom-scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

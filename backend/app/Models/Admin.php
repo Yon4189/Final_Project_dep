@@ -2,30 +2,47 @@
 
 namespace App\Models;
 
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable; // use for login
+
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class Admin extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, HasApiTokens, Notifiable;
 
-    protected $primaryKey = 'adminID'; // primary key
+    protected $table = 'admins';
+    protected $primaryKey = 'adminID';
 
     protected $fillable = [
-        'fullname', 'email', 'phone', 'password'
+        'fullname',
+        'email',
+        'phone',
+        'password',
+        'profilePicture'
     ];
 
-    // hide password from serialization
+    // hidden fields (like password) when returning JSON
     protected $hidden = [
-        'password'
+        'password',
+        'remember_token',
     ];
 
-    // cast attributes
-    protected function casts(): array
+    // Optional: automatically hash password when setting it
+    public function setPasswordAttribute($password)
     {
-        return [
-            'password' => 'hashed',
-        ];
+        $this->attributes['password'] = Hash::make($password);
+    }
+
+    /**
+     * Get absolute URL for profile picture
+     */
+    public function getProfilePictureAttribute($value)
+    {
+        if (!$value) return 'https://via.placeholder.com/150';
+        if (str_starts_with($value, 'http')) return $value;
+        return asset('storage/' . $value);
     }
 }

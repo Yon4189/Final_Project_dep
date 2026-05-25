@@ -17,7 +17,7 @@ return new class extends Migration
             $table->float('estimatedCost')->default(0);
             $table->timestamps();
 
-            $table->foreign('providerID')->references('providerID')->on('serviceProviders')->onDelete('cascade');
+            $table->foreign('providerID')->references('providerID')->on('service_providers')->onDelete('cascade');
             $table->foreign('catagoryID')->references('catagoryID')->on('catagories')->onDelete('cascade');
         });
     }

@@ -1,184 +1,196 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, X, CheckCircle } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Plus, RefreshCw, Database, AlertCircle, CheckCircle } from 'lucide-react';
+import api from '../api/axios';
+import { useServicesData } from '../hooks/useServicesData';
+import ServicesTable from '../components/ServicesTable';
+import CategoryModal from '../components/CategoryModal';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
 
 const Services = () => {
-  // 1. Initial Mock Data (Using realistic IDs)
-  const [categories, setCategories] = useState([
-    { id: "CAT-001", name: "Plumbing", description: "Water pipe repairs and installations", status: "Active" },
-    { id: "CAT-002", name: "Cleaning", description: "Deep house cleaning and laundry services", status: "Active" },
-    { id: "CAT-003", name: "Electrical", description: "Wiring, socket fixing and appliance repair", status: "Active" },
-  ]);
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const location = useLocation();
+  const { categories, services, providers, isLoading, isError, error, refresh } = useServicesData();
 
-  // 2. States for Modal and Form
+  // Determine active tab from URL
+  const activeTab = location.pathname.includes('/services/services') ? 'services' : 'categories';
+
+  // Filter state for services
+  const [filterCategory, setFilterCategory] = useState('');
+  const [costMin, setCostMin] = useState('');
+  const [costMax, setCostMax] = useState('');
+
+  // UI state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  // 3. Handlers
-  const handleOpenModal = (category = null) => {
-    if (category) {
-      setEditingCategory(category);
-      setFormData({ name: category.name, description: category.description });
-    } else {
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
+
+  const categoryIsInUse = (catagoryID) => {
+    const usedByServices = services.some(s => s.catagoryID === catagoryID);
+    const usedByProviders = providers.some(p => p.catagoryID === catagoryID);
+    return usedByServices || usedByProviders;
+  };
+
+  const handleCategorySubmit = async (formData) => {
+    setIsSubmitting(true);
+    try {
+      if (editingCategory) {
+        await api.put(`/admin/categories/${editingCategory.catagoryID}`, formData);
+        showToast(t('serv_msg_cat_updated'));
+      } else {
+        await api.post('/admin/categories', formData);
+        showToast(t('serv_msg_cat_added'));
+      }
+      setIsModalOpen(false);
       setEditingCategory(null);
-      setFormData({ name: '', description: '' });
+      queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+    } catch (err) {
+      const msg = err.response?.data?.message || t('serv_msg_error_saving');
+      showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteCategory = (item) => {
+    if (categoryIsInUse(item.catagoryID)) {
+      showToast(t('serv_msg_error_in_use'), 'error');
+      return;
+    }
+    setDeleteConfirm({ show: true, id: item.catagoryID, name: item.name });
+  };
+
+  const confirmDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/admin/categories/${deleteConfirm.id}`);
+      showToast(t('serv_msg_cat_deleted'));
+      setDeleteConfirm({ show: false, id: null, name: '' });
+      queryClient.invalidateQueries({ queryKey: ['servicesSystem'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+    } catch (err) {
+      const msg = err.response?.data?.message || t('serv_error_delete_constraint');
+      showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openModal = (category = null) => {
+    setEditingCategory(category);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingCategory) {
-      // UPDATE Logic
-      setCategories(prev => prev.map(c => 
-        c.id === editingCategory.id ? { ...c, ...formData } : c
-      ));
-    } else {
-      // CREATE Logic
-      const newCategory = {
-        // Generate a readable ID for the mock
-        id: `CAT-${Math.floor(Math.random() * 900) + 100}`, 
-        ...formData,
-        status: "Active"
-      };
-      setCategories([...categories, newCategory]);
-    }
-    setIsModalOpen(false);
+  const resetFilters = () => {
+    setFilterCategory('');
+    setCostMin('');
+    setCostMax('');
   };
 
-  const handleDelete = (id, name) => {
-    if (window.confirm(`Delete "${name}" category? Providers in this category will be affected.`)) {
-      setCategories(prev => prev.filter(c => c.id !== id));
-    }
-  };
+  const dbStatus = isError ? 'disconnected' : (isLoading ? 'checking' : 'connected');
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Manage Service Categories</h1>
-          <p className="text-slate-500 text-sm">Configure the types of services available on the platform.</p>
-        </div>
-        
-        <button 
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-admin-accent hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95"
-        >
-          <Plus size={20} />
-          Add New Category
-        </button>
-      </div>
-
-      {/* Table Section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-4">Category ID</th>
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Description</th>
-              <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {categories.map((cat) => (
-              <tr key={cat.id} className="hover:bg-slate-50 transition-colors group">
-                <td className="px-6 py-4">
-                  <span className="font-mono text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-md border border-slate-200">
-                    {cat.id}
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-bold text-slate-900">{cat.name}</td>
-                <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">{cat.description}</td>
-                <td className="px-6 py-4 text-center">
-                  <span className="bg-green-100 text-green-600 text-[10px] font-black px-2 py-1 rounded-full uppercase">
-                    {cat.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-2">
-                    <button 
-                      onClick={() => handleOpenModal(cat)}
-                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
-                    >
-                      <Edit2 size={14} /> Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(cat.id, cat.name)}
-                      className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {categories.length === 0 && (
-          <div className="p-20 text-center text-slate-400 italic">No categories created yet. Click "Add New" to start.</div>
-        )}
-      </div>
-
-      {/* --- CRUD MODAL --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h2 className="text-xl font-black text-slate-900">
-                {editingCategory ? 'Update Service' : 'New Service'}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X size={24} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Name</label>
-                <input 
-                  type="text" required
-                  className="w-full border-2 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-admin-accent transition-all text-slate-700 font-medium"
-                  placeholder="e.g. Home Cleaning"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Description</label>
-                <textarea 
-                  required rows="3"
-                  className="w-full border-2 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-admin-accent transition-all text-slate-700 font-medium"
-                  placeholder="Briefly describe what this service covers..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                />
-              </div>
-
-              <div className="flex gap-4 pt-2">
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-1 bg-admin-accent hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={18} />
-                  {editingCategory ? 'Update' : 'Confirm'}
-                </button>
-              </div>
-            </form>
-          </div>
+    <div className="relative space-y-6 animate-in fade-in duration-500 pb-10">
+      {/* Toast */}
+      {toast.show && (
+        <div className={`fixed bottom-10 right-10 z-[100] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl animate-in slide-in-from-right-10 border ${toast.type === 'success' ? 'bg-slate-800 text-green-400 border-green-500/30' : 'bg-red-600 text-white border-red-400/30'}`}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-admin-text tracking-tight italic">
+            {activeTab === 'categories' ? t('serv_cat_title') : t('serv_all_title')}
+          </h1>
+          <p className="text-admin-text-muted text-[10px] font-black uppercase tracking-widest italic mt-1">
+            {activeTab === 'categories' ? t('serv_cat_subtitle') : t('serv_all_subtitle')}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-admin-border bg-admin-card shadow-sm">
+            <Database size={14} className={
+              dbStatus === 'connected' ? 'text-green-500' :
+                dbStatus === 'disconnected' ? 'text-red-500' : 'text-yellow-500 animate-pulse'
+            } />
+            <span className="text-[10px] font-black uppercase tracking-widest text-admin-text-muted">
+              {dbStatus === 'connected' && t('db_connected')}
+              {dbStatus === 'disconnected' && t('db_disconnected')}
+              {dbStatus === 'checking' && t('db_checking')}
+            </span>
+          </div>
+          <button
+            onClick={refresh}
+            className="p-2.5 bg-admin-card border border-admin-border rounded-2xl text-slate-400 hover:text-blue-500 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Refresh data"
+          >
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+          {activeTab === 'categories' && dbStatus === 'connected' && (
+            <button
+              onClick={() => openModal()}
+              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <Plus size={18} /> {t('serv_add_category')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <ServicesTable
+        activeTab={activeTab}
+        categories={categories}
+        services={services}
+        providers={providers}
+        isLoading={isLoading}
+        dbStatus={dbStatus}
+        error={error}
+        onRefresh={refresh}
+        onEditCategory={openModal}
+        onDeleteCategory={handleDeleteCategory}
+        categoryIsInUse={categoryIsInUse}
+        filterCategory={filterCategory}
+        setFilterCategory={setFilterCategory}
+        costMin={costMin}
+        setCostMin={setCostMin}
+        costMax={costMax}
+        setCostMax={setCostMax}
+        resetFilters={resetFilters}
+      />
+
+      <CategoryModal
+        isOpen={isModalOpen}
+        category={editingCategory}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingCategory(null);
+        }}
+        onSubmit={handleCategorySubmit}
+        isSubmitting={isSubmitting}
+      />
+
+      <DeleteConfirmModal
+        show={deleteConfirm.show}
+        name={deleteConfirm.name}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({ show: false, id: null, name: '' })}
+      />
     </div>
   );
 };
 
-export default Services;
+export default Services;

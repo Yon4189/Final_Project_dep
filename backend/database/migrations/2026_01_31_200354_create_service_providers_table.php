@@ -7,32 +7,28 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up(): void
-{
-    Schema::create('serviceProviders', function (Blueprint $table) {
-        $table->id('providerID');
-        $table->string('fullname');
-        $table->string('phone');
-        $table->string('email')->unique();
-        $table->string('password');
-        
-        // 1. Define the column FIRST
-        $table->unsignedBigInteger('catagoryID'); 
-        
-        $table->string('profilePicture')->nullable();
-        $table->string('idPhoto');
-        $table->boolean('isVerified')->default(false);
-        $table->text('bio')->nullable();
-        $table->float('walletBalance')->default(0);
-        $table->float('serviceRadiusKm')->nullable();
-        $table->timestamps();
+    {
+        Schema::create('service_providers', function (Blueprint $table) {
+            $table->id('providerID');                   
+            $table->string('fullname');                 
+            $table->string('phone')->unique();                    
+            $table->string('email')->unique();          
+            $table->string('password');                 
+            $table->unsignedBigInteger('catagoryID')->nullable(); // FK to catagories
+            $table->string('profilePicture')->nullable();  // nullable cuz its optional
+            $table->string('idPhoto');                  
+            $table->boolean('isVerified')->default(false); 
+            $table->string('bio')->nullable();          
+            $table->float('walletBalance')->default(0); 
+            $table->float('serviceRadiusKm')->nullable(); 
+            $table->timestamps();
 
-        // 2. Add the foreign key using the SAME name defined above
-        $table->foreign('catagoryID')->references('catagoryID')->on('catagories')->onDelete('cascade');
-    });
-}
+            $table->foreign('catagoryID')->references('catagoryID')->on('catagories');
+        });
+    }
 
     public function down(): void
     {
-        Schema::dropIfExists('serviceProviders');
+        Schema::dropIfExists('service_providers');
     }
 };
