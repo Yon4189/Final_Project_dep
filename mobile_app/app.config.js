@@ -122,7 +122,7 @@ module.exports = ({ config }) => {
       ...config.extra,
       apiIp: "https://pushchair-improve-valium.ngrok-free.dev",
       eas: {
-        projectId: "4de687ab-28f0-43b3-bba9-8964a02bc7c2"
+        projectId: "e6e0e4c5-95d3-4e49-b05e-8d318997aba8"
       }
     }
   };
