@@ -251,6 +251,30 @@ class ApiService {
     }
   }
 
+  private async handleSessionExpired(): Promise<void> {
+    console.log('Session expired, clearing tokens and redirecting to login...');
+    await this.removeToken();
+    await this.removeUserData();
+
+    // Clear Zustand stores
+    try {
+      const { useCustomerStore } = require('../store/customerStore');
+      const { useProviderStore } = require('../store/providerStore');
+      useCustomerStore.getState().reset();
+      useProviderStore.getState().reset();
+    } catch (e) {
+      console.warn('Failed to reset stores:', e);
+    }
+
+    // Redirect to login
+    try {
+      const { router } = require('expo-router');
+      router.replace('/(auth)/login');
+    } catch (e) {
+      console.warn('Failed to redirect to login:', e);
+    }
+  }
+
   // Network check
   private async checkNetwork(): Promise<boolean> {
     try {
@@ -371,7 +395,7 @@ class ApiService {
         const originalConfig = error.config as AxiosRequestConfig & { _retry?: boolean };
 
         if (__DEV__) {
-          console.error(' API Error Details:', {
+          console.log(' API Error Details:', {
             url: originalConfig?.url,
             status: error.response?.status,
             statusText: error.response?.statusText,
@@ -453,8 +477,7 @@ class ApiService {
             } else {
               console.log('Token refresh failed, clearing tokens');
               this.processQueue(new Error('Refresh failed'));
-              await this.removeToken();
-              await this.removeUserData();
+              await this.handleSessionExpired();
 
               const sessionError: any = new Error('Session expired. Please login again.');
               sessionError.statusCode = 401;
@@ -464,8 +487,7 @@ class ApiService {
           } catch (refreshError) {
             console.error('Token refresh error:', refreshError);
             this.processQueue(refreshError as Error);
-            await this.removeToken();
-            await this.removeUserData();
+            await this.handleSessionExpired();
 
             const sessionError: any = new Error('Session expired. Please login again.');
             sessionError.statusCode = 401;

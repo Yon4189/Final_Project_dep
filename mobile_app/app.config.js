@@ -50,7 +50,7 @@ const localIp = getLocalIp();
 module.exports = ({ config }) => {
   return {
     ...config,
-    name: "mobile_app",
+    name: "Ethio Handyman",
     slug: "mobile_app",
     version: "1.0.0",
     scheme: "mobileapp",

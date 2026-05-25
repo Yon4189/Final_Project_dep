@@ -5,6 +5,7 @@
 import Pusher from 'pusher-js';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL, API_HOST } from '../config/api';
+import { api } from './api';
 
 const REVERB_HOST = (__DEV__
   ? API_HOST || process.env.EXPO_PUBLIC_REVERB_HOST?.trim()
@@ -24,7 +25,8 @@ export async function getPusher(): Promise<Pusher> {
 
   connecting = true;
   try {
-    const token = await SecureStore.getItemAsync('user_token') ?? '';
+    await api.waitForReady();
+    const token = api.getToken() ?? '';
 
     const instance = new Pusher(REVERB_APP_KEY, {
       cluster: 'mt1',

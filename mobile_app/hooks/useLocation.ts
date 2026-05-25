@@ -63,7 +63,7 @@ export const useLocation = (): UseLocationReturn => {
         setLoading(false);
       }
     } catch (error) {
-      console.error('Location - Permission check failed:', error);
+      console.log('Location - Permission check failed:', error);
       setError('Failed to check location permissions');
       setLoading(false);
     }
@@ -82,7 +82,7 @@ export const useLocation = (): UseLocationReturn => {
         return false;
       }
     } catch (error) {
-      console.error('Location - Permission request failed:', error);
+      console.log('Location - Permission request failed:', error);
       setError('Failed to request location permissions');
       return false;
     }
@@ -149,7 +149,7 @@ if (geocode.length > 0) {
       setLocation(locationData);
       setAddress(addressData || null);
     } catch (error: any) {
-      console.error('Location - Failed to get location:', error);
+      console.log('Location - Failed to get location:', error);
       
       if (error.code === 'E_LOCATION_UNAVAILABLE') {
         setError('Location services are unavailable');
