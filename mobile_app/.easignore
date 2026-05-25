@@ -1,5 +1,7 @@
 # Full directory name - EAS will match anywhere in the tree
-backend/
+
+../backend/
 
 # Or more specific with wildcards
+
 **/backend/**
