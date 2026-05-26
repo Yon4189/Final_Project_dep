@@ -276,7 +276,7 @@ export default function CustomerDashboard() {
   };
 
   const handleViewAllCategories = () => {
-    router.push("/categories");
+    router.push("/(customer)/categories");
   };
 
   const handleProviderSelect = (provider: ServiceProvider) => {
@@ -329,7 +329,7 @@ export default function CustomerDashboard() {
           [
             {
               text: "View My Bookings",
-              onPress: () => router.push("/bookings"),
+              onPress: () => router.push("/(customer)/bookings"),
             },
             {
               text: "OK",
@@ -399,7 +399,7 @@ export default function CustomerDashboard() {
         color: Colors.primary,
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/bookings');
+          router.push('/(customer)/bookings');
         },
       },
       {
@@ -408,7 +408,7 @@ export default function CustomerDashboard() {
         color: Colors.warning || '#FF9500',
         onPress: () => {
           setShowHamburgerMenu(false);
-          router.push('/complaints');
+          router.push('/(customer)/complaints');
         },
       },
       {
@@ -568,7 +568,7 @@ export default function CustomerDashboard() {
 
             <TouchableOpacity
               style={styles.profileButton}
-              onPress={() => router.push("/profile")}
+              onPress={() => router.push("/(customer)/profile")}
             >
               {(() => {
                 const pic = user?.profilePicture || user?.profile_picture;
