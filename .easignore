@@ -1,0 +1,5 @@
+backend/**
+web_app/**
+nginx/**
+node_modules/**
+.git/**

@@ -1,7 +1,21 @@
-# Full directory name - EAS will match anywhere in the tree
-
-../backend/
-
-# Or more specific with wildcards
-
+# Ignore backend entirely
+../backend
+../backend/**
+../../backend
 **/backend/**
+
+# Ignore other non-mobile folders
+../web_app
+../web_app/**
+../nginx
+../nginx/**
+../node_modules
+../node_modules/**
+
+# Ignore large/unnecessary files
+node_modules/**
+.expo/**
+dist/**
+android/**
+ios/**
+*.log

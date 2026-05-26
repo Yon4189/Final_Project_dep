@@ -3,6 +3,9 @@ const os = require('os');
 const PREFERRED_INTERFACES = ['wi-fi', 'wifi', 'wlan', 'ethernet'];
 const SKIPPED_INTERFACES = ['loopback', 'virtual', 'vmware', 'vbox', 'hyper-v', 'bluetooth', 'docker'];
 
+// Update this URL every time your ngrok URL changes
+const PRODUCTION_API_URL = 'https://pushchair-improve-valium.ngrok-free.dev';
+
 function isPrivateIpv4(address) {
   return (
     address.startsWith('10.') ||
@@ -19,17 +22,9 @@ function getLocalIp() {
     const lowerName = interfaceName.toLowerCase();
 
     for (const addr of addresses || []) {
-      if (addr.family !== 'IPv4' || addr.internal) {
-        continue;
-      }
-
-      if (addr.address.startsWith('169.254.')) {
-        continue;
-      }
-
-      if (!isPrivateIpv4(addr.address)) {
-        continue;
-      }
+      if (addr.family !== 'IPv4' || addr.internal) continue;
+      if (addr.address.startsWith('169.254.')) continue;
+      if (!isPrivateIpv4(addr.address)) continue;
 
       const isSkipped = SKIPPED_INTERFACES.some((item) => lowerName.includes(item));
       const isPreferred = PREFERRED_INTERFACES.some((item) => lowerName.includes(item));
@@ -48,6 +43,16 @@ function getLocalIp() {
 const localIp = getLocalIp();
 
 module.exports = ({ config }) => {
+  // In production builds (EAS), use the ngrok/server URL
+  // In development, use local IP from .env or auto-detected
+  const isProduction = process.env.APP_ENV === 'production';
+
+  const apiIp = process.env.EXPO_PUBLIC_API_URL
+    ? process.env.EXPO_PUBLIC_API_URL.replace('/api/v1', '')
+    : isProduction
+      ? PRODUCTION_API_URL
+      : `http://${localIp}:8000`;
+
   return {
     ...config,
     name: "Ethio Handyman",
@@ -62,17 +67,12 @@ module.exports = ({ config }) => {
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
-    assetBundlePatterns: [
-      "**/*"
-    ],
+    assetBundlePatterns: ["**/*"],
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.hbservicefinder.app",
       infoPlist: {
-        UIBackgroundModes: [
-          "location",
-          "fetch"
-        ]
+        UIBackgroundModes: ["location", "fetch"]
       }
     },
     android: {
@@ -120,7 +120,7 @@ module.exports = ({ config }) => {
     ],
     extra: {
       ...config.extra,
-      apiIp: process.env.EXPO_PUBLIC_API_URL ? process.env.EXPO_PUBLIC_API_URL.replace('/api/v1', '') : `http://${localIp}:8000`,
+      apiIp,
       eas: {
         projectId: "e6e0e4c5-95d3-4e49-b05e-8d318997aba8"
       }
