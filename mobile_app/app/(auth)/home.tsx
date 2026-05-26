@@ -14,7 +14,7 @@ export default function HomeTab() {
       <View style={styles.header}>
          
         <TouchableOpacity
-          onPress={() => router.replace('/index')}
+          onPress={() => router.replace('/')}
           style={{ position: 'absolute', left: 20 }}
         >
         

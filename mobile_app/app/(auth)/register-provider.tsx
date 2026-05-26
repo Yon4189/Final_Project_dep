@@ -339,7 +339,7 @@ export default function RegisterProviderScreen() {
       });
 
       if (response.success || response.status === 'success') {
-        router.replace('/login');
+        router.replace('/(auth)/login');
       } else {
         setRegistrationSuccess(true);
       }
@@ -375,7 +375,7 @@ export default function RegisterProviderScreen() {
         </Text>
         <AppButton
           title={t("auth.goToLogin", "Go to Login")}
-          onPress={() => router.replace('/login')}
+          onPress={() => router.replace('/(auth)/login')}
           fullWidth
           style={{ marginTop: 20 }}
         />

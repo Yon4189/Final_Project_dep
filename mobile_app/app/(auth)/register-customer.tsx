@@ -182,7 +182,7 @@ export default function RegisterCustomerScreen() {
         Alert.alert(
           t("auth.success", "Success!"),
           t("auth.accountCreated", "Your account has been created successfully. Please log in."),
-          [{ text: "OK", onPress: () => router.replace("/login") }]
+          [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
         );
       } else {
         // Handle backend validation errors

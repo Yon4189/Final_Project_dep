@@ -116,13 +116,13 @@ export default function LoginScreen() {
             queryClient.clear();
             useCustomerStore.getState().reset();
             useProviderStore.getState().reset();
-            router.replace("/provider_dashboard");
+            router.replace("/(provider)/provider_dashboard");
           } else {
             console.log(' Navigating to customer dashboard');
             queryClient.clear();
             useCustomerStore.getState().reset();
             useProviderStore.getState().reset();
-            router.replace("/customer_dashboard");
+            router.replace("/(customer)/customer_dashboard");
           }
         } else {
           console.error(' No token in response');
@@ -257,9 +257,9 @@ export default function LoginScreen() {
           useProviderStore.getState().reset();
 
           if (userType === "provider") {
-            router.replace("/provider_dashboard");
+            router.replace("/(provider)/provider_dashboard");
           } else {
-            router.replace("/customer_dashboard");
+            router.replace("/(customer)/customer_dashboard");
           }
         }
       } else if (response?.message !== 'Google sign-in cancelled or failed') {

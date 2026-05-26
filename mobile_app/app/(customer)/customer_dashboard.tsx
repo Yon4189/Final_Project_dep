@@ -364,7 +364,7 @@ export default function CustomerDashboard() {
             await SecureStore.deleteItemAsync('auth_token');
             await SecureStore.deleteItemAsync('user_data');
             useCustomerStore.getState().reset();
-            router.replace('/login');
+            router.replace('/(auth)/login');
           } catch (error) {
             console.error('Logout error:', error);
           }

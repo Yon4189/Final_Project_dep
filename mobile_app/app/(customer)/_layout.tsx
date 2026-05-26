@@ -59,7 +59,7 @@ export default function CustomerLayout() {
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  router.replace('/customer_dashboard');
+                  router.replace('/(customer)/customer_dashboard');
                 }
               }}
               style={{ marginRight: 12 }}
@@ -67,7 +67,7 @@ export default function CustomerLayout() {
               <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => router.replace('/customer_dashboard')}
+              onPress={() => router.replace('/(customer)/customer_dashboard')}
             >
               <Ionicons name="home-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
