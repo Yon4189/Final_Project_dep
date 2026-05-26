@@ -104,7 +104,7 @@ export default function ProviderProfile() {
             // Clear auth and navigate to login
             await api.clearAll();
             useProviderStore.getState().reset();
-            router.replace('/login');
+            router.replace('/(auth)/login');
           }
         },
       ]

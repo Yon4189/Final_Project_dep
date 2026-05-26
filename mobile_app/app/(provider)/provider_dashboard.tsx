@@ -529,7 +529,7 @@ export default function ProviderDashboard() {
                   const { api } = await import('@/app/services/api');
                   await api.clearAll();
                   useProviderStore.getState().reset(); 
-                  router.replace('/login'); 
+                  router.replace('/(auth)/login'); 
                 }}>
                   <Ionicons name="log-out-outline" size={22} color={colors.error} />
                   <Text style={[styles.drawerItemText, { color: colors.error }]}>{t("common.logout", "Logout")}</Text>
