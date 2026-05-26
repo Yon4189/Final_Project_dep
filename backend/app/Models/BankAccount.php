@@ -7,72 +7,35 @@ use Illuminate\Database\Eloquent\Model;
 class BankAccount extends Model
 {
     protected $table = 'bank_accounts';
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'bankAccountID';
 
     protected $fillable = [
-        'user_type',
-        'user_id',
-        'bank_name',
-        'account_name',
-        'account_number',
+        'providerID',
+        'bankName',
+        'accountName',
+        'accountNumber',
         'branch',
-        'swift_code',
-        'is_default'
+        'swiftCode',
+        'is_primary'
     ];
 
     protected $casts = [
-        'is_default' => 'boolean',
+        'is_primary' => 'boolean',
     ];
 
     /**
      * Append camelCase attributes for frontend compatibility
      */
     protected $appends = [
-        'bankName',
-        'accountName',
-        'accountNumber',
-        'swiftCode',
         'isPrimary'
     ];
 
     /**
-     * Get bank_name as bankName
-     */
-    public function getBankNameAttribute()
-    {
-        return $this->attributes['bank_name'] ?? null;
-    }
-
-    /**
-     * Get account_name as accountName
-     */
-    public function getAccountNameAttribute()
-    {
-        return $this->attributes['account_name'] ?? null;
-    }
-
-    /**
-     * Get account_number as accountNumber
-     */
-    public function getAccountNumberAttribute()
-    {
-        return $this->attributes['account_number'] ?? null;
-    }
-
-    /**
-     * Get swift_code as swiftCode
-     */
-    public function getSwiftCodeAttribute()
-    {
-        return $this->attributes['swift_code'] ?? null;
-    }
-
-    /**
-     * Get is_default as isPrimary (for backward compatibility)
+     * Get is_primary as isPrimary (for backward compatibility)
      */
     public function getIsPrimaryAttribute()
     {
-        return $this->attributes['is_default'] ?? false;
+        return $this->attributes['is_primary'] ?? false;
     }
 
     /**
@@ -80,6 +43,6 @@ class BankAccount extends Model
      */
     public function provider()
     {
-        return $this->belongsTo(ServiceProvider::class, 'user_id', 'providerID');
+        return $this->belongsTo(ServiceProvider::class, 'providerID', 'providerID');
     }
 }

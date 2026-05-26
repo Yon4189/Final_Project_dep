@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "18c87641-c978-4c67-aed3-69259f86f82b"
+      }
+    },
+    "android": {
+      "package": "com.hbservicefinder.app"
+    }
+  }
+}

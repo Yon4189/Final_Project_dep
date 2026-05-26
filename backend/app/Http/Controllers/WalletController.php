@@ -607,9 +607,8 @@ class WalletController extends Controller
         try {
             $provider = $request->user();
             
-            $bankAccounts = BankAccount::where('user_type', 'provider')
-                ->where('user_id', $provider->providerID)
-                ->orderBy('is_default', 'desc')
+            $bankAccounts = BankAccount::where('providerID', $provider->providerID)
+                ->orderBy('is_primary', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
             
@@ -637,7 +636,7 @@ class WalletController extends Controller
         $request->validate([
             'bankName' => 'required|string|max:255',
             'accountName' => 'required|string|max:255',
-            'accountNumber' => 'required|string|max:50|unique:bank_accounts,account_number',
+            'accountNumber' => 'required|string|max:50|unique:bank_accounts,accountNumber',
             'branch' => 'nullable|string|max:255',
             'swiftCode' => 'nullable|string|max:20'
         ]);
@@ -646,28 +645,23 @@ class WalletController extends Controller
             $provider = $request->user();
             
             // Check if this is the first bank account for this provider
-            $existingCount = BankAccount::where('user_type', 'provider')
-                ->where('user_id', $provider->providerID)
-                ->count();
-            $isDefault = $existingCount === 0; // First account is automatically default
+            $existingCount = BankAccount::where('providerID', $provider->providerID)->count();
+            $isDefault = $existingCount === 0;
             
-            // If user wants to set this as default, unset other default accounts
-            if ($request->has('is_default') && $request->is_default) {
-                BankAccount::where('user_type', 'provider')
-                    ->where('user_id', $provider->providerID)
-                    ->update(['is_default' => false]);
+            if ($request->has('is_primary') && $request->is_primary) {
+                BankAccount::where('providerID', $provider->providerID)
+                    ->update(['is_primary' => false]);
                 $isDefault = true;
             }
             
             $bankAccount = BankAccount::create([
-                'user_type' => 'provider',
-                'user_id' => $provider->providerID,
-                'bank_name' => $request->bankName,
-                'account_name' => $request->accountName,
-                'account_number' => $request->accountNumber,
-                'branch' => $request->branch,
-                'swift_code' => $request->swiftCode,
-                'is_default' => $isDefault
+                'providerID'    => $provider->providerID,
+                'bankName'      => $request->bankName,
+                'accountName'   => $request->accountName,
+                'accountNumber' => $request->accountNumber,
+                'branch'        => $request->branch,
+                'swiftCode'     => $request->swiftCode,
+                'is_primary'    => $isDefault
             ]);
             
             return response()->json([
@@ -704,7 +698,7 @@ class WalletController extends Controller
         $request->validate([
             'bankName' => 'required|string|max:255',
             'accountName' => 'required|string|max:255',
-            'accountNumber' => 'required|string|max:50|unique:bank_accounts,account_number,' . $id . ',id',
+            'accountNumber' => 'required|string|max:50|unique:bank_accounts,accountNumber,' . $id . ',bankAccountID',
             'branch' => 'nullable|string|max:255',
             'swiftCode' => 'nullable|string|max:20'
         ]);
@@ -712,9 +706,8 @@ class WalletController extends Controller
         try {
             $provider = $request->user();
             
-            $bankAccount = BankAccount::where('id', $id)
-                ->where('user_type', 'provider')
-                ->where('user_id', $provider->providerID)
+            $bankAccount = BankAccount::where('bankAccountID', $id)
+                ->where('providerID', $provider->providerID)
                 ->first();
             
             if (!$bankAccount) {
@@ -724,21 +717,19 @@ class WalletController extends Controller
                 ], 404);
             }
             
-            // If user wants to set this as default, unset other default accounts
-            if ($request->has('is_default') && $request->is_default) {
-                BankAccount::where('user_type', 'provider')
-                    ->where('user_id', $provider->providerID)
-                    ->where('id', '!=', $id)
-                    ->update(['is_default' => false]);
+            if ($request->has('is_primary') && $request->is_primary) {
+                BankAccount::where('providerID', $provider->providerID)
+                    ->where('bankAccountID', '!=', $id)
+                    ->update(['is_primary' => false]);
             }
             
             $bankAccount->update([
-                'bank_name' => $request->bankName,
-                'account_name' => $request->accountName,
-                'account_number' => $request->accountNumber,
-                'branch' => $request->branch,
-                'swift_code' => $request->swiftCode,
-                'is_default' => $request->has('is_default') ? $request->is_default : $bankAccount->is_default
+                'bankName'      => $request->bankName,
+                'accountName'   => $request->accountName,
+                'accountNumber' => $request->accountNumber,
+                'branch'        => $request->branch,
+                'swiftCode'     => $request->swiftCode,
+                'is_primary'    => $request->has('is_primary') ? $request->is_primary : $bankAccount->is_primary
             ]);
             
             return response()->json([
@@ -772,9 +763,8 @@ class WalletController extends Controller
         try {
             $provider = $request->user();
             
-            $bankAccount = BankAccount::where('id', $id)
-                ->where('user_type', 'provider')
-                ->where('user_id', $provider->providerID)
+            $bankAccount = BankAccount::where('bankAccountID', $id)
+                ->where('providerID', $provider->providerID)
                 ->first();
             
             if (!$bankAccount) {
@@ -784,15 +774,13 @@ class WalletController extends Controller
                 ], 404);
             }
             
-            // If deleting default account, set another account as default
-            if ($bankAccount->is_default) {
-                $nextAccount = BankAccount::where('user_type', 'provider')
-                    ->where('user_id', $provider->providerID)
-                    ->where('id', '!=', $id)
+            if ($bankAccount->is_primary) {
+                $nextAccount = BankAccount::where('providerID', $provider->providerID)
+                    ->where('bankAccountID', '!=', $id)
                     ->first();
                 
                 if ($nextAccount) {
-                    $nextAccount->update(['is_default' => true]);
+                    $nextAccount->update(['is_primary' => true]);
                 }
             }
             
