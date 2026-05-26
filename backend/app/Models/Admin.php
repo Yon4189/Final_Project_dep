@@ -41,7 +41,7 @@ class Admin extends Authenticatable
      */
     public function getProfilePictureAttribute($value)
     {
-        if (!$value) return 'https://via.placeholder.com/150';
+        if (!$value) return null;
         if (str_starts_with($value, 'http')) return $value;
         return asset('storage/' . $value);
     }

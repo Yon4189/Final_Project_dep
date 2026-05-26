@@ -25,6 +25,7 @@ const Topbar = ({ onToggleSidebar, isMobile }) => {
 
   const getBackendUrl = (path) => {
     if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
     const base = api.defaults.baseURL.replace('/api', '').replace(/\/+$/, '');
     const cleanPath = path.replace(/^\/+/, '');
     return `${base}/${cleanPath}`;
