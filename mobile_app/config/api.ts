@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const DEFAULT_API_PORT = process.env.EXPO_PUBLIC_API_PORT?.trim() || '8000';
-const DEFAULT_PRODUCTION_API_URL = 'https://pushchair-improve-valium.ngrok-free.dev/api/v1';
+const DEFAULT_PRODUCTION_API_URL = 'http://192.168.137.1:8000/api/v1';
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
 

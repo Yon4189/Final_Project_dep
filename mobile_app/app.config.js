@@ -120,7 +120,7 @@ module.exports = ({ config }) => {
     ],
     extra: {
       ...config.extra,
-      apiIp: "https://pushchair-improve-valium.ngrok-free.dev",
+      apiIp: process.env.EXPO_PUBLIC_API_URL ? process.env.EXPO_PUBLIC_API_URL.replace('/api/v1', '') : `http://${localIp}:8000`,
       eas: {
         projectId: "e6e0e4c5-95d3-4e49-b05e-8d318997aba8"
       }
