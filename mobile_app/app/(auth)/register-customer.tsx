@@ -26,7 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from "../context/ThemeContext";
 import { useCustomerStore } from "../store/customerStore";
 import { useProviderStore } from "../store/providerStore";
-import { useQueryClient } from "@tantml:react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Define City interface
 interface City {
