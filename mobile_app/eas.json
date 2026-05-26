@@ -12,10 +12,20 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pushchair-improve-valium.ngrok-free.dev/api/v1",
+        "EXPO_PUBLIC_REVERB_PORT": "8080",
+        "EXPO_PUBLIC_REVERB_APP_KEY": "final-project-key"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pushchair-improve-valium.ngrok-free.dev/api/v1",
+        "EXPO_PUBLIC_REVERB_PORT": "8080",
+        "EXPO_PUBLIC_REVERB_APP_KEY": "final-project-key"
+      }
     }
   },
   "submit": {
