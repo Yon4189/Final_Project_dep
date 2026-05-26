@@ -42,7 +42,9 @@ class Admin extends Authenticatable
     public function getProfilePictureAttribute($value)
     {
         if (!$value) return null;
+        // Cloudinary and other full URLs are returned as-is
         if (str_starts_with($value, 'http')) return $value;
-        return asset('storage/' . $value);
+        // Legacy local files
+        return asset($value);
     }
 }

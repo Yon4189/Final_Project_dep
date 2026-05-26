@@ -99,8 +99,10 @@ class Customer extends Authenticatable
     public function getProfilePictureAttribute($value)
     {
         if (!$value) return 'https://via.placeholder.com/150';
+        // Cloudinary and other full URLs returned as-is
         if (str_starts_with($value, 'http')) return $value;
-        return asset('storage/' . $value);
+        // Legacy local files
+        return asset($value);
     }
 
     /**

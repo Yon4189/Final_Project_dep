@@ -69,7 +69,7 @@ const Profile = () => {
       });
 
       if (response.data.success) {
-        const newPath = response.data.path;
+        const newPath = response.data.path + '?t=' + Date.now();
 
         // Update local state
         setProfileData(prev => ({ ...prev, profilePicture: newPath }));

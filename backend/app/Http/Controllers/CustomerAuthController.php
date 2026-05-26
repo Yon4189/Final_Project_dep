@@ -78,20 +78,20 @@ class CustomerAuthController extends Controller
         // Step 3: Handle profile picture if provided
         $profilePath = null;
         if ($request->hasFile('profilePicture')) {
-            $file = $request->file('profilePicture');
-            
-            $extension = $file->getClientOriginalExtension() ?: 'jpg'; 
-            $filename = Str::random(20) . '.' . $extension;
-            
-            $destinationPath = public_path('profilepics');
-            if (!file_exists($destinationPath)) {
-                mkdir($destinationPath, 0777, true);
+            try {
+                $file = $request->file('profilePicture');
+                $cloudinary = new \Cloudinary\Cloudinary();
+                $result = $cloudinary->uploadApi()->upload($file->getRealPath(), [
+                    'folder'        => 'customer_profiles',
+                    'resource_type' => 'image',
+                    'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
+                ]);
+                $profilePath = $result['secure_url'];
+                Log::info('Profile picture uploaded to Cloudinary:', ['url' => $profilePath]);
+            } catch (\Exception $e) {
+                Log::error('Cloudinary upload failed during registration: ' . $e->getMessage());
+                // Continue registration without profile picture
             }
-
-            $file->move($destinationPath, $filename);
-            $profilePath = 'profilepics/' . $filename;
-            
-            Log::info('Profile picture saved:', ['path' => $profilePath]);
         }
 
         // Step 4: Create new customer

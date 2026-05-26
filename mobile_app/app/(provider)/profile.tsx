@@ -76,6 +76,8 @@ export default function ProviderProfile() {
         } as any);
         
         await updateProfileMutation.mutateAsync(formData);
+        // Reload profile to show new picture
+        await loadProfile();
         Alert.alert(t('common.success', 'Success'), t('profile.pictureUpdated', 'Profile picture updated'));
       } catch (error) {
         Alert.alert(t('common.error', 'Error'), t('profile.updateError', 'Failed to update profile picture'));

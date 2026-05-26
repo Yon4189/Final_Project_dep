@@ -184,16 +184,26 @@ class CustomerController extends Authenticatable
             Storage::delete('public/' . $customer->profile_image);
         }
 
-        $file     = $request->file('image');
-        $filename = $validator->safeFilename($file, 'customer_' . $customer->customerID);
-        $file->storeAs('profile_images', $filename, 'public');
-        $imagePath = 'profile_images/' . $filename;
+        try {
+            $cloudinary = new \Cloudinary\Cloudinary();
+            $result = $cloudinary->uploadApi()->upload($request->file('image')->getRealPath(), [
+                'folder'        => 'customer_profiles',
+                'public_id'     => 'customer_' . $customer->customerID,
+                'overwrite'     => true,
+                'resource_type' => 'image',
+                'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
+            ]);
+            $imageUrl = $result['secure_url'];
+        } catch (\Exception $e) {
+            Log::error('Cloudinary upload failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Image upload failed'], 500);
+        }
 
-        $customer->update(['profile_image' => $imagePath]);
+        $customer->update(['profilePicture' => $imageUrl]);
 
         return response()->json([
             'success' => true,
-            'data' => ['url' => Storage::url($imagePath)]
+            'data' => ['url' => $imageUrl]
         ]);
     }
 

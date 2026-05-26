@@ -89,10 +89,18 @@ class ServiceProviderAuthController extends Controller
                 } catch (\InvalidArgumentException $e) {
                     return response()->json(['success' => false, 'message' => 'Profile picture: ' . $e->getMessage()], 422);
                 }
-                $file = $request->file('profilePicture');
-                $profileName = $fileValidator->safeFilename($file, 'profile');
-                $file->move(public_path('profilepics'), $profileName);
-                $profilePath = 'profilepics/' . $profileName;
+                try {
+                    $cloudinary = new \Cloudinary\Cloudinary();
+                    $result = $cloudinary->uploadApi()->upload($request->file('profilePicture')->getRealPath(), [
+                        'folder'        => 'provider_profiles',
+                        'resource_type' => 'image',
+                        'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
+                    ]);
+                    $profilePath = $result['secure_url'];
+                } catch (\Exception $e) {
+                    \Log::error('Cloudinary profile upload failed: ' . $e->getMessage());
+                    // Continue without profile picture
+                }
             }
 
             $idPhotoPath = null;
@@ -470,15 +478,20 @@ class ServiceProviderAuthController extends Controller
 
         // Handle profile picture upload
         if ($request->hasFile('profilePicture')) {
-            // Delete old profile picture if exists
-            if ($provider->profilePicture && file_exists(public_path($provider->profilePicture))) {
-                unlink(public_path($provider->profilePicture));
+            try {
+                $cloudinary = new \Cloudinary\Cloudinary();
+                $result = $cloudinary->uploadApi()->upload($request->file('profilePicture')->getRealPath(), [
+                    'folder'        => 'provider_profiles',
+                    'public_id'     => 'provider_' . $provider->providerID,
+                    'overwrite'     => true,
+                    'resource_type' => 'image',
+                    'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
+                ]);
+                $provider->profilePicture = $result['secure_url'];
+            } catch (\Exception $e) {
+                \Log::error('Cloudinary profile update failed: ' . $e->getMessage());
+                return response()->json(['success' => false, 'message' => 'Profile picture upload failed'], 500);
             }
-
-            $file = $request->file('profilePicture');
-            $profileName = Str::random(20) . '_profile.' . $file->getClientOriginalExtension();
-            $file->move(public_path('profilepics'), $profileName);
-            $provider->profilePicture = 'profilepics/' . $profileName;
         }
 
         // Handle id photo uploads

@@ -916,22 +916,35 @@ class AdminAuthController extends Authenticatable
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
 
-            $file     = $request->file('image');
-            $fileValidator = app(\App\Services\FileUploadValidator::class);
-            $filename = $fileValidator->safeFilename($file, 'admin_' . $admin->adminID);
+            try {
+                // Upload to Cloudinary
+                $uploadedFile = $request->file('image');
+                $cloudinaryUrl = config('cloudinary.cloud_url') ?: env('CLOUDINARY_URL');
+                $cloudinary = new \Cloudinary\Cloudinary($cloudinaryUrl);
+                $result = $cloudinary->uploadApi()
+                    ->upload($uploadedFile->getRealPath(), [
+                        'folder'        => 'admin_profiles',
+                        'public_id'     => 'admin_' . $admin->adminID,
+                        'overwrite'     => true,
+                        'resource_type' => 'image',
+                        'transformation' => [
+                            ['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']
+                        ],
+                    ]);
 
-            $file->move(public_path('profiles'), $filename);
-            if (!$admin) {
-                return response()->json(['error' => 'Admin not found'], 404);
+                $url = $result['secure_url'];
+                $admin->update(['profilePicture' => $url]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Profile picture updated',
+                    'path'    => $url,
+                    'admin'   => $admin->fresh(),
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Cloudinary upload failed: ' . $e->getMessage());
+                return response()->json(['success' => false, 'message' => 'Image upload failed: ' . $e->getMessage()], 500);
             }
-            $path = 'profiles/' . $filename;
-            $admin->update(['profilePicture' => $path]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Profile picture updated',
-                'path' => $path
-            ]);
         }
 
         return response()->json(['success' => false, 'message' => 'No image uploaded'], 400);

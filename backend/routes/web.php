@@ -41,3 +41,4 @@ Route::get('/fix-database', function () {
 Route::get('/check-columns', function() {
     return Illuminate\Support\Facades\Schema::getColumnListing('customers');
 });
+

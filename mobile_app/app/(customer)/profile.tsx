@@ -25,12 +25,14 @@ import {
   useUpdateProfile,
   useNotificationSettings,
   useUpdateNotificationSettings,
+  customerKeys,
 } from '../../hooks/useCustomerQueries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { customerService } from '../services/customer.service';
 import { useCustomerStore } from '../store/customerStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface EditableField {
   key: string;
@@ -55,6 +57,8 @@ export default function CustomerProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<any>({});
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   if (isLoading || isLoadingNotifications) {
     return <LoadingSpinner />;
@@ -126,6 +130,10 @@ export default function CustomerProfile() {
         } as any);
 
         await customerService.uploadProfileImage(formData);
+        // Show the locally picked image immediately (no cache issue)
+        setLocalImageUri(asset.uri);
+        // Also invalidate query so next mount gets fresh data
+        queryClient.invalidateQueries({ queryKey: customerKeys.profile() });
         Alert.alert(t('common.success', 'Success'), t('profile.pictureUpdated', 'Profile picture updated'));
       } catch {
         Alert.alert(t('common.error', 'Error'), 'Failed to upload image');
@@ -212,7 +220,7 @@ export default function CustomerProfile() {
     </View>
   );
 
-  const profileImageUri = profile?.profilePicture || profile?.profileImage;
+  const profileImageUri = localImageUri || profile?.profilePicture || profile?.profileImage;
 
   return (
     <KeyboardAvoidingView
