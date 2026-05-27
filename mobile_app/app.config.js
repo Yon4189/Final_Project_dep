@@ -72,7 +72,11 @@ module.exports = ({ config }) => {
       supportsTablet: true,
       bundleIdentifier: "com.hbservicefinder.app",
       infoPlist: {
-        UIBackgroundModes: ["location", "fetch"]
+        UIBackgroundModes: ["location", "fetch"],
+        // CHANGE 1: Added explicit permission strings for iOS production
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Allow Ethio Handyman to use your location in the background to provide live tracking for service requests.",
+        NSLocationWhenInUseUsageDescription: "Allow Ethio Handyman to use your location to find nearby service providers.",
+        NSLocationAlwaysUsageDescription: "Allow Ethio Handyman to use your location in the background to provide live tracking."
       }
     },
     android: {
@@ -89,12 +93,7 @@ module.exports = ({ config }) => {
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
-      ],
-      config: {
-        googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ""
-        }
-      }
+      ]
     },
     web: {
       favicon: "./assets/homescreen.png",
@@ -109,16 +108,19 @@ module.exports = ({ config }) => {
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow HomeLink to access your camera to photograph your ID card for identity verification.",
+          "cameraPermission": "Allow Ethio Handyman to access your camera to photograph your ID card for identity verification.",
           "microphonePermission": false,
-          "photosPermission": "Allow HomeLink to access your photo library to upload profile pictures and documents."
+          "photosPermission": "Allow Ethio Handyman to access your photo library to upload profile pictures and documents."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow this app to use your location in the background to provide live tracking.",
-          "isAndroidBackgroundLocationEnabled": true
+          "locationAlwaysAndWhenInUsePermission": "Allow Ethio Handyman to use your location in the background to provide live tracking.",
+          "isAndroidBackgroundLocationEnabled": true,
+          // CHANGE 2: Added these two permission strings for Android production
+          "locationAlwaysPermission": "Allow Ethio Handyman to use your location in the background to provide live tracking for service requests.",
+          "locationWhenInUsePermission": "Allow Ethio Handyman to use your location to find nearby service providers."
         }
       ],
       "expo-font"
