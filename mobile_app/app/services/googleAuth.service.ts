@@ -16,10 +16,15 @@ const GOOGLE_CLIENT_IDS = {
   androidClientId: '201510205977-qc5oekbqigcb8a3psonacv80rq5nj07j.apps.googleusercontent.com',
 };
 
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+
 export const useGoogleAuth = () => {
+  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
   const redirectUri = Platform.OS === 'web' 
     ? AuthSession.makeRedirectUri() 
-    : 'https://auth.expo.io/@yoseph2123/mobile_app';
+    : (isExpoGo 
+        ? 'https://auth.expo.io/@yoseph2123/mobile_app' 
+        : AuthSession.makeRedirectUri({ scheme: 'mobileapp' }));
 
   console.log('--- GOOGLE AUTH DEBUG ---');
   console.log('Final Redirect URI:', redirectUri);

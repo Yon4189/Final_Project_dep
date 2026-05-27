@@ -1,7 +1,8 @@
 // Map/index.native.tsx
 import React from 'react';
 import MapView, { Marker } from 'react-native-maps';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 interface MapProps {
   center?: [number, number];
@@ -24,6 +25,18 @@ export default function Map({
   style,
   markers = []
 }: MapProps) {
+  const apiKey = Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
+
+  // In standalone production Android builds, mounting MapView without a Google Maps API Key will crash the app.
+  // We check for this condition and display a fallback placeholder instead.
+  if (!apiKey && Platform.OS === 'android' && !__DEV__) {
+    return (
+      <View style={[styles.container, style, styles.fallbackContainer]}>
+        <Text style={styles.fallbackText}>📍 Map is disabled (Google Maps API Key not configured)</Text>
+      </View>
+    );
+  }
+
   const initialRegion = center ? {
     latitude: Number(center[0]) || 9.03,
     longitude: Number(center[1]) || 38.74,
@@ -91,5 +104,20 @@ const styles = StyleSheet.create({
   map: {
     width: '100%',
     height: '100%',
+  },
+  fallbackContainer: {
+    backgroundColor: '#F5F5F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 12,
+  },
+  fallbackText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

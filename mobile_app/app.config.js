@@ -89,7 +89,12 @@ module.exports = ({ config }) => {
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
-      ]
+      ],
+      config: {
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+        }
+      }
     },
     web: {
       favicon: "./assets/homescreen.png",
