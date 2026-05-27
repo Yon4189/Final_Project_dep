@@ -41,6 +41,8 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   onSharePress,
 }) => {
   const { t } = useTranslation();
+  const [imageError, setImageError] = React.useState(false);
+  const avatarSource = provider.profilePicture || provider.profileImage || (provider as any).profile_picture;
   const formatDistance = (distance?: number) => {
     if (!distance) return null;
     if (distance < 1) {
@@ -70,16 +72,21 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.header}>
         <View style={styles.imageContainer}>
-          <Image
-            source={{
-              uri: provider.profileImage
-                ? (provider.profileImage.startsWith('http')
-                  ? provider.profileImage
-                  : `${API_BASE_URL.replace('/api', '')}/${provider.profileImage}`)
-                : 'https://via.placeholder.com/60'
-            }}
-            style={styles.image}
-          />
+          {(!avatarSource || imageError) ? (
+            <View style={[styles.image, styles.avatarPlaceholder]}>
+              <Ionicons name="person" size={28} color={Colors.primary} />
+            </View>
+          ) : (
+            <Image
+              source={{
+                uri: avatarSource.startsWith('http')
+                  ? avatarSource
+                  : `${API_BASE_URL.replace('/api', '')}/${avatarSource}`
+              }}
+              style={styles.image}
+              onError={() => setImageError(true)}
+            />
+          )}
           {provider.verified && showBadges && (
             <View style={styles.verifiedBadge}>
               <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
@@ -358,5 +365,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.success,
     fontWeight: '600',
+  },
+  avatarPlaceholder: {
+    backgroundColor: Colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
