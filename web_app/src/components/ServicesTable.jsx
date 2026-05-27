@@ -271,7 +271,13 @@ const ServicesTable = ({
                   {activeTab === 'categories' ? (
                     <>
                       <td className="px-6 py-4 font-mono text-sm text-admin-text-muted">#{item.catagoryID}</td>
-                      <td className="px-6 py-4 text-2xl">{item.icon || '🛠️'}</td>
+                      <td className="px-6 py-4 text-2xl">
+                        {item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/storage')) ? (
+                          <img src={item.icon} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                        ) : (
+                          item.icon || '🛠️'
+                        )}
+                      </td>
                       <td className="px-6 py-4 font-semibold text-admin-text">{item.name}</td>
                       <td className="px-6 py-4 text-xs text-admin-text-muted max-w-xs truncate italic">
                         {item.description || '—'}
@@ -331,8 +337,12 @@ const ServicesTable = ({
             <div key={activeTab === 'categories' ? item.catagoryID : item.serviceID} className="bg-admin-card rounded-2xl p-5 border border-admin-border space-y-3 shadow-sm">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-2xl border border-admin-border">
-                    {item.icon || '🛠️'}
+                  <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-2xl border border-admin-border overflow-hidden">
+                    {item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/storage')) ? (
+                      <img src={item.icon} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      item.icon || '🛠️'
+                    )}
                   </div>
                   <div>
                     <p className="font-mono text-xs text-slate-400">#{activeTab === 'categories' ? item.catagoryID : item.serviceID}</p>

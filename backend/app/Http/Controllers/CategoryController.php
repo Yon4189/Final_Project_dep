@@ -45,7 +45,9 @@ class CategoryController extends Controller
 
         if ($request->hasFile('icon_file')) {
             $path = $request->file('icon_file')->store('categories', 'public');
-            $iconPath = asset('storage/' . $path);
+            $iconPath = $path;
+        } elseif ($iconPath && str_contains($iconPath, '/storage/')) {
+            $iconPath = substr($iconPath, strpos($iconPath, '/storage/') + strlen('/storage/'));
         }
 
         // Create category
@@ -141,9 +143,13 @@ class CategoryController extends Controller
         
         if ($request->hasFile('icon_file')) {
             $path = $request->file('icon_file')->store('categories', 'public');
-            $category->icon = asset('storage/' . $path);
+            $category->icon = $path;
         } else {
-            $category->icon = $request->input('icon', $category->icon);
+            $icon = $request->input('icon', $category->icon);
+            if ($icon && str_contains($icon, '/storage/')) {
+                $icon = substr($icon, strpos($icon, '/storage/') + strlen('/storage/'));
+            }
+            $category->icon = $icon;
         }
 
         $category->description = $request->input('description', $category->description);

@@ -36,7 +36,14 @@ class Category extends Model
     public function getIconAttribute($value)
     {
         if (!$value) return null;
-        if (str_starts_with($value, 'http')) return $value;
-        return asset('storage/' . $value);
+        if (str_starts_with($value, 'http') || str_starts_with($value, 'https')) {
+            return $value;
+        }
+        // If it has a standard image file extension or contains a folder path, return storage asset URL
+        if (preg_match('/\.(jpg|jpeg|png|gif|svg)$/i', $value) || str_contains($value, '/')) {
+            return asset('storage/' . $value);
+        }
+        // Otherwise, it is a plain emoji, return it as-is
+        return $value;
     }
 }
