@@ -702,36 +702,16 @@ const Disputes = () => {
                         value={resolutionData.resolution_type}
                         onChange={(e) => {
                           const type = e.target.value;
-                          let amount = resolutionData.refund_amount;
-                          // Automatically set total amount for full refund, or as a starting point for partial
-                          if (type === 'refund' || type === 'partial_refund') {
-                            amount = selectedDispute?.booking?.agreed_price || selectedDispute?.refund_amount || 0;
-                          }
-                          setResolutionData(prev => ({ ...prev, resolution_type: type, refund_amount: amount }));
+                          setResolutionData(prev => ({ ...prev, resolution_type: type }));
                         }}
                       >
                         <option value="">{t('select_type')}</option>
-                        <option value="refund">{t('full_refund')}</option>
-                        <option value="partial_refund">{t('partial_refund')}</option>
                         <option value="dismissed">{t('dismiss_case')}</option>
                         <option value="warning">{t('issue_warning')}</option>
                       </select>
                     </div>
 
-                    {(resolutionData.resolution_type === 'refund' || resolutionData.resolution_type === 'partial_refund') && (
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-admin-text uppercase tracking-widest opacity-60">{t('refund_amount')}</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            className="w-full p-3 pl-10 bg-white dark:bg-admin-card border border-admin-border rounded-xl text-xs font-bold outline-none text-admin-text"
-                            value={resolutionData.refund_amount}
-                            onChange={(e) => setResolutionData({ ...resolutionData, refund_amount: e.target.value })}
-                          />
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">ETB</span>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
 
                   <div className="space-y-2 pt-4">
