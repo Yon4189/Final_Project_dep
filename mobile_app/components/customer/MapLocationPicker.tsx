@@ -13,6 +13,8 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/app/constants/Colors';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 interface MapLocationPickerProps {
   initialLocation?: {
@@ -162,6 +164,33 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     });
     onClose();
   };
+
+  // Guard: In standalone production Android builds, mounting MapView without
+  // a Google Maps API Key causes an immediate native crash.
+  const googleMapsApiKey = Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
+  if (!googleMapsApiKey && Platform.OS === 'android' && !__DEV__) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Pin Your Location</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.noMapFallback}>
+          <Ionicons name="map-outline" size={64} color={Colors.text.secondary} />
+          <Text style={styles.noMapFallbackTitle}>Map Unavailable</Text>
+          <Text style={styles.noMapFallbackText}>
+            Map location picking requires a Google Maps API Key. Please use GPS or enter your address manually.
+          </Text>
+          <TouchableOpacity style={styles.noMapCloseButton} onPress={onClose}>
+            <Text style={styles.noMapCloseButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -535,5 +564,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.surface,
+  },
+  noMapFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: Colors.background,
+  },
+  noMapFallbackTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noMapFallbackText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  noMapCloseButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  noMapCloseButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
