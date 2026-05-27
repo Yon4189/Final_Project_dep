@@ -165,6 +165,13 @@ export default function CustomerNotifications() {
         case 'new_message':
           router.push('/(customer)/chat/index');
           break;
+        case 'dispute':
+          if (notification.data?.disputeID) {
+            router.push(`/(customer)/complaints/${notification.data.disputeID}`);
+          } else {
+            router.push('/(customer)/complaints');
+          }
+          break;
         default:
           if (bookingId) {
             router.push(`/(customer)/requests/${bookingId}`);
@@ -196,6 +203,8 @@ export default function CustomerNotifications() {
         return <Ionicons name="warning" size={size} color={Colors.error} />;
       case 'new_message':
         return <Ionicons name="chatbubble" size={size} color={color} />;
+      case 'dispute':
+        return <Ionicons name="warning" size={size} color={Colors.warning} />;
       case 'reminder':
         return <Ionicons name="alarm" size={size} color="#f59e0b" />;
       case 'system':

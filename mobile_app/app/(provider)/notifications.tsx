@@ -197,6 +197,13 @@ export default function ProviderNotifications() {
         case 'review':
           router.push('/(provider)/reviews');
           break;
+        case 'dispute':
+          if (notification.data?.disputeID) {
+            router.push(`/(provider)/disputes/${notification.data.disputeID}`);
+          } else {
+            router.push('/(provider)/disputes');
+          }
+          break;
         case 'system':
         case 'provider_approved':
         case 'provider_rejected':
@@ -240,6 +247,8 @@ export default function ProviderNotifications() {
         return <Ionicons name="cash" size={iconSize} color={iconColor} />;
       case 'review':
         return <Ionicons name="star" size={iconSize} color={iconColor} />;
+      case 'dispute':
+        return <Ionicons name="warning" size={iconSize} color={Colors.warning} />;
       case 'reminder':
         return <Ionicons name="alarm" size={iconSize} color={iconColor} />;
       case 'system':
