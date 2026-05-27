@@ -12,6 +12,7 @@ import MapView, { Marker, PROVIDER_GOOGLE, Region, Polyline } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Colors } from '@/app/constants/Colors';
+import Constants from 'expo-constants';
 const { width, height } = Dimensions.get('window');
 const ASPECT_RATIO = width / height;
 const LATITUDE_DELTA = 0.0922;
@@ -259,6 +260,18 @@ export const ProviderMap: React.FC<ProviderMapProps> = ({
     );
   };
 
+  // Guard: In standalone production Android builds, mounting MapView without
+  // a Google Maps API Key causes an immediate native crash.
+  const googleMapsApiKey = Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
+  if (!googleMapsApiKey && Platform.OS === 'android' && !__DEV__) {
+    return (
+      <View style={[styles.container, { height: height as any }, styles.fallbackContainer]}>
+        <Ionicons name="map-outline" size={40} color={Colors.text.secondary} />
+        <Text style={styles.fallbackText}>Map unavailable (Google Maps API Key not configured)</Text>
+      </View>
+    );
+  }
+
   return (
    <View style={[styles.container, { height: height as any }]}>
       <MapView
@@ -408,6 +421,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 16,
     position: 'relative',
+  },
+  fallbackContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F7',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  fallbackText: {
+    fontSize: 13,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 16,
+    fontWeight: '500',
   },
   map: {
     ...StyleSheet.absoluteFillObject,

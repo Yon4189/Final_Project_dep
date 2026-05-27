@@ -9,6 +9,7 @@ import {
   FlatList,
   Modal,
   Platform,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -127,7 +128,11 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
                   onPress={() => handleCategoryPress(item.id)}
                 >
                   {item.icon && (
-                    <Text style={styles.categoryIcon}>{item.icon}</Text>
+                    item.icon.startsWith('http') || item.icon.startsWith('/storage') ? (
+                      <Image source={{ uri: item.icon }} style={styles.categoryIconImage} />
+                    ) : (
+                      <Text style={styles.categoryIcon}>{item.icon}</Text>
+                    )
                   )}
                   <Text
                     style={[
@@ -239,6 +244,12 @@ const styles = StyleSheet.create({
   },
   categoryIcon: {
     fontSize: 16,
+    marginRight: 6,
+  },
+  categoryIconImage: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
     marginRight: 6,
   },
   categoryName: {
