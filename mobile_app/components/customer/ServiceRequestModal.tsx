@@ -25,6 +25,7 @@ import { useCreateBooking } from '@/hooks/useCustomerBookings';
 import { api } from '@/app/services/api';
 import { customerService } from '@/app/services/customer.service';
 import { MapLocationPicker } from './MapLocationPicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { 
   ServiceProvider, 
   ProfessionalService, 
@@ -55,6 +56,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
   const { t } = useTranslation();
   const router = useRouter();
   const createBooking = useCreateBooking();
+  const insets = useSafeAreaInsets();
 
   // Service selection state
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
@@ -932,7 +934,10 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 24 }}
+          >
             {/* Provider Info */}
             <View style={styles.providerInfo}>
               <Text style={styles.providerName}>
@@ -1219,7 +1224,7 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
           </ScrollView>
 
           {/* Action Buttons */}
-          <View style={styles.actionButtons}>
+          <View style={[styles.actionButtons, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
