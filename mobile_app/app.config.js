@@ -81,6 +81,11 @@ module.exports = ({ config }) => {
         foregroundImage: "./assets/homescreen.png",
         backgroundColor: "#ffffff"
       },
+      config: {
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyD-tcdQryF7Kz9K8M8sB3AYWgS7LTrDxI4"
+        }
+      },
       permissions: [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
@@ -92,7 +97,8 @@ module.exports = ({ config }) => {
       ],
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+          // Hardcoded as backup in case env var is not picked up by EAS
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyD-tcdQryF7Kz9K8M8sB3AYWgS7LTrDxI4"
         }
       }
     },
