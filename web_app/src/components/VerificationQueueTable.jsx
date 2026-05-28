@@ -176,6 +176,7 @@ const VerificationQueueTable = ({
   }
 
   return (
+    <>
     <div className="bg-admin-card rounded-[2.5rem] shadow-sm border border-admin-border overflow-hidden">
       {/* Header with filter bar */}
       <div className="p-8 border-b border-admin-border bg-admin-card">
@@ -617,6 +618,7 @@ const VerificationQueueTable = ({
         </div>
       </div>
     )}
+    </>
   );
 };
 
