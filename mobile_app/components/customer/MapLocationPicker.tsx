@@ -167,8 +167,12 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
   // Guard: In standalone production Android builds, mounting MapView without
   // a Google Maps API Key causes an immediate native crash.
-  const googleMapsApiKey = Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
-  if (!googleMapsApiKey && Platform.OS === 'android' && !__DEV__) {
+  const googleMapsApiKey = 
+    Constants.expoConfig?.android?.config?.googleMaps?.apiKey ||
+    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
+    'AIzaSyD-tcdQryF7Kz9K8M8sB3AYWgS7LTrDxI4'; // hardcoded fallback
+
+  if (!googleMapsApiKey && Platform.OS === 'android') {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
