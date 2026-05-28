@@ -25,11 +25,14 @@ export default function Map({
   style,
   markers = []
 }: MapProps) {
-  const apiKey = Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
+  const apiKey = 
+    Constants.expoConfig?.android?.config?.googleMaps?.apiKey ||
+    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
+    'AIzaSyD-tcdQryF7Kz9K8M8sB3AYWgS7LTrDxI4';
 
   // In standalone production Android builds, mounting MapView without a Google Maps API Key will crash the app.
   // We check for this condition and display a fallback placeholder instead.
-  if (!apiKey && Platform.OS === 'android' && !__DEV__) {
+  if (!apiKey && Platform.OS === 'android') {
     return (
       <View style={[styles.container, style, styles.fallbackContainer]}>
         <Text style={styles.fallbackText}>📍 Map is disabled (Google Maps API Key not configured)</Text>

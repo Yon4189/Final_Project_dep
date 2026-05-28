@@ -72,6 +72,8 @@ class ApiService {
   private refreshToken: string | null = null;
   private userType: 'provider' | 'customer' | null = null;
   private isRefreshing = false;
+  private isHandlingSessionExpiry = false;
+  private lastTokenSetTime = 0;
   private failedQueue: Array<{
     resolve: (value: unknown) => void;
     reject: (reason?: any) => void;
@@ -152,6 +154,7 @@ class ApiService {
     this.providerToken = token;
     this.customerToken = null;
     this.userType = 'provider';
+    this.lastTokenSetTime = Date.now();
 
     if (refreshToken) {
       this.refreshToken = refreshToken;
@@ -177,6 +180,7 @@ class ApiService {
     this.customerToken = token;
     this.providerToken = null;
     this.userType = 'customer';
+    this.lastTokenSetTime = Date.now();
 
     if (refreshToken) {
       this.refreshToken = refreshToken;
@@ -252,6 +256,13 @@ class ApiService {
   }
 
   private async handleSessionExpired(): Promise<void> {
+    // Prevent multiple simultaneous session expiry redirects
+    if (this.isHandlingSessionExpiry) {
+      console.log('Session expiry already being handled, skipping...');
+      return;
+    }
+    this.isHandlingSessionExpiry = true;
+
     console.log('Session expired, clearing tokens and redirecting to login...');
     await this.removeToken();
     await this.removeUserData();
@@ -266,12 +277,24 @@ class ApiService {
       console.warn('Failed to reset stores:', e);
     }
 
-    // Redirect to login
+    // Redirect to login only if not already on an auth screen
     try {
       const { router } = require('expo-router');
-      router.replace('/(auth)/login');
+      const currentPath = (global as any).__currentPath || '';
+      const isOnAuthScreen = currentPath.includes('/login') ||
+                             currentPath.includes('/register') ||
+                             currentPath.includes('/(auth)') ||
+                             currentPath === '/';
+      if (!isOnAuthScreen) {
+        router.replace('/(auth)/login');
+      }
     } catch (e) {
       console.warn('Failed to redirect to login:', e);
+    } finally {
+      // Reset flag after a delay to allow navigation to complete
+      setTimeout(() => {
+        this.isHandlingSessionExpiry = false;
+      }, 3000);
     }
   }
 
@@ -440,13 +463,31 @@ class ApiService {
           const isAuthEndpoint = originalConfig.url?.includes('/login') || 
                                  originalConfig.url?.includes('/register') ||
                                  originalConfig.url?.includes('/forgot-password');
-          
+
+          // Don't trigger session expiry for background/silent endpoints
+          const isBackgroundEndpoint = originalConfig.url?.includes('/heartbeat') ||
+                                       originalConfig.url?.includes('/heartbeat/offline') ||
+                                       originalConfig.url?.includes('/push-token');
+
           if (isAuthEndpoint) {
             console.log('401 on auth endpoint, not attempting refresh');
             const authError: any = new Error('Wrong password or email. Please try again.');
             authError.response = error.response;
             authError.statusCode = 401;
             return Promise.reject(authError);
+          }
+
+          if (isBackgroundEndpoint) {
+            console.log('401 on background endpoint, silently ignoring');
+            return Promise.reject(error);
+          }
+
+          // Don't trigger session expiry if token was just set (within last 10 seconds)
+          // This prevents redirect loops right after login
+          const tokenJustSet = (Date.now() - this.lastTokenSetTime) < 10000;
+          if (tokenJustSet) {
+            console.log('Token was just set, ignoring 401 to prevent redirect loop');
+            return Promise.reject(error);
           }
 
           if (this.isRefreshing) {

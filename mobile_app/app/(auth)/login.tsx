@@ -422,18 +422,6 @@ export default function LoginScreen() {
             style={styles.registerButton}
             disabled={loading}
           />
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('auth.or', 'OR')}</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <SocialLoginButton
-            onPress={handleGoogleLogin}
-            loading={loading}
-            title={t('auth.continueWithGoogle', 'Continue with Google')}
-          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

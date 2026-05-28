@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, CheckCircle, Calendar, ImageIcon, FileCheck, Eye, Search, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { getBackendUrl } from '../utils/url';
@@ -22,6 +22,12 @@ const VerificationQueueTable = ({
   const { t } = useTranslation();
   const searchInputRef = useRef(null);
   const categorySelectRef = useRef(null);
+  const [imageModal, setImageModal] = useState({ open: false, url: '', title: '' });
+
+  const openImage = (url, title) => {
+    if (!url) return;
+    setImageModal({ open: true, url, title });
+  };
   
   const translateDBString = (str) => {
     if (!str) return str;
@@ -346,7 +352,7 @@ const VerificationQueueTable = ({
                       <td className="px-6 py-5">
                         <div className="flex flex-col gap-1.5 items-center">
                           <button
-                            onClick={() => hasIdPhoto && window.open(idPhotoUrl, '_blank')}
+                            onClick={() => hasIdPhoto && openImage(idPhotoUrl, t('vqueue_id_front'))}
                             disabled={!hasIdPhoto}
                             className={`w-28 py-1.5 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasIdPhoto
                                 ? 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500'
@@ -360,7 +366,7 @@ const VerificationQueueTable = ({
                           </button>
                           {hasIdPhotoBack && (
                             <button
-                              onClick={() => window.open(idPhotoBackUrl, '_blank')}
+                              onClick={() => openImage(idPhotoBackUrl, t('vqueue_id_back'))}
                               className="w-28 py-1.5 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 bg-slate-900 dark:bg-slate-700 text-white hover:bg-black dark:hover:bg-black focus:ring-slate-500"
                               aria-label={`${t('vqueue_id_back')} for ${item.name}`}
                             >
@@ -369,7 +375,7 @@ const VerificationQueueTable = ({
                             </button>
                           )}
                           <button
-                            onClick={() => hasCredential && window.open(credentialUrl, '_blank')}
+                            onClick={() => hasCredential && openImage(credentialUrl, t('vqueue_licence'))}
                             disabled={!hasCredential}
                             className={`w-28 py-1.5 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${hasCredential
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
@@ -573,6 +579,44 @@ const VerificationQueueTable = ({
         </div>
       )}
     </div>
+
+    {/* Image Modal */}
+    {imageModal.open && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+        onClick={() => setImageModal({ open: false, url: '', title: '' })}
+      >
+        <div
+          className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700">
+            <span className="font-bold text-slate-800 dark:text-white text-sm">{imageModal.title}</span>
+            <button
+              onClick={() => setImageModal({ open: false, url: '', title: '' })}
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-800 min-h-[300px]">
+            <img
+              src={imageModal.url}
+              alt={imageModal.title}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+            <div className="hidden flex-col items-center gap-2 text-slate-400">
+              <ImageIcon size={48} />
+              <span className="text-sm">Failed to load image</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   );
 };
 
